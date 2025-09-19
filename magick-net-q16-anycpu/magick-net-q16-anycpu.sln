@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "magick-net-q16-anycpu", "magick-net-q16-anycpu.csproj", "{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D280C1F3-832C-431C-A129-4B12F6DD6CC7}
+	EndGlobalSection
+EndGlobal
