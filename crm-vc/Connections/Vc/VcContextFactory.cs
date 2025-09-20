@@ -10,7 +10,7 @@ public class VcContextFactory(ServerArgs args) : IDbContextFactory<VcContext>
     {
         var optionsBuilder = new DbContextOptionsBuilder<VcContext>();
 
-        optionsBuilder.UseSqlite("Data Source=D:\\Repos\\_Ivy\\Ivy-Examples\\crm-vc\\db.sqlite");
+        optionsBuilder.UseSqlite("Data Source=db.sqlite");
 
         if (args.Verbose)
         {

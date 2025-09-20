@@ -27,7 +27,7 @@
     <Folder Include="Connections" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="D:\Repos\_Ivy\Ivy-Examples\crm-vc\db.sqlite">
+    <None Update="db.sqlite">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
