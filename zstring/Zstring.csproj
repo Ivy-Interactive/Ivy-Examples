@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>IvyExamples.ZStringDemo</AssemblyName>
+    <RootNamespace>IvyExamples.ZStringDemo</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/**/*" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Ivy" Version="1.0.113" />
+    <PackageReference Include="ZString" Version="2.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Apps" />
+    <Folder Include="Connections" />
+  </ItemGroup>
+
+</Project>
