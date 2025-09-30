@@ -74,6 +74,10 @@ public class ProfileApp : ViewBase
                  | new Button("Create Profile").HandleClick(new Action(HandleSubmit))
                     .Loading(loading).Disabled(loading)
                 | validationView
+
+            | new Separator()
+            | Text.Small("This demo uses QRCoder library to generate vCard QR codes for contact sharing.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [QRCoder](https://github.com/codebude/QRCoder)")
         ).Height(Size.Full());
 
         // Main content - QR Code display
