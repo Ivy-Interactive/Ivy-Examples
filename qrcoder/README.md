@@ -32,7 +32,8 @@ This specific implementation creates a **Profile Creator** application that allo
 
 ## Screenshot
 
-![QR Code Generation Example](image.png)
+<img width="1626" height="913" alt="image" src="https://github.com/user-attachments/assets/1e09bc03-6b52-4762-af44-436fbd916329" />
+
 
 ## How to Run
 
