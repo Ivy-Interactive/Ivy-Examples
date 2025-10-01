@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using MiniExcelLibs;
-using UseOfMiniExcel.Apps.Models;
+using UseOfMiniExcel.Models;
 
 namespace UseOfMiniExcel.Apps
 {
