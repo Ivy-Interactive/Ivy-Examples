@@ -5,6 +5,7 @@ using Ivy;
 using Ivy.Core;
 using Ivy.Core.Hooks;
 using MiniExcelLibs;
+using UseOfMiniExcel.Apps.Models;
 
 namespace UseOfMiniExcel.Apps
 {
@@ -12,11 +13,7 @@ namespace UseOfMiniExcel.Apps
     public class AddStudentToXlsx : ViewBase
     {
         // Model for Excel rows
-        public class Student
-        {
-            public string Name { get; set; } = string.Empty;
-            public int Age { get; set; }
-        }
+        
 
         // Persisted states (kept between UI re-renders)
         private readonly State<string> name;

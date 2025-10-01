@@ -1,16 +1,11 @@
 using System;
 using System.Linq;
 using MiniExcelLibs;
+using UseOfMiniExcel.Apps.Models;
 
 namespace UseOfMiniExcel.Apps
 {
-    // Define a C# model (POCO) that matches the Excel file headers.
-    // The Excel file must have columns: "Name" and "Age".
-    public class Student
-    {
-        public string Name { get; set; }  // Student's name
-        public int Age { get; set; }      // Student's age
-    }
+   
 
     // This class represents an Ivy application screen (UI page)
     [App(icon: Icons.PartyPopper, title: "ReadFromExcelFile")]
@@ -21,7 +16,7 @@ namespace UseOfMiniExcel.Apps
         {
             // Path to your Excel file.
             // Make sure "Students.xlsx" is located in bin/Debug/net9.0/Students.xlsx
-            var file = "Students.xlsx";
+            var file = System.IO.Path.Combine(AppContext.BaseDirectory, "Students.xlsx");
 
             // Read all rows from the Excel file and map them into a list of Student objects.
             // MiniExcel automatically matches Excel headers to Student class properties.
