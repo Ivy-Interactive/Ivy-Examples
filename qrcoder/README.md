@@ -1,5 +1,7 @@
 # QR Code Generator
 
+<img width="1626" height="913" alt="image" src="https://github.com/user-attachments/assets/1e09bc03-6b52-4762-af44-436fbd916329" />
+
 ## Created Using Ivy
 
 Web application created using [Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework).
@@ -30,11 +32,6 @@ This specific implementation creates a **Profile Creator** application that allo
 - Creates resizable panel layout for optimal user experience
 - Handles form submission with loading states and error display
 
-## Screenshot
-
-<img width="1626" height="913" alt="image" src="https://github.com/user-attachments/assets/1e09bc03-6b52-4762-af44-436fbd916329" />
-
-
 ## How to Run
 
 1. **Prerequisites**: .NET 8+ SDK
@@ -56,9 +53,14 @@ This specific implementation creates a **Profile Creator** application that allo
 
 Deploy this example to Ivy's hosting platform:
 
-```bash
-cd qrcoder
-ivy deploy
-```
-
+1. **Navigate to the example**:
+   ```bash
+   cd qrcoder
+   ```
+2. **Deploy to Ivy hosting**:
+   ```bash
+   ivy deploy
+   ```
 This will deploy your QR code generation application with a single command.
+
+## For more details, see the [Ivy Documentation](https://docs.ivy.app)
