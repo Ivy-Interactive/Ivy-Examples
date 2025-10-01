@@ -1,0 +1,28 @@
+{
+    "name": "Ivy Examples",
+    "image": "mcr.microsoft.com/dotnet/sdk:9.0",
+    "features": {},
+    "postCreateCommand": "dotnet tool install -g Ivy.Console",
+    "postStartCommand": "dotnet watch run",
+    "forwardPorts": [5010],
+    "portsAttributes": {
+      "5010": {
+        "label": "Ivy",
+        "onAutoForward": "openPreview"
+      }
+    },
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "dotnet.defaultSolution": "**/*.sln",
+          "terminal.integrated.shell.linux": "/bin/bash"
+        },
+        "extensions": [
+          "ms-dotnettools.csharp",
+          "ms-vscode.powershell",
+          "ms-dotnettools.csdevkit"
+        ]
+      }
+    }
+  }
+  
