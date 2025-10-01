@@ -2,19 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ivy;
-using Ivy.Core;
-using Ivy.Core.Hooks;
-using MiniExcelLibs;
-using UseOfMiniExcel.Apps.Models;
-
+using UseOfMiniExcel.Models;
 namespace UseOfMiniExcel.Apps
 {
     [App(icon: Icons.PartyPopper, title: "AddStudentToExcel")]
     public class AddStudentToXlsx : ViewBase
     {
-        // Model for Excel rows
-        
-
+        // Model for Excel rows is now shared in Models/Student.cs
         // Persisted states (kept between UI re-renders)
         private readonly State<string> name;
         private readonly State<int> age;
