@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-using NewtonsoftJsonApp.Models;
-
+﻿
 namespace NewtonsoftJsonApp.Apps
 {
 

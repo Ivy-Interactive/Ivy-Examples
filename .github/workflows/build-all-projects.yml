@@ -5,10 +5,9 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
   schedule:
-    # Check for new Ivy versions daily at 6 AM UTC
-    - cron: '0 6 * * *'
+    - cron: '0 6 * * *' # daily at 6 AM UTC
 
 env:
   DOTNET_VERSION: '9.0.x'
@@ -27,6 +26,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -36,82 +38,43 @@ jobs:
       - name: Check Ivy version
         id: version-check
         run: |
-          # Get the latest Ivy version from NuGet
           echo "🔍 Checking latest Ivy version on NuGet..."
           latest_version=$(curl -s "https://api.nuget.org/v3-flatcontainer/ivy/index.json" | jq -r '.versions | last')
           echo "Latest Ivy version: $latest_version"
-          
-          # Since all projects use wildcards (1.*), we'll determine the resolved version later
           current_version="wildcard"
           version_changed="false"
           should_build="false"
-          
-          # For scheduled runs, check if there's a new version since last run
+
           if [ "${{ github.event_name }}" == "schedule" ]; then
-            echo "📅 Scheduled run - checking for Ivy version updates..."
-            
-            # Try to get the last known version from a previous run
-            # We'll use GitHub's cache or artifact system to store this
             last_known_version_file=".github/last-ivy-version.txt"
             last_known_version=""
-            
             if [ -f "$last_known_version_file" ]; then
               last_known_version=$(cat "$last_known_version_file")
               echo "Last known Ivy version: $last_known_version"
             else
-              echo "No previous version record found - will build to establish baseline"
-              last_known_version=""
+              echo "No previous version record found"
             fi
-            
-            # Compare versions
+
             if [ -z "$last_known_version" ] || [ "$last_known_version" != "$latest_version" ]; then
-              echo "🆕 New Ivy version detected! ($last_known_version → $latest_version)"
+              echo "🆕 New Ivy version detected!"
               should_build="true"
               version_changed="true"
-              
-              # Store the new version for next time
               echo "$latest_version" > "$last_known_version_file"
             else
               echo "✅ No new Ivy version since last check"
-              should_build="false"
-              version_changed="false"
             fi
           fi
-          
-          # For push/PR/manual events, always build regardless of version
+
           if [ "${{ github.event_name }}" == "push" ] || [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             should_build="true"
             echo "🔄 Code change detected - will build"
-            
-            # Also update the version file for manual/push events to keep it current
             echo "$latest_version" > ".github/last-ivy-version.txt"
           fi
-          
+
           echo "should-build=$should_build" >> $GITHUB_OUTPUT
           echo "current-version=$current_version" >> $GITHUB_OUTPUT
           echo "latest-version=$latest_version" >> $GITHUB_OUTPUT
           echo "version-changed=$version_changed" >> $GITHUB_OUTPUT
-
-      - name: Commit version tracking file
-        if: steps.version-check.outputs.version-changed == 'true' || github.event_name != 'schedule'
-        run: |
-          # Configure git
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # Check if there are changes to commit
-          if [ -f ".github/last-ivy-version.txt" ]; then
-            git add .github/last-ivy-version.txt
-            
-            # Only commit if there are actual changes
-            if ! git diff --staged --quiet; then
-              git commit -m "Update last known Ivy version to ${{ steps.version-check.outputs.latest-version }}"
-              git push
-              echo "✅ Updated version tracking file"
-            else
-              echo "ℹ️ No changes to version tracking file"
-            fi
-          fi
 
   discover-projects:
     name: Discover Projects
@@ -124,14 +87,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Find all .NET projects
         id: find-projects
         run: |
-          # Find all .csproj files, excluding those in bin/obj directories
           projects=$(find . -name "*.csproj" -not -path "*/bin/*" -not -path "*/obj/*" | sort)
-          
-          # Convert to JSON array for matrix strategy
           project_array="["
           first=true
           while IFS= read -r project; do
@@ -140,19 +103,11 @@ jobs:
             else
               project_array="$project_array,"
             fi
-            
-            # Get project directory name for display
             dir_name=$(dirname "$project" | xargs basename)
             project_array="$project_array{\"path\":\"$project\",\"name\":\"$dir_name\"}"
           done <<< "$projects"
           project_array="$project_array]"
-          
-          # Count projects
           project_count=$(echo "$projects" | wc -l)
-          
-          echo "Found $project_count projects:"
-          echo "$projects"
-          
           echo "projects=$project_array" >> $GITHUB_OUTPUT
           echo "project-count=$project_count" >> $GITHUB_OUTPUT
 
@@ -162,13 +117,15 @@ jobs:
     needs: [check-ivy-version, discover-projects]
     if: needs.check-ivy-version.outputs.should-build == 'true' && needs.discover-projects.outputs.project-count > 0
     strategy:
-      fail-fast: false # Continue building other projects even if one fails
+      fail-fast: false
       matrix:
         project: ${{ fromJson(needs.discover-projects.outputs.projects) }}
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -217,6 +174,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -227,37 +187,26 @@ jobs:
         id: get-version
         run: |
           echo "🔍 Determining resolved Ivy version from packages..."
-          
-          # Find a project to check resolved version
           project_file=$(find . -name "*.csproj" -not -path "*/bin/*" -not -path "*/obj/*" | head -1)
-          
           if [ -n "$project_file" ]; then
-            echo "Checking resolved packages for: $project_file"
-            
-            # Restore packages to get lock file
             dotnet restore "$project_file" --verbosity quiet
-            
-            # Get the resolved version from the project assets
             project_dir=$(dirname "$project_file")
             assets_file="$project_dir/obj/project.assets.json"
-            
             if [ -f "$assets_file" ]; then
               # Extract Ivy version from project.assets.json
-              resolved_version=$(jq -r '.libraries | to_entries[] | select(.key | startswith("Ivy/")) | .key | split("/")[1]' "$assets_file" 2>/dev/null | head -1)
-              
+              # 1. Look at .libraries
+              # 2. Filter entries where key starts with "Ivy/"
+              # 3. Split key on "/" and take version part
+              resolved_version=$(jq -r '.libraries | to_entries[] | select(.key | startswith("Ivy/")) | .key | split("/")[1]' "$assets_file" | head -1)
               if [ -n "$resolved_version" ] && [ "$resolved_version" != "null" ]; then
-                echo "✅ Resolved Ivy version: $resolved_version"
                 echo "resolved-version=$resolved_version" >> $GITHUB_OUTPUT
               else
-                echo "⚠️ Could not determine resolved version from assets file"
                 echo "resolved-version=${{ needs.check-ivy-version.outputs.latest-version }}" >> $GITHUB_OUTPUT
               fi
             else
-              echo "⚠️ Project assets file not found, using latest version"
               echo "resolved-version=${{ needs.check-ivy-version.outputs.latest-version }}" >> $GITHUB_OUTPUT
             fi
           else
-            echo "⚠️ No project files found"
             echo "resolved-version=unknown" >> $GITHUB_OUTPUT
           fi
 
@@ -265,54 +214,17 @@ jobs:
     name: Build Summary
     runs-on: ubuntu-latest
     needs: [check-ivy-version, discover-projects, build-projects, detect-resolved-version]
-    if: always() && needs.check-ivy-version.outputs.should-build == 'true' # Run even if some builds failed
-    
+    if: always() && needs.check-ivy-version.outputs.should-build == 'true'
     steps:
       - name: Generate build summary
         run: |
           echo "# 🚀 Ivy-Examples Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Add Ivy version information
-          echo "## 📦 Ivy Version Information" >> $GITHUB_STEP_SUMMARY
-          
           resolved_version="${{ needs.detect-resolved-version.outputs.resolved-version }}"
           latest_version="${{ needs.check-ivy-version.outputs.latest-version }}"
-          
-          echo "- **Project Configuration:** \`1.*\` (wildcard)" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Ivy Version Information" >> $GITHUB_STEP_SUMMARY
           echo "- **Resolved Version:** $resolved_version" >> $GITHUB_STEP_SUMMARY
           echo "- **Latest Available:** $latest_version" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "$resolved_version" = "$latest_version" ]; then
-            echo "- **Status:** ✅ Using latest version" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.check-ivy-version.outputs.version-changed }}" == "true" ]; then
-            echo "- **Status:** 🆕 New version available!" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- **Status:** ℹ️ Resolved to compatible version" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Total Projects:** ${{ needs.discover-projects.outputs.project-count }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Check build results
-          if [ "${{ needs.build-projects.result }}" == "success" ]; then
-            echo "## ✅ All builds successful! 🎉" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "All ${{ needs.discover-projects.outputs.project-count }} projects built successfully." >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.build-projects.result }}" == "failure" ]; then
-            echo "## ❌ Some builds failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "One or more projects failed to build. Check the individual job logs for details." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## ⚠️ Build status: ${{ needs.build-projects.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📊 Build Matrix Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Check individual job results in the workflow run above." >> $GITHUB_STEP_SUMMARY
-
       - name: Set workflow status
         run: |
           if [ "${{ needs.build-projects.result }}" != "success" ]; then
@@ -322,23 +234,16 @@ jobs:
             echo "✅ Build workflow succeeded"
           fi
 
-  # Optional: Create a simple build status badge
   create-badge:
     name: Update Build Badge
     runs-on: ubuntu-latest
     needs: [check-ivy-version, build-summary, detect-resolved-version]
     if: github.ref == 'refs/heads/main' && always() && needs.check-ivy-version.outputs.should-build == 'true'
-    
     steps:
       - name: Create build status badge
         run: |
           if [ "${{ needs.build-summary.result }}" == "success" ]; then
-            badge_color="brightgreen"
-            badge_message="passing"
+            echo "Build passing"
           else
-            badge_color="red"
-            badge_message="failing"
+            echo "Build failing"
           fi
-          
-          echo "Build status: $badge_message ($badge_color)"
-          # You can extend this to actually update a badge service like shields.io
