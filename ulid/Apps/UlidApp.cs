@@ -1,4 +1,4 @@
-using Cysharp;   // for Ulid
+using Cysharp.Ulid;   // for Ulid
 using Ivy;
 
 namespace customApp.Apps;
