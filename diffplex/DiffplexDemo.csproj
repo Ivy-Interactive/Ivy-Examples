@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>NewtonsoftJsonApp</RootNamespace>
+    <RootNamespace>DiffplexDemo</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,15 +16,13 @@
   
   
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.112.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="System.Text.Json" Version="9.0.9" />
-    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
+    <PackageReference Include="DiffPlex" Version="1.9.0" />
+    <PackageReference Include="Ivy" Version="1.0.115.0" />
   </ItemGroup>
   
 
   <ItemGroup>
+    <Folder Include="Apps" />
     <Folder Include="Connections" />
   </ItemGroup>
 

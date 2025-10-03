@@ -5,6 +5,7 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
+
 var chromeSettings = new ChromeSettings().DefaultApp<NewtonsoftJsonApp.Apps.NewtonsoftJsonApp>().UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 await server.RunAsync();
