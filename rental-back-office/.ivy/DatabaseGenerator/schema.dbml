@@ -1,0 +1,97 @@
+Enum reservation_status {
+    pending
+    confirmed
+    cancelled
+    completed
+}
+
+Table user {
+    id int [pk, increment]
+    first_name varchar [not null]
+    last_name varchar [not null]
+    email varchar [not null, unique]
+    password_hash varchar [not null]
+    phone varchar
+    is_host boolean [not null, default: false]
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+}
+
+Table listing {
+    id int [pk, increment]
+    host_id int [not null]
+    title varchar [not null]
+    description text
+    address_line1 varchar [not null]
+    address_line2 varchar
+    city varchar [not null]
+    state varchar [not null]
+    country varchar [not null]
+    postal_code varchar [not null]
+    latitude decimal [not null]
+    longitude decimal [not null]
+    price_per_night decimal [not null]
+    max_guests int [not null]
+    num_bedrooms int
+    num_baths int
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+}
+
+Table reservation {
+    id int [pk, increment]
+    listing_id int [not null]
+    guest_id int [not null]
+    start_date date [not null]
+    end_date date [not null]
+    total_price decimal [not null]
+    status reservation_status [not null]
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+}
+
+Table review {
+    id int [pk, increment]
+    listing_id int [not null]
+    guest_id int [not null]
+    reservation_id int [not null]
+    rating int [not null]
+    comment text
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+}
+
+Table amenity {
+    id int [pk, increment]
+    name varchar [not null, unique]
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+}
+
+Table listing_amenity {
+    listing_id int [not null]
+    amenity_id int [not null]
+    indexes {
+        (listing_id, amenity_id) [pk]
+    }
+}
+
+Table photo {
+    id int [pk, increment]
+    listing_id int [not null]
+    url varchar [not null]
+    description varchar
+    is_primary boolean [not null, default: false]
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+}
+
+Ref: listing.host_id > user.id
+Ref: reservation.listing_id > listing.id
+Ref: reservation.guest_id > user.id
+Ref: review.listing_id > listing.id
+Ref: review.guest_id > user.id
+Ref: review.reservation_id > reservation.id
+Ref: listing_amenity.listing_id > listing.id
+Ref: listing_amenity.amenity_id > amenity.id
+Ref: photo.listing_id > listing.id
