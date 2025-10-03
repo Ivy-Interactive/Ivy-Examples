@@ -35,7 +35,7 @@ namespace Superpower.Apps
                     {
                         resultState.Set(false);
                         resultValueState.Set(0);
-                        errorState.Set($"Error occured: {ex.Message}");
+                        errorState.Set($"Error occurred: {ex.Message}");
                     }
 
                 }
