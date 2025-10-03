@@ -28,7 +28,7 @@ namespace SuperpowerExample.Apps
                     {
                         parsedDataState.Set("");
                         parsingState.Set(false);
-                        errorState.Set($"Error occured: {error}\nPosition: {errorPosition.Column}");                        
+                        errorState.Set($"Error occurred: {error}\nPosition: {errorPosition.Column}");                        
                     }
                 }
                 parsingState.Set(false);
