@@ -49,7 +49,7 @@ public class SuperpowerApp
                     | Text.Label("JSON Parser")
                     | Text.P("This is an example JSON parser")
                     | new Card("This parser correctly and completely implements the language spec at https://json.org (or should), " +
-                    "but the goal isn't to use this \"for rea\" - there are no tests, after all! :-)\n" +
+                    "but the goal isn't to use this \"for real\" - there are no tests, after all! :-)\n" +
                     "The goal of the example is to demonstrate how a reasonably-efficient parser " +
                     "with end-user-quality error reporting can be built using Superpower")
                     | jsonParserView,
