@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./Superpower.dll"]
+ENTRYPOINT ["dotnet","SuperpowerExample.dll"]
