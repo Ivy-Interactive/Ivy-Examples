@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["Superpower.csproj", "./"]
-RUN dotnet restore "Superpower.csproj"
+COPY ["SuperpowerExample.csproj", "./"]
+RUN dotnet restore "SuperpowerExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "Superpower.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "SuperpowerExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Superpower.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "SuperpowerExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
