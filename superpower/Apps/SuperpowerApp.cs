@@ -55,14 +55,14 @@ public class SuperpowerApp
                     | jsonParserView,
 
                 IntCalculatorSection => Layout.Vertical().Gap(4)
-                    | Text.Label("Arithmetic Expresion Parser")
-                    | Text.P("This is a simple arithmetic expresion parser (integer calculator)")
+                    | Text.Label("Arithmetic Expression Parser")
+                    | Text.P("This is a simple arithmetic expression parser (integer calculator)")
                     | new Card("Demonstrates the use of Superpower for parsing of arithmetic expressions. Supports addition, subtraction, multiplication, and division")
                     | integerCalculatorView,
 
                 DateTimeTextParserSection => Layout.Vertical().Gap(4)
                     | Text.Label("Date Time Text Parser")
-                    | Text.P("This is a simple arithmetic expresion parser (integer calculator)")
+                    | Text.P("This is a simple arithmetic expression parser (integer calculator)")
                     | new Card("Demonstrates how Superpower's text parsers work, parsing ISO-8601 date-times")
                     | Text.Code("Example formats:\r\n2017-01-01\r\n2017-01-01 05:28:10\r\n2017-01-01 05:28\r\n2017-01-01T05:28:10\r\n2017-01-01T05:28")
                     | dateTimeParserView,
