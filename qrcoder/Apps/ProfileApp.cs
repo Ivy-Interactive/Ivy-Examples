@@ -75,13 +75,6 @@ public class ProfileApp : ViewBase
                 | validationView
             | Text.Small("This demo uses QRCoder library to generate vCard QR codes for contact sharing.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [QRCoder](https://github.com/codebude/QRCoder)")
-            | new Html(@"
-                <div >
-                    <a href=""https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fqrcoder%2Fdevcontainer.json&location=EuropeWest"">
-                        <img src=""https://github.com/codespaces/badge.svg"" alt=""Open in GitHub Codespaces"" />
-                    </a>
-                </div>
-            ")
         ).Height(Size.Full());
 
         // Main content - QR Code display
