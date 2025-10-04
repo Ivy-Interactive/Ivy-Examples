@@ -1,6 +1,7 @@
 # QR Code Generator
 
-<img width="1913" height="910" alt="image" src="https://github.com/user-attachments/assets/38adadd4-e3ec-47d4-bac5-6edb68dab0b1" />
+<img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/db0376d5-f4f7-4785-946a-214338c008f2" />
+
 
 ## Created Using Ivy
 
