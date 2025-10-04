@@ -1,4 +1,4 @@
-namespace AsposeBarcodeDemo.Apps;
+namespace AsposeBarCodeExample.Apps;
 
 [App(icon: Icons.QrCode, title: "Aspose BarCode", path: ["Apps"])]
 public class BarcodeApp : ViewBase
