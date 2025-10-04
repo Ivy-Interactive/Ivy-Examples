@@ -21,7 +21,7 @@ public class SmartFormatApp : ViewBase
             ["Pluralization"] = ("You have {Count:plural:no items|one item|{} items}.", "{ \"Count\": 3 }"),
             ["Conditional"] = ("{Gender:male?Mr.|female?Ms.|Mx.} {LastName}", "{ \"Gender\": \"male\", \"LastName\": \"Odiaka\" }"),
             ["List"] = ("Team: {Members:list:{}|, |, and }", "{ \"Members\": [\"Evans\", \"Sarah\", \"Mike\"] }"),
-            ["Numbers"] = ("Temperature: {Temp}°C = {Temp:0.0}°F", "{ \"Temp\": 25 }"),
+            ["Numbers"] = ("Temperature: {Temp}°C = {TempF:0.0}°F", "{ \"Temp\": 25, \"TempF\": 77 }"),
         };
 
         void LoadExample(string exampleName)
@@ -78,7 +78,7 @@ public class SmartFormatApp : ViewBase
                 
                 Text.H3("Output"),
                 new Box()
-                    .Color(outputText.Value.StartsWith("X") ? Colors.Red : Colors.Gray)
+                    .Color(outputText.Value.StartsWith("❌") ? Colors.Red : Colors.Gray)
                     .Padding(10)
                     | Text.P(string.IsNullOrEmpty(outputText.Value) 
                         ? "Click 'Format String' to see the result..." 
