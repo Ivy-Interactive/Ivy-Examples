@@ -15,6 +15,7 @@ public class BarcodeApp : ViewBase
     var text = UseState("");
     var encodeType = UseState(EncodeTypes.QR);
     var size = UseState(DemoSize.Medium);
+    var previewUri = UseState("");
 
     var downloadUrl = this.UseDownload(() =>
     {
@@ -58,15 +59,53 @@ public class BarcodeApp : ViewBase
     var controls = Layout.Horizontal().Gap(2)
       | typeDropDown
       | sizeDropDown
-      | new Button("Download").Primary().Url(downloadUrl.Value).Icon(Icons.Download);
+      | new Button("Preview").Primary().Icon(Icons.Eye)
+        .HandleClick(() =>
+        {
+          if (string.IsNullOrWhiteSpace(text.Value))
+          {
+            previewUri.Value = "";
+            return;
+          }
 
-    return Layout.Center()
-      | new Card(
-        Layout.Vertical().Gap(6).Padding(3)
-        | Text.H2("Try Now")
-        | Text.Muted("Generate barcodes using Aspose.BarCode")
-        | text.ToCodeInput().Language(Languages.Text).Width(Size.Full()).Height(Size.Units(25)).Placeholder("Enter your text here...")
-        | controls
-      ).Width(Size.Units(140).Max(900));
+          var xDimension = size.Value switch
+          {
+            DemoSize.Small => 3f,
+            DemoSize.Medium => 10f,
+            DemoSize.Large => 30f,
+            _ => 10f
+          };
+
+          using var generator = new BarcodeGenerator(encodeType.Value, text.Value);
+          generator.Parameters.Barcode.XDimension.Pixels = xDimension;
+
+          using var ms = new MemoryStream();
+          generator.Save(ms, BarCodeImageFormat.Png);
+          var base64 = Convert.ToBase64String(ms.ToArray());
+          previewUri.Value = $"data:image/png;base64,{base64}";
+        })
+      | new Button("Download").Primary().Url(downloadUrl.Value).Icon(Icons.Download)
+        .Disabled(string.IsNullOrEmpty(previewUri.Value));
+
+    var leftCard = new Card(
+      Layout.Vertical().Gap(6).Padding(3)
+      | Text.H2("Input")
+      | Text.Muted("Enter text and barcode options")
+      | text.ToCodeInput().Language(Languages.Text).Width(Size.Full()).Height(Size.Units(25)).Placeholder("Enter text...")
+      | controls
+    ).Width(Size.Auto());
+
+    var rightCardBody = Layout.Vertical().Gap(4)
+      | Text.H2("Barcode")
+      | Text.Muted("Preview")
+      | (!string.IsNullOrEmpty(previewUri.Value)
+          ? new Image(previewUri.Value!).Width(Size.Units(100)).Height(Size.Units(100))
+          : Text.Muted("No preview"));
+
+    var rightCard = new Card(rightCardBody).Width(Size.Auto());
+
+    return Layout.Horizontal().Gap(6).Align(Align.Center)
+          | leftCard
+          | rightCard;
   }
 }
