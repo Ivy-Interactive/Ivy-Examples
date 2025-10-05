@@ -1,6 +1,6 @@
 # Aspose.BarCode Generator
 
-<img width="1917" height="909" alt="image" src="https://github.com/user-attachments/assets/110fbdfe-f4a6-404d-927a-99e060b09d48" />
+<img width="1916" height="909" alt="Image" src="https://github.com/user-attachments/assets/3ae37d9a-cc50-4a9a-878a-1973daca1dbb" />
 
 ## Created Using Ivy
 
