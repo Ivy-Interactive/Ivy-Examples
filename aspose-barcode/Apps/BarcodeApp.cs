@@ -56,7 +56,7 @@ public class BarcodeApp : ViewBase
         MenuItem.Default("Large").HandleSelect(() => size.Value = DemoSize.Large)
       );
 
-    var controls = Layout.Horizontal().Gap(2)
+    var controls = Layout.Horizontal().Gap(2).Align(Align.Center)
       | typeDropDown
       | sizeDropDown
       | new Button("Preview").Primary().Icon(Icons.Eye)
@@ -93,16 +93,25 @@ public class BarcodeApp : ViewBase
       | Text.Muted("Enter text and barcode options")
       | text.ToCodeInput().Language(Languages.Text).Width(Size.Full()).Height(Size.Units(25)).Placeholder("Enter text...")
       | controls
-    ).Width(Size.Auto());
+    ).Width(Size.Fraction(0.45f)).Height(130);
+
+    var previewPixels = size.Value switch
+    {
+      DemoSize.Small => 50,
+      DemoSize.Medium => 65,
+      DemoSize.Large => 80,
+      _ => 60
+    };
 
     var rightCardBody = Layout.Vertical().Gap(4)
       | Text.H2("Barcode")
       | Text.Muted("Preview")
+      | (Layout.Center()
       | (!string.IsNullOrEmpty(previewUri.Value)
-          ? new Image(previewUri.Value!).Width(Size.Units(100)).Height(Size.Units(100))
-          : Text.Muted("No preview"));
+          ? new Image(previewUri.Value!).Width(Size.Units(previewPixels)).Height(Size.Units(previewPixels))
+          : Text.Muted("No preview")));
 
-    var rightCard = new Card(rightCardBody).Width(Size.Auto());
+    var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.35f)).Height(130);
 
     return Layout.Horizontal().Gap(6).Align(Align.Center)
           | leftCard
