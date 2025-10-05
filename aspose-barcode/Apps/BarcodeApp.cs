@@ -90,6 +90,8 @@ public class BarcodeApp : ViewBase
       | Text.Muted("Enter text and barcode options")
       | text.ToCodeInput().Language(Languages.Text).Width(Size.Full()).Height(Size.Units(25)).Placeholder("Enter text...")
       | controls
+      | Text.Small("This demo uses Aspose.BarCode for .NET to generate barcodes.")
+      | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.BarCode for .NET](https://products.aspose.com/barcode/net/)")
     ).Width(Size.Fraction(0.45f)).Height(130);
 
     var rightCardBody = Layout.Vertical().Gap(4)
