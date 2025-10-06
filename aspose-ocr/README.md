@@ -68,7 +68,21 @@ Deploy this example to Ivy's hosting platform:
    ```
 This will deploy your OCR application with a single command.
 
+## Licensing & Trial Limitations
+
+**Aspose.OCR for .NET** is a commercial library that can be used in trial (evaluation) mode without a license.
+
+### Trial Mode Restrictions
+
+When running without a license, the following limitations apply:
+
+- If the recognized image contains **more than 300 characters**, only the **first 300 characters** are recognized.
+- If the recognized image contains **less than 300 characters**, only the **first 60%** are recognized.
+
+For more licensing options (metered, embedded resources, stream), see the [official licensing documentation](https://docs.aspose.com/ocr/net/licensing/).
+
 ## Learn More
 
 - Aspose.OCR for .NET overview: [products.aspose.com/ocr/net](https://products.aspose.com/ocr/net/)
+- Aspose.OCR Licensing: [docs.aspose.com/ocr/net/licensing](https://docs.aspose.com/ocr/net/licensing/)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
