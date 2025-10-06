@@ -1,5 +1,5 @@
 {
-    "name": "QR Code Generator",
+    "name": "Aspose BarCode",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
     "workspaceFolder": "/workspaces/Ivy-Examples/aspose-barcode",
