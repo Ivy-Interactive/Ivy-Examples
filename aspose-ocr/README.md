@@ -39,7 +39,7 @@ Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
 
 ## How to Run
 
-1. **Prerequisites**: .NET 8+ SDK
+1. **Prerequisites**: .NET 9+ SDK
 2. **Navigate to the example**:
    ```bash
    cd aspose-ocr
