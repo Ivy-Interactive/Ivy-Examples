@@ -1,7 +1,7 @@
-﻿using Ivy.Aspose.OCR.Examples.Connections.OCR;
+﻿using AsposeOcrExample.Connections.OCR;
 using System.IO;
 
-namespace Ivy.Aspose.OCR.Examples.Apps;
+namespace AsposeOcrExample.Apps;
 
 [App(icon: Icons.FileImage, path: ["Apps"])]
 public class ImageToTextApp : ViewBase

@@ -1,4 +1,4 @@
-﻿namespace Ivy.Aspose.OCR.Examples.Connections.OCR;
+﻿namespace AsposeOcrExample.Connections.OCR;
 
 public interface IOCRService
 {

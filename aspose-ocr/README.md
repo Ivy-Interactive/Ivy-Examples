@@ -1,4 +1,4 @@
-# Ivy.Aspose.OCR.Examples 
+# AsposeOcrExample
 
 Web application created using [Ivy](https://github.com/Ivy-Interactive/Ivy-Framework). 
 

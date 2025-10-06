@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36429.23 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ivy.Aspose.OCR.Examples", "Ivy.Aspose.OCR.Examples.csproj", "{BA2A13B0-78C9-203B-1462-034AD42E4D37}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsposeOcrExample", "AsposeOcrExample.csproj", "{BA2A13B0-78C9-203B-1462-034AD42E4D37}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,6 +1,6 @@
 ﻿using Aspose.OCR;
 
-namespace Ivy.Aspose.OCR.Examples.Connections.OCR.Aspose;
+namespace AsposeOcrExample.Connections.OCR.Aspose;
 
 public class AsposeOcrService: IOCRService
 {

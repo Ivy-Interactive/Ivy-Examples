@@ -1,5 +1,5 @@
 
-using Ivy.Aspose.OCR.Examples.Apps;
+using AsposeOcrExample.Apps;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();

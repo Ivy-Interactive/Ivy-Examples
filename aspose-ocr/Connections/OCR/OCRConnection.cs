@@ -1,7 +1,7 @@
-﻿using Ivy.Aspose.OCR.Examples.Connections.OCR.Aspose;
+﻿using AsposeOcrExample.Connections.OCR.Aspose;
 using Ivy.Connections;
 
-namespace Ivy.Aspose.OCR.Examples.Connections.OCR;
+namespace AsposeOcrExample.Connections.OCR;
 
 public class OCRConnection : IConnection
 {
