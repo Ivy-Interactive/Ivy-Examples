@@ -31,39 +31,44 @@ public class ImageToTextApp : ViewBase
             "uploaded-image"
         );
 
-        return Layout.Vertical(
-            Text.H1("Convert Image to text online").Color(Colors.Green),
-            Text.Block("Free OCR software to convert images or screenshots to text online"),
-            error.Value != null
-                ? new Callout(error.Value, variant: CalloutVariant.Error)
-                : null,
-            files.ToFileInput(uploadUrl, "Upload Image").Accept("image/*"),
-            new Button("Recognize", _ =>
-            {
-                if (error.Value == null && fileBytes.Value != null)
+        var leftCard = new Card(
+            Layout.Vertical().Gap(6).Padding(3)
+            | Text.H2("Input")
+            | Text.Muted("Upload an image and run OCR")
+            | (error.Value != null ? new Callout(error.Value, variant: CalloutVariant.Error) : null)
+            | files.ToFileInput(uploadUrl, "Upload Image").Accept("image/*")
+            | new Button("Recognize").Primary().Icon(Icons.Eye)
+                .HandleClick(() =>
                 {
-                    using var ms = new MemoryStream(fileBytes.Value);
+                    if (error.Value == null && fileBytes.Value != null)
+                    {
+                        using var ms = new MemoryStream(fileBytes.Value);
 
-                    // Create recognition engine
-                    var recognitionEngine = new AsposeOcr();
+                        var recognitionEngine = new AsposeOcr();
+                        using var source = new OcrInput(InputType.SingleImage);
+                        source.Add(ms);
 
-                    // Prepare input (single image) and add uploaded stream
-                    using var source = new OcrInput(InputType.SingleImage);
-                    source.Add(ms);
+                        var results = recognitionEngine.Recognize(source);
+                        outputText.Value = results.Count > 0 ? results[0].RecognitionText : string.Empty;
+                        fileBytes.Set((byte[]?)null);
+                    }
+                })
+            | Text.Small("This demo uses Aspose.OCR for .NET to recognize text.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.OCR for .NET](https://products.aspose.com/ocr/net/)")
+        ).Width(Size.Fraction(0.45f)).Height(130);
 
-                    // Recognize text
-                    var results = recognitionEngine.Recognize(source);
+        var rightCardBody = Layout.Vertical().Gap(4)
+            | Text.H2("Recognized Text")
+            | Text.Muted("Output")
+            | outputText.ToCodeInput()
+                .Width(Size.Full())
+                .Height(Size.Units(70))
+                .Language(Languages.Text);
 
-                    // Output first result
-                    outputText.Value = results.Count > 0 ? results[0].RecognitionText : string.Empty;
-                    fileBytes.Set((byte[]?)null); // Clear stored bytes once completed
-                }
-            }),
-            Text.Block("Output Text:"),
-            outputText.ToCodeInput()
-                .Width(Size.Auto())
-                .Height(Size.Auto())
-                .Language(Languages.Text)
-            ).Align(Align.Center);
+        var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(130);
+
+        return Layout.Horizontal().Gap(6).Align(Align.Center)
+            | leftCard
+            | rightCard;
     }
 }
