@@ -1,4 +1,4 @@
-﻿using AsposeOcrExample.Connections.OCR;
+﻿using Aspose.OCR;
 using System.IO;
 
 namespace AsposeOcrExample.Apps;
@@ -9,7 +9,6 @@ public class ImageToTextApp : ViewBase
     public override object? Build()
     {
         var outputText = this.UseState<string>("");
-        var ocrService = UseService<IOCRService>();
 
         var error = UseState<string?>(() => null);
         var files = UseState<FileInput?>(() => null);
@@ -43,14 +42,28 @@ public class ImageToTextApp : ViewBase
             {
                 if (error.Value == null && fileBytes.Value != null)
                 {
-                    // Use the stored file bytes instead of file.Content
                     using var ms = new MemoryStream(fileBytes.Value);
-                    outputText.Value = ocrService.ExtractText(ms);
+
+                    // Create recognition engine
+                    var recognitionEngine = new AsposeOcr();
+
+                    // Prepare input (single image) and add uploaded stream
+                    using var source = new OcrInput(InputType.SingleImage);
+                    source.Add(ms);
+
+                    // Recognize text
+                    var results = recognitionEngine.Recognize(source);
+
+                    // Output first result
+                    outputText.Value = results.Count > 0 ? results[0].RecognitionText : string.Empty;
                     fileBytes.Set((byte[]?)null); // Clear stored bytes once completed
                 }
             }),
             Text.Block("Output Text:"),
-            new ObservableView<string>(outputText)
+            outputText.ToCodeInput()
+                .Width(Size.Auto())
+                .Height(Size.Auto())
+                .Language(Languages.Text)
             ).Align(Align.Center);
     }
 }

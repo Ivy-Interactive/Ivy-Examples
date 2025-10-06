@@ -17,7 +17,7 @@
   
   <ItemGroup>
     <PackageReference Include="Aspose.OCR" Version="25.9.0" />
-    <PackageReference Include="Ivy" Version="1.0.113.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
 
 </Project>
