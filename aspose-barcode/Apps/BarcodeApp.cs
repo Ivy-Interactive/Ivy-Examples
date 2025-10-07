@@ -98,8 +98,8 @@ public class BarcodeApp : ViewBase
       | Text.H2("Barcode")
       | Text.Muted("Preview")
       | (Layout.Center()
-      | (!string.IsNullOrEmpty(previewUri.Value)
-          ? new Image(previewUri.Value!) // Use intrinsic size to avoid scaling blur
+      | (previewUri.Value is string uri && !string.IsNullOrEmpty(uri)
+          ? new Image(uri) // Use intrinsic size to avoid scaling blur
           : Text.Muted("No preview")));
 
     var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(130);
