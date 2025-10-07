@@ -135,7 +135,7 @@ public class CreateNewDocumentApp : ViewBase
 
                 return new Card(new StackLayout(cardContent.ToArray(), gap: 2));
             }),
-            
+            new Spacer(),
             Text.Small("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents."),
             Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)")
         ], gap: 4);
