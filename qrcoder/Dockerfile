@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["QrCodeProfile.csproj", "./"]
-RUN dotnet restore "QrCodeProfile.csproj"
+COPY ["QrCoderExample.csproj", "./"]
+RUN dotnet restore "QrCoderExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "QrCodeProfile.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "QrCoderExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "QrCodeProfile.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "QrCoderExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./QrCodeProfile.dll"]
+ENTRYPOINT ["dotnet","./QrCoderExample.dll"]
