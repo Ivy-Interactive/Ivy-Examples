@@ -4,6 +4,14 @@
 
 <img width="1919" height="913" alt="Image" src="https://github.com/user-attachments/assets/b4e0642b-7f22-4491-a803-c7697932e884" />
 
+## One-Click Development Environment
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Faspose-words%2Fdevcontainer.json&location=EuropeWest)
+
+Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+- **.NET 9.0** SDK pre-installed
+- **Ready-to-run** development environment
+- **No local setup** required
 
 ## Created Using Ivy
 
@@ -35,15 +43,6 @@ This specific implementation creates a **Document Generator** application that a
 - Generates documents with professional headers and footers
 - Supports mail merge placeholders for form letters
 - Provides type-safe file downloads with proper MIME types
-
-## One-Click Development Environment
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Faspose-words%2Fdevcontainer.json&location=EuropeWest)
-
-Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
-- **Ready-to-run** development environment
-- **No local setup** required
 
 ## How to Run
 
