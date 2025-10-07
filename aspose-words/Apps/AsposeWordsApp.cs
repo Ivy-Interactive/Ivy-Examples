@@ -38,6 +38,7 @@ public class CreateNewDocumentApp : ViewBase
         // State for each template
         var generatedDocuments = UseState<Dictionary<string, Document>>(new Dictionary<string, Document>());
         var isGenerating = UseState<string?>("");
+        var errorMessages = UseState<Dictionary<string, string>>(new Dictionary<string, string>());
 
         return new StackLayout([
             Text.H2("Aspose.Words for .NET Demo"),
@@ -98,6 +99,12 @@ public class CreateNewDocumentApp : ViewBase
                 {
                     cardContent.Add(new Button("Generate", _ => {
                         isGenerating.Set(template.Name);
+                        
+                        // Clear previous error
+                        var clearedErrors = new Dictionary<string, string>(errorMessages.Value);
+                        clearedErrors.Remove(template.Name);
+                        errorMessages.Set(clearedErrors);
+                        
                         try
                         {
                             var doc = template.Generator();
@@ -106,6 +113,14 @@ public class CreateNewDocumentApp : ViewBase
                                 [template.Name] = doc
                             };
                             generatedDocuments.Set(updatedDocs);
+                        }
+                        catch (Exception ex)
+                        {
+                            var updatedErrors = new Dictionary<string, string>(errorMessages.Value)
+                            {
+                                [template.Name] = $"Failed to generate document: {ex.Message}"
+                            };
+                            errorMessages.Set(updatedErrors);
                         }
                         finally
                         {
@@ -122,6 +137,12 @@ public class CreateNewDocumentApp : ViewBase
                     cardContent.Add(new StackLayout([
                         Text.Muted("Generating...")
                     ], Ivy.Shared.Orientation.Horizontal, align: Align.Center, gap: 2));
+                }
+                
+                // Error message
+                if (errorMessages.Value.ContainsKey(template.Name))
+                {
+                    cardContent.Add(Text.Danger(errorMessages.Value[template.Name]));
                 }
                 
                 // Step 2: Download button (if generated)

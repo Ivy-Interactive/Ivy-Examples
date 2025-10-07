@@ -10,6 +10,7 @@ public class TextGeneratorApp : ViewBase
         var inputText = UseState(() => "");
         var generatedDoc = UseState<Document?>(() => null);
         var isGenerating = UseState(() => false);
+        var errorMessage = UseState(() => "");
 
         var downloadUrl = this.UseDownload(
             () =>
@@ -46,6 +47,7 @@ public class TextGeneratorApp : ViewBase
                         }
 
                         isGenerating.Set(true);
+                        errorMessage.Set("");
                         try
                         {
                             var doc = new Document();
@@ -58,6 +60,10 @@ public class TextGeneratorApp : ViewBase
 
                             generatedDoc.Set(doc);
                         }
+                        catch (Exception ex)
+                        {
+                            errorMessage.Set($"Failed to generate document: {ex.Message}");
+                        }
                         finally
                         {
                             isGenerating.Set(false);
@@ -69,6 +75,9 @@ public class TextGeneratorApp : ViewBase
                     : null!)
                 | (isGenerating.Value
                     ? Text.Muted("Generating document...")
+                    : null!)
+                | (!string.IsNullOrEmpty(errorMessage.Value)
+                    ? Text.Danger(errorMessage.Value)
                     : null!)
                 | (generatedDoc.Value != null && !isGenerating.Value
                     ? new Button("Download DOCX")
