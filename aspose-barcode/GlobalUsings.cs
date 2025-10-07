@@ -28,4 +28,4 @@ global using System;
 global using System.IO;
 global using Aspose.BarCode.Generation;
 
-namespace AsposeBarcodeDemo;
+namespace AsposeBarCodeExample;
