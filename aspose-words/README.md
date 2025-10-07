@@ -26,7 +26,7 @@ This specific implementation creates a **Document Generator** application that a
 - **Download DOCX Files**: Export generated documents in Microsoft Word format
 - **Rich Formatting Support**: Create documents with headers, footers, tables, and styled text
 - **Template-Based Approach**: Select from multiple document types optimized for different business needs
-
+- **Custom Text to DOCX**: Instantly convert any custom text into a Word document with a simple text input interface
 **Technical Implementation:**
 
 - Uses Aspose.Words DocumentBuilder API for document construction
@@ -42,8 +42,6 @@ This specific implementation creates a **Document Generator** application that a
 
 Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
 - **.NET 9.0** SDK pre-installed
-- **All Ivy Examples** available for exploration
-- **Navigate to `aspose-words` folder** to run this Word Document Generator
 - **Ready-to-run** development environment
 - **No local setup** required
 
@@ -78,4 +76,7 @@ Deploy this example to Ivy's hosting platform:
    ```
 This will deploy your Word document generation application with a single command.
 
-## For more details, see the [Ivy Documentation](https://docs.ivy.app)
+## Learn More
+
+- **Aspose.Words for .NET overview**: [products.aspose.com/words/net](https://products.aspose.com/words/net)
+- **Ivy Documentation**: [docs.ivy.app](https://docs.ivy.app)
