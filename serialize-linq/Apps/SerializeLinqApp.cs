@@ -30,7 +30,7 @@ public class SerializeLinqApp : ViewBase
             //Serialize button
             | new Button("Serialize", () =>
             {
-                Expression<Func<int, bool>> expression = null;
+                Expression<Func<int, bool>>? expression;
                 switch (operatorState.Value)
                 {
                     case "=":
@@ -50,6 +50,9 @@ public class SerializeLinqApp : ViewBase
                         break;
                     case "!=":
                         expression = val => value1State.Value != val;
+                        break;
+                    default:
+                        expression = null;
                         break;
                 }
                 if (expression != null)
@@ -80,7 +83,11 @@ public class SerializeLinqApp : ViewBase
                     //Result of the expresion when using value2
                     comparisonResultState.Set($"The comparison is {expression.Compile()(value2State.Value).ToString().ToLower()}");
                 }
-                catch { }
+                catch (Exception ex) 
+                {
+                    expressionState.Set(ex.Message);
+                    comparisonResultState.Set("");
+                }
             })
             //Deserialization results
             | Text.Block(expressionState.Value)
