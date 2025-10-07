@@ -14,7 +14,7 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="Aspose.Words" Version="25.9.0" />
-    <PackageReference Include="Ivy" Version="1.0.110.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Apps" />
