@@ -2,10 +2,10 @@ using Aspose.Words;
 using Aspose.Words.Drawing;
 using Aspose.Words.Tables;
 
-namespace AsposeWords.Apps;
+namespace AsposeWordsExample.Apps;
 
-[App(icon: Icons.FileText, title: "Aspose.Words Demo")]
-public class AsposeWordsApp : ViewBase
+[App(icon: Icons.FileText, title: "Create New Documents")]
+public class CreateNewDocumentApp : ViewBase
 {
     public record DocumentTemplate(string Name, string Description, Func<Document> Generator);
 

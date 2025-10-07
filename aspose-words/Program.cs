@@ -1,4 +1,4 @@
-using AsposeWords.Apps;
+using AsposeWordsExample.Apps;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
@@ -7,6 +7,6 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings().DefaultApp<AsposeWordsApp>().UseTabs(preventDuplicates: true);
+var chromeSettings = new ChromeSettings().DefaultApp<CreateNewDocumentApp>().UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 await server.RunAsync();
