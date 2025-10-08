@@ -4,7 +4,7 @@ using Type = BarcodeStandard.Type;
 
 namespace BarcodeLibExample.Apps
 {
-    [App(icon: Icons.Barcode, title: "BarcodeLib Demo", path: ["Apps"])]
+    [App(icon: Icons.Barcode, title: "BarcodeLib", path: ["Apps"])]
     public sealed class BarcodeLibApp : ViewBase
     {
         private static readonly (string Label, Type Type)[] Symbologies =
@@ -50,39 +50,53 @@ namespace BarcodeLibExample.Apps
                 .Icon(Icons.ChevronDown)
                 .WithDropDown(typeItems);
 
-            return Layout.Center()
-                | new Card(
-                    Layout.Vertical().Gap(6).Padding(3)
-                    | Text.H2("Generate a barcode")
-                    | Text.Muted("This demo uses the BarcodeLib NuGet package to generate barcodes.")
-                    | text.ToInput(placeholder: "Enter the barcode value …")
-                    | typeDropDown
-                    | new Button(includeLabel.Value ? "Label: ON" : "Label: OFF")
-                        .HandleClick(() => includeLabel.Value = !includeLabel.Value)
-                    | Text.Muted("Barcode size is fixed at 300×120 pixels.")
-                    // button to generate the preview; clicking this will generate and display the barcode
-                    | new Button("Preview").Primary().Icon(Icons.Eye)
-                        .HandleClick(() =>
+            var controls = Layout.Horizontal().Gap(2).Align(Align.Center)
+                | typeDropDown
+                | new Button(includeLabel.Value ? "Label: ON" : "Label: OFF")
+                    .Primary()
+                    .HandleClick(() => includeLabel.Value = !includeLabel.Value)
+                | new Button("Preview").Primary().Icon(Icons.Eye)
+                    .HandleClick(() =>
+                    {
+                        if (string.IsNullOrWhiteSpace(text.Value))
                         {
-                            if (string.IsNullOrWhiteSpace(text.Value))
-                            {
-                                previewUri.Value = "";
-                                return;
-                            }
-                            var (_, type) = Symbologies[typeIndex.Value];
-                            var b = new Barcode { IncludeLabel = includeLabel.Value };
-                            using var bitmap = b.Encode(type, text.Value, SKColors.Black, SKColors.White, width, height);
-                            using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
-                            var base64 = Convert.ToBase64String(data.ToArray());
-                            previewUri.Value = $"data:image/png;base64,{base64}";
-                        })
-                    // show the preview image if available
-                    | (!string.IsNullOrEmpty(previewUri.Value) ? new Image(previewUri.Value!).Width(150).Height(60) : "")
-                    // disable the download button until a preview has been generated
-                    | new Button("Download").Primary().Icon(Icons.Download)
-                        .Disabled(string.IsNullOrEmpty(previewUri.Value))
-                        .Url(downloadUrl.Value)
-                  ).Width(Size.Units(120).Max(900));
+                            previewUri.Value = "";
+                            return;
+                        }
+                        var (_, type) = Symbologies[typeIndex.Value];
+                        var b = new Barcode { IncludeLabel = includeLabel.Value };
+                        using var bitmap = b.Encode(type, text.Value, SKColors.Black, SKColors.White, width, height);
+                        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+                        var base64 = Convert.ToBase64String(data.ToArray());
+                        previewUri.Value = $"data:image/png;base64,{base64}";
+                    })
+                | new Button("Download").Primary().Icon(Icons.Download)
+                    .Disabled(string.IsNullOrEmpty(previewUri.Value))
+                    .Url(downloadUrl.Value ?? "");
+
+            var leftCard = new Card(
+                Layout.Vertical().Gap(4).Padding(2)
+                | Text.H2("Input")
+                | Text.Muted("Enter barcode value and options")
+                | text.ToInput(placeholder: "Enter the barcode value …")
+                | controls
+                | Text.Small("This demo uses the BarcodeLib NuGet package to generate barcodes.")
+                | Text.Muted("Barcode size is fixed at 300×120 pixels.")
+            ).Width(Size.Fraction(0.45f)).Height(110);
+
+            var rightCard = new Card(
+                Layout.Vertical().Gap(4).Padding(2)
+                | Text.H2("Barcode")
+                | Text.Muted("Preview")
+                | (Layout.Center()
+                | (previewUri.Value is string uri && !string.IsNullOrEmpty(uri)
+                    ? new Image(uri) // Use intrinsic size to avoid scaling blur
+                    : Text.Muted("No preview")))
+            ).Width(Size.Fraction(0.45f)).Height(110);
+
+            return Layout.Horizontal().Gap(6).Align(Align.Center)
+                | leftCard
+                | rightCard;
         }
     }
 }
