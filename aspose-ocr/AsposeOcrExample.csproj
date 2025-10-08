@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>AsposeOcrExample</RootNamespace>
+    <UserSecretsId>302df7e9-e2d1-4d4c-b745-a93a4da85168</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
