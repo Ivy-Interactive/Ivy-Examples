@@ -8,8 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ivy" Version="1.0.115" />
+		<PackageReference Include="Ivy" Version="1.*" />
 		<PackageReference Include="BarcodeLib" Version="3.1.5" />
-		<PackageReference Include="SkiaSharp" Version="3.119.1" />
 	</ItemGroup>
 </Project>
