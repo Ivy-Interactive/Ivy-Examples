@@ -65,7 +65,7 @@ public class ProfileApp : ViewBase
 
         // Sidebar content - Profile form
         var formContent = new Card(
-            Layout.Vertical().Gap(6).Padding(2)
+            Layout.Vertical().Padding(2)
             | Text.H2("Create Your Profile")
             | Text.Block("Fill in your information to create a shareable profile")
             | formView
@@ -75,12 +75,12 @@ public class ProfileApp : ViewBase
                 | validationView
             | Text.Small("This demo uses QRCoder library to generate vCard QR codes for contact sharing.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [QRCoder](https://github.com/codebude/QRCoder)")
-        ).Height(Size.Full());
+        ).Height(Size.Fit().Min(Size.Full()));
 
         // Main content - QR Code display
         var qrCodeContent = profileSubmitted.Value && !string.IsNullOrEmpty(qrCodeBase64.Value) ?
             new Card(
-                Layout.Vertical().Gap(6).Padding(2)
+                Layout.Vertical().Padding(2)
                 | Text.H2("Your QR Code")
                 | Text.Block("Scan this QR code with your phone to automatically add this contact to your contacts:")
                 | (Layout.Horizontal().Align(Align.Center)
@@ -89,18 +89,16 @@ public class ProfileApp : ViewBase
             ).BorderStyle(BorderStyle.None).Width(Size.Units(70)).Height(Size.Units(70)))
             ).Height(Size.Full())
             : new Card(
-                Layout.Vertical().Gap(6).Padding(2)
+                Layout.Vertical().Padding(2)
                 | (Layout.Center()
                     | Text.H2("Welcome to Profile Creator"))
                 | Text.Block("Fill out the form in the sidebar to create your shareable profile QR code.")
                 | Text.Block("Once you submit the form, your QR code will appear here in the main content area.")
             ).Height(Size.Full());
 
-        return Layout.Vertical().Height(Size.Full())
-            | new ResizeablePanelGroup(
-                new ResizeablePanel(70, formContent),
-                new ResizeablePanel(30, qrCodeContent)
-            ).Horizontal();
+        return Layout.Horizontal().Gap(6)
+            | formContent.Width(Size.Fraction(0.70f))
+            | qrCodeContent.Width(Size.Fraction(0.30f));
 
     }
 }
