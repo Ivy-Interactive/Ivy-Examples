@@ -8,7 +8,6 @@
 
 Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
 - **.NET 9.0** SDK pre-installed
-- **Node.js 20 LTS** pre-installed (required for jsii/Constructs)
 - **Ready-to-run** development environment
 - **No local setup** required
 
@@ -42,7 +41,7 @@ This example demonstrates building composable configuration models using the [AW
 
 ## How to Run
 
-1. **Prerequisites**: .NET 9.0 SDK and Node.js 20 LTS
+1. **Prerequisites**: .NET 9.0 SDK
 2. **Navigate to the example**:
    ```bash
    cd constructs
