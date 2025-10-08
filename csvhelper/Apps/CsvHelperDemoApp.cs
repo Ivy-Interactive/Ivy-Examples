@@ -1,6 +1,6 @@
 
-[App(icon: Icons.Box, title: "CsvHelper Demo")]
-public class CsvHelperDemoApp : ViewBase
+[App(icon: Icons.Box, title: "CsvHelper")]
+public class CsvHelperApp : ViewBase
 {
     public record ProductModel(string Name, string Description, decimal Price, string Category);
 

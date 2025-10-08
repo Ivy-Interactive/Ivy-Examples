@@ -28,4 +28,4 @@ global using System.Reactive.Linq;
 global using CsvHelper;
 global using CsvHelper.Configuration;
 
-namespace CsvHelperDemo;
+namespace CsvHelperExample;
