@@ -4,7 +4,7 @@ using ConstructsExample.Extensions;
 
 namespace ConstructsExample.Apps;
 
-[App(icon: Icons.PartyPopper, title: "Constructs (AWS)")]
+[App(icon: Icons.PartyPopper, title: "Constructs")]
 public class ConstructsApp : ViewBase
 {
     private RootConstruct? _root;
@@ -16,13 +16,13 @@ public class ConstructsApp : ViewBase
         var parent = UseState(string.Empty);
         var childId = UseState(string.Empty);
         var maxLines = UseState(MaxLines);
+        var client = UseService<IClientProvider>();
 
         if (_root is null)
         {
             try
             {
                 _root = DemoConstruct.BuildRoot();
-                parent.Set(_root.Node.Path);
             }
             catch (Exception ex)
             {
@@ -47,8 +47,7 @@ public class ConstructsApp : ViewBase
         LayoutView left = Layout.Vertical().Gap(6)
             | Text.H2("AWS Constructs — interactive demo")
             | Text.Block("Write a parent path, add a child construct, or reset to the canonical tree.")
-            | Text.Block("Parent path, ex. Root/Demo/Nested. Start typing to filter tree view.")
-            | parent.ToInput(placeholder: "Root")
+            | parent.ToInput(placeholder: "Parent path, ex. Root/Demo/Nested. Start typing to filter tree view.")
             | Text.Block("New child id")
             | childId.ToInput(placeholder: "ChildX")
             | (
@@ -62,35 +61,37 @@ public class ConstructsApp : ViewBase
                     string newChildId = childId.Value.Trim();
                     if (string.IsNullOrWhiteSpace(newChildId))
                     {
-                        status.Set("Enter a non-empty child id.");
+                        client.Toast("Enter a non-empty child id.");
                         return;
                     }
 
                     Construct? parentNode = _root.FindByPath(parentPath);
                     if (parentNode == null)
                     {
-                        status.Set($"Parent path not found: {parentPath}");
+                        client.Toast($"Parent path not found: {parentPath}");
                         return;
                     }
 
                     _ = new Construct(parentNode, newChildId);
                     childId.Set(string.Empty);
-                    status.Set($"Added: {parentNode.Node.Path}/{newChildId}");
-                })
-                | new Button("Reset", onClick: () =>
+                    client.Toast($"Added: {parentNode.Node.Path}/{newChildId}");
+                }).Icon(Icons.Plus)
+                | new Button("Reset", _ =>
                 {
                     _root = DemoConstruct.BuildRoot();
-                    parent.Set(_root.Node.Path);
-                    status.Set("Tree reset.");
+                    parent.Set(string.Empty);
+                    client.Toast("Tree reset.");
                     maxLines.Set(MaxLines);
-                })
-              )
-            | (string.IsNullOrWhiteSpace(status.Value) ? Text.Block(string.Empty) : Text.Block(status.Value));
+                }).Icon(Icons.RefreshCw)
+                )
+                | Text.Small("This demo uses the AWS Constructs library to build composable configuration models.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [AWS Constructs](https://github.com/aws/constructs)")
+            ;
 
         // Build right (tree view) panel
         Card right = new Card(
-                Layout.Vertical().Gap(6).Padding(3)
-                | Text.Block("Current tree (subtree of the selected parent)")
+                Layout.Vertical().Gap(3).Padding(3)
+                | Text.H4("Current tree")
                 | new Separator()
                 | Text.Markdown("```text\n" + string.Join('\n', visible) + "\n```")
                 | (hasMore
@@ -99,14 +100,13 @@ public class ConstructsApp : ViewBase
                         ? new Button("Collapse", onClick: () => maxLines.Set(MaxLines))
                         : Text.Block(string.Empty)))
             )
-            .Width(Size.Units(180).Max(900));
+            .Width(Size.Fraction(0.8f));
 
         return Layout.Center()
              | new Card(
                  Layout.Horizontal().Gap(12).Padding(3)
                  | left
                  | right
-               )
-               .Width(Size.Units(340).Max(1000));
+               ).Width(Size.Fraction(0.8f));
     }
 }
