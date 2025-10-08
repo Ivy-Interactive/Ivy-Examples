@@ -1,6 +1,6 @@
 ﻿using Constructs;
 
-namespace Ivy.Examples.Constructs.Domain;
+namespace ConstructsExample.Domain;
 
 /// <summary>
 /// Provides helpers for traversing and flattening a tree of <see cref="Construct"/> instances.
