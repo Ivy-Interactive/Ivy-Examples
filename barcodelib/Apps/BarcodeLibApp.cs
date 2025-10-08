@@ -2,7 +2,7 @@
 using SkiaSharp;
 using Type = BarcodeStandard.Type;
 
-namespace BarcodelibExample.Apps
+namespace BarcodeLibExample.Apps
 {
     [App(icon: Icons.Barcode, title: "BarcodeLib Demo", path: ["Apps"])]
     public sealed class BarcodeLibApp : ViewBase

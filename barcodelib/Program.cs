@@ -1,4 +1,4 @@
-using BarcodelibExample.Apps;
+using BarcodeLibExample.Apps;
 using Ivy;
 using Ivy.Chrome;
 using System.Globalization;
