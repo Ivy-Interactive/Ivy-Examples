@@ -19,7 +19,7 @@ namespace BarcodeLibExample.Apps
 
         public override object? Build()
         {
-            var text = UseState("038000356216");
+            var text = UseState("123456789012");
             var typeIndex = UseState(0);
             var includeLabel = UseState(true);
             // holds the generated preview data URI. null means no preview yet
@@ -81,17 +81,17 @@ namespace BarcodeLibExample.Apps
                 | text.ToInput(placeholder: "Enter the barcode value …")
                 | controls
                 | Text.Small("This demo uses the BarcodeLib NuGet package to generate barcodes.")
-                | Text.Muted("Barcode size is fixed at 300×120 pixels.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [BarcodeLib](https://github.com/barnhill/barcodelib)")
             ).Width(Size.Fraction(0.45f)).Height(110);
 
             var rightCard = new Card(
                 Layout.Vertical().Gap(4).Padding(2)
                 | Text.H2("Barcode")
                 | Text.Muted("Preview")
-                | (Layout.Center()
-                | (previewUri.Value is string uri && !string.IsNullOrEmpty(uri)
+                | Layout.Horizontal(
+                 (previewUri.Value is string uri && !string.IsNullOrEmpty(uri)
                     ? new Image(uri) // Use intrinsic size to avoid scaling blur
-                    : Text.Muted("No preview")))
+                    : Text.Muted("No preview"))).Align(Align.Center)
             ).Width(Size.Fraction(0.45f)).Height(110);
 
             return Layout.Horizontal().Gap(6).Align(Align.Center)
