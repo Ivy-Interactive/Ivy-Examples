@@ -2,6 +2,15 @@
 
 <img width="1916" height="909" alt="Image" src="https://github.com/user-attachments/assets/3ae37d9a-cc50-4a9a-878a-1973daca1dbb" />
 
+## One-Click Development Environment
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Faspose-barcode%2Fdevcontainer.json&location=EuropeWest)
+
+Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+- **.NET 9.0** SDK pre-installed
+- **Ready-to-run** development environment
+- **No local setup** required
+
 ## Created Using Ivy
 
 Web application created using [Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework).
@@ -27,15 +36,6 @@ This example showcases generating multiple barcode symbologies (QR, PDF417, Code
 - Sets `Parameters.Barcode.XDimension.Pixels` based on size presets for sharp output
 - Generates Base64 PNG for the in-app preview and byte stream for download
 - Single C# view (`Apps/BarcodeApp.cs`) built with Ivy UI primitives
-
-## One-Click Development Environment
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Faspose-barcode%2Fdevcontainer.json&location=EuropeWest)
-
-Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
-- **Ready-to-run** development environment
-- **No local setup** required
 
 ## How to Run
 

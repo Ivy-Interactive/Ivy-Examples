@@ -2,6 +2,14 @@
 
 <img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/db0376d5-f4f7-4785-946a-214338c008f2" />
 
+## One-Click Development Environment
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fqrcoder%2Fdevcontainer.json&location=EuropeWest)
+
+Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+- **.NET 9.0** SDK pre-installed
+- **Ready-to-run** development environment
+- **No local setup** required
 
 ## Created Using Ivy
 
@@ -33,20 +41,9 @@ This specific implementation creates a **Profile Creator** application that allo
 - Creates resizable panel layout for optimal user experience
 - Handles form submission with loading states and error display
 
-## One-Click Development Environment
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fqrcoder%2Fdevcontainer.json&location=EuropeWest)
-
-Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
-- **All Ivy Examples** available for exploration
-- **Navigate to `qrcoder` folder** to run this QR Code Generator
-- **Ready-to-run** development environment
-- **No local setup** required
-
 ## How to Run
 
-1. **Prerequisites**: .NET 8+ SDK
+1. **Prerequisites**: .NET 9.0 SDK
 2. **Navigate to the example**:
    ```bash
    cd qrcoder
