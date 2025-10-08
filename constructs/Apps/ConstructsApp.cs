@@ -1,8 +1,8 @@
 using Constructs;
-using Ivy.Examples.Constructs.Domain;
-using Ivy.Examples.Constructs.Extensions;
+using ConstructsExample.Domain;
+using ConstructsExample.Extensions;
 
-namespace Ivy.Examples.Constructs.Apps;
+namespace ConstructsExample.Apps;
 
 [App(icon: Icons.PartyPopper, title: "Constructs (AWS)")]
 public class ConstructsApp : ViewBase

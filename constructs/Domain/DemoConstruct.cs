@@ -1,6 +1,6 @@
 ﻿using Constructs;
 
-namespace Ivy.Examples.Constructs.Domain;
+namespace ConstructsExample.Domain;
 
 /// <summary>
 /// Represents a demonstration construct that builds a small construct tree for examples and tests.

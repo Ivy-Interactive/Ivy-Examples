@@ -1,6 +1,6 @@
 ﻿using Constructs;
 
-namespace Ivy.Examples.Constructs.Extensions
+namespace ConstructsExample.Extensions
 {
     /// <summary>
     /// Provides extension methods for working with <see cref="Construct"/> instances.
