@@ -25,7 +25,7 @@ var customHeader = Layout.Vertical().Gap(2).Align(Align.Center)
     | Text.Muted("Open Ivy-Examples in Codespaces")
     | new Html(@"
         <div>
-          <a href=""https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fbarcodelib%2Fdevcontainer.json&location=EuropeWest"">
+          <a href=""https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fdevcontainer.json&location=EuropeWest"">
             <img src=""https://github.com/codespaces/badge.svg"" alt=""Open Ivy-Examples in Codespaces"" />
           </a>
         </div>
