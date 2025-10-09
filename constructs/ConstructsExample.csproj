@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>ConstructsExample</RootNamespace>
+    <UserSecretsId>da16ecf5-9666-4517-8973-1e6ed4155167</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
