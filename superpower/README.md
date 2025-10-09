@@ -6,7 +6,7 @@ Built for [Ivy](https://ivy.app/), a web framework for building interactive web 
 
 ## Usage
 
-You can	use the app to parse JSON, simple mathematical expressions, or ISO-8601 date-time strings.
+You can use the app to parse JSON, simple mathematical expressions, or ISO-8601 date-time strings.
 
 ## Run
 
