@@ -60,7 +60,7 @@ public class CronosApp : ViewBase
                 }
             }
         }
-        
+
         string GetCronExpression(CronScheduleType scheduleType)
         {
             return scheduleType switch
@@ -103,37 +103,57 @@ public class CronosApp : ViewBase
             }
         }, selectedSchedule);
 
-        return Layout.Vertical(
-                Text.H1("Cronos"),
-                
+        var userCard = new Card(
+            Layout.Vertical(
+                Text.H3("Cronos"),
                 inputTimeZone
                     .ToSelectInput(timeZones
                         .Select(tz => new Option<string>(tz.Name, tz.Id))
                         .ToList())
                     .WithLabel("Select a time zone"),
-                
+
                 inputCronExpression
                     .ToTextInput()
                     .Placeholder("Cron expression (e.g. \"*/5 * * * *\")")
                     .WithLabel("Enter a cron expression"),
-                
-                includeSeconds
-                    .ToBoolInput(variant: BoolInputs.Checkbox)
-                    .Label("Include seconds"),
-                    
-                    new Button("Try parse", onClick: TryParseCron)
-                        .Disabled(string.IsNullOrWhiteSpace(inputCronExpression.Value)),
-                
-                // Predefined examples
-                Text.H3("Predefined Examples:"),
+
                 selectedSchedule
                     .ToSelectInput(scheduleOptions)
                     .Placeholder("Choose a schedule template...")
-                    .WithLabel("Select schedule type"),
-                
-                // Results
-                Text.H3($"Next occurrence: {dateString}")
-            ).Width(Size.Units(170))
-            .Padding(20, 0, 20, 20);
+                    .WithLabel("Predefined Examples"),
+
+                includeSeconds
+                    .ToBoolInput(variant: BoolInputs.Checkbox)
+                    .Label("Include seconds"),
+
+                new Button("Try parse", onClick: TryParseCron)
+                    .Disabled(string.IsNullOrWhiteSpace(inputCronExpression.Value))
+                    .Icon(Icons.Clock),
+
+                Text.Markdown($"### Next occurrence: `{dateString}`")
+            )
+        );
+
+        var helpCard = new Card(
+            Layout.Vertical(
+                Text.Markdown(
+                    "### Quick Guide\n\n" +
+                    "1. Select a time zone.\n" +
+                    "2. Enter a cron expression or choose a template.\n" +
+                    "3. Optionally enable 'Include seconds' for 6-field crons.\n" +
+                    "4. Click 'Try parse' to validate and compute the next run.\n\n" +
+                    "Notes:\n" +
+                    "- Next occurrence is shown for the selected time zone.\n" +
+                    "- Common operators: `*` any, `/` every, `-` range, `,` list."
+                )
+            )
+        );
+
+        return Layout.Vertical(
+                Layout.Horizontal(
+                    userCard,
+                    helpCard
+                ).Gap(4)
+            );
     }
 }
