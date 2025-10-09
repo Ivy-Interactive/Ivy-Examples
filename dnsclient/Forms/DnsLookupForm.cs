@@ -1,9 +1,9 @@
 ﻿using DnsClient;
-using IvySample.DnsClient.Models;
-using IvySample.DnsClient.Signals;
-using IvySample.DnsClient.Utils;
+using DnsClientExample.Models;
+using DnsClientExample.Signals;
+using DnsClientExample.Utils;
 
-namespace IvySample.DnsClient.Forms;
+namespace DnsClientExample.Forms;
 
 public class DnsLookupForm : ViewBase
 { 

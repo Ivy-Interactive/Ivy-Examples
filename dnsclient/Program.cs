@@ -1,5 +1,5 @@
 using DnsClient;
-using IvySample.DnsClient.Apps;
+using DnsClientExample.Apps;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();

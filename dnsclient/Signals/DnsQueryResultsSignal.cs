@@ -1,6 +1,6 @@
 ﻿using DnsClient;
 
-namespace IvySample.DnsClient.Signals;
+namespace DnsClientExample.Signals;
 
 [Signal(BroadcastType.App)]
 public class DnsQueryResultsSignal : AbstractSignal<DnsQueryResponse?, bool>

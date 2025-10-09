@@ -1,7 +1,7 @@
-﻿using IvySample.DnsClient.Components;
-using IvySample.DnsClient.Forms;
+﻿using DnsClientExample.Components;
+using DnsClientExample.Forms;
 
-namespace IvySample.DnsClient.Apps;
+namespace DnsClientExample.Apps;
 
 [App(icon: Icons.Server, title:"DNS Lookup")]
 public class DnsLookUpApp : ViewBase

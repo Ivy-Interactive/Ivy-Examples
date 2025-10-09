@@ -1,7 +1,7 @@
 ﻿using DnsClient;
-using IvySample.DnsClient.Signals;
+using DnsClientExample.Signals;
 
-namespace IvySample.DnsClient.Components;
+namespace DnsClientExample.Components;
 
 public class DnsQueryResults : ViewBase
 {
