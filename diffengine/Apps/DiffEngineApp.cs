@@ -1,7 +1,7 @@
 namespace DiffengineExample.Apps;
 
 [App(icon: Icons.Diff, title: "DiffEngine")]
-public class HelloApp : ViewBase
+public class DiffEngineApp : ViewBase
 {
     private static readonly string[] Extensions =
     {
