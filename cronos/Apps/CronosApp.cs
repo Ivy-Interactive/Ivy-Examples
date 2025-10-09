@@ -147,8 +147,8 @@ public class CronosApp : ViewBase
                     "- Common operators: `*` any, `/` every, `-` range, `,` list."
                 )
                 | new Spacer()
-                | Text.Small("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents.")
-                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)")
+                | Text.Small("This demo uses Cronos for parsing and validating Cron expressions.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Cronos](https://github.com/HangfireIO/Cronos)")
         ).Height(Size.Fit().Min(Size.Full()));
 
         return Layout.Horizontal().Gap(6)
