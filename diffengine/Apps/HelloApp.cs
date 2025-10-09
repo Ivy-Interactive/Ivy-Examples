@@ -1,6 +1,6 @@
 namespace DiffengineExample.Apps;
 
-[App(icon: Icons.PartyPopper, title: "DiffEngine Demo")]
+[App(icon: Icons.Diff, title: "DiffEngine")]
 public class HelloApp : ViewBase
 {
     public override object Build()
@@ -23,7 +23,7 @@ public class HelloApp : ViewBase
         {
             try
             {
-                error.Value = null;
+                error.Value = "";
                 var pair = await DiffService.LaunchTextAsync(
                     leftText.Value, rightText.Value, textExt.Value ?? "txt");
                 lastLeft.Value = pair.left;
@@ -44,7 +44,7 @@ public class HelloApp : ViewBase
             }
             try
             {
-                error.Value = null;
+                error.Value = "";
                 var pair = await DiffService.LaunchFilesAsync(
                     leftFile.Value, rightFile.Value, fileExt.Value ?? "txt");
                 lastLeft.Value = pair.left;
@@ -62,10 +62,9 @@ public class HelloApp : ViewBase
             DiffService.Kill(lastLeft.Value!, lastRight.Value!);
         }
 
-        // left card (text diff)
-        var textCard =
+        // text diff tab content
+        var textTabContent =
             Layout.Vertical().Gap(6).Padding(2)
-            | Text.H3("Text diff")
             | Text.Block("Type text on each side and choose an extension. Launch writes temp files and opens your diff tool.")
             | Layout.Vertical().Gap(2)
                 | Text.Block("Left (text)")
@@ -78,10 +77,9 @@ public class HelloApp : ViewBase
                 | new Button("Launch Diff (Text)", onClick: () => { _ = launchText(); })
                 | new Button("Kill Last Diff", onClick: () => kill());
 
-        // right card (file diff)
-        var fileCard =
+        // file diff tab content
+        var fileTabContent =
             Layout.Vertical().Gap(6).Padding(2)
-            | Text.H3("File diff (paths)")
             | Text.Block("Enter two file paths (they're copied to temp), then Launch.")
             | Layout.Vertical().Gap(2)
                 | Text.Block("Left file path")
@@ -94,20 +92,19 @@ public class HelloApp : ViewBase
                 | new Button("Launch Diff (Files)", onClick: () => { _ = launchFiles(); })
                 | new Button("Kill Last Diff", onClick: () => kill());
 
-        // put the two cards in a horizontal row
-        // (Width caps each card so inputs stay readable; no Grow needed)
-        var twoUpRow =
-            Layout.Horizontal().Gap(6)
-            | new Card(textCard).Width(Size.Units(75).Max(420))
-            | new Card(fileCard).Width(Size.Units(75).Max(420));
+        // tabs layout
+        var tabsView =
+            Layout.Tabs(
+                new Tab("Text Diff", textTabContent).Icon(Icons.FileText),
+                new Tab("File Paths Diff", fileTabContent).Icon(Icons.File)
+            ).Variant(TabsVariant.Tabs);
 
         // page
         var page =
             Layout.Vertical().Gap(8).Padding(2)
             | Text.H2("DiffEngine × Ivy")
             | Text.Block(string.IsNullOrWhiteSpace(error.Value) ? "" : "⚠ " + error.Value)
-            | twoUpRow
-            | new Separator()
+            | tabsView
             | Layout.Horizontal().Gap(2)
                 | Text.Small($"CI: {(DiffService.IsCi ? "On" : "Off")}")
                 | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "No active diff" : "Last diff ready (Kill available)")
@@ -115,6 +112,6 @@ public class HelloApp : ViewBase
 
         // outer card wide enough to allow side-by-side on big screens
         return Layout.Center()
-             | new Card(page).Width(Size.Units(190).Max(1100));
+             | page;
     }
 }
