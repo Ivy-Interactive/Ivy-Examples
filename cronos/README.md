@@ -1,6 +1,6 @@
 # Cronos 
 
-<img width="1915" height="915" alt="Image" src="https://github.com/user-attachments/assets/b7a355d9-af3b-4ce8-9b04-1b4a120f2b1e" />
+<img width="1917" height="915" alt="Image" src="https://github.com/user-attachments/assets/b7a355d9-af3b-4ce8-9b04-1b4a120f2b1e" />
 
 ## One-Click Development Environment
 
