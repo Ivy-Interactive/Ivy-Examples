@@ -5,7 +5,8 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RootNamespace>BarcodeLibExample</RootNamespace>
-	</PropertyGroup>
+	  <UserSecretsId>413220cf-46c6-40b0-ab98-939aa58ce212</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Ivy" Version="1.*" />
