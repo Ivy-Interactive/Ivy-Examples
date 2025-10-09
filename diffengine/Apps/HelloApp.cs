@@ -3,16 +3,21 @@ namespace DiffengineExample.Apps;
 [App(icon: Icons.Diff, title: "DiffEngine")]
 public class HelloApp : ViewBase
 {
+    private static readonly string[] Extensions =
+    {
+        "txt", "json"
+    };
+
     public override object Build()
     {
         // states
         var leftText = this.UseState("");
         var rightText = this.UseState("");
-        var textExt = this.UseState("txt");
+        var textExtIndex = this.UseState(0);
 
         var leftFile = this.UseState("");
         var rightFile = this.UseState("");
-        var fileExt = this.UseState("txt");
+        var fileExtIndex = this.UseState(0);
 
         var lastLeft = this.UseState<string>();
         var lastRight = this.UseState<string>();
@@ -25,7 +30,7 @@ public class HelloApp : ViewBase
             {
                 error.Value = "";
                 var pair = await DiffService.LaunchTextAsync(
-                    leftText.Value, rightText.Value, textExt.Value ?? "txt");
+                    leftText.Value, rightText.Value, Extensions[textExtIndex.Value]);
                 lastLeft.Value = pair.left;
                 lastRight.Value = pair.right;
             }
@@ -46,7 +51,7 @@ public class HelloApp : ViewBase
             {
                 error.Value = "";
                 var pair = await DiffService.LaunchFilesAsync(
-                    leftFile.Value, rightFile.Value, fileExt.Value ?? "txt");
+                    leftFile.Value, rightFile.Value, Extensions[fileExtIndex.Value]);
                 lastLeft.Value = pair.left;
                 lastRight.Value = pair.right;
             }
@@ -63,21 +68,49 @@ public class HelloApp : ViewBase
         }
 
         // text diff tab content
+        var leftCard =
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H4("Left")
+            | leftText.ToCodeInput(placeholder: "Enter left text here...");
+
+        var rightCard =
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H4("Right")
+            | rightText.ToCodeInput(placeholder: "Enter right text here...");
+
+        var textExtItems = Extensions
+            .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => textExtIndex.Value = idx))
+            .ToArray();
+
         var textTabContent =
             Layout.Vertical().Gap(6).Padding(2)
             | Text.Block("Type text on each side and choose an extension. Launch writes temp files and opens your diff tool.")
-            | Layout.Vertical().Gap(2)
-                | Text.Block("Left (text)")
-                | leftText.ToInput(placeholder: "left text…")
-                | Text.Block("Right (text)")
-                | rightText.ToInput(placeholder: "right text…")
-                | Text.Block("Extension")
-                | textExt.ToInput(placeholder: "txt / json")
-            | Layout.Horizontal().Gap(3)
+            | (Layout.Horizontal().Gap(4).Grow()
+                | new Card(leftCard)
+                | new Card(rightCard))
+            | (Layout.Horizontal().Gap(3)
+                | new Button(Extensions[textExtIndex.Value])
+                    .Primary()
+                    .Icon(Icons.ChevronDown)
+                    .WithDropDown(textExtItems)
                 | new Button("Launch Diff (Text)", onClick: () => { _ = launchText(); })
-                | new Button("Kill Last Diff", onClick: () => kill());
+                | new Button("Kill Last Diff", onClick: () => kill()))
+            | Layout.Horizontal().Gap(2)
+                | Text.Small($"CI: {(DiffService.IsCi ? "On" : "Off")}")
+                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "No active diff" : "Last diff ready (Kill available)")
+                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"Temp: {lastLeft.Value} vs {lastRight.Value}");
+
 
         // file diff tab content
+        var fileExtItems = Extensions
+            .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => fileExtIndex.Value = idx))
+            .ToArray();
+
+        var fileExtDropdown = new Button(Extensions[fileExtIndex.Value])
+            .Primary()
+            .Icon(Icons.ChevronDown)
+            .WithDropDown(fileExtItems);
+
         var fileTabContent =
             Layout.Vertical().Gap(6).Padding(2)
             | Text.Block("Enter two file paths (they're copied to temp), then Launch.")
@@ -86,11 +119,17 @@ public class HelloApp : ViewBase
                 | leftFile.ToInput(placeholder: @"e.g. C:\temp\left.txt")
                 | Text.Block("Right file path")
                 | rightFile.ToInput(placeholder: @"e.g. C:\temp\right.txt")
-                | Text.Block("Treat as extension")
-                | fileExt.ToInput(placeholder: "txt / json")
+                | Layout.Horizontal().Gap(3)
+                    | Text.Block("Treat as extension:")
+                    | fileExtDropdown
             | Layout.Horizontal().Gap(3)
+                | new Spacer()
                 | new Button("Launch Diff (Files)", onClick: () => { _ = launchFiles(); })
-                | new Button("Kill Last Diff", onClick: () => kill());
+                | new Button("Kill Last Diff", onClick: () => kill())
+            | Layout.Horizontal().Gap(2)
+                | Text.Small($"CI: {(DiffService.IsCi ? "On" : "Off")}")
+                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "No active diff" : "Last diff ready (Kill available)")
+                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"Temp: {lastLeft.Value} vs {lastRight.Value}");
 
         // tabs layout
         var tabsView =
@@ -99,19 +138,9 @@ public class HelloApp : ViewBase
                 new Tab("File Paths Diff", fileTabContent).Icon(Icons.File)
             ).Variant(TabsVariant.Tabs);
 
-        // page
-        var page =
-            Layout.Vertical().Gap(8).Padding(2)
-            | Text.H2("DiffEngine × Ivy")
-            | Text.Block(string.IsNullOrWhiteSpace(error.Value) ? "" : "⚠ " + error.Value)
-            | tabsView
-            | Layout.Horizontal().Gap(2)
-                | Text.Small($"CI: {(DiffService.IsCi ? "On" : "Off")}")
-                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "No active diff" : "Last diff ready (Kill available)")
-                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"Temp: {lastLeft.Value} vs {lastRight.Value}");
-
         // outer card wide enough to allow side-by-side on big screens
         return Layout.Center()
-             | page;
+            | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                | new Card(tabsView).Width(Size.Fraction(0.8f)));
     }
 }
