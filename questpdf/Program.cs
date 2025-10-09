@@ -17,7 +17,7 @@ var customHeader = Layout.Vertical().Gap(2).Align(Align.Center)
           </a>
         </div>
       ")
-    | new Button("Source Code").Url("https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/questpdf").Icon(Icons.ExternalLink).Width(Size.Full());
+    | new Button("Source Code").Url("https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/questpdf").Icon(Icons.ExternalLink).Width(Ivy.Shared.Size.Full());
 var chromeSettings = new ChromeSettings().DefaultApp<QuestPdfApp>().UseTabs(preventDuplicates: true).Header(customHeader);
 server.UseChrome(chromeSettings);
 await server.RunAsync();

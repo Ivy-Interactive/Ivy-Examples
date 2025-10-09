@@ -1,14 +1,14 @@
 {
-    "name": "BarcodeLib",
+    "name": "QuestPDF",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/barcodelib",
+    "workspaceFolder": "/workspaces/Ivy-Examples/questpdf",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],
     "portsAttributes": {
       "5010": {
-        "label": "BarcodeLib",
+        "label": "QuestPDF",
         "onAutoForward": "openPreview"
       }
     },
@@ -21,7 +21,7 @@
         ]
       },
       "codespaces": {
-        "openFiles": ["Apps/BarcodeLibApp.cs"]
+        "openFiles": ["Apps/QuestPdfApp.cs"]
       }
     }
   }
