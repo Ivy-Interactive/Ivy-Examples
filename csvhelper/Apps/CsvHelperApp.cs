@@ -155,18 +155,21 @@ public class CsvHelperApp : ViewBase
                 .Builder(m => m.Category, s => s.ToTextInput().Placeholder("Enter category..."))
                 .ToDialog(isDialogOpen, "Create New Product", "Please provide product information",
                          width: Size.Units(500))
-            
+
             // Export CSV button
             | new Button("Export CSV")
                 .Icon(Icons.Download)
                 .Url(downloadUrl.Value)
                 .Width(Size.Full())
-            
+
             | new Separator()
             | Text.Small("Import CSV File:")
-            
+
             // Import CSV file input
             | fileInput.ToFileInput(uploadUrl, "Choose File").Accept(".csv")
+            | new Spacer()
+            | Text.Small("This demo uses CsvHelper library for reading and writing CSV files with custom class objects.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [CsvHelper](https://github.com/JoshClose/CsvHelper)")
         ).Title("Management").Height(Size.Fit().Min(Size.Full()));
 
         // Right card - Table
