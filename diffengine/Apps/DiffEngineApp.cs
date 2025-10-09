@@ -97,11 +97,22 @@ public class DiffEngineApp : ViewBase
                 | new Button("Launch Diff (Text)", onClick: () => { _ = launchText(); })
                 | new Button("Kill Last Diff", onClick: () => kill()))
             | Layout.Horizontal().Gap(2)
-                | Text.Markdown(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"**Temp: `{lastLeft.Value}` vs `{lastRight.Value}`**")
+                | Text.Markdown(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"**Temp:** `{lastLeft.Value}` vs `{lastRight.Value}`")
                 | new Spacer()
                 | Text.Small("This demo uses the DiffEngine NuGet package to launch diff tools.")
-                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffEngine](https://github.com/VerifyTests/DiffEngine)");
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy) and [DiffEngine](https://github.com/VerifyTests/DiffEngine)");
+
         // file diff tab content
+        var leftFileCard =
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H4("Left Path")
+            | leftFile.ToInput(placeholder: @"e.g. C:\temp\leftPath.*");
+
+        var rightFileCard =
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H4("Right Path")
+            | rightFile.ToInput(placeholder: @"e.g. C:\temp\rightPath.*");
+
         var fileExtItems = Extensions
             .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => fileExtIndex.Value = idx))
             .ToArray();
@@ -113,23 +124,19 @@ public class DiffEngineApp : ViewBase
 
         var fileTabContent =
             Layout.Vertical().Gap(6).Padding(2)
+            | Text.H3("File Diff")
             | Text.Block("Enter two file paths (they're copied to temp), then Launch.")
-            | Layout.Vertical().Gap(2)
-                | Text.Block("Left file path")
-                | leftFile.ToInput(placeholder: @"e.g. C:\temp\left.txt")
-                | Text.Block("Right file path")
-                | rightFile.ToInput(placeholder: @"e.g. C:\temp\right.txt")
-                | Layout.Horizontal().Gap(3)
-                    | Text.Block("Treat as extension:")
-                    | fileExtDropdown
-            | Layout.Horizontal().Gap(3)
-                | new Spacer()
+            | (Layout.Horizontal().Gap(4).Grow()
+                | new Card(leftFileCard)
+                | new Card(rightFileCard))
+            | (Layout.Horizontal().Gap(3)
+                | fileExtDropdown
                 | new Button("Launch Diff (Files)", onClick: () => { _ = launchFiles(); })
-                | new Button("Kill Last Diff", onClick: () => kill())
+                | new Button("Kill Last Diff", onClick: () => kill()))
             | Layout.Horizontal().Gap(2)
-                | Text.Small($"CI: {(DiffService.IsCi ? "On" : "Off")}")
-                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "No active diff" : "Last diff ready (Kill available)")
-                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"Temp: {lastLeft.Value} vs {lastRight.Value}");
+                | new Spacer()
+                | Text.Small("This demo uses the DiffEngine NuGet package to launch diff tools.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy) and [DiffEngine](https://github.com/VerifyTests/DiffEngine)");
 
         // tabs layout
         var tabsView =
