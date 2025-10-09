@@ -5,6 +5,17 @@ namespace CronosExample.Apps;
 [App(icon: Icons.TimerReset, title: "Cronos")]
 public class CronosApp : ViewBase
 {
+    private enum CronScheduleType
+    {
+        EveryMinute,
+        Every5Minutes,
+        DailyAt9AM,
+        WeekdaysAtNoon,
+        MonthlyFirstDay9AM,
+        Every30Seconds,
+        ComplexExample
+    }
+
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
@@ -25,6 +36,9 @@ public class CronosApp : ViewBase
         // Options for Cron format
         var includeSeconds = UseState(false);
         var cronFormat = includeSeconds.Value ? CronFormat.IncludeSeconds : CronFormat.Standard;
+
+        // Selected schedule type
+        var selectedSchedule = UseState<CronScheduleType?>(default(CronScheduleType?));
 
         // Formatting
         var dateFormat = includeSeconds.Value ? "dd.MM.yyyy HH:mm:ss zzz" : "dd.MM.yyyy HH:mm zzz";
@@ -47,11 +61,47 @@ public class CronosApp : ViewBase
             }
         }
         
-        void SetPredefinedCron(string cronExpr, string description)
+        string GetCronExpression(CronScheduleType scheduleType)
         {
-            inputCronExpression.Value = cronExpr;
-            client.Toast($"Set: {description}");
+            return scheduleType switch
+            {
+                CronScheduleType.EveryMinute => includeSeconds.Value ? "0 * * * * *" : "* * * * *",
+                CronScheduleType.Every5Minutes => includeSeconds.Value ? "0 */5 * * * *" : "*/5 * * * *",
+                CronScheduleType.DailyAt9AM => includeSeconds.Value ? "0 0 9 * * *" : "0 9 * * *",
+                CronScheduleType.WeekdaysAtNoon => includeSeconds.Value ? "0 0 12 * * 1-5" : "0 12 * * 1-5",
+                CronScheduleType.MonthlyFirstDay9AM => includeSeconds.Value ? "0 0 9 1 * *" : "0 9 1 * *",
+                CronScheduleType.Every30Seconds => "*/30 * * * * *",
+                CronScheduleType.ComplexExample => includeSeconds.Value ? "0 15,45 8-17 * * 1-5" : "15,45 8-17 * * 1-5",
+                _ => ""
+            };
         }
+
+        string GetDescription(CronScheduleType scheduleType)
+        {
+            return scheduleType switch
+            {
+                CronScheduleType.EveryMinute => "Every minute",
+                CronScheduleType.Every5Minutes => "Every 5 minutes",
+                CronScheduleType.DailyAt9AM => "Daily at 09:00",
+                CronScheduleType.WeekdaysAtNoon => "Weekdays at noon",
+                CronScheduleType.MonthlyFirstDay9AM => "Monthly on 1st at 09:00",
+                CronScheduleType.Every30Seconds => "Every 30 seconds",
+                CronScheduleType.ComplexExample => "15 and 45 min past hour, 8-17h, Mon-Fri",
+                _ => ""
+            };
+        }
+
+        var scheduleOptions = typeof(CronScheduleType).ToOptions();
+
+        // Automatically apply selected schedule
+        UseEffect(() =>
+        {
+            if (selectedSchedule.Value.HasValue)
+            {
+                inputCronExpression.Value = GetCronExpression(selectedSchedule.Value.Value);
+                client.Toast($"Applied: {GetDescription(selectedSchedule.Value.Value)}");
+            }
+        }, selectedSchedule);
 
         return Layout.Vertical(
                 Text.H1("Cronos"),
@@ -76,41 +126,10 @@ public class CronosApp : ViewBase
                 
                 // Predefined examples
                 Text.H3("Predefined Examples:"),
-                Layout.Horizontal(
-                    new Button("Every minute", 
-                        onClick: () => SetPredefinedCron(includeSeconds.Value 
-                            ? "0 * * * * *" 
-                            : "* * * * *", "Every minute")),
-                    
-                    new Button("Every 5 min", 
-                        onClick: () => SetPredefinedCron(includeSeconds.Value 
-                            ? "0 */5 * * * *" 
-                            : "*/5 * * * *", "Every 5 minutes")),
-                    
-                    new Button("Daily at 09:00", 
-                        onClick: () => SetPredefinedCron(includeSeconds.Value 
-                            ? "0 0 9 * * *" 
-                            : "0 9 * * *", "Daily at 09:00")),
-                    
-                    new Button("Weekdays at noon", 
-                        onClick: () => SetPredefinedCron(includeSeconds.Value 
-                            ? "0 0 12 * * 1-5" 
-                            : "0 12 * * 1-5", "Weekdays at noon")),
-                    
-                    new Button("Monthly (1st, 09:00)", 
-                        onClick: () => SetPredefinedCron(includeSeconds.Value 
-                            ? "0 0 9 1 * *" 
-                            : "0 9 1 * *", "Monthly on 1st at 09:00")),
-                    
-                    new Button("Every 30 sec", 
-                            onClick: () => SetPredefinedCron("*/30 * * * * *", "Every 30 seconds"))
-                        .Disabled(!includeSeconds.Value),
-                    
-                    new Button("Complex example", 
-                        onClick: () => SetPredefinedCron(includeSeconds.Value 
-                            ? "0 15,45 8-17 * * 1-5" 
-                            : "15,45 8-17 * * 1-5", "15 and 45 min past hour, 8-17h, Mon-Fri"))
-                ).Wrap(),
+                selectedSchedule
+                    .ToSelectInput(scheduleOptions)
+                    .Placeholder("Choose a schedule template...")
+                    .WithLabel("Select schedule type"),
                 
                 // Results
                 Text.H3($"Next occurrence: {dateString}")
