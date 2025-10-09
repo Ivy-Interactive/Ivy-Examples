@@ -84,6 +84,7 @@ public class HelloApp : ViewBase
 
         var textTabContent =
             Layout.Vertical().Gap(6).Padding(2)
+            | Text.H3("Text Diff")
             | Text.Block("Type text on each side and choose an extension. Launch writes temp files and opens your diff tool.")
             | (Layout.Horizontal().Gap(4).Grow()
                 | new Card(leftCard)
@@ -96,11 +97,10 @@ public class HelloApp : ViewBase
                 | new Button("Launch Diff (Text)", onClick: () => { _ = launchText(); })
                 | new Button("Kill Last Diff", onClick: () => kill()))
             | Layout.Horizontal().Gap(2)
-                | Text.Small($"CI: {(DiffService.IsCi ? "On" : "Off")}")
-                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "No active diff" : "Last diff ready (Kill available)")
-                | Text.Small(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"Temp: {lastLeft.Value} vs {lastRight.Value}");
-
-
+                | Text.Markdown(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"**Temp: `{lastLeft.Value}` vs `{lastRight.Value}`**")
+                | new Spacer()
+                | Text.Small("This demo uses the BarcodeLib NuGet package to generate barcodes.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [BarcodeLib](https://github.com/barnhill/barcodelib)");
         // file diff tab content
         var fileExtItems = Extensions
             .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => fileExtIndex.Value = idx))
@@ -139,7 +139,7 @@ public class HelloApp : ViewBase
             ).Variant(TabsVariant.Tabs);
 
         // outer card wide enough to allow side-by-side on big screens
-        return Layout.Center()
+        return Layout.Vertical()
             | (Layout.Horizontal().Gap(2).Align(Align.Center)
                 | new Card(tabsView).Width(Size.Fraction(0.8f)));
     }
