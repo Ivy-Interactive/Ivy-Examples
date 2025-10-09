@@ -4,7 +4,7 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<RootNamespace>BarcodeLibExample</RootNamespace>
+		<RootNamespace>BarcodelibExample</RootNamespace>
 	  <UserSecretsId>413220cf-46c6-40b0-ab98-939aa58ce212</UserSecretsId>
   </PropertyGroup>
 
