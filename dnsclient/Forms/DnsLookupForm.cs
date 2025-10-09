@@ -11,7 +11,7 @@ public class DnsLookupForm : ViewBase
     {
         var signal = this.Context.CreateSignal<DnsQueryResultsSignal, DnsQueryResponse?, bool>();
 
-        var lookup = this.UseState<LookupModel>(() => new LookupModel("", QueryType.A));
+        var lookup = this.UseState<LookupModel>(() => new LookupModel("samples.ivy.app", QueryType.A));
 
         var lookupClient = UseService<ILookupClient>();
 
