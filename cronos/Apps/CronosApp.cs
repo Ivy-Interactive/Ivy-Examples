@@ -132,11 +132,11 @@ public class CronosApp : ViewBase
 
                 Text.Markdown($"### Next occurrence: `{dateString}`")
             )
-        );
+        ).Height(Size.Fit().Min(Size.Full()));
 
         var helpCard = new Card(
-            Layout.Vertical(
-                Text.Markdown(
+            Layout.Vertical()
+                | Text.Markdown(
                     "### Quick Guide\n\n" +
                     "1. Select a time zone.\n" +
                     "2. Enter a cron expression or choose a template.\n" +
@@ -146,14 +146,13 @@ public class CronosApp : ViewBase
                     "- Next occurrence is shown for the selected time zone.\n" +
                     "- Common operators: `*` any, `/` every, `-` range, `,` list."
                 )
-            )
-        );
+                | (Layout.Vertical().Align(Align.BottomLeft)
+                    | Text.Small("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents.")
+                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)"))
+        ).Height(Size.Fit().Min(Size.Full()));
 
-        return Layout.Vertical(
-                Layout.Horizontal(
-                    userCard,
-                    helpCard
-                ).Gap(4)
-            );
+        return Layout.Horizontal().Gap(6)
+            | userCard.Width(Size.Fraction(0.60f))
+            | helpCard.Width(Size.Fraction(0.40f));
     }
 }
