@@ -32,8 +32,6 @@ public class CsvHelperApp : ViewBase
             new() { Id = Guid.NewGuid(), Name = "USB-C Hub", Description = "7-in-1 hub with HDMI, USB 3.0 and card reader", Price = 34.95m, Category = "Peripherals", CreatedAt = DateTime.UtcNow },
             new() { Id = Guid.NewGuid(), Name = "Noise-Cancelling Headphones", Description = "Over-ear Bluetooth headphones with ANC", Price = 149.00m, Category = "Audio", CreatedAt = DateTime.UtcNow },
         });
-
-        var newProduct = UseState(() => new ProductModel());
         
         // Export CSV download
         var downloadUrl = this.UseDownload(
@@ -96,41 +94,26 @@ public class CsvHelperApp : ViewBase
         });
 
         // State for dialog open/close
+        var product = UseState(() => new ProductModel());
         var isDialogOpen = UseState(false);
         
-        // Handle product submission via UseEffect
+        // Handle product submission
         UseEffect(() =>
         {
-            // Check if form was submitted (non-empty required fields and dialog is open)
-            if (isDialogOpen.Value && 
-                !string.IsNullOrEmpty(newProduct.Value.Name) && 
-                newProduct.Value.Price > 0 &&
-                !string.IsNullOrEmpty(newProduct.Value.Category))
+            // Check if form was submitted (non-empty required fields)
+            if (!string.IsNullOrEmpty(product.Value.Name) && 
+                product.Value.Price > 0 &&
+                !string.IsNullOrEmpty(product.Value.Category))
             {
-                newProduct.Value.Id = Guid.NewGuid();
-                newProduct.Value.CreatedAt = DateTime.UtcNow;
-                products.Value = products.Value.Append(newProduct.Value).ToList();
-                client.Toast("Product added successfully");
-                newProduct.Value = new ProductModel();
-                isDialogOpen.Value = false;
+                product.Value.Id = Guid.NewGuid();
+                product.Value.CreatedAt = DateTime.UtcNow;
+                products.Value = products.Value.Append(product.Value).ToList();
+                client.Toast($"Product '{product.Value.Name}' added successfully");
+                product.Set(new ProductModel());
+                isDialogOpen.Set(false);
             }
-        }, [newProduct]);
-
-        // Build Add form
-        var addProductDialog = newProduct.ToForm()
-            .Remove(x => x.Id)
-            .Remove(x => x.CreatedAt)
-            .Required(m => m.Name, m => m.Price, m => m.Category)
-            .Label(m => m.Name, "Product Name")
-            .Label(m => m.Description, "Description")
-            .Label(m => m.Price, "Price")
-            .Label(m => m.Category, "Category")
-            .Builder(m => m.Name, s => s.ToTextInput().Placeholder("Enter product name..."))
-            .Builder(m => m.Description, s => s.ToTextInput().Placeholder("Enter description..."))
-            .Builder(m => m.Price, s => s.ToNumberInput().Placeholder("Enter price...").Min(0))
-            .Builder(m => m.Category, s => s.ToTextInput().Placeholder("Enter category..."))
-            .ToDialog(isDialogOpen, title: "Add New Product", submitTitle: "Add Product");
-
+        }, [product]);
+        
         // Build the table with delete button
         var table = products.Value.Select(p => new
         {
@@ -150,13 +133,28 @@ public class CsvHelperApp : ViewBase
             Layout.Vertical().Gap(6)
             | Text.H3("Controls")
             | Text.Small($"Total: {products.Value.Count} products")
-            
+
             // Add Product button - opens dialog
             | new Button("Add Product")
                 .Icon(Icons.Plus)
                 .Primary()
                 .Width(Size.Full())
-                .HandleClick(_ => isDialogOpen.Value = true)
+                .HandleClick(_ => isDialogOpen.Set(true))
+
+            | product.ToForm()
+                .Remove(m => m.Id)
+                .Remove(m => m.CreatedAt)
+                .Required(m => m.Name, m => m.Price, m => m.Category)
+                .Label(m => m.Name, "Product Name")
+                .Label(m => m.Description, "Description")
+                .Label(m => m.Price, "Price")
+                .Label(m => m.Category, "Category")
+                .Builder(m => m.Name, s => s.ToTextInput().Placeholder("Enter product name..."))
+                .Builder(m => m.Description, s => s.ToTextInput().Placeholder("Enter description..."))
+                .Builder(m => m.Price, s => s.ToNumberInput().Placeholder("Enter price...").Min(0))
+                .Builder(m => m.Category, s => s.ToTextInput().Placeholder("Enter category..."))
+                .ToDialog(isDialogOpen, "Create New Product", "Please provide product information",
+                         width: Size.Units(500))
             
             // Export CSV button
             | new Button("Export CSV")
@@ -169,14 +167,14 @@ public class CsvHelperApp : ViewBase
             
             // Import CSV file input
             | fileInput.ToFileInput(uploadUrl, "Choose File").Accept(".csv")
-        ).Title("Management");
+        ).Title("Management").Height(Size.Fit().Min(Size.Full()));
 
         // Right card - Table
-        var rightCard = new Card(table).Title("Products");
+        var rightCard = new Card(table).Title("Products").Height(Size.Fit().Min(Size.Full()));
 
         // Two-column layout
         return Layout.Horizontal().Gap(8)
-            | leftCard.Width(Size.Units(80).Max(350))
-            | rightCard.Width(Size.Full());
+            | leftCard.Width(Size.Fraction(0.4f))
+            | rightCard.Width(Size.Fraction(0.6f));
     }
 }
