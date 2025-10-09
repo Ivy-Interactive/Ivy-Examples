@@ -1,4 +1,4 @@
-namespace DiffEngineDemo.Apps;
+namespace DiffengineExample.Apps;
 
 [App(icon: Icons.PartyPopper, title: "DiffEngine Demo")]
 public class HelloApp : ViewBase
