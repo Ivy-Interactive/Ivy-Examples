@@ -99,8 +99,8 @@ public class HelloApp : ViewBase
             | Layout.Horizontal().Gap(2)
                 | Text.Markdown(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"**Temp: `{lastLeft.Value}` vs `{lastRight.Value}`**")
                 | new Spacer()
-                | Text.Small("This demo uses the BarcodeLib NuGet package to generate barcodes.")
-                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [BarcodeLib](https://github.com/barnhill/barcodelib)");
+                | Text.Small("This demo uses the DiffEngine NuGet package to launch diff tools.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffEngine](https://github.com/VerifyTests/DiffEngine)");
         // file diff tab content
         var fileExtItems = Extensions
             .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => fileExtIndex.Value = idx))
