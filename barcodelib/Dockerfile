@@ -24,6 +24,14 @@ RUN dotnet publish "BarcodelibExample.csproj" -c $BUILD_CONFIGURATION -o /app/pu
 # Final runtime image
 FROM base AS final
 WORKDIR /app
+
+# Install fonts for SkiaSharp text rendering
+RUN apt-get update && apt-get install -y \
+    fontconfig \
+    libfontconfig1 \
+    fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=publish /app/publish .
 
 # Set environment variables
