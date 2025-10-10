@@ -8,11 +8,11 @@ public class DnsLookUpApp : ViewBase
 {
     public override object? Build()
     {
-
-        return Layout.Vertical().Gap(2)
-             | Text.H1("DNS Client Sample")
-             | new DnsLookupForm()
-             | new DnsQueryResults();
-
+        return Layout.Vertical(
+            Text.H1("🌐 DNS Lookup Tool"),
+            Text.Muted("Query DNS records for any domain with detailed information"),
+            new DnsLookupForm(),
+            new DnsQueryResults()
+        ).Width(Size.Units(200));
     }
 }
