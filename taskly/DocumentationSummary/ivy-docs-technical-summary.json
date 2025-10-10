@@ -1,0 +1,274 @@
+{
+  "ivy_fw": {
+    "meta": {
+      "src": "131+ md files",
+      "ts": "2025-09-29",
+      "desc": "Ivy Framework tech specs - compressed machine-readable format"
+    },
+    "01_onboard": {
+      "get_started": {
+        "intro": {
+          "fw": "Full-stack C# web framework",
+          "arch": "React patterns in C#",
+          "app_attr": "[App(icon: Icons.Users)]",
+          "base": "ViewBase",
+          "method": "Build() -> object?"
+        },
+        "install": {
+          "cmd": "dotnet tool install -g Ivy.Console",
+          "init": "ivy init --namespace Acme.Project",
+          "run": "dotnet watch"
+        },
+        "basics": {
+          "view_base": "abstract ViewBase",
+          "hooks": ["UseState", "UseService", "UseEffect"],
+          "state": "var count = UseState(0);",
+          "service": "var client = UseService<IClientProvider>();",
+          "layout": "Layout.Vertical() | Layout.Horizontal()"
+        },
+        "how_works": {
+          "flow": "C# Views -> Widget Tree -> WebSocket -> React Frontend",
+          "hooks": ["UseState<T>", "UseEffect", "UseService<T>", "UseSignal", "UseDownload", "UseWebhook"],
+          "widgets": ["Button", "Badge", "Progress", "Table", "Card", "TextInput", "NumberInput", "BoolInput"]
+        },
+        "todo_tutorial": {
+          "model": "public record Todo(string Title, bool Done);",
+          "app_attr": "[App(icon: Icons.Calendar)]",
+          "state_mgmt": ["UseState<string>", "UseState<ImmutableArray<Todo>>"],
+          "ui": "Card | Layout.Vertical | ToTextInput | Button"
+        },
+        "chat_tutorial": {
+          "app_attr": "[App(icon: Icons.Sparkles)]",
+          "chat_msg": "ChatMessage(ChatSender, content)",
+          "ai_req": "OpenAI API key -> OPENAI_API_KEY",
+          "kernel": "Kernel.CreateBuilder().AddOpenAIChatCompletion"
+        }
+      },
+      "concepts": {
+        "alerts": {
+          "types": ["Dialog", "Toast"],
+          "hook": "UseAlert()",
+          "btn_sets": ["Ok", "OkCancel", "YesNo", "YesNoCancel"],
+          "api": "client.Toast(message, title?)"
+        },
+        "clients": {
+          "svc": "IClientProvider",
+          "methods": ["Toast", "Dialog", "Navigate", "DownloadFile", "UploadFiles", "CopyToClipboard", "OpenUrl"]
+        },
+        "content_builders": {
+          "iface": "IContentBuilder",
+          "methods": ["CanHandle(object?)", "Format(object?)"],
+          "types": ["strings->Text", "numbers->Text", "bools->CheckIcons", "dates->FormattedStrings", "collections->Tables"]
+        },
+        "downloads": {
+          "hook": "UseDownload(() => Task<byte[]>, contentType, filename)",
+          "api": "client.DownloadFile(filename, content, contentType?)"
+        },
+        "effects": {
+          "hook": "UseEffect(action/func, deps?)",
+          "triggers": ["AfterInit", "AfterRender", "AfterChange"],
+          "cleanup": "return IDisposable"
+        },
+        "forms": {
+          "method": ".ToForm()",
+          "config": [".Label()", ".Description()", ".Required()", ".Builder()", ".Place()", ".Group()"],
+          "validation": ".Validate<T>(prop, validator)",
+          "submit": ".UseForm(context)"
+        },
+        "memoization": {
+          "hooks": ["UseMemo(() => computation, deps)", "UseCallback(() => func, deps)"],
+          "iface": "IMemoized -> GetMemoValues()",
+          "purpose": "Cache expensive computations, prevent re-renders"
+        },
+        "program": {
+          "server": "new Server(ServerArgs?)",
+          "config": ["UseHotReload()", "AddAppsFromAssembly()", "UseChrome()", "UseAuth<T>"],
+          "props": ["Port", "Verbose", "Browse", "Silent", "DefaultAppId"]
+        },
+        "prompts": {
+          "alerts": "UseAlert() -> (alertView, showAlert)",
+          "dialogs": ".ToDialog(isOpen, title, desc?)",
+          "sheets": ".ToSheet(isOpen, title, desc?)"
+        },
+        "secrets": {
+          "iface": "IHaveSecrets -> Secret[] GetSecrets()",
+          "secret": "new Secret(name)",
+          "format": "hierarchical:colon:separated"
+        },
+        "services": {
+          "di": "UseService<IMyService>()",
+          "reg": ".UseService<IService, Impl>(lifetime?)",
+          "lifetimes": ["Singleton", "Scoped", "Transient"]
+        },
+        "signals": {
+          "base": "AbstractSignal<TInput, TOutput>",
+          "create": "Context.CreateSignal<T, TIn, TOut>()",
+          "use": "Context.UseSignal<T, TIn, TOut>()",
+          "send": "await signal.Send(input)",
+          "receive": "signal.Receive(handler)"
+        },
+        "state": {
+          "hook": "UseState(initialValue/factory)",
+          "methods": [".Set(value)", ".Value"],
+          "types": ["primitives", "collections", "objects", "nullable"]
+        },
+        "tasks_observables": {
+          "task_view": "TaskView<T>(task)",
+          "obs_view": "ObservableView<T>(observable)",
+          "rx": "Observable.Interval/Where/Select/Subscribe"
+        },
+        "theming": {
+          "modes": ["Light", "Dark", "System"],
+          "api": "client.SetThemeMode(ThemeMode)",
+          "custom": ".UseTheme(config)",
+          "runtime": "IThemeService.SetTheme/GenerateThemeCss/ApplyTheme"
+        },
+        "uploads": {
+          "hook": "UseUpload(handler, contentType, filename)",
+          "widget": ".ToFileInput(uploadUrl, label)",
+          "config": [".Accept(types)", ".Multiple()"]
+        },
+        "views": {
+          "base": "abstract ViewBase",
+          "method": "override object? Build()",
+          "attr": "[App(icon, title?, path?, isVisible?)]",
+          "returns": ["Widgets", "Views", "Layouts", "primitives", "collections", "null"]
+        },
+        "widgets": {
+          "cats": ["Common", "Inputs", "Primitives", "Layouts", "Effects", "Charts", "Advanced"],
+          "common": ["Button", "Badge", "Progress", "Table", "Card", "Tooltip"],
+          "inputs": ["TextInput", "NumberInput", "BoolInput", "DateTimeInput", "FileInput"],
+          "primitives": ["Text", "Icon", "Image", "Markdown", "Json", "Code", "Avatar"],
+          "layouts": ["GridLayout", "TabsLayout", "SidebarLayout", "FloatingPanel"]
+        }
+      },
+      "cli": {
+        "overview": {
+          "install": "dotnet tool install -g Ivy.Console",
+          "help": "ivy --help",
+          "cmds": ["init", "db", "auth", "deploy", "samples", "docs"]
+        },
+        "init": {
+          "cmd": "ivy init",
+          "opts": ["--namespace", "--dangerous-clear", "--dangerous-overwrite", "--verbose", "--helloworld"],
+          "files": ["Program.cs", "GlobalUsings.cs", "README.md", ".gitignore", "*.csproj"]
+        },
+        "deploy": {
+          "cmd": "ivy deploy",
+          "providers": ["AWS", "Azure", "GCP"],
+          "opts": ["--project-path", "--verbose"],
+          "services": {
+            "aws": ["ECR", "App Runner", "S3", "IAM"],
+            "azure": ["ACR", "Container Apps", "ARM", "AAD"],
+            "gcp": ["GCR", "Cloud Run", "Cloud Build", "IAM"]
+          }
+        },
+        "db": {
+          "cmd": "ivy db add",
+          "providers": ["SqlServer", "PostgreSQL", "MySQL", "SQLite", "Supabase", "Airtable", "Oracle", "Spanner", "ClickHouse", "Snowflake"]
+        },
+        "auth": {
+          "cmd": "ivy auth add",
+          "providers": ["Auth0", "Supabase", "Authelia", "MicrosoftEntra", "BasicAuth"]
+        }
+      }
+    },
+    "02_widgets": {
+      "common": {
+        "button": {
+          "class": "Button",
+          "ctor": "new Button(text?, onClick?)",
+          "variants": ["Primary", "Destructive", "Secondary", "Outline", "Ghost", "Link", "Success", "Warning", "Info"],
+          "states": [".Disabled()", ".Loading()"],
+          "sizes": [".Small()", ".Large()"],
+          "radius": [".BorderRadius(None/Rounded/Full)"],
+          "icons": [".Icon(icon, align?)"]
+        },
+        "badge": {
+          "class": "Badge",
+          "variants": [".Primary()", ".Secondary()"]
+        },
+        "progress": {
+          "class": "Progress",
+          "ctor": "new Progress(value)"
+        },
+        "card": {
+          "class": "Card",
+          "methods": [".Title()", ".Description()"]
+        }
+      },
+      "inputs": {
+        "text": {
+          "class": "TextInput",
+          "ctor": "new TextInput(state)",
+          "variants": ["Password", "Textarea", "Search", "Email", "Tel", "Url"],
+          "methods": [".Placeholder()", ".Invalid()", ".Disabled()", ".ShortcutKey()"],
+          "helpers": [".ToTextInput()", ".ToPasswordInput()", ".ToEmailInput()"]
+        },
+        "number": {
+          "class": "NumberInput",
+          "methods": [".Min()", ".Max()"]
+        },
+        "bool": {
+          "class": "BoolInput",
+          "helper": ".ToBoolInput()"
+        },
+        "file": {
+          "class": "FileInput",
+          "methods": [".Accept()", ".Multiple()"],
+          "helper": ".ToFileInput(uploadUrl, label)"
+        }
+      },
+      "layouts": {
+        "basic": {
+          "vertical": "Layout.Vertical()",
+          "horizontal": "Layout.Horizontal()",
+          "grid": "Layout.Grid().Columns(n)"
+        },
+        "methods": [".Gap()", ".Align()", ".Width()", ".Height()", ".Padding()"]
+      }
+    },
+    "03_api": {
+      "shared": {
+        "align": {
+          "enum": "Align",
+          "values": ["Left", "Center", "Right", "Top", "Bottom", "TopLeft", "TopRight", "BottomLeft", "BottomRight"]
+        }
+      }
+    },
+    "hooks": {
+      "state": "UseState<T>(init?) -> {Value, Set}",
+      "effect": "UseEffect(action, deps?) -> IDisposable?",
+      "service": "UseService<T>() -> T",
+      "memo": "UseMemo<T>(factory, deps) -> T",
+      "callback": "UseCallback(func, deps) -> func",
+      "signal": "UseSignal<T, TIn, TOut>() -> signal",
+      "download": "UseDownload(handler, type, name) -> url",
+      "upload": "UseUpload(handler, type, name) -> url",
+      "alert": "UseAlert() -> (view, show)"
+    },
+    "patterns": {
+      "app": "[App(icon: Icons.X)] class MyApp : ViewBase",
+      "view": "public override object? Build() => ...",
+      "state": "var x = UseState(init); x.Set(value); x.Value",
+      "layout": "Layout.Vertical() | widget1 | widget2",
+      "form": "model.ToForm().Required().Label().UseForm()",
+      "table": "data.ToTable().Columns().Builder()",
+      "signal": "signal.Send(data); signal.Receive(handler)"
+    },
+    "extensions": {
+      "state": [".ToTextInput()", ".ToNumberInput()", ".ToBoolInput()", ".ToFileInput()"],
+      "form": [".ToForm()", ".ToDialog()", ".ToSheet()"],
+      "table": [".ToTable()", ".Columns()", ".Builder()"],
+      "button": [".Primary()", ".Secondary()", ".Disabled()", ".Loading()"],
+      "layout": [".Gap()", ".Align()", ".Width()", ".Height()"]
+    },
+    "types": {
+      "core": ["ViewBase", "Widget", "IContentBuilder", "Server", "ServerArgs"],
+      "state": ["IState<T>", "ISignal<TIn,TOut>", "IMemoized"],
+      "ui": ["Button", "TextInput", "Card", "Layout", "Progress", "Badge"],
+      "auth": ["IAuthProvider", "IHaveSecrets", "Secret"],
+      "client": ["IClientProvider", "Event<T>"]
+    }
+  }
+}

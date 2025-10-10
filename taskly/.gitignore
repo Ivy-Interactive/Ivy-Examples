@@ -1,0 +1,13 @@
+bin/
+obj/
+*.sln.iml
+.idea/**/*
+**/.idea/*
+
+# Database files (personal data - not committed)
+Database/taskly_database.db
+Database/taskly_database.db-shm
+Database/taskly_database.db-wal
+
+# Template database is committed (contains schema only)
+!Database/taskly_database.template.db

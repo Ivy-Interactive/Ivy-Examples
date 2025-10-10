@@ -1,0 +1,232 @@
+{
+  "cli": {
+    "c": [
+      {"n": "init", "p": ["--namespace", "--dangerous-clear", "--dangerous-overwrite", "--verbose", "--helloworld"]},
+      {"n": "db", "sc": ["add"], "p": ["--provider", "--name", "--schema"]},
+      {"n": "auth", "sc": ["add"], "p": ["--provider", "--connection-string"]},
+      {"n": "deploy", "p": ["--project-path", "--verbose"]},
+      {"n": "app", "sc": ["create", "remove"], "p": ["--name", "--all"]},
+      {"n": "fix", "p": ["--use-claude-code"]},
+      {"n": "debug", "sc": ["enable-ivy-fix-upload-telemetry", "disable-ivy-fix-upload-telemetry"]}
+    ]
+  },
+  "db": {
+    "providers": [
+      {"n": "SqlServer", "cs": "Server=localhost;Database=db;Trusted_Connection=True;", "pkg": "Microsoft.EntityFrameworkCore.SqlServer"},
+      {"n": "Postgres", "cs": "Host=localhost;Database=db;Username=user;Password=pass", "pkg": "Npgsql.EntityFrameworkCore.PostgreSQL"},
+      {"n": "MySQL", "cs": "Server=localhost;Database=db;Uid=user;Pwd=pass;", "pkg": "Pomelo.EntityFrameworkCore.MySql"},
+      {"n": "SQLite", "cs": "Data Source=database.db", "pkg": "Microsoft.EntityFrameworkCore.Sqlite"},
+      {"n": "Supabase", "cs": "Host=host;Database=db;Username=user;Password=pass", "pkg": "Npgsql.EntityFrameworkCore.PostgreSQL"},
+      {"n": "Oracle", "pkg": "Oracle.EntityFrameworkCore"},
+      {"n": "ClickHouse", "pkg": "ClickHouse.EntityFrameworkCore"},
+      {"n": "GoogleSpanner", "pkg": "Google.Cloud.EntityFrameworkCore.Spanner"},
+      {"n": "Snowflake", "pkg": "Snowflake.Data"},
+      {"n": "MariaDb", "pkg": "Pomelo.EntityFrameworkCore.MySql"},
+      {"n": "Airtable", "pkg": "AirtableApiClient"}
+    ]
+  },
+  "auth": {
+    "providers": [
+      {
+        "n": "Auth0",
+        "cfg": {"Domain": "", "ClientId": "", "ClientSecret": "", "Audience": ""},
+        "opts": ["EmailPassword", "Google", "GitHub", "Microsoft", "Apple", "Twitter"],
+        "pkg": "Ivy.Auth.Auth0"
+      },
+      {
+        "n": "Supabase",
+        "cfg": {"Url": "", "ApiKey": ""},
+        "opts": ["EmailPassword", "Google", "Apple"],
+        "pkg": "Ivy.Auth.Supabase"
+      },
+      {
+        "n": "BasicAuth",
+        "cfg": {"Username": "", "Password": ""},
+        "pkg": "Ivy.Auth.BasicAuth"
+      },
+      {
+        "n": "MicrosoftEntra",
+        "cfg": {"ClientId": "", "TenantId": "", "ClientSecret": ""},
+        "pkg": "Ivy.Auth.MicrosoftEntra"
+      }
+    ]
+  },
+  "deploy": {
+    "providers": ["AWS", "Azure", "GCP"],
+    "services": {
+      "AWS": ["ECR", "AppRunner", "S3", "IAM"],
+      "Azure": ["ACR", "ContainerApps", "ARM", "AAD"],
+      "GCP": ["GCR", "CloudRun", "CloudBuild", "IAM"]
+    }
+  },
+  "w": {
+    "common": [
+      {
+        "n": "Button",
+        "p": ["text", "onClick", "icon", "variant"],
+        "v": ["Primary", "Secondary", "Destructive", "Outline", "Ghost", "Link", "Success", "Warning", "Info"],
+        "m": ["Icon", "Disabled", "Loading", "Small", "Large", "BorderRadius"]
+      },
+      {
+        "n": "Card",
+        "p": ["content", "title", "description"],
+        "m": ["Title", "Description", "Width", "BorderThickness", "BorderStyle", "BorderColor", "BorderRadius"]
+      },
+      {
+        "n": "Badge",
+        "p": ["text", "variant"],
+        "v": ["Default", "Secondary", "Destructive", "Outline"]
+      },
+      {
+        "n": "List",
+        "p": ["items"],
+        "m": ["Gap"]
+      },
+      {
+        "n": "ListItem",
+        "p": ["title", "subtitle", "icon", "badge", "onClick"],
+        "m": ["Icon", "Badge", "Subtitle"]
+      },
+      {
+        "n": "Tooltip",
+        "p": ["content", "text"],
+        "m": ["Content"]
+      },
+      {
+        "n": "Progress",
+        "p": ["value", "max"],
+        "m": ["Value", "Max"]
+      }
+    ],
+    "inputs": [
+      {
+        "n": "TextInput",
+        "p": ["value", "onChange", "placeholder", "variant"],
+        "v": ["Text", "Password", "Textarea", "Search", "Email", "Tel", "Url"],
+        "m": ["Placeholder", "Invalid", "Disabled", "ShortcutKey", "Variant"],
+        "ext": ["ToTextInput", "ToPasswordInput", "ToEmailInput", "ToTelInput", "ToUrlInput", "ToTextAreaInput", "ToSearchInput"]
+      },
+      {
+        "n": "NumberInput",
+        "p": ["value", "onChange", "min", "max", "step", "precision", "variant"],
+        "v": ["Number", "Slider"],
+        "m": ["Min", "Max", "Step", "Precision", "FormatStyle", "Currency", "Invalid", "Disabled"],
+        "ext": ["ToNumberInput", "ToMoneyInput"],
+        "fmt": ["Decimal", "Currency", "Percent"]
+      },
+      {
+        "n": "BoolInput",
+        "p": ["value", "onChange", "label", "variant"],
+        "v": ["Checkbox", "Switch", "Toggle"],
+        "m": ["Label", "Disabled"],
+        "ext": ["ToBoolInput", "ToSwitchInput", "ToToggleInput"]
+      },
+      {
+        "n": "SelectInput",
+        "p": ["value", "onChange", "options", "variant"],
+        "v": ["Select", "List", "Toggle"],
+        "m": ["Placeholder", "Invalid", "Disabled", "Variant"],
+        "ext": ["ToSelectInput"]
+      },
+      {
+        "n": "DateTimeInput",
+        "p": ["value", "onChange", "variant"],
+        "v": ["DateTime", "Date", "Time"],
+        "m": ["Placeholder", "Invalid", "Disabled", "Variant"],
+        "ext": ["ToDateTimeInput"]
+      }
+    ],
+    "primitives": [
+      {
+        "n": "Text",
+        "st": ["P", "H1", "H2", "H3", "H4", "Large", "Small", "Literal", "Block", "Inline", "InlineCode", "Label", "Success", "Muted"],
+        "m": ["Color", "Size"]
+      },
+      {
+        "n": "Icon",
+        "p": ["icon", "color", "size"],
+        "m": ["Small", "Large", "Color"]
+      },
+      {
+        "n": "Avatar",
+        "p": ["name", "initials", "src"],
+        "m": ["Size", "Color"]
+      },
+      {
+        "n": "Box",
+        "p": ["content"],
+        "m": ["Width", "Height", "Color", "Padding", "BorderRadius", "BorderThickness", "BorderStyle", "BorderColor", "ContentAlign"]
+      },
+      {
+        "n": "Fragment",
+        "p": ["items"]
+      }
+    ],
+    "layouts": [
+      {
+        "n": "Layout",
+        "st": ["Vertical", "Horizontal", "Grid", "Tabs"],
+        "m": ["Gap", "Align", "Columns", "Rows", "Width", "Height"]
+      },
+      {
+        "n": "TabsLayout",
+        "p": ["onSelect", "onClose", "onRefresh", "onReorder", "selectedIndex", "tabs"],
+        "v": ["Tabs", "Content"],
+        "m": ["Variant"]
+      },
+      {
+        "n": "Tab",
+        "p": ["title", "content"],
+        "m": ["Icon", "Badge"]
+      }
+    ]
+  },
+  "hooks": [
+    {"n": "UseState", "p": ["initialValue", "buildOnChange"]},
+    {"n": "UseEffect", "p": ["effect", "dependencies"]},
+    {"n": "UseService", "p": ["serviceType"]},
+    {"n": "UseMemo", "p": ["factory", "dependencies"]},
+    {"n": "UseSignal", "p": ["initialValue"]}
+  ],
+  "t": {
+    "Align": ["Start", "Center", "End", "Stretch"],
+    "BorderRadius": ["None", "Rounded", "Full"],
+    "BorderStyle": ["Solid", "Dashed", "Dotted"],
+    "Size": ["Auto", "Full", "Grow", "Units", "Fraction", "Percent"],
+    "Colors": ["Primary", "Secondary", "Destructive", "Success", "Warning", "Info", "Gray", "Red", "Green", "Blue", "Purple", "Orange", "Pink"],
+    "ButtonVariant": ["Primary", "Secondary", "Destructive", "Outline", "Ghost", "Link", "Success", "Warning", "Info"],
+    "BadgeVariant": ["Default", "Secondary", "Destructive", "Outline"],
+    "TextInputs": ["Text", "Password", "Textarea", "Search", "Email", "Tel", "Url"],
+    "NumberInputs": ["Number", "Slider"],
+    "BoolInputs": ["Checkbox", "Switch", "Toggle"],
+    "SelectInputs": ["Select", "List", "Toggle"],
+    "DateTimeInputs": ["DateTime", "Date", "Time"],
+    "TabsVariant": ["Tabs", "Content"],
+    "NumberFormatStyle": ["Decimal", "Currency", "Percent"]
+  },
+  "services": {
+    "IClientProvider": {
+      "m": ["Toast", "Alert", "Confirm", "Download"]
+    },
+    "lifetime": ["Singleton", "Scoped", "Transient"]
+  },
+  "views": {
+    "base": "ViewBase",
+    "m": ["Build", "UseState", "UseEffect", "UseService", "UseMemo"],
+    "attr": {"App": {"p": ["icon", "title", "path", "isVisible"]}}
+  },
+  "env": {
+    "vars": [
+      "IVY_FIX_USE_CLAUDE_CODE",
+      "IVY_FIX_UPLOAD_TELEMETRY",
+      "ASPNETCORE_ENVIRONMENT",
+      "ConnectionStrings__*",
+      "Auth0:Domain",
+      "Auth0:ClientId",
+      "Auth0:ClientSecret",
+      "Auth0:Audience",
+      "Supabase:Url",
+      "Supabase:ApiKey"
+    ]
+  }
+}

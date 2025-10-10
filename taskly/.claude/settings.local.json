@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(dotnet run:*)",
+      "Bash(dotnet list:*)",
+      "Bash(sed:*)",
+      "Bash(dotnet restore:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
