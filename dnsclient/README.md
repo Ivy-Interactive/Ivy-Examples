@@ -1,6 +1,6 @@
 ﻿# DNS Client
 
-<img width="1919" height="915" alt="image" src="https://github.com/user-attachments/assets/73f5c62c-f845-4f8e-8769-623897aca71b" />
+<img width="1918" height="913" alt="image" src="https://github.com/user-attachments/assets/0d682c28-6790-48d4-bac4-de6094295a25" />
 
 ## One-Click Development Environment
 
