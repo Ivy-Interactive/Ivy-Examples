@@ -21,14 +21,14 @@ public class DiffEngineApp : ViewBase
 
         var lastLeft = this.UseState<string>();
         var lastRight = this.UseState<string>();
-        var error = this.UseState<string>();
+        var error = this.UseState<string?>();
 
         // handlers
         Func<Task> launchText = async () =>
         {
             try
             {
-                error.Value = "";
+                error.Value = null;
                 var pair = await DiffService.LaunchTextAsync(
                     leftText.Value, rightText.Value, Extensions[textExtIndex.Value]);
                 lastLeft.Value = pair.left;
@@ -49,7 +49,7 @@ public class DiffEngineApp : ViewBase
             }
             try
             {
-                error.Value = "";
+                error.Value = null;
                 var pair = await DiffService.LaunchFilesAsync(
                     leftFile.Value, rightFile.Value, Extensions[fileExtIndex.Value]);
                 lastLeft.Value = pair.left;
