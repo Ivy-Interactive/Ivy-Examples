@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
+    <RootNamespace>SvgSkiaDemo</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/**/*" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- <PackageReference Include="Svg.Skia" Version="1.7.0" />
+    <PackageReference Include="SkiaSharp" Version="2.0.0" /> -->
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="Svg.Skia" Version="3.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Apps" />
+    <Folder Include="Connections" />
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+</Project>
