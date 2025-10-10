@@ -1,9 +1,9 @@
 ﻿using DnsClient;
-using IvySample.DnsClient.Models;
-using IvySample.DnsClient.Signals;
-using IvySample.DnsClient.Utils;
+using DnsClientExample.Models;
+using DnsClientExample.Signals;
+using DnsClientExample.Utils;
 
-namespace IvySample.DnsClient.Forms;
+namespace DnsClientExample.Forms;
 
 public class DnsLookupForm : ViewBase
 { 
@@ -11,15 +11,17 @@ public class DnsLookupForm : ViewBase
     {
         var signal = this.Context.CreateSignal<DnsQueryResultsSignal, DnsQueryResponse?, bool>();
 
-        var lookup = this.UseState<LookupModel>(() => new LookupModel("", QueryType.A));
+        var lookup = this.UseState<LookupModel>(() => new LookupModel("samples.ivy.app", QueryType.A));
 
         var lookupClient = UseService<ILookupClient>();
+        var client = UseService<IClientProvider>();
 
         var formBuilder = lookup.ToForm()
             .Validate<string>(model => model.Dns,
             dns => (DnsValidator.IsValidDomainName(dns), "Must be a valid Domain Name"))
             .Required(model => model.Dns)
-            .Description(model =>model.Dns, "Enter a valid DNS to query its records.");
+            .Description(model => model.Dns, "Enter a valid domain name to query DNS records")
+            .Description(model => model.QueryType, "Select the type of DNS record to query");
 
         var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(this.Context);
 
@@ -27,15 +29,33 @@ public class DnsLookupForm : ViewBase
         {
             if (await onSubmit())
             {
-                var queryResults = await lookupClient.QueryAsync(lookup.Value.Dns, lookup.Value.QueryType);
-
-                var result = await signal.Send((DnsQueryResponse)queryResults);
-                
+                try
+                {
+                    var queryResults = await lookupClient.QueryAsync(lookup.Value.Dns, lookup.Value.QueryType);
+                    await signal.Send((DnsQueryResponse)queryResults);
+                }
+                catch (Exception ex)
+                {
+                    client.Toast($"DNS Query Error: {ex.Message}");
+                }
             }
         }
 
-        return Layout.Vertical()
-            | formView
-            | new Button("Query DNS").Tooltip("Query DNS Results").HandleClick(new Action(HandleSubmit)).Loading(loading).Disabled(loading);
+        return new Card()
+            | Layout.Vertical(
+                Text.H3("🌐 DNS Client"),
+                Text.Muted("Query DNS records for any domain with detailed information"),
+                formView,
+                Layout.Horizontal(
+                    new Button("Query DNS", new Action(HandleSubmit))
+                        .Variant(ButtonVariant.Primary)
+                        .Icon(Icons.Search)
+                        .Disabled(loading),
+                    loading ? Text.Muted("Querying...") : null
+                ),
+                new Spacer(),
+                Text.Small("This demo uses the DnsClient.NET library for DNS lookups."),
+                Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DnsClient.NET](https://github.com/MichaCo/DnsClient.NET)")
+            );
     }
 }

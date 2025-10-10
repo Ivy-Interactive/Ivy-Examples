@@ -1,6 +1,6 @@
 ﻿using DnsClient;
 
-namespace IvySample.DnsClient.Models;
+namespace DnsClientExample.Models;
 
 public record LookupModel(
         string Dns,

@@ -3,7 +3,7 @@
 ################################################################################
 
 /.vs
-/dnsclient/.vs/IvySample.DnsClient
+/dnsclient/.vs/DnsClientExample
 #Ignore thumbnails created by Windows
 Thumbs.db
 #Ignore files built by Visual Studio

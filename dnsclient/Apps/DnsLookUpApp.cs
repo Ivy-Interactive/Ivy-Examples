@@ -1,18 +1,16 @@
-﻿using IvySample.DnsClient.Components;
-using IvySample.DnsClient.Forms;
+﻿using DnsClientExample.Components;
+using DnsClientExample.Forms;
 
-namespace IvySample.DnsClient.Apps;
+namespace DnsClientExample.Apps;
 
-[App(icon: Icons.Server, title:"DNS Lookup")]
+[App(icon: Icons.Server, title:"DNS Client")]
 public class DnsLookUpApp : ViewBase
 {
     public override object? Build()
     {
-
-        return Layout.Vertical().Gap(2)
-             | Text.H1("DNS Client Sample")
-             | new DnsLookupForm()
-             | new DnsQueryResults();
-
+        return Layout.Horizontal(
+            new DnsLookupForm(),
+            new Card(new DnsQueryResults()).Height(Size.Fit().Min(Size.Full()))
+        );
     }
 }

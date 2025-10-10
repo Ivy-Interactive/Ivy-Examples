@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IvySample.DnsClient", "IvySample.DnsClient.csproj", "{552AAB79-F3A9-4B61-A3AB-593B8AD6C728}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnsClientExample", "DnsClientExample.csproj", "{552AAB79-F3A9-4B61-A3AB-593B8AD6C728}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
