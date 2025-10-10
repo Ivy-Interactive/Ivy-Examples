@@ -1,4 +1,4 @@
-﻿namespace DiffEngineDemo.Services;
+﻿namespace DiffengineExample.Services;
 
 public static class DiffService
 {

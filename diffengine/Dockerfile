@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy project and restore
-COPY ["DiffengineDemo.csproj", "./"]
-RUN dotnet restore "DiffengineDemo.csproj"
+COPY ["DiffengineExample.csproj", "./"]
+RUN dotnet restore "DiffengineExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "DiffengineDemo.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "DiffengineExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "DiffengineDemo.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "DiffengineExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Final runtime image
 FROM base AS final
@@ -30,4 +30,4 @@ COPY --from=publish /app/publish .
 ENV ASPNETCORE_URLS=http://+:80
 
 # Run the app
-ENTRYPOINT ["dotnet","DiffengineDemo.dll"]
+ENTRYPOINT ["dotnet","DiffengineExample.dll"]
