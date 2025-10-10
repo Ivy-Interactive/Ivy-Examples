@@ -1,6 +1,6 @@
-using IvyClosedXml.Apps.Views;
+using ClosedXmlExample.Apps.Views;
 
-namespace IvyClosedXml.Apps;
+namespace ClosedXmlExample.Apps;
 
 /// <summary>
 /// Represents an Excel editor application that provides a user interface for creating and editing Excel files.

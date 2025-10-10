@@ -1,4 +1,4 @@
-namespace IvyClosedXml.Apps.Views
+namespace ClosedXmlExample.Apps.Views
 {
     /// <summary>
     /// Dialog view enabling creation, selection, and deletion of workbook files.

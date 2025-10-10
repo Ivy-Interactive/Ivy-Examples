@@ -1,4 +1,4 @@
-namespace IvyClosedXml.Apps.Views
+namespace ClosedXmlExample.Apps.Views
 {
     /// <summary>
     /// View that constructs a tabbed header interface for every worksheet in the currently opened Excel workbook.

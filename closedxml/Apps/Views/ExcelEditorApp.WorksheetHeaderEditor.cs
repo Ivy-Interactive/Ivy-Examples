@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace IvyClosedXml.Apps.Views
+namespace ClosedXmlExample.Apps.Views
 {
     /// <summary>
     /// UI component for editing a worksheet: add columns, edit rows, and persist changes.

@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace IvyClosedXml.Apps.Views
+namespace ClosedXmlExample.Apps.Views
 {
     /// <summary>
     /// UI view that renders text inputs for adding a new row to a DataTable.

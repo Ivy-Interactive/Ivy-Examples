@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace IvyClosedXml.Apps.Views
+namespace ClosedXmlExample.Apps.Views
 {
     /// <summary>
     /// Represents a view for rendering a worksheet file as a table, constructed from a provided DataTable.
