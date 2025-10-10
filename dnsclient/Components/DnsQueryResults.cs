@@ -29,37 +29,30 @@ public class DnsQueryResults : ViewBase
         return Layout.Vertical(
             RenderHeader(result),
             RenderAnswers(result),
-            RenderAuthority(result),
-            RenderAdditional(result)
+            RenderAuthority(result)
         );
     }
 
     private object RenderHeader(IDnsQueryResponse result)
     {
-        var statusText = result.HasError ? $"❌ Error: {result.ErrorMessage}" : "✅ Success";
+        var statusText = result.HasError ? $"Error: {result.ErrorMessage}" : "Query successful";
+        var recordCount = result.AllRecords.Count();
 
         return new Card()
-            .Title("Query Information")
+            .Title($"{statusText}")
             | Layout.Vertical(
                 Layout.Horizontal(
                     Layout.Vertical(
-                        Text.Muted("Status"),
-                        Text.Literal(statusText)
+                        Text.Muted("Name Server:"),
+                        Text.Strong(result.NameServer.ToString())
                     ).Width(Size.Grow()),
                     Layout.Vertical(
-                        Text.Muted("Name Server"),
-                        Text.Literal(result.NameServer.ToString())
-                    ).Width(Size.Grow())
-                ).Width(Size.Full()),
-                new Separator(),
-                Layout.Horizontal(
-                    Layout.Vertical(
-                        Text.Muted("Message Size"),
-                        Text.Literal($"{result.MessageSize} bytes")
+                        Text.Muted("Records Found:"),
+                        Text.Strong($"{recordCount} record(s)")
                     ).Width(Size.Grow()),
                     Layout.Vertical(
-                        Text.Muted("Records"),
-                        Text.Literal($"{result.AllRecords.Count()} total")
+                        Text.Muted("Message Size:"),
+                        Text.Strong($"{result.MessageSize} bytes")
                     ).Width(Size.Grow())
                 ).Width(Size.Full())
             );
@@ -71,7 +64,7 @@ public class DnsQueryResults : ViewBase
             return null;
 
         return new Card()
-            .Title($"📋 Answers ({result.Answers.Count})")
+            .Title($"Answers ({result.Answers.Count})")
             | Layout.Vertical(
                 result.Answers.Select(record => RenderRecord(record)).ToArray()
             );
@@ -83,21 +76,9 @@ public class DnsQueryResults : ViewBase
             return null;
 
         return new Card()
-            .Title($"🛡️ Authority ({result.Authorities.Count})")
+            .Title($"Authority ({result.Authorities.Count})")
             | Layout.Vertical(
                 result.Authorities.Select(record => RenderRecord(record)).ToArray()
-            );
-    }
-
-    private object? RenderAdditional(IDnsQueryResponse result)
-    {
-        if (!result.Additionals.Any())
-            return null;
-
-        return new Card()
-            .Title($"ℹ️ Additional ({result.Additionals.Count})")
-            | Layout.Vertical(
-                result.Additionals.Select(record => RenderRecord(record)).ToArray()
             );
     }
 

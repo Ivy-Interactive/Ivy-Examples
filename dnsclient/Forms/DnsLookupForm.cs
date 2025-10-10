@@ -14,6 +14,7 @@ public class DnsLookupForm : ViewBase
         var lookup = this.UseState<LookupModel>(() => new LookupModel("samples.ivy.app", QueryType.A));
 
         var lookupClient = UseService<ILookupClient>();
+        var client = UseService<IClientProvider>();
 
         var formBuilder = lookup.ToForm()
             .Validate<string>(model => model.Dns,
@@ -35,16 +36,15 @@ public class DnsLookupForm : ViewBase
                 }
                 catch (Exception ex)
                 {
-                    // Handle errors gracefully
-                    Console.WriteLine($"DNS Query Error: {ex.Message}");
+                    client.Toast($"DNS Query Error: {ex.Message}");
                 }
             }
         }
 
         return new Card()
-            .Title("🔍 DNS Query")
-            .Description("Query DNS records for any domain")
             | Layout.Vertical(
+                Text.H3("🌐 DNS Lookup Tool"),
+                Text.Muted("Query DNS records for any domain with detailed information"),
                 formView,
                 Layout.Horizontal(
                     new Button("Query DNS", new Action(HandleSubmit))

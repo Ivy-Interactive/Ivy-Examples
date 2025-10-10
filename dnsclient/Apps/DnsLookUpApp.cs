@@ -3,16 +3,14 @@ using DnsClientExample.Forms;
 
 namespace DnsClientExample.Apps;
 
-[App(icon: Icons.Server, title:"DNS Lookup")]
+[App(icon: Icons.Server, title:"DNS Client")]
 public class DnsLookUpApp : ViewBase
 {
     public override object? Build()
     {
-        return Layout.Vertical(
-            Text.H1("🌐 DNS Lookup Tool"),
-            Text.Muted("Query DNS records for any domain with detailed information"),
+        return Layout.Horizontal(
             new DnsLookupForm(),
-            new DnsQueryResults()
-        ).Width(Size.Units(200));
+            new Card(new DnsQueryResults()).Height(Size.Fit().Min(Size.Full()))
+        );
     }
 }
