@@ -74,7 +74,7 @@ namespace ClosedXmlExample.Apps.Views
                     | new Button("Add file")
                         .Icon(Icons.Plus)
                         .Variant(ButtonVariant.Primary)
-                        .HandleClick(() => HandleAddFile(workbookRepository, fileName, existingFiles, selectedFile))
+                        .HandleClick(() => HandleAddFile(workbookRepository, fileName, existingFiles, selectedFile, client))
                     | selectedFile
                     .ToSelectInput(existingFiles.Value.ToOptions(), placeholder: "Selected file")
                     .Variant(SelectInputs.Select)
@@ -85,18 +85,32 @@ namespace ClosedXmlExample.Apps.Views
             return toolbar;
         }
 
-        private void HandleAddFile(WorkbookRepository workbookRepository, IState<string> fileName, IState<List<string>> existingFiles, IState<string> selectedFile)
+        private void HandleAddFile(WorkbookRepository workbookRepository, IState<string> fileName, IState<List<string>> existingFiles, IState<string> selectedFile, IClientProvider client)
         {
-            workbookRepository.AddNewFile(fileName.Value);
-            existingFiles.Set(GetFilesFromRepo(workbookRepository));
-            if (existingFiles.Value.Count == 1)
+            if (string.IsNullOrWhiteSpace(fileName.Value))
             {
-                selectedFile.Set(existingFiles.Value[0]);
-                workbookRepository.SetCurrentFile(existingFiles.Value[0]);
+                client.Toast("❌ File name cannot be empty!");
+                return;
             }
-            selectedFile.Set(fileName.Value);
 
-            RefreshToken.Refresh();
+            try
+            {
+                workbookRepository.AddNewFile(fileName.Value);
+                existingFiles.Set(GetFilesFromRepo(workbookRepository));
+                if (existingFiles.Value.Count == 1)
+                {
+                    selectedFile.Set(existingFiles.Value[0]);
+                    workbookRepository.SetCurrentFile(existingFiles.Value[0]);
+                }
+                selectedFile.Set(fileName.Value);
+                fileName.Set(""); // Clear the input after successful add
+
+                RefreshToken.Refresh();
+            }
+            catch (Exception ex)
+            {
+                client.Toast($"❌ Error: {ex.Message}");
+            }
         }
 
         private void HandleDeleteFile(WorkbookRepository workbookRepository, IState<List<string>> existingFiles, IState<string> selectedFile)

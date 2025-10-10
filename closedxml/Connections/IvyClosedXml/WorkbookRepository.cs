@@ -139,6 +139,7 @@ public class WorkbookRepository
     /// <summary>
     /// Saves the provided DataTable to the current worksheet as a table named "FirstTable".
     /// Removes any existing table with the same name before saving.
+    /// Data is kept in memory only - no files are created on disk.
     /// </summary>
     /// <param name="table">The <see cref="DataTable"/> to save.</param>
     internal void Save(DataTable table)
@@ -149,11 +150,8 @@ public class WorkbookRepository
         .Cell(1, 1)
         .InsertTable(table, "FirstTable", true);
 
-        var file = GetCurrentFile();
-        if (file != null)
-        {
-            file.Workbook.SaveAs(file.FileName + ".xlsx");
-        }
+        // Note: Data is stored in memory only
+        // No physical files are created on disk
     }
 
     /// <summary>
