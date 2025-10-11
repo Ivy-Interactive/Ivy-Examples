@@ -47,39 +47,14 @@ public class WorkbooksViewerApp : ViewBase
         var columnCount = selectedTable?.Columns.Count ?? 0;
         var rowCount = selectedTable?.Rows.Count ?? 0;
         
-        object fileInfoContent;
-        if (selectedFile != null && selectedTable != null)
-        {
-            // Get column types summary
-            var columnTypes = selectedTable.Columns.Cast<DataColumn>()
-                .GroupBy(c => c.DataType.Name)
-                .Select(g => $"{g.Key}: {g.Count()}")
-                .ToList();
-            
-            var columnTypesList = columnTypes.Count > 0
-                ? Layout.Vertical().Gap(1) | columnTypes.Select(t => Text.Small($"  • {t}")).ToArray()
-                : null;
-            
-            fileInfoContent = Layout.Vertical().Gap(2)
-                | Text.Label($"File: {selectedFile.FileName}")
-                | Text.Small($"Columns: {columnCount}")
-                | Text.Small($"Rows: {rowCount}")
-                | Text.Small($"Worksheets: {selectedFile.Workbook.Worksheets.Count}")
-                | Text.Muted("Column Types:")
-                | columnTypesList;
-        }
-        else
-        {
-            fileInfoContent = Text.Muted("No file selected");
-        }
-        
         var leftCard = new Card(
             Layout.Vertical().Gap(4).Padding(2)
             | Text.H2("File Selection")
             | Text.Muted("Choose a workbook to preview")
             | fileDropDown
-            | fileInfoContent
+            | new Spacer()
             | Text.Small("This demo uses the ClosedXML NuGet package to work with Excel files.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ClosedXML](https://github.com/ClosedXML/ClosedXML)")
         ).Width(Size.Fraction(0.45f)).Height(110);
         
         // Right Card - Data Table
