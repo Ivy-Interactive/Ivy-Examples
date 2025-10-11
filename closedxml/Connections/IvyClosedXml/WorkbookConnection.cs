@@ -6,7 +6,7 @@ using System.Data;
 /// </summary>
 public class WorkbookConnection : IConnection
 {
-    // Статичний екземпляр репозиторію - єдина база даних для всього додатку
+    // Static repository instance - single shared database for the entire application
     private static readonly WorkbookRepository _sharedRepository = new WorkbookRepository();
     
     public WorkbookConnection()
@@ -19,7 +19,7 @@ public class WorkbookConnection : IConnection
     /// </summary>
     private void InitializeSampleData()
     {
-        // Перевіряємо, чи вже ініціалізовано (щоб не дублювати при кожному створенні з'єднання)
+        // Check if already initialized to avoid duplicating data on each connection creation
         if (_sharedRepository.GetFiles().Count > 0)
             return;
             
@@ -102,7 +102,7 @@ public class WorkbookConnection : IConnection
 
     public void RegisterServices(IServiceCollection services)
     {
-        // Реєструємо статичний екземпляр WorkbookRepository як Singleton - єдина база даних для всього додатку
+        // Register the static WorkbookRepository instance as Singleton - single shared database for the entire application
         services.AddSingleton<WorkbookRepository>(_ => _sharedRepository);
         services.AddSingleton<WorkbookConnection>();
     }

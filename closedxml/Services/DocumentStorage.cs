@@ -146,8 +146,8 @@ public static class DocumentStorage
         {
             return _documents.Where(d =>
                 d.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                d.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                d.Author.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                (d.Description ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (d.Author ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
             ).ToList();
         }
     }
