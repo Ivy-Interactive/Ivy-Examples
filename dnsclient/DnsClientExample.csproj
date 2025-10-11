@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>DnsClientExample</RootNamespace>
+    <UserSecretsId>259f2b85-df6e-46d8-92d5-ba6c16a2e380</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
