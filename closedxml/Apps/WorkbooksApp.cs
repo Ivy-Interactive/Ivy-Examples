@@ -44,8 +44,7 @@ public class WorkbooksListBlade : ViewBase
             new(
                 title: record.FileName,
                 onClick: onItemClicked,
-                tag: record,
-                subtitle: $"{record.ColumnCount} columns"
+                tag: record
             );
 
         var createBtn = Icons.Plus.ToButton(_ =>
