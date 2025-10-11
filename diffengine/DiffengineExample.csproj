@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>DiffengineExample</RootNamespace>
+    <UserSecretsId>2b7c4264-8086-4c7d-883f-944e0d1d884a</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
