@@ -66,7 +66,44 @@ public class WorkbookRepository
         if (table == null)
             return new DataTable() { TableName = "FirstTable" };
 
-        return table.AsNativeDataTable();
+        var dataTable = table.AsNativeDataTable();
+        
+        // Remove empty rows that ClosedXML might have created
+        RemoveEmptyRows(dataTable);
+        
+        return dataTable;
+    }
+    
+    /// <summary>
+    /// Removes rows that are completely empty (all cells are null or whitespace).
+    /// </summary>
+    /// <param name="dataTable">The DataTable to clean.</param>
+    private void RemoveEmptyRows(DataTable dataTable)
+    {
+        var rowsToDelete = new List<DataRow>();
+        
+        foreach (DataRow row in dataTable.Rows)
+        {
+            bool isEmptyRow = true;
+            foreach (var item in row.ItemArray)
+            {
+                if (item != null && !string.IsNullOrWhiteSpace(item.ToString()))
+                {
+                    isEmptyRow = false;
+                    break;
+                }
+            }
+            
+            if (isEmptyRow)
+            {
+                rowsToDelete.Add(row);
+            }
+        }
+        
+        foreach (var row in rowsToDelete)
+        {
+            dataTable.Rows.Remove(row);
+        }
     }
 
     /// <summary>

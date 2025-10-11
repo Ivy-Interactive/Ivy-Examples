@@ -293,11 +293,7 @@ public class WorksheetTableView(DataTable table) : ViewBase
             listOfTableRows.Add(new TableRow([.. dataCells]));
         }
 
-        if (listOfTableRows.Count == 1) // Only header row
-        {
-            return Text.Small("No data rows yet. Add rows using the form above.");
-        }
-
+        // Always return table, even if there are only headers (no data rows)
         return new Table([.. listOfTableRows]);
     }
 }
