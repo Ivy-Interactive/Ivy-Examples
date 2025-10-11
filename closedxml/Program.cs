@@ -6,6 +6,6 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings().UseTabs(preventDuplicates: true).DefaultApp<ExcelEditorApp>();
+var chromeSettings = new ChromeSettings().UseTabs(preventDuplicates: true).DefaultApp<WorkbooksViewerApp>();
 server.UseChrome(chromeSettings);
 await server.RunAsync();
