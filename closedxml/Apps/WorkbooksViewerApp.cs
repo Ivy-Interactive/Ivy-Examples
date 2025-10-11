@@ -11,6 +11,7 @@ public class WorkbooksViewerApp : ViewBase
     public override object? Build()
     {
         var workbookRepository = this.UseService<WorkbookRepository>();
+        var refreshToken = this.UseRefreshToken();
         
         var files = workbookRepository.GetFiles();
         var selectedFileIndex = this.UseState(0);
@@ -42,6 +43,10 @@ public class WorkbooksViewerApp : ViewBase
             .Icon(Icons.ChevronDown)
             .WithDropDown(fileMenuItems);
         
+        var refreshButton = Icons.RefreshCw.ToButton(_ => refreshToken.Refresh())
+            .Variant(ButtonVariant.Secondary)
+            .WithTooltip("Refresh file list");
+        
         // Left Card - File Selection and Info
         var columnCount = selectedTable?.Columns.Count ?? 0;
         var rowCount = selectedTable?.Rows.Count ?? 0;
@@ -50,7 +55,9 @@ public class WorkbooksViewerApp : ViewBase
             Layout.Vertical().Gap(4).Padding(2)
             | Text.H2("File Selection")
             | Text.Muted("Choose a workbook to preview")
-            | fileDropDown
+            | (Layout.Horizontal().Gap(2)
+                | fileDropDown
+                | refreshButton)
             | new Spacer()
             | Text.Small("This demo uses the ClosedXML NuGet package to work with Excel files.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ClosedXML](https://github.com/ClosedXML/ClosedXML)")
