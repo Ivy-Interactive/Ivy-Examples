@@ -10,8 +10,7 @@ public class WorkbooksViewerApp : ViewBase
 {
     public override object? Build()
     {
-        var workbookConnection = this.UseService<WorkbookConnection>();
-        var workbookRepository = workbookConnection.GetWorkbookRepository();
+        var workbookRepository = this.UseService<WorkbookRepository>();
         
         var files = workbookRepository.GetFiles();
         var selectedFileIndex = this.UseState(0);

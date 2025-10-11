@@ -6,11 +6,12 @@ using ClosedXML.Excel;
 /// Represents a repository for managing Excel workbook files using ClosedXML.
 /// This class handles operations such as adding, removing, and manipulating workbook files,
 /// including setting a current file for operations and saving data tables to worksheets.
+/// This is registered as a Singleton - one shared database for all components.
 /// </summary>
 public class WorkbookRepository
 {
-    private List<WorkbookFileInfo> excelFiles { get; set; }
-    private WorkbookFileInfo? currentFile { get; set; }
+    private readonly List<WorkbookFileInfo> excelFiles;
+    private WorkbookFileInfo? currentFile;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkbookRepository"/> class.

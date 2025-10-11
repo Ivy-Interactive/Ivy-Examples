@@ -21,8 +21,7 @@ public class WorkbooksListBlade : ViewBase
     public override object? Build()
     {
         var blades = this.UseContext<IBladeController>();
-        var workbookConnection = this.UseService<WorkbookConnection>();
-        var workbookRepository = workbookConnection.GetWorkbookRepository();
+        var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
         this.UseEffect(() =>
@@ -90,8 +89,7 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
     public override object? Build()
     {
         var blades = this.UseContext<IBladeController>();
-        var workbookConnection = this.UseService<WorkbookConnection>();
-        var workbookRepository = workbookConnection.GetWorkbookRepository();
+        var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
         // Set current file
@@ -120,8 +118,7 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeController 
     public override object? Build()
     {
         var client = this.UseService<IClientProvider>();
-        var workbookConnection = this.UseService<WorkbookConnection>();
-        var workbookRepository = workbookConnection.GetWorkbookRepository();
+        var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
         var columnName = this.UseState<string?>(() => null);
@@ -307,8 +304,7 @@ public class WorkbookCreateDialog(IState<bool> isOpen, RefreshToken refreshToken
 {
     public override object? Build()
     {
-        var workbookConnection = this.UseService<WorkbookConnection>();
-        var workbookRepository = workbookConnection.GetWorkbookRepository();
+        var workbookRepository = this.UseService<WorkbookRepository>();
         var client = this.UseService<IClientProvider>();
         var workbook = this.UseState(() => new WorkbookCreateRequest());
 

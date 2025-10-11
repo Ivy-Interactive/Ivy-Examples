@@ -6,11 +6,11 @@ using System.Data;
 /// </summary>
 public class WorkbookConnection : IConnection
 {
-    private WorkbookRepository excelFileRepository { get; set; }
-
+    // Статичний екземпляр репозиторію - єдина база даних для всього додатку
+    private static readonly WorkbookRepository _sharedRepository = new WorkbookRepository();
+    
     public WorkbookConnection()
     {
-        excelFileRepository = new WorkbookRepository();
         InitializeSampleData();
     }
     
@@ -19,10 +19,14 @@ public class WorkbookConnection : IConnection
     /// </summary>
     private void InitializeSampleData()
     {
+        // Перевіряємо, чи вже ініціалізовано (щоб не дублювати при кожному створенні з'єднання)
+        if (_sharedRepository.GetFiles().Count > 0)
+            return;
+            
         try
         {
             // Sample 1: Employees
-            excelFileRepository.AddNewFile("Employees.xlsx");
+            _sharedRepository.AddNewFile("Employees.xlsx");
             var employeesTable = new DataTable { TableName = "Employees" };
             employeesTable.Columns.Add("Name", typeof(string));
             employeesTable.Columns.Add("Position", typeof(string));
@@ -34,10 +38,10 @@ public class WorkbookConnection : IConnection
             employeesTable.Rows.Add("Mike Johnson", "Designer", 65000, "Marketing");
             employeesTable.Rows.Add("Sarah Williams", "Analyst", 70000, "Finance");
             
-            excelFileRepository.Save("Employees.xlsx", employeesTable);
+            _sharedRepository.Save("Employees.xlsx", employeesTable);
             
             // Sample 2: Products
-            excelFileRepository.AddNewFile("Products.xlsx");
+            _sharedRepository.AddNewFile("Products.xlsx");
             var productsTable = new DataTable { TableName = "Products" };
             productsTable.Columns.Add("Product", typeof(string));
             productsTable.Columns.Add("Price", typeof(decimal));
@@ -50,10 +54,10 @@ public class WorkbookConnection : IConnection
             productsTable.Rows.Add("Chair", 249.99, 35, "Furniture");
             productsTable.Rows.Add("Monitor", 349.99, 60, "Electronics");
             
-            excelFileRepository.Save("Products.xlsx", productsTable);
+            _sharedRepository.Save("Products.xlsx", productsTable);
             
             // Sample 3: Sales
-            excelFileRepository.AddNewFile("Sales.xlsx");
+            _sharedRepository.AddNewFile("Sales.xlsx");
             var salesTable = new DataTable { TableName = "Sales" };
             salesTable.Columns.Add("Date", typeof(string));
             salesTable.Columns.Add("Product", typeof(string));
@@ -64,7 +68,7 @@ public class WorkbookConnection : IConnection
             salesTable.Rows.Add("2024-01-16", "Mouse", 12, 359.88);
             salesTable.Rows.Add("2024-01-17", "Chair", 5, 1249.95);
             
-            excelFileRepository.Save("Sales.xlsx", salesTable);
+            _sharedRepository.Save("Sales.xlsx", salesTable);
         }
         catch (Exception)
         {
@@ -74,7 +78,7 @@ public class WorkbookConnection : IConnection
 
     public WorkbookRepository GetWorkbookRepository()
     {
-        return excelFileRepository;
+        return _sharedRepository;
     }
 
     public string GetConnectionType()
@@ -98,6 +102,8 @@ public class WorkbookConnection : IConnection
 
     public void RegisterServices(IServiceCollection services)
     {
+        // Реєструємо статичний екземпляр WorkbookRepository як Singleton - єдина база даних для всього додатку
+        services.AddSingleton<WorkbookRepository>(_ => _sharedRepository);
         services.AddSingleton<WorkbookConnection>();
     }
 }
