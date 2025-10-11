@@ -73,7 +73,7 @@ public class WorkbooksViewerApp : ViewBase
             | Text.H2("Data Preview")
             | Text.Muted(selectedFile != null ? $"Viewing: {selectedFile.FileName}" : "Select a file")
             | tableContent
-        ).Width(Size.Fraction(0.45f)).Height(110);
+        ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(110));
         
         return Layout.Horizontal().Gap(6).Align(Align.Center)
             | leftCard
