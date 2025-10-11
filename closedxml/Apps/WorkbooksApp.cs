@@ -14,7 +14,7 @@ public class WorkbooksApp : ViewBase
     }
 }
 
-public record WorkbookListRecord(string FileName, int WorksheetCount);
+public record WorkbookListRecord(string FileName, int ColumnCount);
 
 public class WorkbooksListBlade : ViewBase
 {
@@ -45,7 +45,7 @@ public class WorkbooksListBlade : ViewBase
                 title: record.FileName,
                 onClick: onItemClicked,
                 tag: record,
-                subtitle: $"{record.WorksheetCount} worksheets"
+                subtitle: $"{record.ColumnCount} columns"
             );
 
         var createBtn = Icons.Plus.ToButton(_ =>
@@ -75,7 +75,9 @@ public class WorkbooksListBlade : ViewBase
                 : files.Where(f => f.FileName.Contains(filter, StringComparison.OrdinalIgnoreCase));
 
             return filtered
-                .Select(f => new WorkbookListRecord(f.FileName, f.Workbook.Worksheets.Count))
+                .Select(f => new WorkbookListRecord(
+                    f.FileName, 
+                    f.Workbook.Worksheets.FirstOrDefault()?.ColumnsUsed().Count() ?? 0))
                 .ToArray();
         });
     }
@@ -104,42 +106,17 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
         if (currentFile == null)
             return Text.Block("No workbook selected");
 
-        var deleteBtn = new Button("Delete", onClick: e =>
-            {
-                workbookRepository.RemoveFile(fileName);
-                blades.Pop(refresh: true);
-            })
-            .Variant(ButtonVariant.Destructive)
-            .Icon(Icons.Trash)
-            .WithConfirm($"Are you sure you want to delete workbook '{fileName}'?", "Delete Workbook");
+        // Get the first worksheet
+        var table = workbookRepository.GetCurrentTable();
 
-        // Create tabs for each worksheet
-        var tabs = new List<Tab>();
-        foreach (var worksheet in currentFile.Workbook.Worksheets)
-        {
-            var table = workbookRepository.GetCurrentTable();
-            var tab = new Tab(worksheet.Name, new WorksheetEditor(table, fileName));
-            tabs.Add(tab);
-        }
-
-        var header = new Card(
-            Layout.Horizontal().Gap(2).Width(Size.Full())
-            | Layout.Vertical().Width(Size.Grow())
-                | Text.H4(fileName)
-                | Text.Small($"{currentFile.Workbook.Worksheets.Count} worksheets")
-            | deleteBtn
-        ).Title("Excel Workbook Editor");
-
-        return Layout.Vertical().Gap(2)
-            | header
-            | Layout.Tabs([.. tabs]).Variant(TabsVariant.Tabs);
+        return new WorksheetEditor(table, fileName, blades);
     }
 }
 
 /// <summary>
 /// Worksheet Editor - Allows adding columns, rows, and saving changes
 /// </summary>
-public class WorksheetEditor(DataTable table, string fileName) : ViewBase
+public class WorksheetEditor(DataTable table, string fileName, IBladeController blades) : ViewBase
 {
     public override object? Build()
     {
@@ -162,10 +139,16 @@ public class WorksheetEditor(DataTable table, string fileName) : ViewBase
 
             try
             {
-                table.Columns.Add(columnName.Value, GetColumnTypeFromString(selectedType.Value));
+                var colName = columnName.Value;
+                table.Columns.Add(colName, GetColumnTypeFromString(selectedType.Value));
+                
+                // Auto-save changes
+                workbookRepository.SetCurrentFile(fileName);
+                workbookRepository.Save(table);
+                
                 columnName.Value = null;
                 refreshToken.Refresh();
-                client.Toast($"Column '{columnName.Value}' added!");
+                client.Toast($"Column '{colName}' added and saved!");
             }
             catch (Exception ex)
             {
@@ -175,39 +158,42 @@ public class WorksheetEditor(DataTable table, string fileName) : ViewBase
         .Variant(ButtonVariant.Primary)
         .Icon(Icons.Plus);
 
-        var saveButton = new Button("Save Table", _ =>
-        {
-            try
-            {
-                workbookRepository.SetCurrentFile(fileName);
-                workbookRepository.Save(table);
-                client.Toast("✅ Changes saved!");
-            }
-            catch (Exception ex)
-            {
-                client.Toast($"❌ Error: {ex.Message}");
-            }
-        })
-        .Variant(ButtonVariant.Outline)
-        .Icon(Icons.Database);
-
         var columnEditorCard = new Card(
             Layout.Vertical().Gap(2)
-            | Text.Label("Add New Column")
             | Layout.Horizontal().Gap(2)
                 | columnName.ToTextInput(placeholder: "Column name")
                 | selectedType.ToSelectInput(columnTypes.ToOptions()).Variant(SelectInputs.Select)
                 | addColumnButton
-                | saveButton
-        ).Title("Worksheet Controls");
+        ).Title($"Add New Column");
 
-        var rowEditor = new RowEditor(table, refreshToken);
+        var rowEditor = new RowEditor(table, refreshToken, workbookRepository, fileName);
         var tableView = new WorksheetTableView(table);
+
+        var deleteBtn = new Button("Delete", onClick: e =>
+            {
+                workbookRepository.RemoveFile(fileName);
+                blades.Pop(refresh: true);
+            })
+            .Variant(ButtonVariant.Destructive)
+            .Icon(Icons.Trash)
+            .WithConfirm($"Are you sure you want to delete workbook '{fileName}'?", "Delete Workbook");
+
+        var columnCount = table.Columns.Count;
+        var rowCount = table.Rows.Count;
+
+        var footer = new Card(
+            Layout.Vertical().Gap(2)
+            | Layout.Horizontal().Gap(4)
+                | Text.Label($"{columnCount} columns")
+                | Text.Label($"{rowCount} rows")
+            | deleteBtn
+        ).Title(fileName);
 
         return Layout.Vertical().Gap(4)
             | columnEditorCard
             | new Card(rowEditor).Title("Add New Row")
-            | new Card(tableView).Title("Table Data");
+            | new Card(tableView).Title("Table Data")
+            | footer;
     }
 
     private static Type GetColumnTypeFromString(string selectedType)
@@ -227,7 +213,7 @@ public class WorksheetEditor(DataTable table, string fileName) : ViewBase
 /// <summary>
 /// Row Editor - UI for adding new rows to the table
 /// </summary>
-public class RowEditor(DataTable table, RefreshToken refreshToken) : ViewBase
+public class RowEditor(DataTable table, RefreshToken refreshToken, WorkbookRepository workbookRepository, string fileName) : ViewBase
 {
     public override object? Build()
     {
@@ -255,6 +241,10 @@ public class RowEditor(DataTable table, RefreshToken refreshToken) : ViewBase
                 var newRow = inputsForRowData.Select(input => input.Value ?? "").ToArray();
                 table.Rows.Add(newRow);
                 
+                // Auto-save changes
+                workbookRepository.SetCurrentFile(fileName);
+                workbookRepository.Save(table);
+                
                 // Clear inputs
                 foreach (var input in inputsForRowData)
                 {
@@ -262,7 +252,7 @@ public class RowEditor(DataTable table, RefreshToken refreshToken) : ViewBase
                 }
                 
                 refreshToken.Refresh();
-                client.Toast("Row added!");
+                client.Toast("Row added and saved!");
             }
             catch (Exception ex)
             {
