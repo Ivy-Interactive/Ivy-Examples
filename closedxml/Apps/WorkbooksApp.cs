@@ -106,8 +106,8 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
         if (currentFile == null)
             return Text.Block("No workbook selected");
 
-        // Get the first worksheet
-        var table = workbookRepository.GetCurrentTable();
+        // Get the first worksheet - passing fileName directly to avoid shared state issues
+        var table = workbookRepository.GetCurrentTable(fileName);
 
         return new WorksheetEditor(table, fileName, blades);
     }
@@ -142,9 +142,8 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeController 
                 var colName = columnName.Value;
                 table.Columns.Add(colName, GetColumnTypeFromString(selectedType.Value));
                 
-                // Auto-save changes
-                workbookRepository.SetCurrentFile(fileName);
-                workbookRepository.Save(table);
+                // Auto-save changes - passing fileName directly to avoid shared state issues
+                workbookRepository.Save(fileName, table);
                 
                 columnName.Value = null;
                 refreshToken.Refresh();
@@ -241,9 +240,8 @@ public class RowEditor(DataTable table, RefreshToken refreshToken, WorkbookRepos
                 var newRow = inputsForRowData.Select(input => input.Value ?? "").ToArray();
                 table.Rows.Add(newRow);
                 
-                // Auto-save changes
-                workbookRepository.SetCurrentFile(fileName);
-                workbookRepository.Save(table);
+                // Auto-save changes - passing fileName directly to avoid shared state issues
+                workbookRepository.Save(fileName, table);
                 
                 // Clear inputs
                 foreach (var input in inputsForRowData)

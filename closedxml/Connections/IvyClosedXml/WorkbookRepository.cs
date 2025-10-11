@@ -39,13 +39,30 @@ public class WorkbookRepository
     }
 
     /// <summary>
-    /// Gets the first table from the current worksheet as a DataTable.
+    /// Gets the first table from the current file's worksheet as a DataTable.
     /// If no table exists, returns a new DataTable with the name "FirstTable".
     /// </summary>
     /// <returns>A <see cref="DataTable"/> representing the first table in the worksheet.</returns>
     public DataTable GetCurrentTable()
     {
-        var table = Worksheet.Tables.FirstOrDefault();
+        if (currentFile == null)
+            throw new InvalidOperationException("No current file is set. Call SetCurrentFile() first.");
+        
+        return GetCurrentTable(currentFile.FileName);
+    }
+
+    /// <summary>
+    /// Gets the first table from the specified file's worksheet as a DataTable.
+    /// If no table exists, returns a new DataTable with the name "FirstTable".
+    /// </summary>
+    /// <param name="fileName">The name of the file to get the table from.</param>
+    /// <returns>A <see cref="DataTable"/> representing the first table in the worksheet.</returns>
+    public DataTable GetCurrentTable(string fileName)
+    {
+        var file = GetFileByName(fileName);
+        var worksheet = file.Workbook.Worksheets.FirstOrDefault();
+        var table = worksheet?.Tables.FirstOrDefault();
+        
         if (table == null)
             return new DataTable() { TableName = "FirstTable" };
 
@@ -137,16 +154,34 @@ public class WorkbookRepository
     }
 
     /// <summary>
-    /// Saves the provided DataTable to the current worksheet as a table named "FirstTable".
+    /// Saves the provided DataTable to the current file's worksheet as a table named "FirstTable".
     /// Removes any existing table with the same name before saving.
     /// Data is kept in memory only - no files are created on disk.
     /// </summary>
     /// <param name="table">The <see cref="DataTable"/> to save.</param>
     internal void Save(DataTable table)
     {
-        TryRemoveExistingTable();
+        if (currentFile == null)
+            throw new InvalidOperationException("No current file is set. Call SetCurrentFile() first.");
+        
+        Save(currentFile.FileName, table);
+    }
 
-        Worksheet
+    /// <summary>
+    /// Saves the provided DataTable to the specified file's worksheet as a table named "FirstTable".
+    /// Removes any existing table with the same name before saving.
+    /// Data is kept in memory only - no files are created on disk.
+    /// </summary>
+    /// <param name="fileName">The name of the file to save the table to.</param>
+    /// <param name="table">The <see cref="DataTable"/> to save.</param>
+    internal void Save(string fileName, DataTable table)
+    {
+        var file = GetFileByName(fileName);
+        var worksheet = file.Workbook.Worksheets.FirstOrDefault();
+        
+        TryRemoveExistingTable(worksheet);
+
+        worksheet
         .Cell(1, 1)
         .InsertTable(table, "FirstTable", true);
 
@@ -163,17 +198,18 @@ public class WorkbookRepository
     /// Attempts to remove the existing table named "FirstTable" from the worksheet.
     /// Clears the worksheet if the table exists.
     /// </summary>
-    private void TryRemoveExistingTable()
+    /// <param name="worksheet">The worksheet to remove the table from.</param>
+    private void TryRemoveExistingTable(IXLWorksheet worksheet)
     {
         try
         {
-            var table = Worksheet.Tables.FirstOrDefault(f => f.Name == "FirstTable");
+            var table = worksheet.Tables.FirstOrDefault(f => f.Name == "FirstTable");
 
             if (table != null)
             {
-                Worksheet.Tables.Remove(0);
+                worksheet.Tables.Remove(0);
                 table.Clear(XLClearOptions.All);
-                Worksheet.Clear(XLClearOptions.All);
+                worksheet.Clear(XLClearOptions.All);
             }
         }
         catch (Exception ex)
