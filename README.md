@@ -157,8 +157,6 @@ Looking for inspiration? Here are some examples we'd love to see:
 - **Gaming**: MonoGame, Unity integrations
 - **IoT**: Device communication and monitoring
 - **Blockchain**: Ethereum, Bitcoin integrations
-- **Mobile**: MAUI hybrid applications
-- **Desktop**: Avalonia, WinUI integrations
 
 ## License
 
