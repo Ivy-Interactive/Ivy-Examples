@@ -5,6 +5,8 @@
 [![License](https://img.shields.io/github/license/Ivy-Interactive/Ivy-Examples?style=flat-square)](LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/Ivy-Interactive/Ivy-Examples?style=flat-square)](https://github.com/Ivy-Interactive/Ivy-Examples/graphs/contributors)
 
+[Documentation](https://docs.ivy.app) | [Samples](https://samples.ivy.app) | [Current Sprint](https://github.com/orgs/Ivy-Interactive/projects/8) | [Roadmap](https://github.com/orgs/Ivy-Interactive/projects/7) | [Examples](https://github.com/Ivy-Interactive/Ivy-Examples)
+
 A comprehensive collection of real-world examples showcasing the power and versatility of the [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) integrated with popular .NET packages and libraries.
 
 **Ivy** is the ultimate framework for building internal tools with LLM code generation by unifying front-end and back-end into a single C# codebase. With Ivy, you can build robust internal tools and dashboards using C# and AI assistance based on your existing database.
@@ -161,13 +163,6 @@ Looking for inspiration? Here are some examples we'd love to see:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Links
-
-- **Ivy Framework**: [github.com/Ivy-Interactive/Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework)
-- **Documentation**: [docs.ivy.app](https://docs.ivy.app)
-- **Community**: [Discord](https://discord.gg/ivy)
-- **Website**: [ivy.app](https://ivy.app)
 
 ## Star History
 
