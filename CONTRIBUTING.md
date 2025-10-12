@@ -101,7 +101,6 @@ your-example-name/
 
 ## Learn More
 
-- [Package Documentation](link-to-package-docs)
 - [Ivy Documentation](https://docs.ivy.app)
 
 ### 7. Create Dockerfile
