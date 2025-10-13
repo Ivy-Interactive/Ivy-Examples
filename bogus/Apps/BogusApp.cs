@@ -11,7 +11,7 @@ using Bogus.DataSets;
 
 namespace BogusExample.Apps
 {
-    [App(icon: Icons.Check)]
+    [App(icon: Icons.BrainCog)]
     public class BogusApp : ViewBase
     {
         public override object? Build()
@@ -50,7 +50,6 @@ namespace BogusExample.Apps
                       ? Layout.Vertical().Gap(2)
                         | fruits.Value.Select(f =>
                               Layout.Horizontal().Width(Size.Full()).Gap(2).Align(Align.Center)
-                              | new Badge(f).Variant(BadgeVariant.Secondary)
                               | Text.Literal(f).Width(Size.Grow())
                               | new Button(null, _ => fruits.Set(fruits.Value.Remove(f)))
                                   .Icon(Icons.Trash)
@@ -111,7 +110,6 @@ namespace BogusExample.Apps
                   .Align(p => p.OrderId, Align.Center)
                   .Align(p => p.Quantity, Align.Center)
                   .Align(p => p.LotNumber, Align.Center)
-                  .Totals(p => p.Quantity, items => items.Sum(p => p.Quantity))
                   .Empty(
                       Layout.Vertical().Gap(3)
                       | Text.Muted("No orders yet.")
