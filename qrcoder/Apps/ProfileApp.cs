@@ -90,8 +90,7 @@ public class ProfileApp : ViewBase
             ).Height(Size.Full())
             : new Card(
                 Layout.Vertical().Padding(2)
-                | (Layout.Center()
-                    | Text.H2("Welcome to Profile Creator"))
+                | Text.H2("Welcome to Profile Creator")
                 | Text.Block("Fill out the form in the sidebar to create your shareable profile QR code.")
                 | Text.Block("Once you submit the form, your QR code will appear here in the main content area.")
             ).Height(Size.Full());
