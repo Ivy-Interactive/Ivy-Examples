@@ -20,13 +20,16 @@ namespace BogusExample.Apps
             var fruits = this.UseState(ImmutableArray.Create("apple", "banana", "orange", "strawberry", "kiwi"));
             var fruitInput = this.UseState("");
 
-            return new Card().Title("Orders").Description("Generate sample orders with the Bogus library.")
-           | (Layout.Vertical()
-
-              // Fruit editor
-              | Text.Muted("Fruits")
-              | (Layout.Horizontal().Width(Size.Full())
-                 | fruitInput.ToTextInput(placeholder: "Add fruit...").Width(Size.Grow())
+            // Left Card: Fruit Configuration
+            var leftCardBody = Layout.Vertical().Gap(4).Padding(3)
+              | Text.H2("🍎 Fruit Configuration")
+              | Text.Muted("Manage the list of fruits for orders")
+              
+              | new Separator()
+              
+              // Add fruit input
+              | (Layout.Horizontal().Width(Size.Full()).Gap(2)
+                 | fruitInput.ToTextInput(placeholder: "Add a new fruit...").Width(Size.Grow())
                  | new Button("Add", _ =>
                    {
                        var f = (fruitInput.Value ?? "").Trim();
@@ -38,17 +41,30 @@ namespace BogusExample.Apps
                        fruitInput.Set("");
                    }).Icon(Icons.Plus).Variant(ButtonVariant.Secondary)
               )
-              | fruits.Value.Select(f =>
-                    Layout.Horizontal().Width(Size.Full())
-                    | Text.Literal(f).Width(Size.Grow())
-                    | new Button(null, _ => fruits.Set(fruits.Value.Remove(f)))
-                        .Icon(Icons.Trash).Variant(ButtonVariant.Outline)
-                )
+              
               | new Separator()
-
-              // Generator
-              | (Layout.Horizontal().Width(Size.Full())
-                 | new Button("Generate 10", _ =>
+              
+              // Fruits list in Expandable
+              | new Expandable(
+                  $"Available Fruits ({fruits.Value.Length})",
+                  fruits.Value.Length > 0 
+                      ? Layout.Vertical().Gap(2)
+                        | fruits.Value.Select(f =>
+                              Layout.Horizontal().Width(Size.Full()).Gap(2).Align(Align.Center)
+                              | new Badge(f).Variant(BadgeVariant.Secondary)
+                              | Text.Literal(f).Width(Size.Grow())
+                              | new Button(null, _ => fruits.Set(fruits.Value.Remove(f)))
+                                  .Icon(Icons.Trash)
+                                  .Variant(ButtonVariant.Ghost)
+                          )
+                      : (object)Text.Muted("No fruits added yet. Add some fruits to generate orders.")
+              )
+                  
+              | new Separator()
+              
+              // Generate button
+              | (Layout.Horizontal().Width(Size.Full()).Gap(2)
+                 | new Button("Generate 10 Orders", _ =>
                    {
                        var fruit = (fruits.Value.Length > 0
                            ? fruits.Value
@@ -66,25 +82,52 @@ namespace BogusExample.Apps
 
                        var generated = testOrders.Generate(10);
                        orders.Set(ImmutableArray.CreateRange(generated));
-                   }).Icon(Icons.RefreshCw).Variant(ButtonVariant.Primary)
+                   })
+                   .Icon(Icons.RefreshCw)
+                   .Variant(ButtonVariant.Primary)
+                   .Width(Size.Full())
+                   
+                 | new Button("Clear", _ => orders.Set(ImmutableArray.Create<Order>()))
+                   .Icon(Icons.Trash2)
+                   .Variant(ButtonVariant.Outline)
               )
+              | Text.Small("This demo uses Bogus library to generate fake data.")
+              | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Bogus](https://github.com/bchavez/Bogus)");
 
+            var leftCard = new Card(leftCardBody).Width(Size.Fraction(0.4f)).Height(Size.Units(130));
+            
+            // Right Card: Generated Orders Table
+            var rightCardBody = Layout.Vertical().Gap(4).Padding(3)
+              | Text.H2("📦 Generated Orders")
+              | Text.Muted($"Displaying {orders.Value.Length} orders")
+              
               | new Separator()
-              | (Layout.Horizontal().Width(Size.Full())
-                 | Text.Muted("OrderId").Width(0.2)
-                 | Text.Muted("Item").Width(Size.Grow())
-                 | Text.Muted("Quantity").Width(0.2)
-                 | Text.Muted("LotNumber").Width(0.2)
-              )
-              | new Separator()
-              | orders.Value.Select(o =>
-                    Layout.Horizontal().Align(Align.Center).Width(Size.Full())
-                    | Text.Literal(o.OrderId.ToString()).Width(0.2)
-                    | Text.Literal(o.Item).Width(Size.Grow())
-                    | Text.Literal(o.Quantity.ToString()).Width(0.2)
-                    | Text.Muted(o.LotNumber?.ToString() ?? "null").Width(0.2)
-                )
-            );
+              
+              | orders.Value.ToTable()
+                  .Width(Size.Full())
+                  .Width(p => p.OrderId, Size.Fraction(0.15f))
+                  .Width(p => p.Item, Size.Fraction(0.35f))
+                  .Width(p => p.Quantity, Size.Fraction(0.2f))
+                  .Width(p => p.LotNumber, Size.Fraction(0.3f))
+                  .Header(p => p.OrderId, "ID")
+                  .Header(p => p.Item, "Fruit")
+                  .Header(p => p.Quantity, "Qty")
+                  .Header(p => p.LotNumber, "Lot #")
+                  .Align(p => p.OrderId, Align.Center)
+                  .Align(p => p.Quantity, Align.Center)
+                  .Align(p => p.LotNumber, Align.Center)
+                  .Totals(p => p.Quantity, items => items.Sum(p => p.Quantity))
+                  .Empty(
+                      Layout.Vertical().Gap(3)
+                      | Text.Muted("No orders yet.")
+                      | Text.Muted("Generate orders using the left panel.")
+                  );
+
+            var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.55f)).Height(Size.Units(130));
+
+            return Layout.Horizontal().Gap(6).Align(Align.Center)
+                  | leftCard
+                  | rightCard;
         }
 
         internal class Order
