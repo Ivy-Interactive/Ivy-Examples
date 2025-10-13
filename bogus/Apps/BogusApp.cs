@@ -20,9 +20,14 @@ namespace BogusExample.Apps
             var fruits = this.UseState(ImmutableArray.Create("apple", "banana", "orange", "strawberry", "kiwi"));
             var fruitInput = this.UseState("");
 
+            // Layout constants
+            const int CardHeight = 130;
+            const float LeftCardWidth = 0.4f;
+            const float RightCardWidth = 0.55f;
+
             // Left Card: Fruit Configuration
             var leftCardBody = Layout.Vertical().Gap(4).Padding(3)
-              | Text.H2("🍎 Fruit Configuration")
+              | Text.H2("Fruit Configuration")
               | Text.Muted("Manage the list of fruits for orders")
               
               | new Separator()
@@ -94,11 +99,11 @@ namespace BogusExample.Apps
               | Text.Small("This demo uses Bogus library to generate fake data.")
               | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Bogus](https://github.com/bchavez/Bogus)");
 
-            var leftCard = new Card(leftCardBody).Width(Size.Fraction(0.4f)).Height(Size.Units(130));
+            var leftCard = new Card(leftCardBody).Width(Size.Fraction(LeftCardWidth)).Height(Size.Units(CardHeight));
             
             // Right Card: Generated Orders Table
             var rightCardBody = Layout.Vertical().Gap(4).Padding(3)
-              | Text.H2("📦 Generated Orders")
+              | Text.H2("Generated Orders")
               | Text.Muted($"Displaying {orders.Value.Length} orders")
               
               | new Separator()
@@ -123,7 +128,7 @@ namespace BogusExample.Apps
                       | Text.Muted("Generate orders using the left panel.")
                   );
 
-            var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.55f)).Height(Size.Units(130));
+            var rightCard = new Card(rightCardBody).Width(Size.Fraction(RightCardWidth)).Height(Size.Units(CardHeight));
 
             return Layout.Horizontal().Gap(6).Align(Align.Center)
                   | leftCard
