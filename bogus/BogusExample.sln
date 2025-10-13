@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36429.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BogusSample", "BogusSample.csproj", "{C3F88460-8E80-59CD-CB51-A2A3855D7BA1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BogusExample", "BogusExample.csproj", "{C3F88460-8E80-59CD-CB51-A2A3855D7BA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

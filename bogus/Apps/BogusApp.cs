@@ -9,10 +9,10 @@ using Ivy.Views.Forms;
 using Bogus;
 using Bogus.DataSets;
 
-namespace BogusSample.Apps
+namespace BogusExample.Apps
 {
     [App(icon: Icons.Check)]
-    public class BogusSample : ViewBase
+    public class BogusApp : ViewBase
     {
         public override object? Build()
         {
