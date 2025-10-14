@@ -43,7 +43,7 @@ public class DnsLookupForm : ViewBase
 
         return new Card()
             | Layout.Vertical(
-                Text.H3("🌐 DNS Client"),
+                Text.H3("DNS Client"),
                 Text.Muted("Query DNS records for any domain with detailed information"),
                 formView,
                 Layout.Horizontal(
