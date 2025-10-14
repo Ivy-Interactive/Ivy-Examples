@@ -17,11 +17,11 @@
 
   <ItemGroup>
     <None Include="Modules/**/*.md" />
-    <Compile Include="**/*.cs" Exclude="obj/**/*.cs;bin/**/*.cs;Generated/**/*.cs" />
+    <Compile Include="**/*.cs" Exclude="obj/**/*.cs;bin/**/*.cs;Generated/**/*.cs;Helpers/Generator/**/*.cs" />
   </ItemGroup>
 
   <Target Name="TransformMarkdown" BeforeTargets="CoreCompile">
-    <Exec Command="dotnet run --project ../../Ivy-Framework/Ivy.Docs.Tools/Ivy.Docs.Tools.csproj -- convert $(MSBuildProjectDirectory)/Modules/*.md $(MSBuildProjectDirectory)/Generated --skip-if-not-changed" />
+    <Exec Command="dotnet run --project $(MSBuildProjectDirectory)/Helpers/Generator/Generator.csproj -- convert $(MSBuildProjectDirectory)/Modules/*.md $(MSBuildProjectDirectory)/Generated $(MSBuildProjectFullPath)" />
     <ItemGroup>
       <Compile Include="Generated/**/*.g.cs" />
     </ItemGroup>
