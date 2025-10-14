@@ -13,8 +13,7 @@ var customHeader = Layout.Vertical().Gap(2).Align(Align.Center)
             <img src=""https://github.com/codespaces/badge.svg"" alt=""Open Constructs in Codespaces"" />
           </a>
         </div>
-      ")
-    | new Button("Source Code").Url("https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/constructs").Icon(Icons.ExternalLink).Width(Size.Full()).Height(Size.Units(10));
+      ");
 var chromeSettings = new ChromeSettings()
     .DefaultApp<ConstructsApp>()
     .UseTabs(preventDuplicates: true)

@@ -13,8 +13,7 @@ var customHeader = Layout.Vertical().Gap(2).Align(Align.Center)
             <img src=""https://github.com/codespaces/badge.svg"" alt=""Open Cronos in Codespaces"" />
           </a>
         </div>
-      ")
-    | new Button("Source Code").Url("https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/cronos").Icon(Icons.ExternalLink).Width(Size.Full());
+      ");
 var chromeSettings = new ChromeSettings()
     .DefaultApp<CronosApp>()
     .UseTabs(preventDuplicates: true)
