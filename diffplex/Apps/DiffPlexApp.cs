@@ -4,84 +4,112 @@ using DiffPlex.DiffBuilder.Model;
 
 namespace DiffPlexExample.Apps;
 
-[App(icon: Icons.FileCode, title: "DiffPlex")]
+[App(icon: Icons.Diff, title: "DiffPlex")]
 public class DiffPlexApp : ViewBase
 {
+    private const float MainCardWidthFraction = 0.8f;
+
     public override object? Build()
     {
-        var textAState = this.UseState(() => "The quick brown fox jumps over the lazy dog.\nThis is line two.\nThis is line three.");
-        var textBState = this.UseState(() => "The quick brown cat jumps over the lazy dog.\nThis is line two modified.\nThis is line three.\nThis is a new line four.");
-        var diffResultState = this.UseState<DiffPaneModel?>(() => null);
+        // States
+        var leftText = this.UseState(() => "The quick brown fox jumps over the lazy dog.\nThis is line two.\nThis is line three.");
+        var rightText = this.UseState(() => "The quick brown cat jumps over the lazy dog.\nThis is line two modified.\nThis is line three.\nThis is a new line four.");
+        var diffResult = this.UseState<SideBySideDiffModel?>(() => null);
+        var ignoreWhitespace = this.UseState(() => false);
+        var ignoreCase = this.UseState(() => false);
 
-        var content = new List<object>
+        // Handler
+        void compareDiff()
         {
-            Text.H1("DiffPlex - Text Comparison Tool"),
-            Text.Block("Compare two texts and see the differences highlighted."),
-            new Spacer(),
-            Layout.Horizontal().Gap(4)
-                .Add(Layout.Vertical().Gap(2)
-                    .Add(Text.H3("Text A (Original)"))
-                    .Add(textAState.ToInput()))
-                .Add(Layout.Vertical().Gap(2)
-                    .Add(Text.H3("Text B (Modified)"))
-                    .Add(textBState.ToInput())),
-            new Spacer(),
-            new Button("Compare Texts", onClick: () =>
-            {
-                var diffBuilder = new InlineDiffBuilder(new Differ());
-                diffResultState.Value = diffBuilder.BuildDiffModel(textAState.Value, textBState.Value);
-            })
-        };
+            var diffBuilder = new SideBySideDiffBuilder(new Differ());
+            diffResult.Value = diffBuilder.BuildDiffModel(
+                leftText.Value ?? "", 
+                rightText.Value ?? "",
+                ignoreWhitespace.Value,
+                ignoreCase.Value
+            );
+        }
 
-        if (diffResultState.Value != null)
+        // Left card with code input (Original)
+        var leftCard =
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H4("Original Text")
+            | leftText.ToCodeInput(placeholder: "Enter original text here...");
+
+        // Right card with code input (Modified)
+        var rightCard =
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H4("Modified Text")
+            | rightText.ToCodeInput(placeholder: "Enter modified text here...");
+
+        // Comparison controls
+        var controls =
+            Layout.Horizontal().Gap(3)
+            | ignoreWhitespace.ToBoolInput(variant: BoolInputs.Checkbox).Label("Ignore Whitespace")
+            | ignoreCase.ToBoolInput(variant: BoolInputs.Checkbox).Label("Ignore Case")
+            | new Button("Compare Texts", onClick: compareDiff).Primary().Icon(Icons.GitCompare)
+            | new Button("Clear", onClick: () => diffResult.Value = null).Variant(ButtonVariant.Secondary).Icon(Icons.X);
+
+        // State for diff results display
+        var diffDisplayText = UseState("");
+        
+        // Update diff display when result changes
+        if (diffResult.Value != null)
         {
-            content.Add(new Separator());
-            content.Add(Text.H3("Comparison Result"));
+            var diffLines = new List<string>();
             
-            var lines = new List<object>();
-            foreach (var line in diffResultState.Value.Lines)
+            // Use the NewText pane which has all lines including imaginary ones
+            foreach (var line in diffResult.Value.NewText.Lines)
             {
-                var backgroundColor = line.Type switch
-                {
-                    ChangeType.Inserted => "#d4edda",
-                    ChangeType.Deleted => "#f8d7da",
-                    ChangeType.Modified => "#fff3cd",
-                    _ => "transparent"
-                };
-
-                var textColor = line.Type switch
-                {
-                    ChangeType.Inserted => "#155724",
-                    ChangeType.Deleted => "#721c24",
-                    ChangeType.Modified => "#856404",
-                    _ => "#000000"
-                };
-
                 var prefix = line.Type switch
                 {
                     ChangeType.Inserted => "+ ",
                     ChangeType.Deleted => "- ",
                     ChangeType.Modified => "~ ",
+                    ChangeType.Imaginary => "- ",  // Deleted lines from original (shown as empty in new)
                     _ => "  "
                 };
-
-                lines.Add(
-                    Layout.Horizontal()
-                        .Add(Text.Block($"{prefix}{line.Text}"))
-                );
+                
+                var lineText = line.Type == ChangeType.Imaginary ? "" : (line.Text ?? "");
+                diffLines.Add(prefix + lineText);
             }
-
-            content.Add(new Card(Layout.Vertical().Add(lines.ToArray())));
-            content.Add(new Spacer());
-            content.Add(
-                Layout.Horizontal().Gap(2)
-                    .Add(Text.Strong("Legend: "))
-                    .Add(Text.Block(" + Added "))
-                    .Add(Text.Block(" - Removed "))
-                    .Add(Text.Block(" ~ Modified "))
-            );
+            
+            diffDisplayText.Value = string.Join("\n", diffLines);
         }
+        
+        // Comparison results card
+        var resultsCard = diffResult.Value != null
+            ? (object)(Layout.Vertical().Gap(3).Padding(2)
+                | Text.H4("Comparison Results")
+                | diffDisplayText.ToCodeInput()
+                    .Language(Languages.Text)
+                    .Disabled()
+                    .ShowCopyButton())
+            : (object)(Layout.Vertical().Gap(3).Padding(2)
+                | Text.H4("Comparison Results")
+                | Text.Muted("Click Compare to see differences here..."));
 
-        return Layout.Vertical().Gap(4).Padding(4).Add(content.ToArray());
+        // Main content layout
+        var mainContent =
+            Layout.Vertical().Gap(6).Padding(2)
+            | Text.H3("Text Comparison")
+            | Text.Block("Enter original text on the left, modified text in the middle, and see the differences on the right. + = added, - = deleted, ~ = modified")
+            | (Layout.Horizontal().Gap(4).Grow()
+                | new Card(leftCard).Width(Size.Fraction(0.33f))
+                | new Card(rightCard).Width(Size.Fraction(0.33f))
+                | new Card(resultsCard).Width(Size.Fraction(0.33f)))
+            | controls;
+
+        // Footer
+        mainContent = mainContent
+            | Layout.Horizontal().Gap(2)
+                | new Spacer()
+                | Text.Small("This demo uses the DiffPlex NuGet package for text comparison.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffPlex](https://github.com/mmanela/diffplex)");
+
+        // Outer card for consistent width
+        return Layout.Vertical()
+            | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                | new Card(mainContent).Width(Size.Fraction(MainCardWidthFraction)));
     }
 }
