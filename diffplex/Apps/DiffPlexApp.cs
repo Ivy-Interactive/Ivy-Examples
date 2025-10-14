@@ -2,7 +2,7 @@ using DiffPlex;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
 
-namespace DiffplexDemo.Apps;
+namespace DiffPlexExample.Apps;
 
 [App(icon: Icons.FileCode, title: "DiffPlex")]
 public class DiffPlexApp : ViewBase
