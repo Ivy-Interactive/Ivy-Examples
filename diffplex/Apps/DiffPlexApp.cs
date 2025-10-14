@@ -34,13 +34,13 @@ public class DiffPlexApp : ViewBase
         var leftCard =
             Layout.Vertical().Gap(3).Padding(2)
             | Text.H4("Original Text")
-            | leftText.ToCodeInput(placeholder: "Enter original text here...");
+            | leftText.ToCodeInput(placeholder: "Enter original text here...").Height(Size.Units(50));
 
         // Right card with code input (Modified)
         var rightCard =
             Layout.Vertical().Gap(3).Padding(2)
             | Text.H4("Modified Text")
-            | rightText.ToCodeInput(placeholder: "Enter modified text here...");
+            | rightText.ToCodeInput(placeholder: "Enter modified text here...").Height(Size.Units(50));
 
         // Comparison controls
         var controls =
@@ -82,6 +82,7 @@ public class DiffPlexApp : ViewBase
             ? (object)(Layout.Vertical().Gap(3).Padding(2)
                 | Text.H4("Comparison Results")
                 | diffDisplayText.ToCodeInput()
+                    .Height(Size.Units(50))
                     .Language(Languages.Text)
                     .Disabled()
                     .ShowCopyButton())
@@ -92,24 +93,19 @@ public class DiffPlexApp : ViewBase
         // Main content layout
         var mainContent =
             Layout.Vertical().Gap(6).Padding(2)
-            | Text.H3("Text Comparison")
-            | Text.Block("Enter original text on the left, modified text in the middle, and see the differences on the right. + = added, - = deleted, ~ = modified")
+            | Text.H3("DiffPlex Text Comparison")
+            | Text.Block("Enter original text on the left, modified text in the middle, and see the differences on the right.")
             | (Layout.Horizontal().Gap(4).Grow()
                 | new Card(leftCard).Width(Size.Fraction(0.33f))
                 | new Card(rightCard).Width(Size.Fraction(0.33f))
                 | new Card(resultsCard).Width(Size.Fraction(0.33f)))
-            | controls;
-
-        // Footer
-        mainContent = mainContent
-            | Layout.Horizontal().Gap(2)
-                | new Spacer()
-                | Text.Small("This demo uses the DiffPlex NuGet package for text comparison.")
-                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffPlex](https://github.com/mmanela/diffplex)");
+            | controls
+            | new Spacer()
+            | Text.Small("This demo uses the DiffPlex NuGet package for text comparison.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffPlex](https://github.com/mmanela/diffplex)");
+                
 
         // Outer card for consistent width
-        return Layout.Vertical()
-            | (Layout.Horizontal().Gap(2).Align(Align.Center)
-                | new Card(mainContent).Width(Size.Fraction(MainCardWidthFraction)));
+        return new Card(mainContent).Height(Size.Fit().Min(Size.Full()));
     }
 }
