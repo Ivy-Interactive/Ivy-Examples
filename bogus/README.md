@@ -1,6 +1,6 @@
 # Bogus
 
-<img width="1918" height="911" alt="image" src="https://github.com/user-attachments/assets/045e1444-e31b-43c5-8794-d0c6a190e616" />
+<img width="1918" height="910" alt="image" src="https://github.com/user-attachments/assets/f20ea249-3472-48e0-a8fd-b2f3790db84c" />
 
 ## One-Click Development Environment
 
