@@ -1,6 +1,6 @@
 # BarcodeLib 
 
-<img width="1917" height="915" alt="image" src="https://github.com/user-attachments/assets/45e3703c-c355-474a-a404-524a620ca6a2" />
+<img width="1913" height="905" alt="image" src="https://github.com/user-attachments/assets/84f10da6-c31b-4040-ad86-4ce72b769ee1" />
 
 ## One-Click Development Environment
 
