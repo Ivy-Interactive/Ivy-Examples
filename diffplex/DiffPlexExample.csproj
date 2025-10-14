@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>DiffplexDemo</RootNamespace>
+    <RootNamespace>DiffPlexExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,7 @@
   
   <ItemGroup>
     <PackageReference Include="DiffPlex" Version="1.9.0" />
-    <PackageReference Include="Ivy" Version="1.0.115.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
   
 
