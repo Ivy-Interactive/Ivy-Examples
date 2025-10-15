@@ -3,5 +3,5 @@
 namespace DnsClientExample.Models;
 
 public record LookupModel(
-        string Dns,
+        string DNS,
         QueryType QueryType = QueryType.A);
