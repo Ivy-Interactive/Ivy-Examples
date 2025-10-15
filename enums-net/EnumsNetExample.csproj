@@ -17,7 +17,7 @@
   
   <ItemGroup>
     <PackageReference Include="Enums.NET" Version="5.0.0" />
-    <PackageReference Include="Ivy" Version="1.0.115.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
   
 
