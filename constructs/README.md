@@ -1,6 +1,6 @@
 # AWS Constructs
 
-<img width="1919" height="913" alt="Image" src="https://github.com/user-attachments/assets/a813ff66-7909-43ed-8df8-2e7c04683acd" />
+<img width="1915" height="909" alt="image" src="https://github.com/user-attachments/assets/a057e99e-ba5e-416d-b2b0-514e4f280cbb" />
 
 ## One-Click Development Environment
 

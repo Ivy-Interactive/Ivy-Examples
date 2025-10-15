@@ -1,6 +1,6 @@
 # DiffEngine 
 
-<img width="1919" height="921" alt="image" src="https://github.com/user-attachments/assets/4e001e23-b9cb-4bc6-8e01-4b899a262b3f" />
+<img width="1909" height="912" alt="image" src="https://github.com/user-attachments/assets/3c2e5cf2-7db3-4447-aa75-3e7d04f9cd4a" />
 
 ## One-Click Development Environment
 

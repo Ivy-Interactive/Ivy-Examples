@@ -1,6 +1,6 @@
 # CSV Helper
 
-<img width="1919" height="914" alt="Image" src="https://github.com/user-attachments/assets/74fc0735-2336-4fd5-8b06-a7104ed3ea6b" />
+<img width="1913" height="904" alt="image" src="https://github.com/user-attachments/assets/2b471250-20a2-4318-8f64-30a3a87dd151" />
 
 ## One-Click Development Environment
 

@@ -7,14 +7,8 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var customHeader = Layout.Vertical().Gap(2).Align(Align.Center)
-    | new Html($@"
-        <div>
-          <a href=""{CodespacesUrl}"">
-            <img src=""https://github.com/codespaces/badge.svg"" alt=""Open DiffEngine in Codespaces"" />
-          </a>
-        </div>
-      ");
+var customHeader = Layout.Vertical().Gap(2)
+    |new Embed(CodespacesUrl);
 var chromeSettings = new ChromeSettings()
     .DefaultApp<DiffEngineApp>()
     .UseTabs(preventDuplicates: true)

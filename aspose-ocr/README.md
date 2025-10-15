@@ -1,6 +1,6 @@
 # Aspose.OCR Image-to-Text
 
-<img width="1918" height="915" alt="Image" src="https://github.com/user-attachments/assets/8e08b435-7f77-48ee-b99b-94c1a1ab88f1" />
+<img width="1908" height="899" alt="image" src="https://github.com/user-attachments/assets/29aa2aef-513a-4f7c-81f1-8e5597503b77" />
 
 ## One-Click Development Environment
 

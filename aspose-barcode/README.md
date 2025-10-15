@@ -1,6 +1,6 @@
 # Aspose.BarCode Generator
 
-<img width="1916" height="909" alt="Image" src="https://github.com/user-attachments/assets/3ae37d9a-cc50-4a9a-878a-1973daca1dbb" />
+<img width="1913" height="907" alt="image" src="https://github.com/user-attachments/assets/a96685ee-bedd-4e35-b37c-8528a3260d19" />
 
 ## One-Click Development Environment
 
