@@ -2,10 +2,10 @@
 using Ivy.Core.Hooks;
 using Ivy.Views.Forms;
 
-namespace EEPlusSoftware.Apps;
+namespace EPPlusExample.Apps;
 
-[App(icon: Icons.Box, title: "EEPlus Software Demo")]
-public class EEPlusDemo : ViewBase
+[App(icon: Icons.Box, title: "EPPlus")]
+public class EPPlusApp : ViewBase
 {
     private static string GetExcelFilePath() =>
        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "books.xlsx");
@@ -58,7 +58,7 @@ public class EEPlusDemo : ViewBase
         var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(this.Context);
 
         return Layout.Vertical()
-            | Text.H2("EEPlus Software Demo") |
+            | Text.H2("EPPlus Software Demo") |
                    new Button("Generate Excel File").HandleClick(_ => ExcelManipulation.WriteExcel(booksState)).Loading(loading).Disabled(loading)
             | booksState.Value.ToTable()
                .Width(Size.Full())
