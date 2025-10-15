@@ -1,5 +1,5 @@
 using EnumsNET;
-using EnumsNetApp.Apps.SampleEnums;
+using EnumsNetApp.Apps;
 using System.ComponentModel;
 /// <summary>
 /// Enums.NET demo view for Ivy samples.
@@ -15,8 +15,8 @@ using System.ComponentModel;
 /// </summary>
 namespace EnumsNetApp.Apps
 {
-    [App(title: "Enums.NET Demo App", icon: Icons.Tag)]
-    public class EnumsNetNewDemoApp : ViewBase
+    [App(title: "Enums.NET", icon: Icons.Tag)]
+    public class EnumsNetDemoApp : ViewBase
     {
         // helper enum 
         // 1.for which table is visible
