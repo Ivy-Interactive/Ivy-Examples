@@ -57,19 +57,49 @@ public class EPPlusApp : ViewBase
 
         var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(this.Context);
 
-        return Layout.Vertical()
-            | Text.H2("EPPlus Software Demo") |
-                   new Button("Generate Excel File").HandleClick(_ => ExcelManipulation.WriteExcel(booksState)).Loading(loading).Disabled(loading)
+        var leftCard = new Card(
+            Layout.Vertical().Gap(4).Padding(2)
+            | Text.H2("Books")
+            | Text.Muted("Generated Excel data (books.xlsx)")
             | booksState.Value.ToTable()
-               .Width(Size.Full())
+                .Width(Size.Full())
                 .Builder(p => p.Title, f => f.Text())
                 .Builder(p => p.Author, f => f.Text())
                 .Builder(p => p.Year, f => f.Default())
-           | downloadBtn | new Button("Delete All Records").HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
-            .Loading(loading).Disabled(loading)
-           | formView | new Button("Save Book").HandleClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
-                    .Loading(loading).Disabled(loading)
-                | validationView;
+            | Layout.Horizontal().Gap(2)
+                | downloadBtn
+                | new Button("Delete All Records")
+                    .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+                    .Loading(loading)
+                    .Disabled(loading)
+            | Text.Small("This demo uses the EPPlus NuGet package to read/write Excel files.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [EPPlus](https://github.com/EPPlusSoftware/EPPlus)")
+        ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(110));
+
+        var rightCard = new Card(
+            Layout.Vertical().Gap(4).Padding(2)
+            | Text.H2("Actions")
+            | Text.Muted("Generate, add, and manage records")
+            | new Button("Generate Excel File")
+                .Primary()
+                .Icon(Icons.Download)
+                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState))
+                .Loading(loading)
+                .Disabled(loading)
+            | formView
+            | Layout.Horizontal().Gap(2)
+                | new Button("Save Book")
+                    .Primary()
+                    .Icon(Icons.Plus)
+                    .HandleClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
+                    .Loading(loading)
+                    .Disabled(loading)
+            | validationView
+        ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(110));
+
+        return Layout.Horizontal().Gap(6).Align(Align.Center)
+            | rightCard
+            | leftCard;
 
 
     }
