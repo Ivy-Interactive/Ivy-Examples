@@ -1,6 +1,6 @@
 ﻿using Ivy.Core.Hooks;
 
-namespace EEPlusSoftware.Helpers;
+namespace EPPlusExample.Helpers;
 
 public static class ExcelManipulation
 {
@@ -77,7 +77,7 @@ public static class ExcelManipulation
         booksState.Value = ExcelManipulation.ReadExcel();
     }
 
-    //using the EEPlus library to read an Excel file
+    //using the EPPlus library to read an Excel file
     public static List<Book> ReadExcel()
     {
         string _fileName = "books.xlsx";

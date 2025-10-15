@@ -1,5 +1,5 @@
-global using EEPlusSoftware.Entities;
-global using EEPlusSoftware.Helpers;
+global using EPPlusExample.Entities;
+global using EPPlusExample.Helpers;
 global using Ivy;
 global using Ivy.Apps;
 global using Ivy.Chrome;

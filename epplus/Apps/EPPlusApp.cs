@@ -2,10 +2,10 @@
 using Ivy.Core.Hooks;
 using Ivy.Views.Forms;
 
-namespace EEPlusSoftware.Apps;
+namespace EPPlusExample.Apps;
 
-[App(icon: Icons.Box, title: "EEPlus Software Demo")]
-public class EEPlusDemo : ViewBase
+[App(icon: Icons.Box, title: "EPPlus")]
+public class EPPlusApp : ViewBase
 {
     private static string GetExcelFilePath() =>
        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "books.xlsx");
@@ -43,9 +43,39 @@ public class EEPlusDemo : ViewBase
     $"books-{DateTime.UtcNow:yyyy-MM-dd}.xlsx"
        );
 
-        var downloadBtn = new Button("Download Excel")
-            .Primary().Icon(Icons.Download)
-            .Url(downloadUrl.Value);
+        var hasBooks = (booksState.Value?.Count ?? 0) > 0;
+
+        var downloadBtn = hasBooks
+            ? new Button("Download .xlsx")
+                .Icon(Icons.File)
+                .Url(downloadUrl.Value)
+            : new Button("Download .xlsx")
+                .Secondary()
+                .Icon(Icons.File)
+                .Disabled()
+                .Url(downloadUrl.Value);
+
+        var deleteBtn = hasBooks
+            ? new Button("Delete All Records")
+                .Destructive()
+                .Icon(Icons.Trash)
+                .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+            : new Button("Delete All Records")
+                .Secondary()
+                .Icon(Icons.Trash)
+                .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+                .Disabled();
+
+        var generateBtn = hasBooks
+            ? new Button("Generate Excel")
+                .Secondary()
+                .Icon(Icons.FileText)
+                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState))
+                .Disabled()
+            : new Button("Generate Excel")
+                .Primary()
+                .Icon(Icons.FileText)
+                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState));
 
         var book = UseState(() => new Book());
         var formBuilder = book.ToForm().Remove(x => x.ID)
@@ -57,19 +87,43 @@ public class EEPlusDemo : ViewBase
 
         var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(this.Context);
 
-        return Layout.Vertical()
-            | Text.H2("EEPlus Software Demo") |
-                   new Button("Generate Excel File").HandleClick(_ => ExcelManipulation.WriteExcel(booksState)).Loading(loading).Disabled(loading)
+        var rightCard = new Card(
+            Layout.Vertical().Gap(4).Padding(2)
+            | Text.H2("Books")
+            | Text.Muted("Generated Excel data (books.xlsx)")
             | booksState.Value.ToTable()
-               .Width(Size.Full())
+                .Width(Size.Full())
                 .Builder(p => p.Title, f => f.Text())
                 .Builder(p => p.Author, f => f.Text())
                 .Builder(p => p.Year, f => f.Default())
-           | downloadBtn | new Button("Delete All Records").HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
-            .Loading(loading).Disabled(loading)
-           | formView | new Button("Save Book").HandleClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
-                    .Loading(loading).Disabled(loading)
-                | validationView;
+            | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                | downloadBtn
+                | deleteBtn
+                | generateBtn)
+                
+        ).Width(Size.Fraction(0.55f)).Height(Size.Fit().Min(Size.Full()));
+
+        var leftCard = new Card(
+            Layout.Vertical().Gap(4).Padding(2)
+            | Text.H2("Actions")
+            | Text.Muted("Generate, add, and manage records")
+            | formView
+            | Layout.Horizontal().Gap(2)
+                | new Button("Add Book")
+                    .Primary()
+                    .Icon(Icons.Plus)
+                    .HandleClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
+                    .Loading(loading)
+                    .Disabled(loading)
+            | validationView
+            | new Spacer()
+            | Text.Small("This demo uses the EPPlus NuGet package to read/write Excel files.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [EPPlus](https://github.com/EPPlusSoftware/EPPlus)")
+        ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(Size.Full()));
+
+        return Layout.Horizontal().Gap(6)
+            | leftCard
+            | rightCard;
 
 
     }
