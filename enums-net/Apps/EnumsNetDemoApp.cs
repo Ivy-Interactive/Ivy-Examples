@@ -53,6 +53,42 @@ namespace EnumsNetApp.Apps
                      .ToList()
             );
 
+            // Simple enum viewer state
+            var selectedEnumType = UseState<Type>(() => typeof(NumericOperator));
+            var simpleEnumList = UseState<List<EnumMemberInfo>>(() =>
+                Enums.GetMembers<NumericOperator>()
+                     .Select(m => new EnumMemberInfo(
+                         (int)m.Value,
+                         m.Name,
+                         m.Attributes.Get<DescriptionAttribute>()?.Description,
+                         m.Attributes.Get<SymbolAttribute>()?.Symbol
+                     ))
+                     .OrderBy(x => x.Value)
+                     .ToList()
+            );
+
+
+            // Simple enum viewer function
+            void ShowSimpleEnum(Type enumType)
+            {
+                try
+                {
+                    var members = Enums.GetMembers(enumType);
+                    var memberInfo = members.Select(m => new EnumMemberInfo(
+                        (int)m.Value,
+                        m.Name,
+                        m.Attributes.Get<DescriptionAttribute>()?.Description,
+                        m.Attributes.Get<SymbolAttribute>()?.Symbol
+                    )).OrderBy(x => x.Value).ToList();
+
+                    simpleEnumList.Set(memberInfo);
+                    selectedEnumType.Set(enumType);
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                }
+            }
 
             //Enumrate member of enums using Enums.GetMembers<T>()
             void selectedView(MembersView view)
@@ -214,43 +250,104 @@ namespace EnumsNetApp.Apps
                 }
             }
 
-            return
+            var simpleEnumViewer =
                 Layout.Vertical().Gap(2)
-                    | new Expandable(
+                | new Expandable(
+                    "Simple Enum Viewer",
+                    Layout.Vertical().Gap(2)
+                        | Text.Muted("Select an enum type to view its members with descriptions and symbols")
+                        | Layout.Horizontal().Gap(2)
+                            | new DropDownMenu(evt =>
+                            {
+                                var selectedType = evt.Value?.ToString();
+                                var type = selectedType switch
+                                {
+                                    "NumericOperator" => typeof(NumericOperator),
+                                    "DaysOfWeek" => typeof(DaysOfWeek),
+                                    "DayType" => typeof(DayType),
+                                    "PriorityLevel" => typeof(PriorityLevel),
+                                    _ => typeof(NumericOperator)
+                                };
+                                ShowSimpleEnum(type);
+                            },
+                                    new Button($"View: {selectedEnumType.Value.Name}"),
+                                    MenuItem.Default("NumericOperator").Tag("NumericOperator"),
+                                    MenuItem.Default("DaysOfWeek").Tag("DaysOfWeek"),
+                                    MenuItem.Default("DayType").Tag("DayType"),
+                                    MenuItem.Default("PriorityLevel").Tag("PriorityLevel")
+                                )
+                            | Text.H4($"{selectedEnumType.Value.Name} Members:")
+                            | (simpleEnumList.Value.Any()
+                                ? simpleEnumList.Value.ToTable().Width(Size.Full())
+                                : Text.Muted("Select an enum type above to view its members"))
+                    );
+
+            var enumEnumerationAndMembers =
+                new Expandable(
                         "Enum Enumeration & Members",
                         Layout.Vertical().Gap(2)
-                            | Text.Muted("Explore different ways to enumerate enum members using Enums.NET")
-                            | Text.P("Demonstrates various enumeration modes: All, Distinct, DisplayOrder, and Flags")
-                            | Layout.Horizontal().Gap(1)
-                                | new Button("All Members", _ => selectedView(MembersView.All)).Primary()
-                                | new Button("Distinct", _ => selectedView(MembersView.Distinct)).Secondary()
-                                | new Button("Display Order", _ => selectedView(MembersView.DisplayOrder)).Secondary()
-                                | new Button("Flags Only", _ => selectedView(MembersView.Flags)).Secondary()
+                            | Text.Muted("Demonstrates various enumeration modes: All, Distinct, DisplayOrder, and Flags")
+                            | new DropDownMenu(evt => {
+                                var selectedMode = evt.Value?.ToString();
+                                var mode = selectedMode switch {
+                                    "All Members" => MembersView.All,
+                                    "Distinct" => MembersView.Distinct,
+                                    "Display Order" => MembersView.DisplayOrder,
+                                    "Flags Only" => MembersView.Flags,
+                                    _ => MembersView.All
+                                };
+                                selectedView(mode);
+                            },
+                                new Button($"Current Mode: {selectedEnumrateionView.Value}"),
+                                MenuItem.Default("All Members").Tag("All Members"),
+                                MenuItem.Default("Distinct").Tag("Distinct"),
+                                MenuItem.Default("Display Order").Tag("Display Order"),
+                                MenuItem.Default("Flags Only").Tag("Flags Only")
+                            )
                             | Text.H4($"Current View: {selectedEnumrateionView.Value}")
-                            | (enumrationList.Value.Any() 
+                            | (enumrationList.Value.Any()
                                 ? enumrationList.Value.ToTable().Width(Size.Full())
                                 : Text.Muted("No members available"))
-                    )
+                    );
 
-                    | new Expandable(
+            var flagOperationsAndManipulation =
+                new Expandable(
                         "Flag Operations & Manipulation",
                         Layout.Vertical().Gap(2)
-                            | Text.Muted("Learn how to work with flag enums using advanced Enums.NET operations")
-                            | Text.P("Interactive demonstrations of flag operations on DaysOfWeek enum")
-                            | Layout.Horizontal().Gap(1).Wrap(true)
-                                | new Button("HasAllFlags", _ => RunFlagOperation(flagOperations.HasAllFlags)).Primary()
-                                | new Button("HasAnyFlags", _ => RunFlagOperation(flagOperations.HasAnyFlags)).Secondary()
-                                | new Button("CombineFlags", _ => RunFlagOperation(flagOperations.CombineFlags)).Secondary()
-                                | new Button("CommonFlags", _ => RunFlagOperation(flagOperations.CommonFlags)).Secondary()
-                                | new Button("RemoveFlags", _ => RunFlagOperation(flagOperations.RemoveFlags)).Secondary()
-                                | new Button("GetFlags", _ => RunFlagOperation(flagOperations.GetFlags)).Secondary()
-                                | new Button("ToggleFlags", _ => { ToggleDay(DaysOfWeek.Saturday); RunFlagOperation(flagOperations.ToggleFlags); }).Secondary()
-                            | new Separator()
+                            | Text.Muted("Interactive demonstrations of flag operations on DaysOfWeek enum")
+                            | new DropDownMenu(evt => {
+                                var selectedOperation = evt.Value?.ToString();
+                                var operation = selectedOperation switch {
+                                    "HasAllFlags" => flagOperations.HasAllFlags,
+                                    "HasAnyFlags" => flagOperations.HasAnyFlags,
+                                    "CombineFlags" => flagOperations.CombineFlags,
+                                    "CommonFlags" => flagOperations.CommonFlags,
+                                    "RemoveFlags" => flagOperations.RemoveFlags,
+                                    "GetFlags" => flagOperations.GetFlags,
+                                    "ToggleFlags" => flagOperations.ToggleFlags,
+                                    _ => flagOperations.HasAllFlags
+                                };
+                                if (operation == flagOperations.ToggleFlags)
+                                {
+                                    ToggleDay(DaysOfWeek.Saturday);
+                                }
+                                RunFlagOperation(operation);
+                            },
+                                new Button($"Flag Operation: {selectedFlagView.Value}"),
+                                MenuItem.Default("HasAllFlags").Tag("HasAllFlags"),
+                                MenuItem.Default("HasAnyFlags").Tag("HasAnyFlags"),
+                                MenuItem.Default("CombineFlags").Tag("CombineFlags"),
+                                MenuItem.Default("CommonFlags").Tag("CommonFlags"),
+                                MenuItem.Default("RemoveFlags").Tag("RemoveFlags"),
+                                MenuItem.Default("GetFlags").Tag("GetFlags"),
+                                MenuItem.Default("ToggleFlags").Tag("ToggleFlags")
+                            )
                             | Text.H4($"Operation: {selectedFlagView.Value}")
                             | flagResult.Value
-                    )
+                    );
 
-                    | new Expandable(
+            var validationAndErrorHandling =
+                new Expandable(
                         "Validation & Error Handling",
                         Layout.Vertical().Gap(2)
                             | Text.Muted("Validate enum values and handle invalid enum scenarios")
@@ -270,6 +367,28 @@ namespace EnumsNetApp.Apps
                                         client.Toast($"LessThan valid: {isNumberValidOne}, Invalid value (20) valid: {isNumberValidTwo}", "NumericOperator Validation");
                                     }).Icon(Icons.Check).Secondary()
                     );
+
+            return Layout.Vertical().Gap(2)
+                | new Card(
+                    Layout.Vertical().Gap(2)
+                        | Text.H3("Enums.NET")
+                        | Text.Block("This demo showcases the Enums.NET library for working with enums and flags.")
+                        | (Layout.Horizontal().Gap(2)
+                            | new Card(
+                                Layout.Vertical().Gap(2)
+                                    | Text.H4("Actions & Operations")
+                                    | Text.Muted("Perform operations and test enum functionality")
+                                    | flagOperationsAndManipulation
+                                    | validationAndErrorHandling
+                            ).Width("50%")
+                            | new Card(
+                                Layout.Vertical().Gap(2)
+                                    | Text.H4("Enum Viewer")
+                                    | Text.Muted("Browse and explore enum types and their members")
+                                    | simpleEnumViewer
+                                    | enumEnumerationAndMembers
+                            ).Width("50%"))
+                ).Height(Size.Fit().Min(Size.Full()));
         }
     }
 }
