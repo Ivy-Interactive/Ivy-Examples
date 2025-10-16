@@ -525,6 +525,9 @@ namespace EnumsNetApp.Apps
                                     | simpleEnumViewer
                                     | enumEnumerationAndMembers
                             ).Width("50%"))
+                        | new Spacer().Height(Size.Units(10))
+                        | Text.Small("This demo uses the Enums.NET library to work with enums and flags.")
+                        | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Enums.NET](https://github.com/TylerBrinkley/Enums.NET)")
                 ).Height(Size.Fit().Min(Size.Full()));
         }
     }
