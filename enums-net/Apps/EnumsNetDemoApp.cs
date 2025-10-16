@@ -168,75 +168,102 @@ namespace EnumsNetApp.Apps
                 daysFlags.Set(current.HasFlag(day) ? current & ~day : current | day);
             }
 
+            // Helper functions for creating Markdown results
+            object CreateHasAllFlagsMarkdown()
+            {
+                var result = flagA.HasAllFlags(flagB);
+                var markdown = $"### HasAllFlags Operation\n\n" +
+                             $"**FlagA:** `{flagA}` (Value: {(int)flagA})\n\n" +
+                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**Operation:** `flagA.HasAllFlags(flagB)`\n\n" +
+                             $"**Result:** `{result}`\n\n" +
+                             $"**Explanation:** {(result ? "FlagA contains ALL flags from FlagB" : "FlagA does NOT contain all flags from FlagB")}";
+                return Text.Markdown(markdown);
+            }
+
+            object CreateHasAnyFlagsMarkdown()
+            {
+                var result = DaysOfWeek.Monday.HasAnyFlags(flagB);
+                var markdown = $"### HasAnyFlags Operation\n\n" +
+                             $"**Monday:** `{DaysOfWeek.Monday}` (Value: {(int)DaysOfWeek.Monday})\n\n" +
+                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**Operation:** `Monday.HasAnyFlags(flagB)`\n\n" +
+                             $"**Result:** `{result}`\n\n" +
+                             $"**Explanation:** {(result ? "Monday shares at least one flag with FlagB" : "Monday shares NO flags with FlagB")}";
+                return Text.Markdown(markdown);
+            }
+
+            object CreateCombineFlagsMarkdown()
+            {
+                var result = flagA.CombineFlags(flagB);
+                var markdown = $"### CombineFlags Operation\n\n" +
+                             $"**FlagA:** `{flagA}` (Value: {(int)flagA})\n\n" +
+                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**Operation:** `flagA.CombineFlags(flagB)`\n\n" +
+                             $"**Result:** `{result}` (Value: {(int)result})\n\n" +
+                             $"**Explanation:** Combines all flags from both FlagA and FlagB";
+                return Text.Markdown(markdown);
+            }
+
+            object CreateCommonFlagsMarkdown()
+            {
+                var result = flagA.CommonFlags(flagB);
+                var markdown = $"### CommonFlags Operation\n\n" +
+                             $"**FlagA:** `{flagA}` (Value: {(int)flagA})\n\n" +
+                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**Operation:** `flagA.CommonFlags(flagB)`\n\n" +
+                             $"**Result:** `{result}` (Value: {(int)result})\n\n" +
+                             $"**Explanation:** Shows only flags that exist in BOTH FlagA and FlagB";
+                return Text.Markdown(markdown);
+            }
+
+            object CreateRemoveFlagsMarkdown()
+            {
+                var result = flagB.RemoveFlags(DaysOfWeek.Wednesday);
+                var markdown = $"### RemoveFlags Operation\n\n" +
+                             $"**Original FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**Flag to Remove:** `{DaysOfWeek.Wednesday}` (Value: {(int)DaysOfWeek.Wednesday})\n\n" +
+                             $"**Operation:** `flagB.RemoveFlags(DaysOfWeek.Wednesday)`\n\n" +
+                             $"**Result:** `{result}` (Value: {(int)result})\n\n" +
+                             $"**Explanation:** Removes Wednesday flag from FlagB";
+                return Text.Markdown(markdown);
+            }
+
+            object CreateGetFlagsMarkdown()
+            {
+                var flags = DaysOfWeek.Weekend.GetFlags();
+                var flagList = string.Join("\n", flags.Select(f => $"  - `{f}` (Value: {(int)f})"));
+                var markdown = $"### GetFlags Operation\n\n" +
+                             $"**Source:** `{DaysOfWeek.Weekend}` (Value: {(int)DaysOfWeek.Weekend})\n\n" +
+                             $"**Operation:** `DaysOfWeek.Weekend.GetFlags()`\n\n" +
+                             $"**Individual Flags:**\n{flagList}\n\n" +
+                             $"**Total Flags Found:** {flags.Count}";
+                return Text.Markdown(markdown);
+            }
+
+            object CreateToggleFlagsMarkdown()
+            {
+                var markdown = $"### ToggleFlags Operation\n\n" +
+                             $"**Current Selection:** `{daysFlags.Value}` (Value: {(int)daysFlags.Value})\n\n" +
+                             $"**Operation:** Toggled Saturday flag\n\n" +
+                             $"**Explanation:** Saturday flag has been toggled (added/removed)";
+                return Text.Markdown(markdown);
+            }
+
             void RunFlagOperation(flagOperations type)
             {
                 try
                 {
                     object result = type switch
                     {
-                        flagOperations.HasAllFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("FlagA:"),
-                                Text.P($"{flagA}"),
-                                Text.Strong("HasAllFlags(FlagB:"),
-                                Text.P($"{flagB}"),
-                                Text.Strong(") => Result:"),
-                                Text.P($"{flagA.HasAllFlags(flagB)}")
-                            ),
-
-                        flagOperations.HasAnyFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("DaysOfWeek.Monday:"),
-                                Text.P($"{DaysOfWeek.Monday}"),
-                                Text.Strong("HasAnyFlags(FlagB:"),
-                                Text.P($"{flagB}"),
-                                Text.Strong(") => Result:"),
-                                Text.P($"{DaysOfWeek.Monday.HasAnyFlags(flagB)}")
-                            ),
-
-                        flagOperations.CombineFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("CombineFlags FlagA:"),
-                                Text.P($"{flagA}"),
-                                Text.Strong("with FlagB:"),
-                                Text.P($"{flagB}"),
-                                Text.Strong("=> Result:"),
-                                Text.P($"{flagA.CombineFlags(flagB)}")
-                            ),
-
-                        flagOperations.CommonFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("CommonFlags in FlagA:"),
-                                Text.P($"{flagA}"),
-                                Text.Strong("and FlagB:"),
-                                Text.P($"{flagB}"),
-                                Text.Strong("=> Result:"),
-                                Text.P($"{flagA.CommonFlags(flagB)}")
-                            ),
-
-                        flagOperations.RemoveFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("RemoveFlags DaysOfWeek.Wednesday:"),
-                                Text.P($"{DaysOfWeek.Wednesday}"),
-                                Text.Strong("from FlagB:"),
-                                Text.P($"{flagB}"),
-                                Text.Strong("=> Result:"),
-                                Text.P($"{flagB.RemoveFlags(DaysOfWeek.Wednesday)}")
-                            ),
-
-                        flagOperations.GetFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("GetFlags of Weekend:"),
-                                Text.P(string.Join(", ", DaysOfWeek.Weekend.GetFlags()))
-                            ),
-
-                        flagOperations.ToggleFlags =>
-                            Layout.Horizontal(
-                                Text.Strong("ToggleFlags current selection:"),
-                                Text.P($"{daysFlags.Value}")
-                            ),
-
-                        _ => Text.P("Unsupported operation")
+                        flagOperations.HasAllFlags => CreateHasAllFlagsMarkdown(),
+                        flagOperations.HasAnyFlags => CreateHasAnyFlagsMarkdown(),
+                        flagOperations.CombineFlags => CreateCombineFlagsMarkdown(),
+                        flagOperations.CommonFlags => CreateCommonFlagsMarkdown(),
+                        flagOperations.RemoveFlags => CreateRemoveFlagsMarkdown(),
+                        flagOperations.GetFlags => CreateGetFlagsMarkdown(),
+                        flagOperations.ToggleFlags => CreateToggleFlagsMarkdown(),
+                        _ => Text.Markdown("### Unsupported Operation\n\nThis operation is not supported.")
                     };
 
                     selectedFlagView.Set(type);
@@ -246,7 +273,7 @@ namespace EnumsNetApp.Apps
                 catch (Exception ex)
                 {
                     client.Error(ex);
-                    flagResult.Set($"Error: {ex.Message}");
+                    flagResult.Set(Text.Markdown($"### Error\n\n**Message:** {ex.Message}"));
                 }
             }
 
@@ -342,7 +369,6 @@ namespace EnumsNetApp.Apps
                                 MenuItem.Default("GetFlags").Tag("GetFlags"),
                                 MenuItem.Default("ToggleFlags").Tag("ToggleFlags")
                             )
-                            | Text.H4($"Operation: {selectedFlagView.Value}")
                             | flagResult.Value
                     );
 
