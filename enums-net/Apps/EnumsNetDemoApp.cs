@@ -39,6 +39,9 @@ namespace EnumsNetApp.Apps
             // state for DaysOfWeek flags
             var daysFlags = UseState(flagB);
 
+            // Validation result state
+            var validationResult = UseState<object>(() => Text.P("Select a validation option to see results"));
+
             //Enumeration related state 
             var selectedEnumrateionView = UseState(() => MembersView.All);
             var enumrationList = UseState<List<EnumMemberInfo>>(() =>
@@ -250,6 +253,104 @@ namespace EnumsNetApp.Apps
                 return Text.Markdown(markdown);
             }
 
+            // Validation functions
+            void RunDayTypeValidation()
+            {
+                try
+                {
+                    var isWeekdayValid = DayType.Weekday.IsValid();
+                    var isWeekdayHolidayValid = (DayType.Weekday | DayType.Holiday).IsValid();
+                    var isWeekdayWeekendValid = (DayType.Weekday | DayType.Weekend).IsValid();
+                    
+                    var markdown = $"### DayType Validation\n\n" +
+                                 $"**Test Cases:**\n\n" +
+                                 $"1. **Weekday:** `{DayType.Weekday}` → **Valid:** `{isWeekdayValid}`\n\n" +
+                                 $"2. **Weekday | Holiday:** `{DayType.Weekday | DayType.Holiday}` → **Valid:** `{isWeekdayHolidayValid}`\n\n" +
+                                 $"3. **Weekday | Weekend:** `{DayType.Weekday | DayType.Weekend}` → **Valid:** `{isWeekdayWeekendValid}`\n\n" +
+                                 $"**Explanation:** DayType uses custom validation - Weekday and Weekend are mutually exclusive, but Holiday can be combined with either.";
+                    
+                    validationResult.Set(Text.Markdown(markdown));
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                    validationResult.Set(Text.Markdown($"### Error\n\n**Message:** {ex.Message}"));
+                }
+            }
+
+            void RunNumericOperatorValidation()
+            {
+                try
+                {
+                    var isLessThanValid = NumericOperator.LessThan.IsValid();
+                    var isInvalidValueValid = ((NumericOperator)20).IsValid();
+                    
+                    var markdown = $"### NumericOperator Validation\n\n" +
+                                 $"**Test Cases:**\n\n" +
+                                 $"1. **Valid Value (LessThan):** `{NumericOperator.LessThan}` → **Valid:** `{isLessThanValid}`\n\n" +
+                                 $"2. **Invalid Value (20):** `{(NumericOperator)20}` → **Valid:** `{isInvalidValueValid}`\n\n" +
+                                 $"**Explanation:** Standard enum validation checks if the value is a defined enum member. Invalid values return false.";
+                    
+                    validationResult.Set(Text.Markdown(markdown));
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                    validationResult.Set(Text.Markdown($"### Error\n\n**Message:** {ex.Message}"));
+                }
+            }
+
+            void RunDaysOfWeekValidation()
+            {
+                try
+                {
+                    var isWeekendValid = DaysOfWeek.Weekend.IsValid();
+                    var isValidCombination = (DaysOfWeek.Sunday | DaysOfWeek.Wednesday).IsValid();
+                    var isInvalidCombination = (DaysOfWeek.Sunday | DaysOfWeek.Wednesday | ((DaysOfWeek)(-1))).IsValid();
+                    
+                    var markdown = $"### DaysOfWeek Validation\n\n" +
+                                 $"**Test Cases:**\n\n" +
+                                 $"1. **Weekend:** `{DaysOfWeek.Weekend}` → **Valid:** `{isWeekendValid}`\n\n" +
+                                 $"2. **Valid Combination:** `{DaysOfWeek.Sunday | DaysOfWeek.Wednesday}` → **Valid:** `{isValidCombination}`\n\n" +
+                                 $"3. **Invalid Combination (with -1):** `{DaysOfWeek.Sunday | DaysOfWeek.Wednesday | (DaysOfWeek)(-1)}` → **Valid:** `{isInvalidCombination}`\n\n" +
+                                 $"**Explanation:** Flag enum validation checks for valid flag combinations and defined enum members.";
+                    
+                    validationResult.Set(Text.Markdown(markdown));
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                    validationResult.Set(Text.Markdown($"### Error\n\n**Message:** {ex.Message}"));
+                }
+            }
+
+            void RunCustomValidatorDemo()
+            {
+                try
+                {
+                    var markdown = $"### Custom Validator Demo\n\n" +
+                                 $"**DayType Validator Rules:**\n\n" +
+                                 $"1. **Weekday** and **Weekend** are mutually exclusive\n" +
+                                 $"2. **Holiday** can be combined with either Weekday or Weekend\n" +
+                                 $"3. **Invalid combinations:** Weekday | Weekend\n\n" +
+                                 $"**Implementation:**\n```csharp\n" +
+                                 $"class DayTypeValidatorAttribute : EnumValidatorAttribute<DayType>\n" +
+                                 $"{{\n" +
+                                 $"    public override bool IsValid(DayType value) =>\n" +
+                                 $"        value.GetFlagCount(DayType.Weekday | DayType.Weekend) == 1 &&\n" +
+                                 $"        FlagEnums.IsValidFlagCombination(value);\n" +
+                                 $"}}\n```\n\n" +
+                                 $"**Try the DayType validation above to see this in action!**";
+                    
+                    validationResult.Set(Text.Markdown(markdown));
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                    validationResult.Set(Text.Markdown($"### Error\n\n**Message:** {ex.Message}"));
+                }
+            }
+
             void RunFlagOperation(flagOperations type)
             {
                 try
@@ -376,22 +477,32 @@ namespace EnumsNetApp.Apps
                 new Expandable(
                         "Validation & Error Handling",
                         Layout.Vertical().Gap(2)
-                            | Text.Muted("Validate enum values and handle invalid enum scenarios")
-                            | Text.P("Test enum validation with different enum types and combinations")
-                            | Layout.Horizontal().Gap(1)
-                                | new Button("Validate DayType", _ =>
-                                    {
-                                        var isDayValidOne = DayType.Weekday.IsValid();
-                                        var isDaysValidOne = (DayType.Weekday | DayType.Holiday).IsValid();
-                                        var IsDaysvalidTwo = (DayType.Weekday | DayType.Weekend).IsValid();
-                                        client.Toast($"Weekday: {isDayValidOne}, Weekday|Holiday: {isDaysValidOne}, Weekday|Weekend: {IsDaysvalidTwo}", "DayType Validation");
-                                    }).Icon(Icons.Check).Primary()
-                                | new Button("Validate NumericOperator", _ =>
-                                    {
-                                        var isNumberValidOne = NumericOperator.LessThan.IsValid();
-                                        var isNumberValidTwo = ((NumericOperator)20).IsValid();
-                                        client.Toast($"LessThan valid: {isNumberValidOne}, Invalid value (20) valid: {isNumberValidTwo}", "NumericOperator Validation");
-                                    }).Icon(Icons.Check).Secondary()
+                            | Text.Muted("Test enum validation with different enum types and combinations")
+                            | new DropDownMenu(evt => {
+                                var selectedValidation = evt.Value?.ToString();
+                                switch (selectedValidation)
+                                {
+                                    case "DayType":
+                                        RunDayTypeValidation();
+                                        break;
+                                    case "NumericOperator":
+                                        RunNumericOperatorValidation();
+                                        break;
+                                    case "DaysOfWeek":
+                                        RunDaysOfWeekValidation();
+                                        break;
+                                    case "CustomValidator":
+                                        RunCustomValidatorDemo();
+                                        break;
+                                }
+                            },
+                                new Button("Select Validation Type"),
+                                MenuItem.Default("DayType Validation").Tag("DayType"),
+                                MenuItem.Default("NumericOperator Validation").Tag("NumericOperator"),
+                                MenuItem.Default("DaysOfWeek Validation").Tag("DaysOfWeek"),
+                                MenuItem.Default("Custom Validator Demo").Tag("CustomValidator")
+                            )
+                            | validationResult.Value
                     );
 
             return Layout.Vertical().Gap(2)
