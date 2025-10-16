@@ -1,8 +1,9 @@
 
 using System.Data;
 using System.IO;
+namespace ExcelDataReaderApp.Apps;
 
-[App(icon: Icons.Sheet)]
+[App(icon: Icons.Sheet, title: "ExcelDataReader")]
 public class ExcelDataReaderApp : ViewBase
 {
     public record User
@@ -144,7 +145,7 @@ public class ExcelDataReaderApp : ViewBase
         }, isDelete);
         return Layout.Vertical(
             Layout.Horizontal().Align(Align.Right) |
-            Layout.Horizontal(Text.H2("This is the example for Nuget exceldatareader")).Align(Align.Left) |
+            Layout.Horizontal(Text.H2("This is the example for Nuget ExcelDataReader")).Align(Align.Left) |
             new Button("Import", _ =>
             {
                 isImport.Set(true);
