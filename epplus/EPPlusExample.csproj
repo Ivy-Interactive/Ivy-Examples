@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>EPPlusExample</RootNamespace>
+    <UserSecretsId>d4c604d7-629c-4b0f-b19e-740fb5c06802</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
