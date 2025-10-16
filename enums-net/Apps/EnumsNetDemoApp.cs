@@ -31,12 +31,6 @@ namespace EnumsNetApp.Apps
         {
             var client = UseService<IClientProvider>();
 
-            var inputString = UseState("Active");
-            var parseResult = UseState(string.Empty);
-            var selectedFormat = UseState(EnumFormat.Name);
-            var showAllValues = UseState(true);
-
-
             // enum flag states 
             var selectedFlagView = UseState(flagOperations.HasAllFlags);
             var flagResult = UseState<object>(Text.P(""));
@@ -45,11 +39,8 @@ namespace EnumsNetApp.Apps
             // state for DaysOfWeek flags
             var daysFlags = UseState(flagB);
 
-
             //Enumeration related state 
-            var enumrationResult = UseState<string>(() => string.Empty);
             var selectedEnumrateionView = UseState(() => MembersView.All);
-            var enumrationListExpanded = UseState(true);
             var enumrationList = UseState<List<EnumMemberInfo>>(() =>
                 Enums.GetMembers<NumericOperator>()
                      .Select(m => new EnumMemberInfo(
@@ -130,7 +121,6 @@ namespace EnumsNetApp.Apps
                 catch (Exception ex)
                 {
                     client.Error(ex);
-                    enumrationResult.Set($"Error: {ex.Message}");
                 }
 
             }
@@ -225,85 +215,61 @@ namespace EnumsNetApp.Apps
             }
 
             return
-                Layout.Vertical(
-                    //This is title Card 
-                    new Card().Title("Enums.NET demo (Ivy)")
-                                .Description("Demonstrates enumeration, flags, parsing, attributes, custom formats and validation.")
-                                .BorderThickness(3)
-                                .BorderStyle(BorderStyle.Dashed)
-                                .BorderColor(Colors.Primary)
-                                .BorderRadius(BorderRadius.Rounded)
-                                .Width(Size.Grow()),
+                Layout.Vertical().Gap(2)
+                    | new Expandable(
+                        "Enum Enumeration & Members",
+                        Layout.Vertical().Gap(2)
+                            | Text.Muted("Explore different ways to enumerate enum members using Enums.NET")
+                            | Text.P("Demonstrates various enumeration modes: All, Distinct, DisplayOrder, and Flags")
+                            | Layout.Horizontal().Gap(1)
+                                | new Button("All Members", _ => selectedView(MembersView.All)).Primary()
+                                | new Button("Distinct", _ => selectedView(MembersView.Distinct)).Secondary()
+                                | new Button("Display Order", _ => selectedView(MembersView.DisplayOrder)).Secondary()
+                                | new Button("Flags Only", _ => selectedView(MembersView.Flags)).Secondary()
+                            | Text.H4($"Current View: {selectedEnumrateionView.Value}")
+                            | (enumrationList.Value.Any() 
+                                ? enumrationList.Value.ToTable().Width(Size.Full())
+                                : Text.Muted("No members available"))
+                    )
 
-            // Members enumeration card
-            new Card(Layout.Vertical(
-                        // content area: conditional show/hide and render chosen table
-                        Layout.Horizontal(
-                            Text.Strong("NumericOperator members ").Width(Size.Shrink()),
-                                new Button(enumrationListExpanded.Value ? "Collapse" : "Expand", _ => enumrationListExpanded.Set(!enumrationListExpanded.Value)),
-                                        new Button("Check All Member", _ => selectedView(MembersView.All)),
-                                        new Button("Check Distinct Member", _ => selectedView(MembersView.Distinct)),
-                                        new Button("Check DisplayOrder Member", _ => selectedView(MembersView.DisplayOrder)),
-                                        new Button("Check Flag Member", _ => selectedView(MembersView.Flags))
-                                    ).Align(Align.Left),
-                                    enumrationListExpanded.Value ?
-                                                     (object)(enumrationList.Value.Any() ?
-                                                                    Layout.Vertical(Text.H3($"Enumeration of Enums for selection : {selectedEnumrateionView.Value}"),
-                                                                    // render rows (use ToTable() if you have it; otherwise show as vertical list)
-                                                                    enumrationList.Value.ToTable().Width(Size.Full()))
-                                                                    : Text.Muted("No members match this view"))
-                                    : Text.Muted("Members collapsed"))).Title("Enum Enumerate in increasing value order"),
+                    | new Expandable(
+                        "Flag Operations & Manipulation",
+                        Layout.Vertical().Gap(2)
+                            | Text.Muted("Learn how to work with flag enums using advanced Enums.NET operations")
+                            | Text.P("Interactive demonstrations of flag operations on DaysOfWeek enum")
+                            | Layout.Horizontal().Gap(1).Wrap(true)
+                                | new Button("HasAllFlags", _ => RunFlagOperation(flagOperations.HasAllFlags)).Primary()
+                                | new Button("HasAnyFlags", _ => RunFlagOperation(flagOperations.HasAnyFlags)).Secondary()
+                                | new Button("CombineFlags", _ => RunFlagOperation(flagOperations.CombineFlags)).Secondary()
+                                | new Button("CommonFlags", _ => RunFlagOperation(flagOperations.CommonFlags)).Secondary()
+                                | new Button("RemoveFlags", _ => RunFlagOperation(flagOperations.RemoveFlags)).Secondary()
+                                | new Button("GetFlags", _ => RunFlagOperation(flagOperations.GetFlags)).Secondary()
+                                | new Button("ToggleFlags", _ => { ToggleDay(DaysOfWeek.Saturday); RunFlagOperation(flagOperations.ToggleFlags); }).Secondary()
+                            | new Separator()
+                            | Text.H4($"Operation: {selectedFlagView.Value}")
+                            | flagResult.Value
+                    )
 
-            // Card for Flags demo
-            new Card(Layout.Vertical(Text.H2("Flag operations"),
-                     Layout.Horizontal(
-                        Text.Strong("DaysOfWeek Flags Demo").Width(Size.Grow()),
-                        new Button("HasAllFlags", _ => RunFlagOperation(flagOperations.HasAllFlags)),
-                        new Button("HasAnyFlags", _ => RunFlagOperation(flagOperations.HasAnyFlags)),
-                        new Button("CombineFlags", _ => RunFlagOperation(flagOperations.CombineFlags)),
-                        new Button("CommonFlags", _ => RunFlagOperation(flagOperations.CommonFlags)),
-                        new Button("RemoveFlags", _ => RunFlagOperation(flagOperations.RemoveFlags)),
-                        new Button("GetFlags", _ => RunFlagOperation(flagOperations.GetFlags)),
-                        new Button("ToggleFlags", _ => { ToggleDay(DaysOfWeek.Saturday); RunFlagOperation(flagOperations.ToggleFlags); })
-                    ).Align(Align.Center),
-                    Layout.Vertical(
-                        Text.H3($"Selected Operation: {selectedFlagView.Value}"),
-                        flagResult.Value
-                    ).Align(Align.Center),
-                    new Separator(),
-                    // Validation demonstration
-                    Layout.Horizontal(new Button("Validate DayType examples", _ =>
-                                        {
-                                            var isDayValidOne = DayType.Weekday.IsValid();
-                                            var isDaysValidOne = (DayType.Weekday | DayType.Holiday).IsValid();
-                                            var IsDaysvalidTwo = (DayType.Weekday | DayType.Weekend).IsValid();
-                                            client.Toast($"Weekday: {isDayValidOne}, Weekday|Holiday: {isDaysValidOne}, Weekday|Weekend: {IsDaysvalidTwo}", "Validation");
-                                        }).Icon(Icons.Check),
-                                        new Button("Validate Numeric Enums examples", _ =>
-                                        {
-                                            var isNumberValidOne = NumericOperator.LessThan.IsValid();
-                                            var isNumberValidTwo = ((NumericOperator)20).IsValid();
-                                            client.Toast($"Is Number One Valid: {isNumberValidOne}, Is Number Two valid: {isNumberValidTwo},", "Validation");
-                                        }).Icon(Icons.Check))
-                    )).Title("Flags & Validation"),
-
-
-            // card for Attribute & parsing 
-            new Card(
-                        Layout.Vertical(
-                                    Text.Strong("Attribute access & parsing"),
-                                    Layout.Horizontal(
-                                        new Button("Show NotEquals symbol", _ =>
-                                        {
-                                            var sym = NumericOperator.NotEquals.GetAttributes().Get<SymbolAttribute>()?.Symbol ?? "<none>";
-                                            client.Toast($"NotEquals symbol: {sym}", "Attributes");
-                                        }).Icon(Icons.Info),
-                                    new Button("Parse 'Monday, Wednesday' Flags", _ =>
-                                        {
-                                            var parsed = Enums.Parse<DaysOfWeek>("Monday, Wednesday");
-                                            client.Toast($"Parsed flags => {parsed}", "Parsing");
-                                        }).Icon(Icons.Calendar)))
-                    ).Title("Helpers & Parsing").Width(1f));
+                    | new Expandable(
+                        "Validation & Error Handling",
+                        Layout.Vertical().Gap(2)
+                            | Text.Muted("Validate enum values and handle invalid enum scenarios")
+                            | Text.P("Test enum validation with different enum types and combinations")
+                            | Layout.Horizontal().Gap(1)
+                                | new Button("Validate DayType", _ =>
+                                    {
+                                        var isDayValidOne = DayType.Weekday.IsValid();
+                                        var isDaysValidOne = (DayType.Weekday | DayType.Holiday).IsValid();
+                                        var IsDaysvalidTwo = (DayType.Weekday | DayType.Weekend).IsValid();
+                                        client.Toast($"Weekday: {isDayValidOne}, Weekday|Holiday: {isDaysValidOne}, Weekday|Weekend: {IsDaysvalidTwo}", "DayType Validation");
+                                    }).Icon(Icons.Check).Primary()
+                                | new Button("Validate NumericOperator", _ =>
+                                    {
+                                        var isNumberValidOne = NumericOperator.LessThan.IsValid();
+                                        var isNumberValidTwo = ((NumericOperator)20).IsValid();
+                                        client.Toast($"LessThan valid: {isNumberValidOne}, Invalid value (20) valid: {isNumberValidTwo}", "NumericOperator Validation");
+                                    }).Icon(Icons.Check).Secondary()
+                    );
         }
     }
 }
