@@ -1,7 +1,7 @@
 
 using System.Data;
 using System.IO;
-namespace ExcelDataReaderApp.Apps;
+namespace ExcelDataReaderExample;
 
 [App(icon: Icons.Sheet, title: "ExcelDataReader")]
 public class ExcelDataReaderApp : ViewBase
