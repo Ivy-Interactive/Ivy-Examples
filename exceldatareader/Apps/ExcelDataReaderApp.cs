@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 namespace ExcelDataReaderExample;
 
-[App(icon: Icons.Sheet, title: "ExcelDataReader")]
+[App(icon: Icons.Sheet, title: "Bad ExcelDataReader")]
 public class ExcelDataReaderApp : ViewBase
 {
     public record User
