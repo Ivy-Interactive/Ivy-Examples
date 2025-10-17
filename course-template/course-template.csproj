@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>CourseTemplate</RootNamespace>
+    <NoWarn>CS8618;CS8603;CS8602;CS8604;CS8669;CS9113;NETSDK1187</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ivy" Version="1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Modules/**/*.md" />
+    <Compile Include="**/*.cs" Exclude="obj/**/*.cs;bin/**/*.cs;Generated/**/*.cs;Helpers/Generator/**/*.cs" />
+  </ItemGroup>
+
+  <Target Name="TransformMarkdown" BeforeTargets="CoreCompile">
+    <Exec Command="dotnet run --project $(MSBuildProjectDirectory)/Helpers/Generator/Generator.csproj -- convert $(MSBuildProjectDirectory)/Modules/*.md $(MSBuildProjectDirectory)/Generated $(MSBuildProjectFullPath)" />
+    <ItemGroup>
+      <Compile Include="Generated/**/*.g.cs" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <Watch Remove="Modules/**/*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Generated\" />
+  </ItemGroup>
+  
+</Project>
+
