@@ -16,7 +16,7 @@ using EnumsNET;
 
 
 
-namespace EnumsNetApp.Apps.SampleEnums
+namespace EnumsNetApp.Apps
 {
 
     enum NumericOperator
