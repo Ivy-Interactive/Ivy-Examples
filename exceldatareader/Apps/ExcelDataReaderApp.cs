@@ -5,7 +5,7 @@ using ExcelDataReader;
 
 namespace ExcelDataReaderExample;
 
-[App(icon: Icons.Sheet, title: "Simple Excel Analyzer")]
+[App(icon: Icons.Sheet, title: "ExcelDataReader")]
 public class ExcelDataReaderApp : ViewBase
 {
     // Model for storing file analysis
@@ -143,6 +143,10 @@ public class ExcelDataReaderApp : ViewBase
                         .Destructive()
                         .Disabled(filePath.Value == null || isAnalyzing.Value)
                     ).Align(Align.Left),
+
+                    new Spacer(),
+                    Text.Small("This demo uses the ExcelDataReader NuGet package to read Excel and CSV files."),
+                    Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ExcelDataReader](https://github.com/ExcelDataReader/ExcelDataReader)"),
 
                     // Analysis indicator
                     isAnalyzing.Value ?
