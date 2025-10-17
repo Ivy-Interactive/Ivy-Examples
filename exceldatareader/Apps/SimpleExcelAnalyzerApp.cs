@@ -25,6 +25,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
         public string CodeName { get; set; } = "";
         public int FieldCount { get; set; }
         public int RowCount { get; set; }
+        public int MergeCellsCount { get; set; }
         public List<string> Headers { get; set; } = new();
         public Dictionary<string, object> Properties { get; set; } = new();
     }
@@ -37,6 +38,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
         var selectedSheetIndex = UseState(0);
         var client = UseService<IClientProvider>();
         var fileInputState = UseState<FileInput?>(() => null);
+        var fileName = fileInputState.Value?.Name;
 
         // Upload URL for files
         var uploadUrl = this.UseUpload(
@@ -46,7 +48,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
                 {
                     var tempPath = System.IO.Path.GetTempFileName();
                     var extension = ".xlsx"; // Default
-                    
+
                     // Determine extension based on file content
                     if (uploadedBytes.Length >= 4)
                     {
@@ -67,7 +69,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
                             }
                         }
                     }
-                    
+
                     var finalPath = tempPath + extension;
                     File.WriteAllBytes(finalPath, uploadedBytes);
                     filePath.Set(finalPath);
@@ -122,17 +124,18 @@ public class SimpleExcelAnalyzerApp : ViewBase
             new Card(
                 Layout.Vertical(
                     Text.H3("Excel File Analyzer"),
-                    Text.Muted("Upload Excel (.xlsx, .xls) or CSV files to analyze their structure, sheets, and data organization."),   
+                    Text.Muted("Upload Excel (.xlsx, .xls) or CSV files to analyze their structure, sheets, and data organization."),
                     fileInputState.ToFileInput(uploadUrl, "Select Excel/CSV file")
                         .Accept(".xlsx,.xls,.csv")
                         .Width(Size.Full()),
-                    
+
                     // Action buttons
                     Layout.Horizontal(
                         new Button("Analyze", _ => startAnalysis())
                             .Disabled(filePath.Value == null || isAnalyzing.Value),
-                        
-                        new Button("Clear", _ => {
+
+                        new Button("Clear", _ =>
+                        {
                             filePath.Set((string?)null);
                             selectedSheetIndex.Set(0);
                             fileInputState.Set((FileInput?)null);
@@ -140,75 +143,59 @@ public class SimpleExcelAnalyzerApp : ViewBase
                         .Destructive()
                         .Disabled(filePath.Value == null || isAnalyzing.Value)
                     ).Align(Align.Left),
-                    
+
                     // Analysis indicator
-                    isAnalyzing.Value ? 
+                    isAnalyzing.Value ?
                         Layout.Horizontal(
                             Text.Label("Analyzing file...")
                         ).Align(Align.Left) : null
                 )
-            ).Width(Size.Fraction(0.4f)),
-            
+            ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full())),
+
             // Right Card - Analysis Results
             new Card(
                 fileAnalysis.Value != null ? (
                     Layout.Vertical(
-                        // General file information
+                        Text.H3("File Analysis Results"),
+                        Text.Muted("Detailed analysis of your Excel/CSV file structure, including sheets, headers, and statistics."),
                         Layout.Vertical(
-                            Text.H3("File Analysis Results"),
-                            Layout.Horizontal(
-                                Layout.Vertical(
-                                    Text.Label($"File name: {fileAnalysis.Value.FileName}"),
-                                    Text.Label($"File type: {fileAnalysis.Value.FileType}"),
-                                    Text.Label($"File size: {FormatFileSize(fileAnalysis.Value.FileSize)}"),
-                                    Text.Label($"Number of sheets: {fileAnalysis.Value.TotalSheets}")
-                                ),
-                                Layout.Vertical(
-                                    Text.Label($"Total rows: {fileAnalysis.Value.Sheets.Sum(s => s.RowCount)}"),
-                                    Text.Label($"Maximum columns: {fileAnalysis.Value.Sheets.Max(s => s.FieldCount)}"),
-                                    Text.Label($"Average rows per sheet: {fileAnalysis.Value.Sheets.Average(s => s.RowCount):F1}"),
-                                    Text.Label($"Average columns: {fileAnalysis.Value.Sheets.Average(s => s.FieldCount):F1}")
-                                )
-                            )
-                        ).Padding(8),
-                        
+                            new Markdown($"""                                
+                                | Property | Value |
+                                |----------|-------|
+                                | **File name** | `{fileName}` |
+                                | **File type** | `{fileAnalysis.Value.FileType}` |
+                                | **File size** | `{FormatFileSize(fileAnalysis.Value.FileSize)}` |
+                                | **Number of sheets** | `{fileAnalysis.Value.TotalSheets}` |
+                                | **Total rows** | `{fileAnalysis.Value.Sheets.Sum(s => s.RowCount)}` |
+                                | **Maximum columns** | `{fileAnalysis.Value.Sheets.Max(s => s.FieldCount)}` |
+                                | **Total merged cells** | `{fileAnalysis.Value.Sheets.Sum(s => s.MergeCellsCount)}` |
+                                | **Average rows per sheet** | `{fileAnalysis.Value.Sheets.Average(s => s.RowCount):F1}` |
+                                | **Average columns** | `{fileAnalysis.Value.Sheets.Average(s => s.FieldCount):F1}` |
+                                """)
+                        ),
+
                         // Sheet list
                         Layout.Vertical(
-                            Text.H3("Sheets in file:"),
-                            Layout.Vertical(
-                                fileAnalysis.Value.Sheets.Select((sheet, index) =>
-                                    new Card(
-                                        Layout.Vertical(
-                                            Layout.Horizontal(
-                                                Layout.Vertical(
-                                                    Text.Label($"Name: {sheet.Name}"),
-                                                    Text.Label($"Code name: {sheet.CodeName}"),
-                                                    Text.Label($"Columns: {sheet.FieldCount}"),
-                                                    Text.Label($"Rows: {sheet.RowCount}")
-                                                ),
-                                                Layout.Vertical(
-                                                    Text.Label("Headers:"),
-                                                    Text.Small(string.Join(", ", sheet.Headers.Take(8))),
-                                                    sheet.Headers.Count > 8 ? 
-                                                        Text.Small($"... and {sheet.Headers.Count - 8} more columns") : null
-                                                )
-                                            ),
-                                            // Additional sheet information
-                                            Layout.Vertical(
-                                                Text.Label("Additional properties:"),
-                                                Layout.Horizontal(
-                                                    sheet.Properties.Select(kvp => 
-                                                        Text.Small($"{kvp.Key}: {kvp.Value}")
-                                                    ).ToArray()
-                                                )
-                                            )
-                                        )
-                                    ).Title($"Sheet {index + 1}")
-                                ).ToArray()
-                            )
+                            fileAnalysis.Value.Sheets.Select((sheet, index) =>
+
+                                    new Expandable(
+                                        Text.Label($"Sheet {index + 1}: {sheet.Name}"),
+                                        new Markdown($"""
+                                            | Property | Value |
+                                            |----------|-------|
+                                            | **Name** | `{sheet.Name}` |
+                                            | **Columns** | `{sheet.FieldCount}` |
+                                            | **Rows** | `{sheet.RowCount}` |
+                                            | **Merged Cells** | `{sheet.MergeCellsCount}` |
+                                            | **Headers** | {string.Join(", ", sheet.Headers.Select(header => $"`{header}`"))} |
+                                            
+                                            """)
+                                    )
+
+                            ).ToArray()
                         )
                     )
-                ) : ( 
+                ) : (
                         Layout.Vertical(
                             Text.H3("What This Program Does"),
                             Layout.Vertical(
@@ -217,12 +204,12 @@ public class SimpleExcelAnalyzerApp : ViewBase
                                 Text.Muted("• Displays file statistics and metadata"),
                                 Text.Muted("• Provides detailed data organization insights")
                             ).Padding(8),
-                            
+
                             Layout.Vertical(
                                 Text.Muted("Quick Start:"),
                                 Text.Muted("1. Upload file → 2. Click 'Analyze' → 3. View results")
                             ).Padding(8),
-                            
+
                             Layout.Vertical(
                                 Text.Muted("Supported Files:"),
                                 Text.Muted("• Excel files (.xlsx, .xls)"),
@@ -230,7 +217,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
                             ).Padding(8)
                         )
                 )
-            ).Width(Size.Fraction(0.6f))
+            ).Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Full()))
         ).Gap(16);
     }
 
@@ -260,7 +247,8 @@ public class SimpleExcelAnalyzerApp : ViewBase
                     Name = reader.Name,
                     CodeName = reader.CodeName,
                     FieldCount = reader.FieldCount,
-                    RowCount = reader.RowCount
+                    RowCount = reader.RowCount,
+                    MergeCellsCount = reader.MergeCells.Length
                 };
 
                 // Collect headers (first row)
@@ -277,6 +265,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
                 sheetAnalysis.Properties["ResultsCount"] = reader.ResultsCount;
                 sheetAnalysis.Properties["FieldCount"] = reader.FieldCount;
                 sheetAnalysis.Properties["RowCount"] = reader.RowCount;
+                sheetAnalysis.Properties["MergeCellsCount"] = reader.MergeCells.Length;
 
                 // Try to get additional properties
                 try
