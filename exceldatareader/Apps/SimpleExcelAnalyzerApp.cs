@@ -49,21 +49,21 @@ public class SimpleExcelAnalyzerApp : ViewBase
                     var tempPath = System.IO.Path.GetTempFileName();
                     var extension = ".xlsx"; // Default
 
-                    // Determine extension based on file content
+                    // Simple extension detection
                     if (uploadedBytes.Length >= 4)
                     {
-                        if (uploadedBytes[0] == 0x50 && uploadedBytes[1] == 0x4B) // ZIP signature
+                        if (uploadedBytes[0] == 0x50 && uploadedBytes[1] == 0x4B)
                         {
                             extension = ".xlsx";
                         }
-                        else if (uploadedBytes[0] == 0xD0 && uploadedBytes[1] == 0xCF) // OLE signature
+                        else if (uploadedBytes[0] == 0xD0 && uploadedBytes[1] == 0xCF)
                         {
                             extension = ".xls";
                         }
                         else
                         {
                             var content = System.Text.Encoding.UTF8.GetString(uploadedBytes.Take(100).ToArray());
-                            if (content.Contains(',') && !content.Any(c => char.IsControl(c) && c != '\r' && c != '\n' && c != '\t'))
+                            if (content.Contains(','))
                             {
                                 extension = ".csv";
                             }
@@ -236,19 +236,31 @@ public class SimpleExcelAnalyzerApp : ViewBase
 
         try
         {
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException($"File not found: {filePath}");
+            }
+
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = ExcelReaderFactory.CreateReader(stream);
+            using var reader = fileInfo.Extension.ToLowerInvariant() == ".csv" 
+                ? ExcelReaderFactory.CreateCsvReader(stream)
+                : ExcelReaderFactory.CreateReader(stream);
+            
+            if (reader == null)
+            {
+                throw new InvalidOperationException("Failed to create reader for the file");
+            }
 
             // Collect information about all sheets
             do
             {
                 var sheetAnalysis = new SheetAnalysis
                 {
-                    Name = reader.Name,
-                    CodeName = reader.CodeName,
+                    Name = reader.Name ?? "Unknown",
+                    CodeName = reader.CodeName ?? "",
                     FieldCount = reader.FieldCount,
                     RowCount = reader.RowCount,
-                    MergeCellsCount = reader.MergeCells.Length
+                    MergeCellsCount = reader.MergeCells?.Length ?? 0
                 };
 
                 // Collect headers (first row)
@@ -265,7 +277,7 @@ public class SimpleExcelAnalyzerApp : ViewBase
                 sheetAnalysis.Properties["ResultsCount"] = reader.ResultsCount;
                 sheetAnalysis.Properties["FieldCount"] = reader.FieldCount;
                 sheetAnalysis.Properties["RowCount"] = reader.RowCount;
-                sheetAnalysis.Properties["MergeCellsCount"] = reader.MergeCells.Length;
+                sheetAnalysis.Properties["MergeCellsCount"] = reader.MergeCells?.Length ?? 0;
 
                 // Try to get additional properties
                 try
@@ -282,9 +294,22 @@ public class SimpleExcelAnalyzerApp : ViewBase
                     if (reader.MergeCells != null && reader.MergeCells.Length > 0)
                     {
                         sheetAnalysis.Properties["MergeCellsCount"] = reader.MergeCells.Length;
+                        sheetAnalysis.MergeCellsCount = reader.MergeCells.Length;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // Log error but continue processing
+                    Console.WriteLine($"Error processing merge cells: {ex.Message}");
+                }
+                
+                // For CSV files, set MergeCellsCount to 0 since CSV doesn't support merged cells
+                if (fileInfo.Extension.ToLowerInvariant() == ".csv")
+                {
+                    sheetAnalysis.MergeCellsCount = 0;
+                    sheetAnalysis.Properties["MergeCellsCount"] = 0;
+                    sheetAnalysis.Properties["IsCSV"] = true;
+                }
 
                 analysis.Sheets.Add(sheetAnalysis);
 
@@ -319,3 +344,4 @@ public class SimpleExcelAnalyzerApp : ViewBase
         return $"{len:0.##} {sizes[order]}";
     }
 }
+
