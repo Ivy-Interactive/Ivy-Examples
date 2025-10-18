@@ -7,48 +7,55 @@ public class FluentDateTimeApp : ViewBase
     {
         var operation = UseState<string?>(() => "Add");
         var unit = UseState<string?>(() => "Days");
-        var amountText = UseState<string>(() => "30");
+        var amount = UseState<double>(() => 30);
+        var baseDateTime = UseState<DateTime>(() => DateTime.Now);
+        var showResult = UseState<bool>(() => false);
 
-        _ = int.TryParse(amountText.Value, out var amountInt);
-        if (amountInt < 0) amountInt = -amountInt;
-        var today = DateTime.Today;
-        var resultDate = ComputeDate(today, operation.Value, unit.Value, amountInt);
+        var amountInt = (int)Math.Abs(amount.Value);
+        var resultDate = ComputeDate(baseDateTime.Value, operation.Value, unit.Value, amountInt);
 
         return Layout.Center()
                | (new Card(
-                   Layout.Vertical().Gap(4).Padding(1)
-                   | Text.H3("Date Calculator")
-                   | Text.Block($"Today: {today:yyyy-MM-dd}")
-                   | Text.Block("Add or subtract an amount of time from today.")
-                   | new Separator()
-                   | Text.H4("Settings")
-                    | (Layout.Horizontal().Gap(10)
-                      | Text.Block("Operation:")
-                      | new Button(operation.Value ?? "Add").Outline().Width(78)
-                          .WithDropDown(
-                              Operations
-                                  .Select(o => MenuItem.Default(o.Label).HandleSelect(() => operation.Set(o.Label)))
-                                  .ToArray()
-                          )
-                    )
-                    | (Layout.Horizontal().Gap(19)
-                      | Text.Block("Unit:")
-                      | new Button(unit.Value ?? "Days").Outline().Width(78)
-                          .WithDropDown(
-                              TimeUnits
-                                  .Select(o => MenuItem.Default(o.Label).HandleSelect(() => unit.Set(o.Label)))
-                                  .ToArray()
-                          )
-                    )
-                   | (Layout.Horizontal().Gap(13).Align(Align.Left)
-                     | Text.Block("Amount:")
-                     | amountText.ToInput(placeholder: "Enter amount (e.g. 3)")
-                   )
-                   | new Separator()
-                   | Text.H4("Result")
-                   | Text.Block($"Computed date: {resultDate:yyyy-MM-dd}")
-                 )
-                 .Width(Size.Units(120).Max(700))
+                   Layout.Vertical().Gap(4)
+                   | Text.H2("Date Calculator")
+                   | Text.Muted("Add or subtract an amount of time from a specific date and time.")
+                   | Layout.Vertical()
+                       | Text.Label("Base Date & Time")
+                       | baseDateTime.ToDateTimeInput()
+                           .Variant(DateTimeInputs.DateTime)
+                       | Text.Label("Operation")
+                       | operation.ToSelectInput(Operations).Variant(SelectInputs.Select)
+                       | Text.Label("Time Unit")
+                       | unit.ToSelectInput(TimeUnits).Variant(SelectInputs.Select)
+                       | Text.Label("Amount")
+                       | new NumberInput<double>(amount)
+                         .Min(1)
+                         .Max(9999)
+                       | (Layout.Horizontal().Gap(4)
+                         | new Button("Calculate")
+                             .HandleClick(() => showResult.Set(true))
+                         | new Button("Clear")
+                             .Secondary()
+                             .HandleClick(() => {
+                                 showResult.Set(false);
+                                 operation.Set("Add");
+                                 unit.Set("Days");
+                                 amount.Set(30);
+                                 baseDateTime.Set(DateTime.Now);
+                             }))
+                          | (showResult.Value ? 
+                              new Card(
+                                  Layout.Vertical()
+                                  | Text.Large("Result")
+                                  | Text.Markdown($"**Computed date**: `{resultDate:yyyy-MM-dd HH:mm}`")
+                                  | Text.Markdown($"**Difference**: `{(int)(resultDate - baseDateTime.Value).TotalDays} days`")
+                              ) : 
+                              Text.Muted("Click 'Calculate' to see the result")
+                            )
+                         | new Spacer()
+                         | Text.Small("This demo uses the FluentDateTime NuGet package for cleaner DateTime operations.")
+                         | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FluentDateTime](https://github.com/FluentDateTime/FluentDateTime)")
+                  ).Width(Size.Fraction(0.4f))
                );
     }
 
@@ -73,7 +80,7 @@ public class FluentDateTimeApp : ViewBase
     private static DateTime ComputeDate(DateTime baseDate, string? operation, string? unit, int amount)
     {
         var isSubtract = string.Equals(operation, "Subtract", StringComparison.OrdinalIgnoreCase);
-        if (unit == "Months") return baseDate.AddMonths(isSubtract ? -amount : amount);
+    if (unit == "Months") return baseDate.AddMonths(isSubtract ? -amount : amount);
         if (unit == "Years") return baseDate.AddYears(isSubtract ? -amount : amount);
 
         var span = unit switch
