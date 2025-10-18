@@ -6,7 +6,7 @@ using FuzzySharp.Extractor;
 using Ivy.Core;
 
 [App(icon: Icons.Sheet)]
-public class FuzzySharpDemoApp : ViewBase
+public class FuzzySharpApp : ViewBase
 {
     public override object? Build()
     {
@@ -45,7 +45,8 @@ public class FuzzySharpDemoApp : ViewBase
             "Mixed Berry Yogurt",
             "Citrus Orange Soda",
             "Ruby Red Grapefruit Sparkling Water",
-            "Seedless Watermelon Candy"
+            "Seedless Watermelon Candy",
+            "National Aeronautics Space Administration"
         };
 
         IEnumerable<ExtractedResult<string>> results =
