@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,23 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>DiffplexDemo</RootNamespace>
+    <RootNamespace>BogusExample</RootNamespace>
+    <UserSecretsId>5d16e344-8e0e-4279-be26-b8755dced3a9</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
-
-  
-  
-  <ItemGroup>
-    <PackageReference Include="DiffPlex" Version="1.9.0" />
-    <PackageReference Include="Ivy" Version="1.0.115.0" />
+<ItemGroup>
+    <PackageReference Include="Bogus" Version="35.6.3" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
-  
-
   <ItemGroup>
-    <Folder Include="Apps" />
     <Folder Include="Connections" />
   </ItemGroup>
 

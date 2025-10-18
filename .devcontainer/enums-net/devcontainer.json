@@ -1,0 +1,27 @@
+{
+    "name": "Enums.NET",
+    "image": "mcr.microsoft.com/dotnet/sdk:9.0",
+    "features": {},
+    "workspaceFolder": "/workspaces/Ivy-Examples/enums-net",
+    "postCreateCommand": "dotnet tool install -g Ivy.Console",
+    "postStartCommand": "dotnet watch",
+    "forwardPorts": [5010],
+    "portsAttributes": {
+      "5010": {
+        "label": "Enums.NET",
+        "onAutoForward": "openPreview"
+      }
+    },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-dotnettools.csharp",
+          "ms-vscode.powershell",
+          "ms-dotnettools.csdevkit"
+        ]
+      },
+      "codespaces": {
+        "openFiles": ["Apps/EnumsNetDemoApp.cs"]
+      }
+    }
+  }

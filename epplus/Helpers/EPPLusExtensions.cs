@@ -1,4 +1,4 @@
-﻿namespace EEPlusSoftware.Helpers;
+﻿namespace EPPlusExample.Helpers;
 
 public static class EPPLusExtensions
 {

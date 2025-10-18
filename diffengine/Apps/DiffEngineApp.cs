@@ -70,6 +70,11 @@ public class DiffEngineApp : ViewBase
         }
 
         // text diff tab content
+        var ciInfo = Text.Muted($"CI mode: {(DiffService.IsCi ? "On" : "Off")} — " +
+                                   (DiffService.IsCi
+                                       ? "in CI, external diff tools are not launched."
+                                       : "locally you can launch external diff tools (WinMerge / VS Code, etc.)."));
+
         var leftCard =
             Layout.Vertical().Gap(3).Padding(2)
             | Text.H4("Left")
@@ -91,6 +96,7 @@ public class DiffEngineApp : ViewBase
             | (Layout.Horizontal().Gap(4).Grow()
                 | new Card(leftCard)
                 | new Card(rightCard))
+            | ciInfo
             | (Layout.Horizontal().Gap(3)
                 | new Button(Extensions[textExtIndex.Value])
                     .Primary()
@@ -131,6 +137,7 @@ public class DiffEngineApp : ViewBase
             | (Layout.Horizontal().Gap(4).Grow()
                 | new Card(leftFileCard)
                 | new Card(rightFileCard))
+            | ciInfo
             | (Layout.Horizontal().Gap(3)
                 | fileExtDropdown
                 | new Button("Launch Diff (Files)", onClick: () => { _ = launchFiles(); })

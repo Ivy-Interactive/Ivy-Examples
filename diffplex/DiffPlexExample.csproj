@@ -6,17 +6,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>bogus</RootNamespace>
+    <RootNamespace>DiffPlexExample</RootNamespace>
+    <UserSecretsId>bbdf9661-190d-40f1-ab73-6659b7dda2c6</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
-<ItemGroup>
-    <PackageReference Include="Bogus" Version="35.6.3" />
+
+  
+  
+  <ItemGroup>
+    <PackageReference Include="DiffPlex" Version="1.9.0" />
     <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
+  
+
   <ItemGroup>
+    <Folder Include="Apps" />
     <Folder Include="Connections" />
   </ItemGroup>
 

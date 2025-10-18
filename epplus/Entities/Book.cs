@@ -1,4 +1,4 @@
-﻿namespace EEPlusSoftware.Entities;
+﻿namespace EPPlusExample.Entities;
 
 [AttributeUsage(AttributeTargets.All)]
 public class Column : System.Attribute
