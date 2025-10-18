@@ -1,6 +1,6 @@
-namespace FluentDateTimeDemo.Apps;
+namespace FluentDateTimeExample;
 
-[App(icon: Icons.Calendar, title: "FluentDateTime Demo")]
+[App(icon: Icons.Calendar, title: "FluentDateTime")]
 public class FluentDateTimeApp : ViewBase
 {
     public override object? Build()
