@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>exceldatareaderApp</RootNamespace>
+    <RootNamespace>ExcelDataReaderExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,7 @@
   <ItemGroup>
     <PackageReference Include="ExcelDataReader" Version="3.8.0" />
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.8.0" />
-    <PackageReference Include="Ivy" Version="1.0.113.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.0-rc.1.25451.107" />
   </ItemGroup>
   
