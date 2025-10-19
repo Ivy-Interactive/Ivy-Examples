@@ -26,4 +26,4 @@ global using System.Globalization;
 global using System.Reactive.Linq;
 global using FluentDateTime;
 
-namespace FluentDateTimeDemo;
+namespace FluentDateTimeExample;
