@@ -18,14 +18,93 @@ namespace EnumsNetApp.Apps
     [App(title: "Enums.NET", icon: Icons.Tag)]
     public class EnumsNetDemoApp : ViewBase
     {
-        // helper enum 
-        // 1.for which table is visible
-        enum MembersView { All, Distinct, DisplayOrder, Flags }
         // for falg enums related operations
         enum flagOperations { HasAllFlags, HasAnyFlags, CombineFlags, CommonFlags, RemoveFlags, GetFlags, ToggleFlags }
 
         // Record to store enum member metadata
-        public record EnumMemberInfo(int Value, string Name, string? Description, string? Symbol);
+        public record EnumMemberInfo(int Value, string Name, string? Description, string? Symbol, string? DisplayName, int? DisplayOrder);
+
+        // Helper function to create dynamic table with only relevant columns
+        object CreateDynamicEnumTable(List<EnumMemberInfo> members)
+        {
+            if (!members.Any())
+                return Text.Muted("No members available");
+
+            // Check which columns have data
+            var hasDescription = members.Any(m => !string.IsNullOrEmpty(m.Description));
+            var hasSymbol = members.Any(m => !string.IsNullOrEmpty(m.Symbol));
+            var hasDisplayName = members.Any(m => !string.IsNullOrEmpty(m.DisplayName));
+            var hasDisplayOrder = members.Any(m => m.DisplayOrder.HasValue);
+
+            // Create table data based on available columns
+            if (hasDescription && hasSymbol && hasDisplayName && hasDisplayOrder)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    Description = m.Description,
+                    Symbol = m.Symbol,
+                    DisplayName = m.DisplayName,
+                    Order = m.DisplayOrder
+                }).ToTable().Width(Size.Full());
+            }
+            else if (hasDescription && hasSymbol)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    Description = m.Description,
+                    Symbol = m.Symbol
+                }).ToTable().Width(Size.Full());
+            }
+            else if (hasDisplayName && hasDisplayOrder)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    DisplayName = m.DisplayName,
+                    Order = m.DisplayOrder
+                }).ToTable().Width(Size.Full());
+            }
+            else if (hasDescription)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    Description = m.Description
+                }).ToTable().Width(Size.Full());
+            }
+            else if (hasSymbol)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    Symbol = m.Symbol
+                }).ToTable().Width(Size.Full());
+            }
+            else if (hasDisplayName)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    DisplayName = m.DisplayName
+                }).ToTable().Width(Size.Full());
+            }
+            else
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value
+                }).ToTable().Width(Size.Full());
+            }
+        }
 
         public override object? Build()
         {
@@ -42,127 +121,50 @@ namespace EnumsNetApp.Apps
             // Validation result state
             var validationResult = UseState<object>(() => Text.P("Select a validation option to see results"));
 
-            //Enumeration related state 
-            var selectedEnumrateionView = UseState(() => MembersView.All);
-            var enumrationList = UseState<List<EnumMemberInfo>>(() =>
-                Enums.GetMembers<NumericOperator>()
-                     .Select(m => new EnumMemberInfo(
-                         (int)m.Value,
-                         m.Name,
-                         m.Attributes.Get<DescriptionAttribute>()?.Description,
-                         m.Attributes.Get<SymbolAttribute>()?.Symbol
-                     ))
-                     .OrderBy(x => x.Value) // increasing value order
-                     .ToList()
-            );
 
             // Simple enum viewer state
-            var selectedEnumType = UseState<Type>(() => typeof(NumericOperator));
-            var simpleEnumList = UseState<List<EnumMemberInfo>>(() =>
-                Enums.GetMembers<NumericOperator>()
-                     .Select(m => new EnumMemberInfo(
-                         (int)m.Value,
-                         m.Name,
-                         m.Attributes.Get<DescriptionAttribute>()?.Description,
-                         m.Attributes.Get<SymbolAttribute>()?.Symbol
-                     ))
-                     .OrderBy(x => x.Value)
-                     .ToList()
-            );
+            var selectedEnumType = UseState<string>(() => "NumericOperator");
+            var simpleEnumList = UseState<List<EnumMemberInfo>>(() => new List<EnumMemberInfo>());
 
+            // Helper function to get enum members
+            List<EnumMemberInfo> GetEnumMembers(string enumTypeName)
+            {
+                var enumType = enumTypeName switch
+                {
+                    "NumericOperator" => typeof(NumericOperator),
+                    "DaysOfWeek" => typeof(DaysOfWeek),
+                    "DayType" => typeof(DayType),
+                    "PriorityLevel" => typeof(PriorityLevel),
+                    _ => typeof(NumericOperator)
+                };
 
-            // Simple enum viewer function
-            void ShowSimpleEnum(Type enumType)
+                return Enums.GetMembers(enumType)
+                           .Select(m => new EnumMemberInfo(
+                               (int)m.Value,
+                               m.Name,
+                               m.Attributes.Get<DescriptionAttribute>()?.Description,
+                               m.Attributes.Get<SymbolAttribute>()?.Symbol,
+                               m.Attributes.Get<DisplayAttribute>()?.Name,
+                               m.Attributes.Get<DisplayAttribute>()?.Order
+                           ))
+                           .OrderBy(x => x.Value)
+                           .ToList();
+            }
+
+            // Initialize and update enum list when selectedEnumType changes
+            UseEffect(() =>
             {
                 try
                 {
-                    var members = Enums.GetMembers(enumType);
-                    var memberInfo = members.Select(m => new EnumMemberInfo(
-                        (int)m.Value,
-                        m.Name,
-                        m.Attributes.Get<DescriptionAttribute>()?.Description,
-                        m.Attributes.Get<SymbolAttribute>()?.Symbol
-                    )).OrderBy(x => x.Value).ToList();
-
+                    var memberInfo = GetEnumMembers(selectedEnumType.Value);
                     simpleEnumList.Set(memberInfo);
-                    selectedEnumType.Set(enumType);
                 }
                 catch (Exception ex)
                 {
                     client.Error(ex);
                 }
-            }
+            }, selectedEnumType);
 
-            //Enumrate member of enums using Enums.GetMembers<T>()
-            void selectedView(MembersView view)
-            {
-                try
-                {
-                    List<EnumMemberInfo> tableRows;
-                    switch (view)
-                    {
-                        case MembersView.Distinct:
-                            // Distinct — by description text for example (you can change distinct key as needed)
-                            tableRows = Enums.GetMembers<NumericOperator>(EnumMemberSelection.Distinct)
-                                         .Select(m => new EnumMemberInfo(
-                                             (int)m.Value,
-                                             m.Name,
-                                             m.Attributes.Get<DescriptionAttribute>()?.Description,
-                                             m.Attributes.Get<SymbolAttribute>()?.Symbol
-                                         ))
-                                         .OrderBy(x => x.Value) // increasing value order
-                                         .ToList();
-                            break;
-
-                        case MembersView.DisplayOrder:
-                            // DisplayOrder — sort by DisplayAttribute.Order (we captured as DisplayOrder in EnumMemberInfo)
-                            // Second e.g for more clarity: Show PriorityLevel with Display(Order)
-                            tableRows = Enums.GetMembers<PriorityLevel>(EnumMemberSelection.DisplayOrder)
-                                        .Select(m => new EnumMemberInfo(
-                                            (int)m.Value,
-                                            m.Name,
-                                            m.Attributes.Get<DisplayAttribute>()?.Name,
-                                            null
-                                        ))
-                                        .ToList();
-
-                            break;
-
-                        case MembersView.Flags:
-                            // Flags view — show only members whose value is power-of-two or that look like flags (example)
-                            tableRows = Enums.GetMembers<NumericOperator>(EnumMemberSelection.Flags)
-                                         .Select(m => new EnumMemberInfo(
-                                             (int)m.Value,
-                                             m.Name,
-                                             m.Attributes.Get<DescriptionAttribute>()?.Description,
-                                             m.Attributes.Get<SymbolAttribute>()?.Symbol
-                                         ))
-                                         .OrderBy(x => x.Value) // increasing value order
-                                         .ToList();
-                            break;
-
-                        default: // MembersView.All
-                            tableRows = Enums.GetMembers<NumericOperator>()
-                                         .Select(m => new EnumMemberInfo(
-                                             (int)m.Value,
-                                             m.Name,
-                                             m.Attributes.Get<DescriptionAttribute>()?.Description,
-                                             m.Attributes.Get<SymbolAttribute>()?.Symbol
-                                         ))
-                                         .OrderBy(x => x.Value) // increasing value order
-                                         .ToList();
-                            break;
-
-                    }
-                    enumrationList.Set(tableRows);
-                    selectedEnumrateionView.Set(view);
-                }
-                catch (Exception ex)
-                {
-                    client.Error(ex);
-                }
-
-            }
 
             // Toggle flags
             void ToggleDay(DaysOfWeek day)
@@ -380,63 +382,13 @@ namespace EnumsNetApp.Apps
 
             var simpleEnumViewer =
                 Layout.Vertical().Gap(2)
-                | new Expandable(
-                    "Simple Enum Viewer",
-                    Layout.Vertical().Gap(2)
-                        | Text.Muted("Select an enum type to view its members with descriptions and symbols")
-                        | Layout.Horizontal().Gap(2)
-                            | new DropDownMenu(evt =>
-                            {
-                                var selectedType = evt.Value?.ToString();
-                                var type = selectedType switch
-                                {
-                                    "NumericOperator" => typeof(NumericOperator),
-                                    "DaysOfWeek" => typeof(DaysOfWeek),
-                                    "DayType" => typeof(DayType),
-                                    "PriorityLevel" => typeof(PriorityLevel),
-                                    _ => typeof(NumericOperator)
-                                };
-                                ShowSimpleEnum(type);
-                            },
-                                    new Button($"View: {selectedEnumType.Value.Name}"),
-                                    MenuItem.Default("NumericOperator").Tag("NumericOperator"),
-                                    MenuItem.Default("DaysOfWeek").Tag("DaysOfWeek"),
-                                    MenuItem.Default("DayType").Tag("DayType"),
-                                    MenuItem.Default("PriorityLevel").Tag("PriorityLevel")
-                                )
-                            | Text.H4($"{selectedEnumType.Value.Name} Members:")
-                            | (simpleEnumList.Value.Any()
-                                ? simpleEnumList.Value.ToTable().Width(Size.Full())
-                                : Text.Muted("Select an enum type above to view its members"))
-                    );
+                    | Layout.Horizontal().Gap(2)
+                        | selectedEnumType.ToSelectInput(
+                            new[] { "NumericOperator", "DaysOfWeek", "DayType", "PriorityLevel" }.ToOptions()
+                        )
+                    | Text.H4($"{selectedEnumType.Value} Members:")
+                    | CreateDynamicEnumTable(simpleEnumList.Value);
 
-            var enumEnumerationAndMembers =
-                new Expandable(
-                        "Enum Enumeration & Members",
-                        Layout.Vertical().Gap(2)
-                            | Text.Muted("Demonstrates various enumeration modes: All, Distinct, DisplayOrder, and Flags")
-                            | new DropDownMenu(evt => {
-                                var selectedMode = evt.Value?.ToString();
-                                var mode = selectedMode switch {
-                                    "All Members" => MembersView.All,
-                                    "Distinct" => MembersView.Distinct,
-                                    "Display Order" => MembersView.DisplayOrder,
-                                    "Flags Only" => MembersView.Flags,
-                                    _ => MembersView.All
-                                };
-                                selectedView(mode);
-                            },
-                                new Button($"Current Mode: {selectedEnumrateionView.Value}"),
-                                MenuItem.Default("All Members").Tag("All Members"),
-                                MenuItem.Default("Distinct").Tag("Distinct"),
-                                MenuItem.Default("Display Order").Tag("Display Order"),
-                                MenuItem.Default("Flags Only").Tag("Flags Only")
-                            )
-                            | Text.H4($"Current View: {selectedEnumrateionView.Value}")
-                            | (enumrationList.Value.Any()
-                                ? enumrationList.Value.ToTable().Width(Size.Full())
-                                : Text.Muted("No members available"))
-                    );
 
             var flagOperationsAndManipulation =
                 new Expandable(
@@ -521,9 +473,8 @@ namespace EnumsNetApp.Apps
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                     | Text.H4("Enum Viewer")
-                                    | Text.Muted("Browse and explore enum types and their members")
+                                    | Text.Muted("Select an enum type to view its members with descriptions and symbols")
                                     | simpleEnumViewer
-                                    | enumEnumerationAndMembers
                             ).Width("50%"))
                         | new Spacer().Height(Size.Units(10))
                         | Text.Small("This demo uses the Enums.NET library to work with enums and flags.")
