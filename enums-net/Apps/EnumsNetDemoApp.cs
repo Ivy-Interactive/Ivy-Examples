@@ -27,9 +27,6 @@ namespace EnumsNetApp.Apps
         // Helper function to create dynamic table with only relevant columns
         object CreateDynamicEnumTable(List<EnumMemberInfo> members)
         {
-            if (!members.Any())
-                return Text.Muted("No members available");
-
             // Check which columns have data
             var hasDescription = members.Any(m => !string.IsNullOrEmpty(m.Description));
             var hasSymbol = members.Any(m => !string.IsNullOrEmpty(m.Symbol));
@@ -37,19 +34,7 @@ namespace EnumsNetApp.Apps
             var hasDisplayOrder = members.Any(m => m.DisplayOrder.HasValue);
 
             // Create table data based on available columns
-            if (hasDescription && hasSymbol && hasDisplayName && hasDisplayOrder)
-            {
-                return members.Select(m => new
-                {
-                    Name = m.Name,
-                    Value = m.Value,
-                    Description = m.Description,
-                    Symbol = m.Symbol,
-                    DisplayName = m.DisplayName,
-                    Order = m.DisplayOrder
-                }).ToTable().Width(Size.Full());
-            }
-            else if (hasDescription && hasSymbol)
+            if (hasDescription && hasSymbol)
             {
                 return members.Select(m => new
                 {
@@ -67,33 +52,6 @@ namespace EnumsNetApp.Apps
                     Value = m.Value,
                     DisplayName = m.DisplayName,
                     Order = m.DisplayOrder
-                }).ToTable().Width(Size.Full());
-            }
-            else if (hasDescription)
-            {
-                return members.Select(m => new
-                {
-                    Name = m.Name,
-                    Value = m.Value,
-                    Description = m.Description
-                }).ToTable().Width(Size.Full());
-            }
-            else if (hasSymbol)
-            {
-                return members.Select(m => new
-                {
-                    Name = m.Name,
-                    Value = m.Value,
-                    Symbol = m.Symbol
-                }).ToTable().Width(Size.Full());
-            }
-            else if (hasDisplayName)
-            {
-                return members.Select(m => new
-                {
-                    Name = m.Name,
-                    Value = m.Value,
-                    DisplayName = m.DisplayName
                 }).ToTable().Width(Size.Full());
             }
             else
@@ -124,7 +82,7 @@ namespace EnumsNetApp.Apps
 
             // Simple enum viewer state
             var selectedEnumType = UseState<string>(() => "NumericOperator");
-            var simpleEnumList = UseState<List<EnumMemberInfo>>(() => new List<EnumMemberInfo>());
+            var simpleEnumList = UseState<List<EnumMemberInfo>>(() => GetEnumMembers("NumericOperator"));
 
             // Helper function to get enum members
             List<EnumMemberInfo> GetEnumMembers(string enumTypeName)
