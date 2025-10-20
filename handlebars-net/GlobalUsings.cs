@@ -8,6 +8,8 @@ global using Ivy.Widgets.Inputs;
 global using System.Globalization;
 global using System.Reactive.Linq;
 global using System.Text.Json;
+global using HandlebarsDotNet;
+global using HandlebarsDotNet.Helpers;
+global using System.Text.Json.Nodes;
 
-
-namespace Ivy_Handlebars_Demo;
+namespace HandlebarsNetExample;

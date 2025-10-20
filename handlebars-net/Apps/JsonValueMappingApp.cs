@@ -1,7 +1,4 @@
-﻿using HandlebarsDotNet;
-using System.Text.Json.Nodes;
-
-namespace Ivy_Handlebars_Demo.Apps;
+﻿namespace HandlebarsNetExample;
 
 [App(icon: Icons.FileText, title: "Json template value mapping")]
 public class TemplateApp : ViewBase

@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Ivy_HandleBars</RootNamespace>
+    <RootNamespace>HandlebarsNetExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

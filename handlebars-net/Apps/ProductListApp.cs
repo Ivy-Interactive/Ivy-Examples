@@ -1,7 +1,4 @@
-﻿using HandlebarsDotNet;
-using HandlebarsDotNet.Helpers;
-
-namespace Ivy_Handlebars_Demo.Apps;
+﻿namespace HandlebarsNetExample;
 
 public class Product
 {
