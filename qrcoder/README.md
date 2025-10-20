@@ -1,6 +1,6 @@
 # QR Code Generator
 
-<img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/db0376d5-f4f7-4785-946a-214338c008f2" />
+<img width="1914" height="913" alt="image" src="https://github.com/user-attachments/assets/1df75bc9-a5e0-438b-b785-5abc2388b191" />
 
 ## One-Click Development Environment
 
