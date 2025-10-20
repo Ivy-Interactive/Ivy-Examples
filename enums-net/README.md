@@ -1,6 +1,6 @@
 # Enums.NET 
 
-<img width="1914" height="907" alt="image" src="https://github.com/user-attachments/assets/4c728632-1c3e-4527-9b84-ef4121f9a053" />
+<img width="1912" height="909" alt="image" src="https://github.com/user-attachments/assets/ee23135f-8211-44e2-83cc-0efa99286c11" />
 
 ## One-Click Development Environment
 
