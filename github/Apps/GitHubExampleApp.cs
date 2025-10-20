@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace GitHubDemo.Apps;
+namespace GitHubExample;
 
 public record GitHubUserStats(
 	int TotalStars,
@@ -19,8 +19,8 @@ public static class GitHubConstants
 	public const int MaxReposToProcess = 50;
 }
 
-[App(icon: Icons.User, title: "GitHub Stats")]
-public class GitHubStatsApp : ViewBase
+[App(icon: Icons.User, title: "GitHub Example")]
+public class GitHubExampleApp : ViewBase
 {
 	public override object? Build()
 	{
