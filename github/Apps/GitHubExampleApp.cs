@@ -19,7 +19,7 @@ public static class GitHubConstants
 	public const int MaxReposToProcess = 50;
 }
 
-[App(icon: Icons.User, title: "GitHub Example")]
+[App(icon: Icons.User, title: "GitHub")]
 public class GitHubExampleApp : ViewBase
 {
 	public override object? Build()
@@ -61,26 +61,15 @@ public class GitHubExampleApp : ViewBase
 			}
 		}
 
-		var getStatsButton = new Button("Get Stats", onClick: () => { _ = handleGetStats(); })
-			.Icon(Icons.ChartBar)
-			.Loading(loading.Value)
-			.Disabled(loading.Value);
-
-		var input = username.ToInput(placeholder: "GitHub username (e.g. torvalds)");
-
-		var header = Layout.Horizontal().Gap(2).Width(Size.Units(120).Max(170))
-					| input
-					| getStatsButton;
-
 		object content = new Card(Text.Block("Stats will appear here...")).Width(Size.Units(120).Max(560));
 		if (!string.IsNullOrEmpty(error.Value))
 		{
 			content = new Card(Text.Block($"Error: {error.Value}"));
 		}
-        else if (user.Value != null && stats.Value != null)
+		else if (user.Value != null && stats.Value != null)
 		{
 			var u = user.Value;
-            var s = stats.Value!;
+			var s = stats.Value!;
 
 			var statsData = new[]
 			{
@@ -104,11 +93,22 @@ public class GitHubExampleApp : ViewBase
 			).Width(Size.Units(120).Max(560));
 		}
 
-		return Layout.Vertical().Gap(2)
-				| Text.H1("GitHub Stats Demo")
+		return (Layout.Center()
+			| new Card(Layout.Vertical().Gap(2)
+				| Text.H1("GitHub Stats")
 				| Text.Muted("Type a username and click Get Stats. Integrates Ivy with the GitHub REST API.")
-				| header
-				| content;
+				| username.ToInput(placeholder: "GitHub username (e.g. torvalds)")
+				| (Layout.Horizontal().Gap(2)
+					| new Button("Get Stats", onClick: () => { _ = handleGetStats(); })
+						.Icon(Icons.ChartBar)
+						.Loading(loading.Value)
+						.Disabled(loading.Value)
+					| new Button("Clear", onClick: () => { username.Set(""); })
+						.Secondary()
+						.Icon(Icons.Trash)
+					)).Width(Size.Fraction(0.25f))
+			| new Card(Layout.Vertical().Gap(2)
+				| content).Width(Size.Fraction(0.4f)));
 	}
 
 	private static async Task<GitHubUserStats> ComputeStatsAsync(HttpClient client, GhUser user)
