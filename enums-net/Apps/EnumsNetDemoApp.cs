@@ -70,12 +70,12 @@ namespace EnumsNetApp.Apps
 
             // enum flag states 
             var selectedFlagView = UseState<string>(() => "HasAllFlags");
-            var flagResult = UseState<object>(Text.P(""));
+            
             var flagA = DaysOfWeek.Monday | DaysOfWeek.Wednesday | DaysOfWeek.Friday;
             var flagB = DaysOfWeek.Monday | DaysOfWeek.Wednesday;
             // state for DaysOfWeek flags
             var daysFlags = UseState(flagB);
-
+            var flagResult = UseState<object>(() => CreateHasAllFlagsMarkdown());
             // Validation result state
             var validationResult = UseState<object>(() => Text.P("Select a validation option to see results"));
 
@@ -93,7 +93,7 @@ namespace EnumsNetApp.Apps
                     "DaysOfWeek" => typeof(DaysOfWeek),
                     "DayType" => typeof(DayType),
                     "PriorityLevel" => typeof(PriorityLevel),
-                    _ => typeof(NumericOperator)
+                    _ => throw new ArgumentException($"Invalid enum type name: '{enumTypeName}'", nameof(enumTypeName))
                 };
 
                 return Enums.GetMembers(enumType)
@@ -123,19 +123,18 @@ namespace EnumsNetApp.Apps
                 }
             }, selectedEnumType);
 
-            // Initialize flag operation on startup
+            // Update flag operation when selectedFlagView changes
             UseEffect(() =>
             {
                 try
                 {
-                    RunFlagOperation("HasAllFlags");
+                    RunFlagOperation(selectedFlagView.Value);
                 }
                 catch (Exception ex)
                 {
                     client.Error(ex);
                 }
-            }, []);
-
+            }, selectedFlagView);
 
             // Helper functions for creating Markdown results
             object CreateHasAllFlagsMarkdown()
@@ -365,7 +364,7 @@ namespace EnumsNetApp.Apps
                     | flagResult.Value);
 
             // Demo selection state
-            var selectedDemo = UseState<string?>(() => null);
+            var selectedDemo = UseState<string>(() => "");
 
             // Update demo when selectedDemo changes
             UseEffect(() =>
