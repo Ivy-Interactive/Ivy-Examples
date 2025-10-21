@@ -8,7 +8,7 @@ using System.ComponentModel;
 /// - Enumerating enum members (All, Distinct, DisplayOrder, Flags) using Enums.GetMembers&lt;T&gt;.
 /// - Presenting enum metadata (value, name, DescriptionAttribute, SymbolAttribute) via EnumMemberInfo.
 /// - Flags operations on <see cref="DaysOfWeek"/> (HasAllFlags, HasAnyFlags, CombineFlags,
-///   CommonFlags, RemoveFlags, GetFlags, ToggleFlags) with interactive UI controls.
+///   CommonFlags, RemoveFlags, GetFlags) with interactive UI controls.
 /// - Simple parsing/formatting examples and validation helpers for other enums (e.g. NumericOperator, DayType).
 /// 
 /// Designed to be state-driven (Ivy `UseState`) and easily extensible with additional UI and logic.
@@ -18,158 +18,123 @@ namespace EnumsNetApp.Apps
     [App(title: "Enums.NET", icon: Icons.Tag)]
     public class EnumsNetDemoApp : ViewBase
     {
-        // helper enum 
-        // 1.for which table is visible
-        enum MembersView { All, Distinct, DisplayOrder, Flags }
         // for falg enums related operations
-        enum flagOperations { HasAllFlags, HasAnyFlags, CombineFlags, CommonFlags, RemoveFlags, GetFlags, ToggleFlags }
+        enum flagOperations { HasAllFlags, HasAnyFlags, CombineFlags, CommonFlags, RemoveFlags, GetFlags }
 
         // Record to store enum member metadata
-        public record EnumMemberInfo(int Value, string Name, string? Description, string? Symbol);
+        public record EnumMemberInfo(int Value, string Name, string? Description, string? Symbol, string? DisplayName, int? DisplayOrder);
+
+        // Helper function to create dynamic table with only relevant columns
+        object CreateDynamicEnumTable(List<EnumMemberInfo> members)
+        {
+            // Check which columns have data
+            var hasDescription = members.Any(m => !string.IsNullOrEmpty(m.Description));
+            var hasSymbol = members.Any(m => !string.IsNullOrEmpty(m.Symbol));
+            var hasDisplayName = members.Any(m => !string.IsNullOrEmpty(m.DisplayName));
+            var hasDisplayOrder = members.Any(m => m.DisplayOrder.HasValue);
+
+            // Create table data based on available columns
+            if (hasDescription && hasSymbol)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    Description = m.Description,
+                    Symbol = m.Symbol
+                }).ToTable().Width(Size.Full());
+            }
+            else if (hasDisplayName && hasDisplayOrder)
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value,
+                    DisplayName = m.DisplayName,
+                    Order = m.DisplayOrder
+                }).ToTable().Width(Size.Full());
+            }
+            else
+            {
+                return members.Select(m => new
+                {
+                    Name = m.Name,
+                    Value = m.Value
+                }).ToTable().Width(Size.Full());
+            }
+        }
 
         public override object? Build()
         {
             var client = UseService<IClientProvider>();
 
             // enum flag states 
-            var selectedFlagView = UseState(flagOperations.HasAllFlags);
-            var flagResult = UseState<object>(Text.P(""));
+            var selectedFlagView = UseState<string>(() => "HasAllFlags");
+            
             var flagA = DaysOfWeek.Monday | DaysOfWeek.Wednesday | DaysOfWeek.Friday;
             var flagB = DaysOfWeek.Monday | DaysOfWeek.Wednesday;
             // state for DaysOfWeek flags
             var daysFlags = UseState(flagB);
-
+            var flagResult = UseState<object>(() => CreateHasAllFlagsMarkdown());
             // Validation result state
             var validationResult = UseState<object>(() => Text.P("Select a validation option to see results"));
 
-            //Enumeration related state 
-            var selectedEnumrateionView = UseState(() => MembersView.All);
-            var enumrationList = UseState<List<EnumMemberInfo>>(() =>
-                Enums.GetMembers<NumericOperator>()
-                     .Select(m => new EnumMemberInfo(
-                         (int)m.Value,
-                         m.Name,
-                         m.Attributes.Get<DescriptionAttribute>()?.Description,
-                         m.Attributes.Get<SymbolAttribute>()?.Symbol
-                     ))
-                     .OrderBy(x => x.Value) // increasing value order
-                     .ToList()
-            );
 
             // Simple enum viewer state
-            var selectedEnumType = UseState<Type>(() => typeof(NumericOperator));
-            var simpleEnumList = UseState<List<EnumMemberInfo>>(() =>
-                Enums.GetMembers<NumericOperator>()
-                     .Select(m => new EnumMemberInfo(
-                         (int)m.Value,
-                         m.Name,
-                         m.Attributes.Get<DescriptionAttribute>()?.Description,
-                         m.Attributes.Get<SymbolAttribute>()?.Symbol
-                     ))
-                     .OrderBy(x => x.Value)
-                     .ToList()
-            );
+            var selectedEnumType = UseState<string>(() => "DaysOfWeek");
+            var simpleEnumList = UseState<List<EnumMemberInfo>>(() => GetEnumMembers("DaysOfWeek"));
 
+            // Helper function to get enum members
+            List<EnumMemberInfo> GetEnumMembers(string enumTypeName)
+            {
+                var enumType = enumTypeName switch
+                {
+                    "NumericOperator" => typeof(NumericOperator),
+                    "DaysOfWeek" => typeof(DaysOfWeek),
+                    "DayType" => typeof(DayType),
+                    "PriorityLevel" => typeof(PriorityLevel),
+                    _ => throw new ArgumentException($"Invalid enum type name: '{enumTypeName}'", nameof(enumTypeName))
+                };
 
-            // Simple enum viewer function
-            void ShowSimpleEnum(Type enumType)
+                return Enums.GetMembers(enumType)
+                           .Select(m => new EnumMemberInfo(
+                               (int)m.Value,
+                               m.Name,
+                               m.Attributes.Get<DescriptionAttribute>()?.Description,
+                               m.Attributes.Get<SymbolAttribute>()?.Symbol,
+                               m.Attributes.Get<DisplayAttribute>()?.Name,
+                               m.Attributes.Get<DisplayAttribute>()?.Order
+                           ))
+                           .OrderBy(x => x.Value)
+                           .ToList();
+            }
+
+            // Initialize and update enum list when selectedEnumType changes
+            UseEffect(() =>
             {
                 try
                 {
-                    var members = Enums.GetMembers(enumType);
-                    var memberInfo = members.Select(m => new EnumMemberInfo(
-                        (int)m.Value,
-                        m.Name,
-                        m.Attributes.Get<DescriptionAttribute>()?.Description,
-                        m.Attributes.Get<SymbolAttribute>()?.Symbol
-                    )).OrderBy(x => x.Value).ToList();
-
+                    var memberInfo = GetEnumMembers(selectedEnumType.Value);
                     simpleEnumList.Set(memberInfo);
-                    selectedEnumType.Set(enumType);
                 }
                 catch (Exception ex)
                 {
                     client.Error(ex);
                 }
-            }
+            }, selectedEnumType);
 
-            //Enumrate member of enums using Enums.GetMembers<T>()
-            void selectedView(MembersView view)
+            // Update flag operation when selectedFlagView changes
+            UseEffect(() =>
             {
                 try
                 {
-                    List<EnumMemberInfo> tableRows;
-                    switch (view)
-                    {
-                        case MembersView.Distinct:
-                            // Distinct — by description text for example (you can change distinct key as needed)
-                            tableRows = Enums.GetMembers<NumericOperator>(EnumMemberSelection.Distinct)
-                                         .Select(m => new EnumMemberInfo(
-                                             (int)m.Value,
-                                             m.Name,
-                                             m.Attributes.Get<DescriptionAttribute>()?.Description,
-                                             m.Attributes.Get<SymbolAttribute>()?.Symbol
-                                         ))
-                                         .OrderBy(x => x.Value) // increasing value order
-                                         .ToList();
-                            break;
-
-                        case MembersView.DisplayOrder:
-                            // DisplayOrder — sort by DisplayAttribute.Order (we captured as DisplayOrder in EnumMemberInfo)
-                            // Second e.g for more clarity: Show PriorityLevel with Display(Order)
-                            tableRows = Enums.GetMembers<PriorityLevel>(EnumMemberSelection.DisplayOrder)
-                                        .Select(m => new EnumMemberInfo(
-                                            (int)m.Value,
-                                            m.Name,
-                                            m.Attributes.Get<DisplayAttribute>()?.Name,
-                                            null
-                                        ))
-                                        .ToList();
-
-                            break;
-
-                        case MembersView.Flags:
-                            // Flags view — show only members whose value is power-of-two or that look like flags (example)
-                            tableRows = Enums.GetMembers<NumericOperator>(EnumMemberSelection.Flags)
-                                         .Select(m => new EnumMemberInfo(
-                                             (int)m.Value,
-                                             m.Name,
-                                             m.Attributes.Get<DescriptionAttribute>()?.Description,
-                                             m.Attributes.Get<SymbolAttribute>()?.Symbol
-                                         ))
-                                         .OrderBy(x => x.Value) // increasing value order
-                                         .ToList();
-                            break;
-
-                        default: // MembersView.All
-                            tableRows = Enums.GetMembers<NumericOperator>()
-                                         .Select(m => new EnumMemberInfo(
-                                             (int)m.Value,
-                                             m.Name,
-                                             m.Attributes.Get<DescriptionAttribute>()?.Description,
-                                             m.Attributes.Get<SymbolAttribute>()?.Symbol
-                                         ))
-                                         .OrderBy(x => x.Value) // increasing value order
-                                         .ToList();
-                            break;
-
-                    }
-                    enumrationList.Set(tableRows);
-                    selectedEnumrateionView.Set(view);
+                    RunFlagOperation(selectedFlagView.Value);
                 }
                 catch (Exception ex)
                 {
                     client.Error(ex);
                 }
-
-            }
-
-            // Toggle flags
-            void ToggleDay(DaysOfWeek day)
-            {
-                var current = daysFlags.Value;
-                daysFlags.Set(current.HasFlag(day) ? current & ~day : current | day);
-            }
+            }, selectedFlagView);
 
             // Helper functions for creating Markdown results
             object CreateHasAllFlagsMarkdown()
@@ -244,31 +209,22 @@ namespace EnumsNetApp.Apps
                 return Text.Markdown(markdown);
             }
 
-            object CreateToggleFlagsMarkdown()
-            {
-                var markdown = $"### ToggleFlags Operation\n\n" +
-                             $"**Current Selection:** `{daysFlags.Value}` (Value: {(int)daysFlags.Value})\n\n" +
-                             $"**Operation:** Toggled Saturday flag\n\n" +
-                             $"**Explanation:** Saturday flag has been toggled (added/removed)";
-                return Text.Markdown(markdown);
-            }
-
-            // Validation functions
-            void RunDayTypeValidation()
+            // Demo functions
+            void RunEnumerationDemo()
             {
                 try
                 {
-                    var isWeekdayValid = DayType.Weekday.IsValid();
-                    var isWeekdayHolidayValid = (DayType.Weekday | DayType.Holiday).IsValid();
-                    var isWeekdayWeekendValid = (DayType.Weekday | DayType.Weekend).IsValid();
-                    
-                    var markdown = $"### DayType Validation\n\n" +
-                                 $"**Test Cases:**\n\n" +
-                                 $"1. **Weekday:** `{DayType.Weekday}` → **Valid:** `{isWeekdayValid}`\n\n" +
-                                 $"2. **Weekday | Holiday:** `{DayType.Weekday | DayType.Holiday}` → **Valid:** `{isWeekdayHolidayValid}`\n\n" +
-                                 $"3. **Weekday | Weekend:** `{DayType.Weekday | DayType.Weekend}` → **Valid:** `{isWeekdayWeekendValid}`\n\n" +
-                                 $"**Explanation:** DayType uses custom validation - Weekday and Weekend are mutually exclusive, but Holiday can be combined with either.";
-                    
+                    var allMembers = Enums.GetMembers<NumericOperator>().ToList();
+                    var distinctValues = Enums.GetValues<NumericOperator>(EnumMemberSelection.Distinct).ToList();
+
+                    var markdown = $"### Enumeration Demo\n\n" +
+                                 $"**NumericOperator Enum Members:**\n\n" +
+                                 $"**All Members ({allMembers.Count}):**\n" +
+                                 string.Join(", ", allMembers.Select(m => m.Name)) + "\n\n" +
+                                 $"**Distinct Values ({distinctValues.Count}):**\n" +
+                                 string.Join(", ", distinctValues.Select(v => v.GetName())) + "\n\n" +
+                                 $"**Explanation:** `GetMembers()` returns all enum members, while `GetValues(Distinct)` returns only unique values (removes duplicates like `NotLessThan = GreaterThanOrEquals`).";
+
                     validationResult.Set(Text.Markdown(markdown));
                 }
                 catch (Exception ex)
@@ -278,19 +234,23 @@ namespace EnumsNetApp.Apps
                 }
             }
 
-            void RunNumericOperatorValidation()
+            void RunStringFormattingDemo()
             {
                 try
                 {
-                    var isLessThanValid = NumericOperator.LessThan.IsValid();
-                    var isInvalidValueValid = ((NumericOperator)20).IsValid();
-                    
-                    var markdown = $"### NumericOperator Validation\n\n" +
-                                 $"**Test Cases:**\n\n" +
-                                 $"1. **Valid Value (LessThan):** `{NumericOperator.LessThan}` → **Valid:** `{isLessThanValid}`\n\n" +
-                                 $"2. **Invalid Value (20):** `{(NumericOperator)20}` → **Valid:** `{isInvalidValueValid}`\n\n" +
-                                 $"**Explanation:** Standard enum validation checks if the value is a defined enum member. Invalid values return false.";
-                    
+                    var equalsName = NumericOperator.Equals.AsString();
+                    var equalsDescription = NumericOperator.Equals.AsString(EnumFormat.Description);
+                    var lessThanName = NumericOperator.LessThan.AsString(EnumFormat.Description, EnumFormat.Name);
+                    var invalidName = ((NumericOperator)(-1)).AsString();
+
+                    var markdown = $"### String Formatting Demo\n\n" +
+                                 $"**NumericOperator Examples:**\n\n" +
+                                 $"1. **Equals.Name:** `{equalsName}`\n\n" +
+                                 $"2. **Equals.Description:** `{equalsDescription}`\n\n" +
+                                 $"3. **LessThan (Description or Name):** `{lessThanName}`\n\n" +
+                                 $"4. **Invalid Value (-1):** `{invalidName}`\n\n" +
+                                 $"**Explanation:** Enums.NET provides flexible string formatting with fallback options for missing attributes.";
+
                     validationResult.Set(Text.Markdown(markdown));
                 }
                 catch (Exception ex)
@@ -300,21 +260,28 @@ namespace EnumsNetApp.Apps
                 }
             }
 
-            void RunDaysOfWeekValidation()
+            void RunFlagOperationsDemo()
             {
                 try
                 {
-                    var isWeekendValid = DaysOfWeek.Weekend.IsValid();
-                    var isValidCombination = (DaysOfWeek.Sunday | DaysOfWeek.Wednesday).IsValid();
-                    var isInvalidCombination = (DaysOfWeek.Sunday | DaysOfWeek.Wednesday | ((DaysOfWeek)(-1))).IsValid();
-                    
-                    var markdown = $"### DaysOfWeek Validation\n\n" +
-                                 $"**Test Cases:**\n\n" +
-                                 $"1. **Weekend:** `{DaysOfWeek.Weekend}` → **Valid:** `{isWeekendValid}`\n\n" +
-                                 $"2. **Valid Combination:** `{DaysOfWeek.Sunday | DaysOfWeek.Wednesday}` → **Valid:** `{isValidCombination}`\n\n" +
-                                 $"3. **Invalid Combination (with -1):** `{DaysOfWeek.Sunday | DaysOfWeek.Wednesday | (DaysOfWeek)(-1)}` → **Valid:** `{isInvalidCombination}`\n\n" +
-                                 $"**Explanation:** Flag enum validation checks for valid flag combinations and defined enum members.";
-                    
+                    var mondayWednesday = DaysOfWeek.Monday | DaysOfWeek.Wednesday;
+                    var hasAllFlags = mondayWednesday.HasAllFlags(DaysOfWeek.Monday);
+                    var hasAnyFlags = DaysOfWeek.Monday.HasAnyFlags(mondayWednesday);
+                    var combinedFlags = DaysOfWeek.Monday.CombineFlags(DaysOfWeek.Wednesday);
+                    var commonFlags = mondayWednesday.CommonFlags(DaysOfWeek.Monday);
+                    var removedFlags = mondayWednesday.RemoveFlags(DaysOfWeek.Monday);
+                    var weekendFlags = DaysOfWeek.Weekend.GetFlags();
+
+                    var markdown = $"### Flag Operations Demo\n\n" +
+                                 $"**DaysOfWeek Flag Operations:**\n\n" +
+                                 $"1. **HasAllFlags:** `{mondayWednesday}.HasAllFlags({DaysOfWeek.Monday})` → `{hasAllFlags}`\n\n" +
+                                 $"2. **HasAnyFlags:** `{DaysOfWeek.Monday}.HasAnyFlags({mondayWednesday})` → `{hasAnyFlags}`\n\n" +
+                                 $"3. **CombineFlags:** `{DaysOfWeek.Monday}.CombineFlags({DaysOfWeek.Wednesday})` → `{combinedFlags}`\n\n" +
+                                 $"4. **CommonFlags:** `{mondayWednesday}.CommonFlags({DaysOfWeek.Monday})` → `{commonFlags}`\n\n" +
+                                 $"5. **RemoveFlags:** `{mondayWednesday}.RemoveFlags({DaysOfWeek.Monday})` → `{removedFlags}`\n\n" +
+                                 $"6. **GetFlags:** `{DaysOfWeek.Weekend}.GetFlags()` → `[{string.Join(", ", weekendFlags.Select(f => f.ToString()))}]`\n\n" +
+                                 $"**Explanation:** Flag operations provide powerful bitwise manipulation for flag enums.";
+
                     validationResult.Set(Text.Markdown(markdown));
                 }
                 catch (Exception ex)
@@ -324,24 +291,25 @@ namespace EnumsNetApp.Apps
                 }
             }
 
-            void RunCustomValidatorDemo()
+            void RunParsingDemo()
             {
                 try
                 {
-                    var markdown = $"### Custom Validator Demo\n\n" +
-                                 $"**DayType Validator Rules:**\n\n" +
-                                 $"1. **Weekday** and **Weekend** are mutually exclusive\n" +
-                                 $"2. **Holiday** can be combined with either Weekday or Weekend\n" +
-                                 $"3. **Invalid combinations:** Weekday | Weekend\n\n" +
-                                 $"**Implementation:**\n```csharp\n" +
-                                 $"class DayTypeValidatorAttribute : EnumValidatorAttribute<DayType>\n" +
-                                 $"{{\n" +
-                                 $"    public override bool IsValid(DayType value) =>\n" +
-                                 $"        value.GetFlagCount(DayType.Weekday | DayType.Weekend) == 1 &&\n" +
-                                 $"        FlagEnums.IsValidFlagCombination(value);\n" +
-                                 $"}}\n```\n\n" +
-                                 $"**Try the DayType validation above to see this in action!**";
-                    
+                    var parsedByName = Enums.Parse<NumericOperator>("GreaterThan");
+                    var parsedByValue = Enums.Parse<NumericOperator>("1");
+                    var parsedByDescription = Enums.Parse<NumericOperator>("Is", ignoreCase: false, EnumFormat.Description);
+                    var parsedFlags = Enums.Parse<DaysOfWeek>("Monday, Wednesday");
+                    var parsedFlagsWithDelimiter = FlagEnums.ParseFlags<DaysOfWeek>("Tuesday | Thursday", ignoreCase: false, delimiter: "|");
+
+                    var markdown = $"### Parsing Demo\n\n" +
+                                 $"**Parsing Examples:**\n\n" +
+                                 $"1. **Parse by Name:** `Enums.Parse<NumericOperator>(\"GreaterThan\")` → `{parsedByName}`\n\n" +
+                                 $"2. **Parse by Value:** `Enums.Parse<NumericOperator>(\"1\")` → `{parsedByValue}`\n\n" +
+                                 $"3. **Parse by Description:** `Enums.Parse<NumericOperator>(\"Is\", EnumFormat.Description)` → `{parsedByDescription}`\n\n" +
+                                 $"4. **Parse Flags:** `Enums.Parse<DaysOfWeek>(\"Monday, Wednesday\")` → `{parsedFlags}`\n\n" +
+                                 $"5. **Parse with Custom Delimiter:** `FlagEnums.ParseFlags<DaysOfWeek>(\"Tuesday | Thursday\", delimiter: \"|\")` → `{parsedFlagsWithDelimiter}`\n\n" +
+                                 $"**Explanation:** Enums.NET supports parsing by name, value, description, and custom formats with flexible delimiters.";
+
                     validationResult.Set(Text.Markdown(markdown));
                 }
                 catch (Exception ex)
@@ -351,23 +319,22 @@ namespace EnumsNetApp.Apps
                 }
             }
 
-            void RunFlagOperation(flagOperations type)
+            void RunFlagOperation(string operationName)
             {
                 try
                 {
-                    object result = type switch
+                    object result = operationName switch
                     {
-                        flagOperations.HasAllFlags => CreateHasAllFlagsMarkdown(),
-                        flagOperations.HasAnyFlags => CreateHasAnyFlagsMarkdown(),
-                        flagOperations.CombineFlags => CreateCombineFlagsMarkdown(),
-                        flagOperations.CommonFlags => CreateCommonFlagsMarkdown(),
-                        flagOperations.RemoveFlags => CreateRemoveFlagsMarkdown(),
-                        flagOperations.GetFlags => CreateGetFlagsMarkdown(),
-                        flagOperations.ToggleFlags => CreateToggleFlagsMarkdown(),
+                        "HasAllFlags" => CreateHasAllFlagsMarkdown(),
+                        "HasAnyFlags" => CreateHasAnyFlagsMarkdown(),
+                        "CombineFlags" => CreateCombineFlagsMarkdown(),
+                        "CommonFlags" => CreateCommonFlagsMarkdown(),
+                        "RemoveFlags" => CreateRemoveFlagsMarkdown(),
+                        "GetFlags" => CreateGetFlagsMarkdown(),
                         _ => Text.Markdown("### Unsupported Operation\n\nThis operation is not supported.")
                     };
 
-                    selectedFlagView.Set(type);
+                    selectedFlagView.Set(operationName);
                     flagResult.Set(result);
 
                 }
@@ -380,129 +347,67 @@ namespace EnumsNetApp.Apps
 
             var simpleEnumViewer =
                 Layout.Vertical().Gap(2)
-                | new Expandable(
-                    "Simple Enum Viewer",
-                    Layout.Vertical().Gap(2)
-                        | Text.Muted("Select an enum type to view its members with descriptions and symbols")
-                        | Layout.Horizontal().Gap(2)
-                            | new DropDownMenu(evt =>
-                            {
-                                var selectedType = evt.Value?.ToString();
-                                var type = selectedType switch
-                                {
-                                    "NumericOperator" => typeof(NumericOperator),
-                                    "DaysOfWeek" => typeof(DaysOfWeek),
-                                    "DayType" => typeof(DayType),
-                                    "PriorityLevel" => typeof(PriorityLevel),
-                                    _ => typeof(NumericOperator)
-                                };
-                                ShowSimpleEnum(type);
-                            },
-                                    new Button($"View: {selectedEnumType.Value.Name}"),
-                                    MenuItem.Default("NumericOperator").Tag("NumericOperator"),
-                                    MenuItem.Default("DaysOfWeek").Tag("DaysOfWeek"),
-                                    MenuItem.Default("DayType").Tag("DayType"),
-                                    MenuItem.Default("PriorityLevel").Tag("PriorityLevel")
-                                )
-                            | Text.H4($"{selectedEnumType.Value.Name} Members:")
-                            | (simpleEnumList.Value.Any()
-                                ? simpleEnumList.Value.ToTable().Width(Size.Full())
-                                : Text.Muted("Select an enum type above to view its members"))
-                    );
+                    | Layout.Horizontal().Gap(2)
+                        | selectedEnumType.ToSelectInput(
+                            new[] { "NumericOperator", "DaysOfWeek", "DayType", "PriorityLevel" }.ToOptions()
+                        )
+                    | Text.H4($"{selectedEnumType.Value} Members:")
+                    | CreateDynamicEnumTable(simpleEnumList.Value);
 
-            var enumEnumerationAndMembers =
-                new Expandable(
-                        "Enum Enumeration & Members",
-                        Layout.Vertical().Gap(2)
-                            | Text.Muted("Demonstrates various enumeration modes: All, Distinct, DisplayOrder, and Flags")
-                            | new DropDownMenu(evt => {
-                                var selectedMode = evt.Value?.ToString();
-                                var mode = selectedMode switch {
-                                    "All Members" => MembersView.All,
-                                    "Distinct" => MembersView.Distinct,
-                                    "Display Order" => MembersView.DisplayOrder,
-                                    "Flags Only" => MembersView.Flags,
-                                    _ => MembersView.All
-                                };
-                                selectedView(mode);
-                            },
-                                new Button($"Current Mode: {selectedEnumrateionView.Value}"),
-                                MenuItem.Default("All Members").Tag("All Members"),
-                                MenuItem.Default("Distinct").Tag("Distinct"),
-                                MenuItem.Default("Display Order").Tag("Display Order"),
-                                MenuItem.Default("Flags Only").Tag("Flags Only")
-                            )
-                            | Text.H4($"Current View: {selectedEnumrateionView.Value}")
-                            | (enumrationList.Value.Any()
-                                ? enumrationList.Value.ToTable().Width(Size.Full())
-                                : Text.Muted("No members available"))
-                    );
 
             var flagOperationsAndManipulation =
-                new Expandable(
-                        "Flag Operations & Manipulation",
-                        Layout.Vertical().Gap(2)
-                            | Text.Muted("Interactive demonstrations of flag operations on DaysOfWeek enum")
-                            | new DropDownMenu(evt => {
-                                var selectedOperation = evt.Value?.ToString();
-                                var operation = selectedOperation switch {
-                                    "HasAllFlags" => flagOperations.HasAllFlags,
-                                    "HasAnyFlags" => flagOperations.HasAnyFlags,
-                                    "CombineFlags" => flagOperations.CombineFlags,
-                                    "CommonFlags" => flagOperations.CommonFlags,
-                                    "RemoveFlags" => flagOperations.RemoveFlags,
-                                    "GetFlags" => flagOperations.GetFlags,
-                                    "ToggleFlags" => flagOperations.ToggleFlags,
-                                    _ => flagOperations.HasAllFlags
-                                };
-                                if (operation == flagOperations.ToggleFlags)
-                                {
-                                    ToggleDay(DaysOfWeek.Saturday);
-                                }
-                                RunFlagOperation(operation);
-                            },
-                                new Button($"Flag Operation: {selectedFlagView.Value}"),
-                                MenuItem.Default("HasAllFlags").Tag("HasAllFlags"),
-                                MenuItem.Default("HasAnyFlags").Tag("HasAnyFlags"),
-                                MenuItem.Default("CombineFlags").Tag("CombineFlags"),
-                                MenuItem.Default("CommonFlags").Tag("CommonFlags"),
-                                MenuItem.Default("RemoveFlags").Tag("RemoveFlags"),
-                                MenuItem.Default("GetFlags").Tag("GetFlags"),
-                                MenuItem.Default("ToggleFlags").Tag("ToggleFlags")
-                            )
-                            | flagResult.Value
-                    );
+            new Card(
+                Layout.Vertical().Gap(2)
+                    | selectedFlagView.ToSelectInput(
+                        new[] { "HasAllFlags", "HasAnyFlags", "CombineFlags", "CommonFlags", "RemoveFlags", "GetFlags" }.ToOptions()
+                    )
+                    | flagResult.Value);
+
+            // Demo selection state
+            var selectedDemo = UseState<string>(() => "");
+
+            // Update demo when selectedDemo changes
+            UseEffect(() =>
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(selectedDemo.Value))
+                    {
+                        validationResult.Set(Text.Muted("Select a demo from the dropdown to see results"));
+                        return;
+                    }
+                    switch (selectedDemo.Value)
+                    {
+                        case "Enumeration":
+                            RunEnumerationDemo();
+                            break;
+                        case "StringFormatting":
+                            RunStringFormattingDemo();
+                            break;
+                        case "FlagOperations":
+                            RunFlagOperationsDemo();
+                            break;
+                        case "Parsing":
+                            RunParsingDemo();
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                }
+            }, selectedDemo);
 
             var validationAndErrorHandling =
                 new Expandable(
-                        "Validation & Error Handling",
+                        "Enums.NET Demos",
                         Layout.Vertical().Gap(2)
-                            | Text.Muted("Test enum validation with different enum types and combinations")
-                            | new DropDownMenu(evt => {
-                                var selectedValidation = evt.Value?.ToString();
-                                switch (selectedValidation)
-                                {
-                                    case "DayType":
-                                        RunDayTypeValidation();
-                                        break;
-                                    case "NumericOperator":
-                                        RunNumericOperatorValidation();
-                                        break;
-                                    case "DaysOfWeek":
-                                        RunDaysOfWeekValidation();
-                                        break;
-                                    case "CustomValidator":
-                                        RunCustomValidatorDemo();
-                                        break;
-                                }
-                            },
-                                new Button("Select Validation Type"),
-                                MenuItem.Default("DayType Validation").Tag("DayType"),
-                                MenuItem.Default("NumericOperator Validation").Tag("NumericOperator"),
-                                MenuItem.Default("DaysOfWeek Validation").Tag("DaysOfWeek"),
-                                MenuItem.Default("Custom Validator Demo").Tag("CustomValidator")
-                            )
-                            | validationResult.Value
+                            | Text.Muted("Explore different Enums.NET features with practical examples")
+                            | new Card(
+                                Layout.Vertical().Gap(2)
+                                | selectedDemo.ToSelectInput(new[] { "Enumeration", "StringFormatting", "FlagOperations", "Parsing" }.ToOptions())
+                                    .Variant(SelectInputs.Toggle)
+                                | validationResult.Value)
                     );
 
             return Layout.Vertical().Gap(2)
@@ -514,16 +419,15 @@ namespace EnumsNetApp.Apps
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                     | Text.H4("Actions & Operations")
-                                    | Text.Muted("Perform operations and test enum functionality")
+                                    | Text.Muted("Interactive demonstrations of flag operations on DaysOfWeek enum")
                                     | flagOperationsAndManipulation
                                     | validationAndErrorHandling
                             ).Width("50%")
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                     | Text.H4("Enum Viewer")
-                                    | Text.Muted("Browse and explore enum types and their members")
+                                    | Text.Muted("Select an enum type to view its members with descriptions and symbols")
                                     | simpleEnumViewer
-                                    | enumEnumerationAndMembers
                             ).Width("50%"))
                         | new Spacer().Height(Size.Units(10))
                         | Text.Small("This demo uses the Enums.NET library to work with enums and flags.")
