@@ -11,7 +11,8 @@ public record BacklogItem(
     ItemStatus Status,
     IssueType Type,
     int? SprintId = null,
-    int? ParentId = null
+    int? ParentId = null,
+    bool IsTutorial = false
 );
 
 public record Sprint(
@@ -20,7 +21,8 @@ public record Sprint(
     DateTime StartDate,
     DateTime EndDate,
     string Goal,
-    ImmutableArray<int> ItemIds
+    ImmutableArray<int> ItemIds,
+    bool IsTutorial = false
 );
 
 public record Developer(

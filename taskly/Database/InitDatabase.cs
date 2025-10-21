@@ -73,7 +73,7 @@ public class InitDatabase
     /// <summary>
     /// Get all backlog items
     /// </summary>
-    public static List<BacklogItemModel> GetAllBacklogItems()
+    public static List<BacklogItemModel> GetAllBacklogItems(bool? isTutorial = null)
     {
         using var connection = GetConnection();
         var sql = @"SELECT
@@ -86,17 +86,28 @@ public class InitDatabase
                         type AS Type,
                         sprint_id AS SprintId,
                         parent_id AS ParentId,
+                        is_tutorial AS IsTutorial,
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                     FROM backlog_items";
-        var items = connection.Query<BacklogItemModel>(sql).ToList();
-        return items;
+
+        if (isTutorial.HasValue)
+        {
+            sql += " WHERE is_tutorial = @IsTutorial";
+            var items = connection.Query<BacklogItemModel>(sql, new { IsTutorial = isTutorial.Value ? 1 : 0 }).ToList();
+            return items;
+        }
+        else
+        {
+            var items = connection.Query<BacklogItemModel>(sql).ToList();
+            return items;
+        }
     }
 
     /// <summary>
     /// Get all sprints
     /// </summary>
-    public static List<SprintModel> GetAllSprints()
+    public static List<SprintModel> GetAllSprints(bool? isTutorial = null)
     {
         using var connection = GetConnection();
         var sql = @"SELECT
@@ -107,26 +118,46 @@ public class InitDatabase
                         goal AS Goal,
                         item_ids AS ItemIdsJson,
                         is_archived AS IsArchived,
+                        is_tutorial AS IsTutorial,
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                     FROM sprints";
-        var sprints = connection.Query<SprintModel>(sql).ToList();
 
-        // Deserialize JSON item_ids for each sprint
-        foreach (var sprint in sprints)
+        if (isTutorial.HasValue)
         {
-            sprint.ItemIds = string.IsNullOrEmpty(sprint.ItemIdsJson)
-                ? new List<int>()
-                : JsonConvert.DeserializeObject<List<int>>(sprint.ItemIdsJson) ?? new List<int>();
-        }
+            sql += " WHERE is_tutorial = @IsTutorial";
+            var sprints = connection.Query<SprintModel>(sql, new { IsTutorial = isTutorial.Value ? 1 : 0 }).ToList();
 
-        return sprints;
+            // Deserialize JSON item_ids for each sprint
+            foreach (var sprint in sprints)
+            {
+                sprint.ItemIds = string.IsNullOrEmpty(sprint.ItemIdsJson)
+                    ? new List<int>()
+                    : JsonConvert.DeserializeObject<List<int>>(sprint.ItemIdsJson) ?? new List<int>();
+            }
+
+            return sprints;
+        }
+        else
+        {
+            var sprints = connection.Query<SprintModel>(sql).ToList();
+
+            // Deserialize JSON item_ids for each sprint
+            foreach (var sprint in sprints)
+            {
+                sprint.ItemIds = string.IsNullOrEmpty(sprint.ItemIdsJson)
+                    ? new List<int>()
+                    : JsonConvert.DeserializeObject<List<int>>(sprint.ItemIdsJson) ?? new List<int>();
+            }
+
+            return sprints;
+        }
     }
 
     /// <summary>
     /// Get current (non-archived) sprint
     /// </summary>
-    public static SprintModel? GetCurrentSprint()
+    public static SprintModel? GetCurrentSprint(bool? isTutorial = null)
     {
         using var connection = GetConnection();
         var sql = @"SELECT
@@ -137,21 +168,40 @@ public class InitDatabase
                         goal AS Goal,
                         item_ids AS ItemIdsJson,
                         is_archived AS IsArchived,
+                        is_tutorial AS IsTutorial,
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                     FROM sprints
-                    WHERE is_archived = 0
-                    LIMIT 1";
-        var sprint = connection.QueryFirstOrDefault<SprintModel>(sql);
+                    WHERE is_archived = 0";
 
-        if (sprint != null)
+        if (isTutorial.HasValue)
         {
-            sprint.ItemIds = string.IsNullOrEmpty(sprint.ItemIdsJson)
-                ? new List<int>()
-                : JsonConvert.DeserializeObject<List<int>>(sprint.ItemIdsJson) ?? new List<int>();
-        }
+            sql += " AND is_tutorial = @IsTutorial";
+            var sprint = connection.QueryFirstOrDefault<SprintModel>(sql, new { IsTutorial = isTutorial.Value ? 1 : 0 });
 
-        return sprint;
+            if (sprint != null)
+            {
+                sprint.ItemIds = string.IsNullOrEmpty(sprint.ItemIdsJson)
+                    ? new List<int>()
+                    : JsonConvert.DeserializeObject<List<int>>(sprint.ItemIdsJson) ?? new List<int>();
+            }
+
+            return sprint;
+        }
+        else
+        {
+            sql += " LIMIT 1";
+            var sprint = connection.QueryFirstOrDefault<SprintModel>(sql);
+
+            if (sprint != null)
+            {
+                sprint.ItemIds = string.IsNullOrEmpty(sprint.ItemIdsJson)
+                    ? new List<int>()
+                    : JsonConvert.DeserializeObject<List<int>>(sprint.ItemIdsJson) ?? new List<int>();
+            }
+
+            return sprint;
+        }
     }
 
     /// <summary>
@@ -160,8 +210,8 @@ public class InitDatabase
     public static BacklogItemModel? CreateBacklogItem(BacklogItemModel item)
     {
         using var connection = GetConnection();
-        var sql = @"INSERT INTO backlog_items (title, description, story_points, priority, status, type, sprint_id, parent_id)
-                    VALUES (@Title, @Description, @StoryPoints, @Priority, @Status, @Type, @SprintId, @ParentId);
+        var sql = @"INSERT INTO backlog_items (title, description, story_points, priority, status, type, sprint_id, parent_id, is_tutorial)
+                    VALUES (@Title, @Description, @StoryPoints, @Priority, @Status, @Type, @SprintId, @ParentId, @IsTutorial);
                     SELECT
                         id AS Id,
                         title AS Title,
@@ -172,6 +222,7 @@ public class InitDatabase
                         type AS Type,
                         sprint_id AS SprintId,
                         parent_id AS ParentId,
+                        is_tutorial AS IsTutorial,
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                     FROM backlog_items WHERE id = last_insert_rowid();";
@@ -225,8 +276,8 @@ public class InitDatabase
         sprint.ItemIdsJson = JsonConvert.SerializeObject(sprint.ItemIds ?? new List<int>());
 
         // Format DateTime as ISO 8601 string for SQLite
-        var sql = @"INSERT INTO sprints (name, start_date, end_date, goal, item_ids, is_archived)
-                    VALUES (@Name, @StartDate, @EndDate, @Goal, @ItemIdsJson, @IsArchived);
+        var sql = @"INSERT INTO sprints (name, start_date, end_date, goal, item_ids, is_archived, is_tutorial)
+                    VALUES (@Name, @StartDate, @EndDate, @Goal, @ItemIdsJson, @IsArchived, @IsTutorial);
                     SELECT
                         id AS Id,
                         name AS Name,
@@ -235,6 +286,7 @@ public class InitDatabase
                         goal AS Goal,
                         item_ids AS ItemIdsJson,
                         is_archived AS IsArchived,
+                        is_tutorial AS IsTutorial,
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                     FROM sprints WHERE id = last_insert_rowid();";
@@ -246,7 +298,8 @@ public class InitDatabase
             EndDate = sprint.EndDate.ToString("yyyy-MM-dd HH:mm:ss"),
             sprint.Goal,
             sprint.ItemIdsJson,
-            sprint.IsArchived
+            sprint.IsArchived,
+            sprint.IsTutorial
         };
 
         var result = connection.QueryFirstOrDefault<SprintModel>(sql, parameters);
@@ -310,6 +363,15 @@ public class InitDatabase
         return result;
     }
 
+    /// <summary>
+    /// Delete a sprint
+    /// </summary>
+    public static void DeleteSprint(int id)
+    {
+        using var connection = GetConnection();
+        connection.Execute("DELETE FROM sprints WHERE id = @Id", new { Id = id });
+    }
+
 }
 
 // Database Models (matching the schema)
@@ -325,6 +387,7 @@ public class BacklogItemModel
     public string Type { get; set; } = "Task";
     public int? SprintId { get; set; }
     public int? ParentId { get; set; }
+    public int IsTutorial { get; set; } = 0;  // SQLite stores boolean as 0/1
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -346,7 +409,50 @@ public class SprintModel
 
     // SQLite stores boolean as 0/1
     public int IsArchived { get; set; }
+    public int IsTutorial { get; set; } = 0;  // SQLite stores boolean as 0/1
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+// App Settings helpers
+public static class AppSettings
+{
+    public static string? GetSetting(string key)
+    {
+        using var connection = InitDatabase.GetConnection();
+        var sql = "SELECT value FROM app_settings WHERE key = @Key";
+        return connection.QueryFirstOrDefault<string>(sql, new { Key = key });
+    }
+
+    public static void SetSetting(string key, string value)
+    {
+        using var connection = InitDatabase.GetConnection();
+        var sql = @"INSERT INTO app_settings (key, value, updated_at)
+                    VALUES (@Key, @Value, CURRENT_TIMESTAMP)
+                    ON CONFLICT(key) DO UPDATE SET value = @Value, updated_at = CURRENT_TIMESTAMP";
+        connection.Execute(sql, new { Key = key, Value = value });
+    }
+
+    public static bool GetBoolSetting(string key, bool defaultValue = false)
+    {
+        var value = GetSetting(key);
+        return value != null && bool.TryParse(value, out var result) ? result : defaultValue;
+    }
+
+    public static void SetBoolSetting(string key, bool value)
+    {
+        SetSetting(key, value.ToString());
+    }
+
+    public static int GetIntSetting(string key, int defaultValue = 0)
+    {
+        var value = GetSetting(key);
+        return value != null && int.TryParse(value, out var result) ? result : defaultValue;
+    }
+
+    public static void SetIntSetting(string key, int value)
+    {
+        SetSetting(key, value.ToString());
+    }
 }

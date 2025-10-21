@@ -20,7 +20,8 @@ public static class DatabaseHelpers
             Status: Enum.Parse<ItemStatus>(model.Status),
             Type: Enum.Parse<IssueType>(model.Type),
             SprintId: model.SprintId,
-            ParentId: model.ParentId
+            ParentId: model.ParentId,
+            IsTutorial: model.IsTutorial == 1
         );
     }
 
@@ -37,7 +38,8 @@ public static class DatabaseHelpers
             Status = item.Status.ToString(),
             Type = item.Type.ToString(),
             SprintId = item.SprintId,
-            ParentId = item.ParentId
+            ParentId = item.ParentId,
+            IsTutorial = item.IsTutorial ? 1 : 0
         };
     }
 
@@ -50,7 +52,8 @@ public static class DatabaseHelpers
             StartDate: model.StartDate,
             EndDate: model.EndDate,
             Goal: model.Goal ?? string.Empty,
-            ItemIds: model.ItemIds?.ToImmutableArray() ?? ImmutableArray<int>.Empty
+            ItemIds: model.ItemIds?.ToImmutableArray() ?? ImmutableArray<int>.Empty,
+            IsTutorial: model.IsTutorial == 1
         );
     }
 
@@ -65,7 +68,8 @@ public static class DatabaseHelpers
             EndDate = sprint.EndDate,
             Goal = sprint.Goal,
             ItemIds = sprint.ItemIds.ToList(),
-            IsArchived = 0  // Not archived by default (SQLite uses 0/1 for boolean)
+            IsArchived = 0,  // Not archived by default (SQLite uses 0/1 for boolean)
+            IsTutorial = sprint.IsTutorial ? 1 : 0
         };
     }
 
@@ -80,7 +84,8 @@ public static class DatabaseHelpers
             EndDate = sprint.EndDate,
             Goal = sprint.Goal,
             ItemIds = sprint.ItemIds.ToList(),
-            IsArchived = isArchived ? 1 : 0  // Convert boolean to int for SQLite
+            IsArchived = isArchived ? 1 : 0,  // Convert boolean to int for SQLite
+            IsTutorial = sprint.IsTutorial ? 1 : 0
         };
     }
 }

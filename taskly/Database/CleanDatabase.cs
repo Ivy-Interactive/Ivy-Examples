@@ -8,13 +8,45 @@ namespace Taskly.Database;
 public class CleanDatabase
 {
     /// <summary>
-    /// Delete all data from all tables (WARNING: This cannot be undone!)
+    /// Delete only tutorial data from all tables (used by IntroductionApp restart)
+    /// </summary>
+    public static async Task CleanTutorialData()
+    {
+        try
+        {
+            Console.WriteLine("⚠️  WARNING: Cleaning tutorial data from database tables...");
+
+            using var connection = InitDatabase.GetConnection();
+
+            // Delete all tutorial backlog items
+            var itemCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM backlog_items WHERE is_tutorial = 1");
+            connection.Execute("DELETE FROM backlog_items WHERE is_tutorial = 1");
+            Console.WriteLine($"✓ Deleted {itemCount} tutorial backlog items");
+
+            // Delete all tutorial sprints
+            var sprintCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM sprints WHERE is_tutorial = 1");
+            connection.Execute("DELETE FROM sprints WHERE is_tutorial = 1");
+            Console.WriteLine($"✓ Deleted {sprintCount} tutorial sprints");
+
+            Console.WriteLine("✓ Tutorial data cleaned successfully!");
+
+            await Task.CompletedTask; // Keep async signature for compatibility
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Error cleaning tutorial data: {ex.Message}");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Delete ALL data from all tables (used by PlanningApp clean database button)
     /// </summary>
     public static async Task CleanAllTables()
     {
         try
         {
-            Console.WriteLine("⚠️  WARNING: Cleaning all database tables...");
+            Console.WriteLine("⚠️  WARNING: Cleaning ALL data from database tables...");
 
             using var connection = InitDatabase.GetConnection();
 
@@ -33,13 +65,17 @@ public class CleanDatabase
             connection.Execute("DELETE FROM developers");
             Console.WriteLine($"✓ Deleted {developerCount} developers");
 
-            Console.WriteLine("✓ Database cleaned successfully!");
+            // Reset introduction completion flag so user can go through tutorial again
+            AppSettings.SetBoolSetting("introduction_completed", false);
+            Console.WriteLine("✓ Introduction completion flag reset");
+
+            Console.WriteLine("✓ All data cleaned successfully!");
 
             await Task.CompletedTask; // Keep async signature for compatibility
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"✗ Error cleaning database: {ex.Message}");
+            Console.WriteLine($"✗ Error cleaning all data: {ex.Message}");
             throw;
         }
     }

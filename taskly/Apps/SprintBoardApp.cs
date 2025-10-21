@@ -13,6 +13,7 @@ public class SprintBoardApp : ViewBase
         var currentSprint = UseState<Sprint>(() => null!);
         var archivedSprints = UseState(ImmutableArray<Sprint>.Empty);
         var isLoading = UseState(true);
+        var spaceingBoardColumns = 120;
 
         // Create signal to notify other apps to refresh
         var refreshSignal = Context.CreateSignal<RefreshDataSignal, bool, bool>();
@@ -31,20 +32,20 @@ public class SprintBoardApp : ViewBase
         {
             try
             {
-                // Load backlog items
-                var itemModels = InitDatabase.GetAllBacklogItems();
+                // Load backlog items (exclude tutorial items)
+                var itemModels = InitDatabase.GetAllBacklogItems(isTutorial: false);
                 var items = itemModels.Select(m => m.ToBacklogItem()).ToImmutableArray();
                 backlogItems.Set(items);
 
-                // Load current sprint
-                var currentSprintModel = InitDatabase.GetCurrentSprint();
+                // Load current sprint (exclude tutorial sprints)
+                var currentSprintModel = InitDatabase.GetCurrentSprint(isTutorial: false);
                 if (currentSprintModel != null)
                 {
                     currentSprint.Set(currentSprintModel.ToSprint());
                 }
 
-                // Load archived sprints
-                var allSprints = InitDatabase.GetAllSprints();
+                // Load archived sprints (exclude tutorial sprints)
+                var allSprints = InitDatabase.GetAllSprints(isTutorial: false);
                 var archived = allSprints
                     .Where(s => s.IsArchived == 1)
                     .Select(s => s.ToSprint())
@@ -65,11 +66,11 @@ public class SprintBoardApp : ViewBase
         {
             try
             {
-                var itemModels = InitDatabase.GetAllBacklogItems();
+                var itemModels = InitDatabase.GetAllBacklogItems(isTutorial: false);
                 var items = itemModels.Select(m => m.ToBacklogItem()).ToImmutableArray();
                 backlogItems.Set(items);
 
-                var currentSprintModel = InitDatabase.GetCurrentSprint();
+                var currentSprintModel = InitDatabase.GetCurrentSprint(isTutorial: false);
                 if (currentSprintModel != null)
                 {
                     currentSprint.Set(currentSprintModel.ToSprint());
@@ -79,7 +80,7 @@ public class SprintBoardApp : ViewBase
                     currentSprint.Set((Sprint)null!);
                 }
 
-                var allSprints = InitDatabase.GetAllSprints();
+                var allSprints = InitDatabase.GetAllSprints(isTutorial: false);
                 var archived = allSprints
                     .Where(s => s.IsArchived == 1)
                     .Select(s => s.ToSprint())
@@ -171,7 +172,7 @@ public class SprintBoardApp : ViewBase
                         null
                     ).Gap(8)
                 ).Gap(8)
-            );
+            ).Width(Size.Grow());
         }
 
         // Helper to build Epic/Story hierarchy with kanban columns inside each story
@@ -225,7 +226,7 @@ public class SprintBoardApp : ViewBase
                                                                 todoTasks.Select(BuildTaskCard).ToArray()
                                                             ).Gap(4) :
                                                             Text.Small("No tasks")
-                                                    ).Gap(4).Width(Size.Grow()),
+                                                    ).Gap(4).Width(Size.Units(spaceingBoardColumns)),
 
                                                     // In Progress Column
                                                     Layout.Vertical(
@@ -235,7 +236,7 @@ public class SprintBoardApp : ViewBase
                                                                 inProgressTasks.Select(BuildTaskCard).ToArray()
                                                             ).Gap(4) :
                                                             Text.Small("No tasks")
-                                                    ).Gap(4).Width(Size.Grow()),
+                                                    ).Gap(4).Width(Size.Units(spaceingBoardColumns)),
 
                                                     // Done Column
                                                     Layout.Vertical(
@@ -245,7 +246,7 @@ public class SprintBoardApp : ViewBase
                                                                 doneTasks.Select(BuildTaskCard).ToArray()
                                                             ).Gap(4) :
                                                             Text.Small("No tasks")
-                                                    ).Gap(4).Width(Size.Grow())
+                                                    ).Gap(4).Width(Size.Units(spaceingBoardColumns))
                                                 ).Gap(8)
                                             ).Gap(8)
                                         );
@@ -274,26 +275,18 @@ public class SprintBoardApp : ViewBase
             Text.H2("Sprint Board"),
 
             // Show current sprint info or message if no sprint
-            currentSprint.Value == null ?
-                new Card(
-                    Text.P("No active sprint. Create a sprint in the Planning app to get started.")
+            currentSprint.Value != null ?
+                SprintSummaryCard.Build(
+                    sprint: currentSprint.Value,
+                    allTasksCount: allTasks.Length,
+                    todoTasksCount: todoTasks.Length,
+                    inProgressTasksCount: inProgressTasks.Length,
+                    doneTasksCount: doneTasks.Length,
+                    archiveButton: ArchiveSprint  // Active archive button
                 ) :
                 new Card(
-                    Layout.Vertical(
-                        Layout.Horizontal(
-                            Layout.Vertical(
-                                Text.H3($"Active Sprint: {currentSprint.Value.Name}"),
-                                !string.IsNullOrEmpty(currentSprint.Value.Goal) ?
-                                    Text.P($"Goal: {currentSprint.Value.Goal}") : null,
-                                Text.Small($"Tasks/Bugs: {allTasks.Length} | " +
-                                          $"To Do: {todoTasks.Length} | " +
-                                          $"In Progress: {inProgressTasks.Length} | " +
-                                          $"Done: {doneTasks.Length}")
-                            ).Width(Size.Grow()),
-                            new Button("Archive Sprint", ArchiveSprint).Secondary()
-                        )
-                    )
-                ),
+                    Text.P("No active sprint. Create a sprint in the Planning app to get started.")
+                ).Width(Size.Fit()),
 
             // Hierarchical Kanban board with columns inside each story
             currentSprint.Value != null && sprintStories.Length > 0 ?
@@ -301,7 +294,7 @@ public class SprintBoardApp : ViewBase
             currentSprint.Value != null ?
                 new Card(
                     Text.P("No stories in sprint yet. Add stories from the Planning app.")
-                ) : null
+                ).Width(Size.Fit()) : null
         ).Gap(16);
     }
 }

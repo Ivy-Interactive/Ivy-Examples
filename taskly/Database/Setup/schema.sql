@@ -15,6 +15,7 @@ CREATE TABLE backlog_items (
     type TEXT NOT NULL CHECK (type IN ('Epic', 'Story', 'Task', 'Bug')),
     sprint_id INTEGER,
     parent_id INTEGER,
+    is_tutorial INTEGER DEFAULT 0 CHECK (is_tutorial IN (0, 1)),  -- 0 = real data, 1 = tutorial data
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_id) REFERENCES backlog_items(id) ON DELETE CASCADE,
@@ -30,6 +31,7 @@ CREATE TABLE sprints (
     goal TEXT,
     item_ids TEXT DEFAULT '[]',  -- JSON array of backlog item IDs
     is_archived INTEGER DEFAULT 0 CHECK (is_archived IN (0, 1)),  -- Boolean as 0/1
+    is_tutorial INTEGER DEFAULT 0 CHECK (is_tutorial IN (0, 1)),  -- 0 = real data, 1 = tutorial data
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -43,12 +45,22 @@ CREATE TABLE developers (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- App Settings Table (for storing application configuration)
+CREATE TABLE app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX idx_backlog_items_type ON backlog_items(type);
 CREATE INDEX idx_backlog_items_status ON backlog_items(status);
 CREATE INDEX idx_backlog_items_sprint_id ON backlog_items(sprint_id);
 CREATE INDEX idx_backlog_items_parent_id ON backlog_items(parent_id);
+CREATE INDEX idx_backlog_items_is_tutorial ON backlog_items(is_tutorial);
 CREATE INDEX idx_sprints_is_archived ON sprints(is_archived);
+CREATE INDEX idx_sprints_is_tutorial ON sprints(is_tutorial);
 
 -- Triggers to automatically update updated_at timestamp
 CREATE TRIGGER update_backlog_items_updated_at
@@ -70,4 +82,11 @@ CREATE TRIGGER update_developers_updated_at
     FOR EACH ROW
 BEGIN
     UPDATE developers SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER update_app_settings_updated_at
+    AFTER UPDATE ON app_settings
+    FOR EACH ROW
+BEGIN
+    UPDATE app_settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
 END;
