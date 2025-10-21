@@ -35,13 +35,41 @@ public class GitHubExampleApp : ViewBase
 			loading.Set(true);
 			try
 			{
-				using var httpClient = CreateConfiguredHttpClient();
-				var ghUser = await httpClient.GetFromJsonAsync<GhUser>($"https://api.github.com/users/{username.Value.Trim()}", JsonOptions);
-				if (ghUser is null) throw new Exception("User not found.");
-				user.Set(ghUser);
-				var computed = await ComputeStatsAsync(httpClient, ghUser);
-				stats.Set(computed);
-				client.Toast($"Successfully loaded stats for {ghUser.Name ?? ghUser.Login}!");
+				// Mock data for testing
+				if (username.Value.Trim().ToLower() == "example")
+				{
+					var mockUser = new GhUser
+					{
+						Login = "example",
+						Name = "Example User",
+						AvatarUrl = "https://avatars.githubusercontent.com/u/1?v=4",
+						PublicRepos = 15,
+						Followers = 42,
+						Following = 8
+					};
+					
+					var mockStats = new GitHubUserStats(
+						TotalStars: 128,
+						TotalCommitsLastYear: 156,
+						TotalPullRequests: 23,
+						TotalIssues: 7,
+						ContributedReposLastYear: 5
+					);
+					
+					user.Set(mockUser);
+					stats.Set(mockStats);
+					client.Toast($"Successfully loaded mock stats for {mockUser.Name}!");
+				}
+				else
+				{
+					using var httpClient = CreateConfiguredHttpClient();
+					var ghUser = await httpClient.GetFromJsonAsync<GhUser>($"https://api.github.com/users/{username.Value.Trim()}", JsonOptions);
+					if (ghUser is null) throw new Exception("User not found.");
+					user.Set(ghUser);
+					var computed = await ComputeStatsAsync(httpClient, ghUser);
+					stats.Set(computed);
+					client.Toast($"Successfully loaded stats for {ghUser.Name ?? ghUser.Login}!");
+				}
 			}
 			catch (Exception ex)
 			{
@@ -99,8 +127,8 @@ public class GitHubExampleApp : ViewBase
 
 		var leftCard = new Card(Layout.Vertical().Gap(2)
 			| Text.H1("GitHub Stats")
-			| Text.Muted("Type a username and click Get Stats. Integrates Ivy with the GitHub REST API.")
-			| username.ToSearchInput(placeholder: "GitHub username (e.g. torvalds)")
+			| Text.Muted("Type a username and click Get Stats. Use 'example' for mock data or real GitHub usernames for live data.")
+			| username.ToSearchInput(placeholder: "GitHub username (e.g. torvalds, example for mock data)")
 			| (Layout.Horizontal().Gap(2)
 				| new Button("Get Stats", onClick: () => { _ = handleGetStats(); })
 					.Icon(Icons.ChartBar)
