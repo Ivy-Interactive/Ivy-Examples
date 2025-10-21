@@ -88,7 +88,11 @@ public class GitHubExampleApp : ViewBase
 
 			content = new Card(
 				Layout.Vertical().Gap(2)
-					| Text.H3($"{u.Name ?? u.Login}'s GitHub Stats")
+					| Layout.Horizontal().Gap(2)
+						| new Avatar(u.Name ?? u.Login, u.AvatarUrl)
+							.Height(60)
+							.Width(60)
+						| Text.H3($"{u.Name ?? u.Login}'s GitHub Stats")
 					| table
 			).Width(Size.Units(120).Max(560));
 		}
@@ -196,6 +200,7 @@ public class GitHubExampleApp : ViewBase
 	{
 		[JsonPropertyName("login")] public string Login { get; set; }
 		[JsonPropertyName("name")] public string? Name { get; set; }
+		[JsonPropertyName("avatar_url")] public string? AvatarUrl { get; set; }
 		[JsonPropertyName("public_repos")] public int PublicRepos { get; set; }
 		[JsonPropertyName("followers")] public int Followers { get; set; }
 		[JsonPropertyName("following")] public int Following { get; set; }
