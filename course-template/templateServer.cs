@@ -10,7 +10,7 @@ public static class TemplateServer
         server.UseHotReload();
 
         var version = typeof(Server).Assembly.GetName().Version!.ToString().EatRight(".0");
-        server.SetMetaTitle($"Ivy Course Template {version}");
+        server.SetMetaTitle($"Ivy Course Repository {version}");
 
         var chromeSettings = new ChromeSettings()
             .Header(

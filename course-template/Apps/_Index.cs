@@ -7,7 +7,7 @@ using static Ivy.Views.Text;
 
 namespace CourseTemplate.Apps;
 
-[App(order: 0, title: "Apps", icon: Icons.PanelLeft, groupExpanded: true)]
+[App(order: 0, title: "Utilities", icon: Icons.PanelLeft, groupExpanded: true)]
 public class _IndexApp() : ViewBase
 {
     public override object? Build()
