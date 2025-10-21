@@ -13,7 +13,7 @@ public class GitHubExampleApp : ViewBase
 {
 	public override object? Build()
 	{
-		var username = this.UseState<string?>();
+		var username = this.UseState<string?>(String.Empty);
 		var loading = this.UseState(false);
 		var user = this.UseState<GhUser?>();
 		var stats = this.UseState<GitHubUserStats?>();
@@ -134,15 +134,17 @@ public class GitHubExampleApp : ViewBase
 					.Icon(Icons.ChartBar)
 					.Loading(loading.Value)
 					.Disabled(loading.Value)
-				| new Button("Clear", onClick: () => { 
-					username.Set(""); 
+				| new Button("Clear", onClick: () =>
+				{
+					username.Set("");
 					user.Set((GhUser?)null);
 					stats.Set((GitHubUserStats?)null);
 					error.Set((string?)null);
-				})
-					.Secondary()
-					.Icon(Icons.Trash)
-				)).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Fraction(0.5f)));
+				}).Secondary().Icon(Icons.Trash))
+				| new Spacer().Height(Size.Units(5))
+				| Text.Small("This demo integrates with the GitHub REST API to fetch user statistics and profile information.")
+			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [GitHub REST API](https://docs.github.com/en/rest)")
+				).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Fraction(0.5f)));
 
 		return rightContent != null 
 			? (Layout.Horizontal().Gap(20).Align(Align.Center) | leftCard | rightContent)
