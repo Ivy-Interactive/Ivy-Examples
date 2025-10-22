@@ -13,7 +13,8 @@ public class DataTablesDemoApp : ViewBase
             ("Sortable Columns", "Table with sortable columns"),
             ("Filterable Data", "Table with filtering capabilities"),
             ("Large Dataset", "Performance demo with 10,000+ rows"),
-            ("Custom Columns", "Table with custom column types and formatting")
+            ("Custom Columns", "Table with custom column types and formatting"),
+            ("Interactive Demo", "Live data manipulation with add/remove functionality")
         };
         
         var demoMenuItems = demos
@@ -34,6 +35,7 @@ public class DataTablesDemoApp : ViewBase
             2 => BuildFilterableDataTable(),
             3 => BuildLargeDatasetTable(),
             4 => BuildCustomColumnsTable(),
+            5 => BuildInteractiveDemo(),
             _ => BuildBasicDataTable()
         };
         
@@ -146,6 +148,68 @@ public class DataTablesDemoApp : ViewBase
                 .Sortable(u => u.Name, true)
                 .Filterable(u => u.Name, true)
         );
+    }
+    
+    private object BuildInteractiveDemo()
+    {
+        var users = this.UseState(GenerateSampleUsers(10).ToList());
+        var newUserName = this.UseState("");
+        var newUserEmail = this.UseState("");
+        var newUserSalary = this.UseState(50000);
+        
+        var addUser = () =>
+        {
+            if (!string.IsNullOrEmpty(newUserName.Value) && !string.IsNullOrEmpty(newUserEmail.Value))
+            {
+                var newUser = new User
+                {
+                    Id = users.Value.Count + 1000,
+                    Name = newUserName.Value,
+                    Email = newUserEmail.Value,
+                    Salary = newUserSalary.Value,
+                    Status = Icons.Star,
+                    IsActive = true
+                };
+                
+                users.Value.Add(newUser);
+                users.Set([.. users.Value]);
+                
+                newUserName.Value = "";
+                newUserEmail.Value = "";
+                newUserSalary.Value = 50000;
+            }
+        };
+        
+        var removeUser = (User user) =>
+        {
+            users.Value.Remove(user);
+            users.Set([.. users.Value]);
+        };
+        
+        return Layout.Vertical().Gap(4).Padding(2)
+            | Text.H2("Interactive DataTable Demo")
+            | Text.Muted("Add and remove users dynamically to see real-time updates")
+            
+            | new Card(
+                Layout.Vertical().Gap(4).Padding(2)
+                | Text.H3("Add New User")
+                | Layout.Horizontal().Gap(2)
+                    | newUserName.ToInput(placeholder: "Full Name")
+                    | newUserEmail.ToInput(placeholder: "Email")
+                    | newUserSalary.ToInput(placeholder: "Salary")
+                    | new Button("Add User", addUser).Primary()
+            )
+            
+            | users.Value.AsQueryable().ToDataTable()
+                .Header(u => u.Name, "Full Name")
+                .Header(u => u.Email, "Email Address")
+                .Header(u => u.Salary, "Salary")
+                .Header(u => u.Status, "Status")
+                .Header(u => u.IsActive, "Active")
+                .Sortable(u => u.Name, true)
+                .Filterable(u => u.Name, true)
+            
+            | Text.Small($"Total Users: {users.Value.Count}");
     }
     
     private IQueryable<User> GenerateSampleUsers(int count)
