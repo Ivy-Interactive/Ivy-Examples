@@ -9,6 +9,7 @@ This Ivy application demonstrates the powerful DataTable widget capabilities, sh
 - **Filterable Data**: Real-time filtering across all columns
 - **Large Dataset Performance**: High-performance handling of 10,000+ rows using Apache Arrow
 - **Custom Columns**: Custom formatting and column types
+- **Interactive Demo**: Live data manipulation with add/remove functionality
 
 ## Running the Application
 
