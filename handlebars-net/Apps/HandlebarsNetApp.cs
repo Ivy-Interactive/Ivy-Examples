@@ -99,6 +99,10 @@ public class HandlebarsNetApp : ViewBase
                     | new Separator()
                     | new Html(outputState.Value ?? "Result will appear here...")
                     | new Separator()
+                    | new Spacer()
+                    | Text.Small("This demo uses Handlebars.Net library for server-side HTML templating with data binding.")
+                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Handlebars.Net](https://github.com/Handlebars-Net/Handlebars.Net)")
+                    
             ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()));
     }
 }
