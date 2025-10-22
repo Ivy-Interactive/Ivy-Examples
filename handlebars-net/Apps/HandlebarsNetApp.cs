@@ -7,7 +7,7 @@ public class HandlebarsNetApp : ViewBase
     {
         // State for the Handlebars template string
         var templateState = this.UseState<string>(@"
-    <div>
+<div>
     <h1>Hello {{name}}!</h1>
     <p>Welcome to {{company}} - {{department}} Department</p>
     
@@ -74,21 +74,31 @@ public class HandlebarsNetApp : ViewBase
         // Run once initially to populate the output
         Render();
 
-        return  (Layout.Horizontal().Gap(10).Padding(3).Align(Align.TopCenter)
+        return Layout.Horizontal().Gap(10).Padding(3).Align(Align.TopCenter)
             | new Card(
                 Layout.Vertical()
-            | Text.H2("Handlebars.Net Demo")
-            | Text.Block("Simple example showing how Handlebars.Net works. Change template or data to see live results!")
-            | Layout.Horizontal().Gap(3)
-                | Layout.Vertical().Gap(2).Width(Size.Fraction(0.5f))
-                    | Text.H3("Template")
-                    | templateState.ToCodeInput().Language(Languages.Html).Height(Size.Auto())
-                | Layout.Vertical().Gap(2).Width(Size.Fraction(0.5f))
-                    | Text.H3("Data")
-                    | modelState.ToCodeInput().Language(Languages.Json).Height(Size.Auto())).Width(Size.Fraction(0.6f)))
+                    | Layout.Tabs(
+                        new Tab("Template", 
+                            Layout.Vertical().Gap(2)
+                                | Text.H3("Handlebars Template")
+                                | Text.Muted("Write your Handlebars template here. Use {{variable}} for data binding, {{#each}} for loops, and {{#if}} for conditions.")
+                                | templateState.ToCodeInput().Language(Languages.Html).Height(Size.Auto())
+                        ).Icon(Icons.Code),
+                        new Tab("Data", 
+                            Layout.Vertical().Gap(2)
+                                | Text.H3("JSON Data")
+                                | Text.Muted("Provide your data as JSON. This will be used to populate the template variables.")
+                                | modelState.ToCodeInput().Language(Languages.Json).Height(Size.Auto())
+                        ).Icon(Icons.Database)
+                    ).Variant(TabsVariant.Tabs)
+            ).Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Full()))
             | new Card(
                 Layout.Vertical()
-            | Text.H2("Result")
-            | new Html(outputState.Value ?? "Result will appear here...")).Width(Size.Fraction(0.4f));
+                    | Text.H2("Handlebars.Net Result")
+                    | Text.Muted("This shows the final HTML output after processing your template with the data.")
+                    | new Separator()
+                    | new Html(outputState.Value ?? "Result will appear here...")
+                    | new Separator()
+            ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()));
     }
 }
