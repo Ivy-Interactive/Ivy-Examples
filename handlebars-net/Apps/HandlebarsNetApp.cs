@@ -1,7 +1,7 @@
 ﻿namespace HandlebarsNetExample;
 
 [App(icon: Icons.FileText, title: "Handlebars.Net")]
-public class TemplateApp : ViewBase
+public class HandlebarsNetApp : ViewBase
 {
     public override object? Build()
     {
