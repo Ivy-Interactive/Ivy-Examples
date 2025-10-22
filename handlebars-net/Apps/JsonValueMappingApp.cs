@@ -1,15 +1,45 @@
 ﻿namespace HandlebarsNetExample;
 
-[App(icon: Icons.FileText, title: "Json template value mapping")]
+[App(icon: Icons.FileText, title: "Handlebars.Net")]
 public class TemplateApp : ViewBase
 {
     public override object? Build()
     {
         // State for the Handlebars template string
-        var templateState = this.UseState<string>("<h1>Hello {{name}}!</h1><p>Your favorite fruits are: {{#each items}}<li>{{this}}</li>{{/each}}</p>");
+        var templateState = this.UseState<string>(@"
+    <div>
+    <h1>Hello {{name}}!</h1>
+    <p>Welcome to {{company}} - {{department}} Department</p>
+    
+    <h3>Your Tasks:</h3>
+    <ul>
+        {{#each tasks}}
+        <li><strong>{{title}}</strong> - {{description}}</li>
+        {{/each}}
+    </ul>
+    
+    {{#if isManager}}
+    <div>
+        <strong>Manager Access:</strong> You can view all team reports.
+    </div>
+    {{/if}}
+    
+    <p>Generated on {{date}}</p>
+</div>");
 
         // State for the JSON model string
-        var modelState = this.UseState<string>(JsonSerializer.Serialize(new { name = "Alice", items = new[] { "Apple", "Banana", "Cherry" } }, new JsonSerializerOptions { WriteIndented = true }));
+        var modelState = this.UseState<string>(JsonSerializer.Serialize(new {
+            name = "John Smith",
+            company = "TechCorp",
+            department = "Engineering",
+            isManager = true,
+            date = DateTime.Now.ToString("MMM dd, yyyy"),
+            tasks = new[] {
+                new { title = "Code Review", description = "Review pull requests" },
+                new { title = "Team Meeting", description = "Weekly standup at 10 AM" },
+                new { title = "Bug Fix", description = "Fix login issue" }
+            }
+        }, new JsonSerializerOptions { WriteIndented = true }));
 
         // State for the rendered output
         var outputState = this.UseState<string?>();
@@ -34,7 +64,7 @@ public class TemplateApp : ViewBase
             catch (Exception ex)
             {
                 // Display any errors that occur during parsing or rendering
-                outputState.Value = $"Error: {ex.Message}";
+                outputState.Value = $"<div><strong>Error:</strong> {ex.Message}</div>";
             }
         }
 
@@ -44,17 +74,21 @@ public class TemplateApp : ViewBase
         // Run once initially to populate the output
         Render();
 
-        return Layout.Center().Width(800) | new Card(
-            Layout.Vertical().Gap(10).Padding(2)
+        return  (Layout.Horizontal().Gap(10).Padding(3).Align(Align.TopCenter)
+            | new Card(
+                Layout.Vertical()
             | Text.H2("Handlebars.Net Demo")
-            | Text.Block("Enter a Handlebars template and a JSON model to see the live output.")
-            | Text.H3("Template")
-            | templateState.ToCodeInput(placeholder: "Handlebars Template")
-            | Text.H3("JSON Model")
-            | modelState.ToCodeInput(language: Languages.Json, placeholder: "JSON Model")
-            | new Separator()
-            | Text.H3("Output")
-            | new Html(outputState.Value ?? "Output will appear here...") // Use Html component to display the rendered string
-        );
+            | Text.Block("Simple example showing how Handlebars.Net works. Change template or data to see live results!")
+            | Layout.Horizontal().Gap(3)
+                | Layout.Vertical().Gap(2).Width(Size.Fraction(0.5f))
+                    | Text.H3("Template")
+                    | templateState.ToCodeInput().Language(Languages.Html).Height(Size.Auto())
+                | Layout.Vertical().Gap(2).Width(Size.Fraction(0.5f))
+                    | Text.H3("Data")
+                    | modelState.ToCodeInput().Language(Languages.Json).Height(Size.Auto())).Width(Size.Fraction(0.6f)))
+            | new Card(
+                Layout.Vertical()
+            | Text.H2("Result")
+            | new Html(outputState.Value ?? "Result will appear here...")).Width(Size.Fraction(0.4f));
     }
 }
