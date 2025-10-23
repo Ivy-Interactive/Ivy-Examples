@@ -23,26 +23,29 @@ public class RepositoryOverviewView : ViewBase
         var repositoryData = this.UseState<RepositoryInfo?>(() => null);
         var isLoading = this.UseState(true);
 
-        this.UseEffect(async () =>
+        this.UseEffect(() =>
         {
-            try
+            Task.Run(async () =>
             {
-                isLoading.Set(true);
-                var response = await _gitHubService.GetRepositoryInfoAsync(_owner, _repo);
-                
-                if (response.Success)
+                try
                 {
-                    repositoryData.Set(response.Data);
+                    isLoading.Set(true);
+                    var response = await _gitHubService.GetRepositoryInfoAsync(_owner, _repo);
+                    
+                    if (response.Success)
+                    {
+                        repositoryData.Set(response.Data);
+                    }
                 }
-            }
-            catch (Exception)
-            {
-                // Handle error silently for now
-            }
-            finally
-            {
-                isLoading.Set(false);
-            }
+                catch (Exception)
+                {
+                    // Handle error silently for now
+                }
+                finally
+                {
+                    isLoading.Set(false);
+                }
+            });
         }, _refreshTrigger);
 
         if (isLoading.Value)
