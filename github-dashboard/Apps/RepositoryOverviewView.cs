@@ -46,7 +46,7 @@ public class RepositoryOverviewView : ViewBase
                     isLoading.Set(false);
                 }
             });
-        }, _refreshTrigger);
+        });
 
         if (isLoading.Value)
         {
