@@ -8,63 +8,49 @@ public class RepositoryOverviewView : ViewBase
     private readonly IGitHubApiService _gitHubService;
     private readonly string _owner;
     private readonly string _repo;
-    private readonly int _refreshTrigger;
 
-    public RepositoryOverviewView(IGitHubApiService gitHubService, string owner, string repo, int refreshTrigger)
+    public RepositoryOverviewView(IGitHubApiService gitHubService, string owner, string repo)
     {
         _gitHubService = gitHubService;
         _owner = owner;
         _repo = repo;
-        _refreshTrigger = refreshTrigger;
     }
 
     public override object? Build()
     {
-        var repositoryData = UseState<RepositoryInfo?>(() => null);
-        var isLoading = UseState(true);
-        var error = UseState<string?>(() => null);
+        var repositoryData = this.UseState<RepositoryInfo?>(() => null);
+        var isLoading = this.UseState(true);
 
-        UseEffect(async () =>
+        this.UseEffect(async () =>
         {
             try
             {
                 isLoading.Set(true);
-                error.Set(null);
-                
                 var response = await _gitHubService.GetRepositoryInfoAsync(_owner, _repo);
                 
                 if (response.Success)
                 {
                     repositoryData.Set(response.Data);
                 }
-                else
-                {
-                    error.Set(response.ErrorMessage ?? "Failed to load repository data");
-                }
             }
             catch (Exception ex)
             {
-                error.Set($"Error: {ex.Message}");
+                // Handle error silently for now
             }
             finally
             {
                 isLoading.Set(false);
             }
-        }, [_refreshTrigger]);
+        }, []);
 
         if (isLoading.Value)
         {
             return LoadingState();
         }
 
-        if (error.Value != null)
-        {
-            return ErrorState(error.Value);
-        }
-
         if (repositoryData.Value == null)
         {
-            return Text.Error("No repository data available");
+            return ErrorState("Failed to load repository data");
         }
 
         return RepositoryMetrics(repositoryData.Value);
@@ -74,24 +60,14 @@ public class RepositoryOverviewView : ViewBase
     {
         return Layout.Vertical().Gap(4)
             | Text.H2("Repository Overview")
-            | Layout.Grid().Columns(2).Gap(3)
-                | SkeletonCard("Stars")
-                | SkeletonCard("Forks")
-                | SkeletonCard("Watchers")
-                | SkeletonCard("Issues")
-            | Layout.Grid().Columns(1).Gap(3)
-                | SkeletonCard("Repository Info");
+            | Text.Muted("Loading repository data...");
     }
 
     private object ErrorState(string errorMessage)
     {
         return Layout.Vertical().Gap(4)
             | Text.H2("Repository Overview")
-            | Card()
-                | Layout.Vertical().Gap(2)
-                    | Icon(Icons.AlertTriangle).Color(Colors.Red)
-                    | Text.Error("Failed to load repository data")
-                    | Text.Muted(errorMessage);
+            | Text.Error(errorMessage);
     }
 
     private object RepositoryMetrics(RepositoryInfo repo)
@@ -100,14 +76,14 @@ public class RepositoryOverviewView : ViewBase
             | Text.H2("Repository Overview")
             | RepositoryInfoCard(repo)
             | Layout.Grid().Columns(2).Gap(3)
-                | MetricCard("Stars", Icons.Star, repo.Stars.ToString("N0"), CalculateTrend(repo.Stars, 1000))
-                | MetricCard("Forks", Icons.GitFork, repo.Forks.ToString("N0"), CalculateTrend(repo.Forks, 50))
-                | MetricCard("Watchers", Icons.Eye, repo.Watchers.ToString("N0"), CalculateTrend(repo.Watchers, 100))
-                | MetricCard("Open Issues", Icons.AlertCircle, repo.OpenIssues.ToString("N0"), CalculateTrend(repo.OpenIssues, 20))
+                | MetricCard("Stars", repo.Stars.ToString("N0"))
+                | MetricCard("Forks", repo.Forks.ToString("N0"))
+                | MetricCard("Watchers", repo.Watchers.ToString("N0"))
+                | MetricCard("Open Issues", repo.OpenIssues.ToString("N0"))
             | Layout.Grid().Columns(3).Gap(3)
-                | MetricCard("Size", Icons.HardDrive, FormatSize(repo.Size), null)
-                | MetricCard("Language", Icons.Code, repo.Language ?? "Unknown", null)
-                | MetricCard("Last Updated", Icons.Clock, FormatDate(repo.UpdatedAt), null);
+                | MetricCard("Size", FormatSize(repo.Size))
+                | MetricCard("Language", repo.Language ?? "Unknown")
+                | MetricCard("Last Updated", FormatDate(repo.UpdatedAt));
     }
 
     private object RepositoryInfoCard(RepositoryInfo repo)
@@ -119,53 +95,16 @@ public class RepositoryOverviewView : ViewBase
                     | Badge.Success(repo.IsPrivate ? "Private" : "Public")
                 | Text.Muted(repo.Description ?? "No description available")
                 | Layout.Horizontal().Gap(4)
-                    | Layout.Horizontal().Gap(1).AlignCenter()
-                        | Icon(Icons.Calendar)
-                        | Text.Small($"Created: {FormatDate(repo.CreatedAt)}")
-                    | Layout.Horizontal().Gap(1).AlignCenter()
-                        | Icon(Icons.GitBranch)
-                        | Text.Small($"Default branch: {repo.DefaultBranch}")
-                | Button("View on GitHub", () => { })
-                    .Variant(ButtonVariants.Outline)
-                    .Width(20);
+                    | Text.Small($"Created: {FormatDate(repo.CreatedAt)}")
+                    | Text.Small($"Default branch: {repo.DefaultBranch}");
     }
 
-    private object MetricCard(string title, string icon, string value, double? trend)
-    {
-        return Card()
-            | Layout.Vertical().Gap(2)
-                | Layout.Horizontal().Gap(2).AlignCenter()
-                    | Icon(icon).Color(Colors.Blue)
-                    | Text.Small(title)
-                | Text.Large(value)
-                | (trend.HasValue ? TrendIndicator(trend.Value) : Spacer());
-    }
-
-    private object TrendIndicator(double trend)
-    {
-        var isPositive = trend > 0;
-        var color = isPositive ? Colors.Green : Colors.Red;
-        var icon = isPositive ? Icons.TrendingUp : Icons.TrendingDown;
-        var text = $"{(trend * 100):+0.0}%";
-
-        return Layout.Horizontal().Gap(1).AlignCenter()
-            | Icon(icon).Color(color).Size(Size.Small)
-            | Text.Small(text).Color(color);
-    }
-
-    private object SkeletonCard(string title)
+    private object MetricCard(string title, string value)
     {
         return Card()
             | Layout.Vertical().Gap(2)
                 | Text.Small(title)
-                | Skeleton().Height(2).Width(15)
-                | Skeleton().Height(1).Width(10);
-    }
-
-    private double CalculateTrend(int current, int baseline)
-    {
-        if (baseline == 0) return 0;
-        return (double)(current - baseline) / baseline;
+                | Text.Large(value);
     }
 
     private string FormatSize(long bytes)
