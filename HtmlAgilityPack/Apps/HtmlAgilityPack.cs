@@ -76,13 +76,37 @@ public class HtmlAgilityPackApp : ViewBase
             if (document == null)
                 return string.Empty;
             string links = string.Empty;
+            var socialDomains = new[] { 
+                "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com", 
+                "youtube.com", "tiktok.com", "discord.gg", "discord.com", "github.com",
+                "reddit.com", "pinterest.com", "snapchat.com", "telegram.org", "whatsapp.com",
+                "discord.gg/", "github.com/"
+            };
+            
             var metaTags = document.DocumentNode.SelectNodes("//a");
             if (metaTags != null)
             {
                 foreach (var tag in metaTags)
                 {
-                    if (tag.Attributes["href"] != null && (tag.Attributes["href"].Value.StartsWith("https://") || tag.Attributes["href"].Value.StartsWith("http://")))
-                        links += tag.Attributes["href"].Value + System.Environment.NewLine;
+                    var href = tag.Attributes["href"]?.Value ?? "";
+                    if (!string.IsNullOrEmpty(href) && (href.StartsWith("https://") || href.StartsWith("http://")))
+                    {
+                        // Check if it's not a social media link
+                        bool isSocialLink = false;
+                        foreach (var domain in socialDomains)
+                        {
+                            if (href.Contains(domain))
+                            {
+                                isSocialLink = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!isSocialLink)
+                        {
+                            links += href + System.Environment.NewLine;
+                        }
+                    }
                 }
             }
             else
@@ -173,53 +197,31 @@ public class HtmlAgilityPackApp : ViewBase
                 return string.Empty;
             string social = string.Empty;
             
-            // Open Graph tags
-            var ogTags = document.DocumentNode.SelectNodes("//meta[@property]");
-            if (ogTags != null)
-            {
-                foreach (var tag in ogTags)
-                {
-                    var property = tag.Attributes["property"]?.Value ?? "";
-                    var content = tag.Attributes["content"]?.Value ?? "";
-                    if (property.StartsWith("og:") && !string.IsNullOrEmpty(content))
-                    {
-                        social += $"{property}: {content}" + System.Environment.NewLine;
-                    }
-                }
-            }
-            
-            // Twitter Card tags
-            var twitterTags = document.DocumentNode.SelectNodes("//meta[@name]");
-            if (twitterTags != null)
-            {
-                foreach (var tag in twitterTags)
-                {
-                    var name = tag.Attributes["name"]?.Value ?? "";
-                    var content = tag.Attributes["content"]?.Value ?? "";
-                    if (name.StartsWith("twitter:") && !string.IsNullOrEmpty(content))
-                    {
-                        social += $"{name}: {content}" + System.Environment.NewLine;
-                    }
-                }
-            }
-            
-            // Social media links
+            // Social media links only (no meta tags)
             var socialLinks = document.DocumentNode.SelectNodes("//a[@href]");
             if (socialLinks != null)
             {
-                var socialDomains = new[] { "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com", "youtube.com", "tiktok.com" };
+                var socialDomains = new[] { 
+                    "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com", 
+                    "youtube.com", "tiktok.com", "discord.gg", "discord.com", "github.com",
+                    "reddit.com", "pinterest.com", "snapchat.com", "telegram.org", "whatsapp.com",
+                    "discord.gg/", "github.com/"
+                };
                 foreach (var link in socialLinks)
                 {
                     var href = link.Attributes["href"]?.Value ?? "";
                     var text = link.InnerText.Trim();
-                    foreach (var domain in socialDomains)
+                    if (!string.IsNullOrEmpty(href) && (href.StartsWith("https://") || href.StartsWith("http://")))
                     {
-                        if (href.Contains(domain))
+                        foreach (var domain in socialDomains)
                         {
-                            social += $"{domain}: {href}";
-                            if (!string.IsNullOrEmpty(text)) social += $" ({text})";
-                            social += System.Environment.NewLine;
-                            break;
+                            if (href.Contains(domain))
+                            {
+                                social += $"{domain}: {href}";
+                                if (!string.IsNullOrEmpty(text)) social += $" ({text})";
+                                social += System.Environment.NewLine;
+                                break;
+                            }
                         }
                     }
                 }
@@ -277,55 +279,52 @@ public class HtmlAgilityPackApp : ViewBase
                         (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0);
                         
         var resultsContent = !hasAnyData
-            ? Layout.Vertical(Text.Muted("HTML parser extracts website data: title, images, structure, links, and social media info"))
-            : Layout.Vertical().Gap(3)
+            ? Layout.Vertical().Gap(2)
+                | Text.H3("HTML Parser Results")
+                | Text.Muted("Select data types above and click 'Parse Site HTML' to analyze any website")
+            : Layout.Vertical().Gap(2)
+                | Text.H3("HTML Parser Results")
+                | Text.Muted("Select data types above and click 'Parse Site HTML' to analyze any website")
                 // Basic information
-                | (selectedTypes.Contains("title") && urlTitleState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("Site Title")
-                        | Text.Code(urlTitleState.Value)
+                | (selectedTypes.Contains("title") && urlTitleState.Value.Length > 0 ? new Expandable(
+                    "Site Title",
+                    Text.Code(urlTitleState.Value)
                 ) : null)
                 
                 // Meta data
-                | (selectedTypes.Contains("meta") && urlMetaState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("Site Meta Data")
-                        | Text.Code(urlMetaState.Value)
+                | (selectedTypes.Contains("meta") && urlMetaState.Value.Length > 0 ? new Expandable(
+                    "Site Meta Data",
+                    Text.Code(urlMetaState.Value)
                 ) : null)
                 
                 // Images
-                | (selectedTypes.Contains("images") && urlImagesState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("Images Found")
-                        | Text.Code(urlImagesState.Value)
+                | (selectedTypes.Contains("images") && urlImagesState.Value.Length > 0 ? new Expandable(
+                    "Images Found",
+                    Text.Code(urlImagesState.Value)
                 ) : null)
                 
                 // Page structure
-                | (selectedTypes.Contains("structure") && urlStructureState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("Page Structure")
-                        | Text.Code(urlStructureState.Value)
+                | (selectedTypes.Contains("structure") && urlStructureState.Value.Length > 0 ? new Expandable(
+                    "Page Structure",
+                    Text.Code(urlStructureState.Value)
                 ) : null)
                 
                 // Social media
-                | (selectedTypes.Contains("social") && urlSocialState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("Social Media & SEO")
-                        | Text.Code(urlSocialState.Value)
+                | (selectedTypes.Contains("social") && urlSocialState.Value.Length > 0 ? new Expandable(
+                    "Social Media Links",
+                    Text.Code(urlSocialState.Value)
                 ) : null)
                 
                 // External links
-                | (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("External Links")
-                        | Text.Code(urlLinksState.Value)
+                | (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0 ? new Expandable(
+                    "External Links",
+                    Text.Code(urlLinksState.Value)
                 ) : null)
                 
                 // Error display
-                | (errorState.Value.Length > 0 ? new Card(
-                    Layout.Vertical()
-                        | Text.Block("Error")
-                        | Text.Block(errorState.Value)
+                | (errorState.Value.Length > 0 ? new Expandable(
+                    "Error",
+                    Text.Block(errorState.Value)
                 ) : null);
 
         return Layout.Horizontal(
