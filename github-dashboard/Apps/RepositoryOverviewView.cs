@@ -28,7 +28,7 @@ public class RepositoryOverviewView : ViewBase
             // For now, just set loading to false
             // TODO: Implement actual API call
             isLoading.Set(false);
-        }, _refreshTrigger);
+        });
 
         if (isLoading.Value)
         {
