@@ -2,7 +2,7 @@ namespace HtmlAgilityPack.Apps;
 
 using HtmlAgilityPack;
 
-[App(icon: Icons.Code, title: "HtmlAgilityPack Demo")]
+[App(icon: Icons.Code, title: "HtmlAgilityPack")]
 public class HtmlAgilityPackApp : ViewBase
 {
     public override object? Build()
@@ -16,6 +16,10 @@ public class HtmlAgilityPackApp : ViewBase
         var urlSocialState = UseState<string>("");
         var errorState = UseState<string>("");
         var parsingState = UseState(false);
+        
+        // Data type selection
+        var dataTypesSelect = UseState<string[]>(new[] { "title", "meta", "images", "structure", "social", "links" });
+        var dataTypeOptions = new[] { "title", "meta", "images", "structure", "social", "links" }.ToOptions();
 
         HtmlDocument? document = null;
         var loadURL = (string url) =>
@@ -253,55 +257,65 @@ public class HtmlAgilityPackApp : ViewBase
         // Left side - Form
         var formCard = new Card(
             Layout.Vertical().Gap(3)
-                | Text.Block("HTML Parser")
-                | urlState.ToTextInput().WithLabel("Enter Site URL:")
+                | Text.H3("HtmlAgilityPack Parser")
+                | Text.Muted("HTML parser extracts website data: title, images, structure, links, and social media info")
+                | urlState.ToSearchInput().WithLabel("Enter Site URL:")
+                | dataTypesSelect.ToSelectInput(dataTypeOptions)
+                    .Variant(SelectInputs.Toggle)
+                    .WithLabel("Select data to extract:")
                 | new Button("Parse Site HTML", eventHandler).Loading(parsingState.Value)
                 | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
         );
 
         // Right side - Results
-        var resultsContent = urlTitleState.Value.Length == 0 && urlMetaState.Value.Length == 0 && 
-                           urlImagesState.Value.Length == 0 && urlStructureState.Value.Length == 0 && 
-                           urlSocialState.Value.Length == 0 && urlLinksState.Value.Length == 0
-            ? Layout.Vertical(Text.Muted("Enter a URL and click 'Parse Site HTML' to see results"))
+        var selectedTypes = dataTypesSelect.Value;
+        var hasAnyData = (selectedTypes.Contains("title") && urlTitleState.Value.Length > 0) ||
+                        (selectedTypes.Contains("meta") && urlMetaState.Value.Length > 0) ||
+                        (selectedTypes.Contains("images") && urlImagesState.Value.Length > 0) ||
+                        (selectedTypes.Contains("structure") && urlStructureState.Value.Length > 0) ||
+                        (selectedTypes.Contains("social") && urlSocialState.Value.Length > 0) ||
+                        (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0);
+                        
+        var resultsContent = !hasAnyData
+            ? Layout.Vertical(Text.Muted("HTML parser extracts website data: title, images, structure, links, and social media info"))
             : Layout.Vertical().Gap(3)
                 // Basic information
-                | (urlTitleState.Value.Length > 0 ? new Card(
+                | (selectedTypes.Contains("title") && urlTitleState.Value.Length > 0 ? new Card(
                     Layout.Vertical()
                         | Text.Block("Site Title")
                         | Text.Code(urlTitleState.Value)
                 ) : null)
                 
                 // Meta data
-                | (urlMetaState.Value.Length > 0 ? new Card(
+                | (selectedTypes.Contains("meta") && urlMetaState.Value.Length > 0 ? new Card(
                     Layout.Vertical()
                         | Text.Block("Site Meta Data")
                         | Text.Code(urlMetaState.Value)
                 ) : null)
                 
                 // Images
-                | (urlImagesState.Value.Length > 0 ? new Card(
+                | (selectedTypes.Contains("images") && urlImagesState.Value.Length > 0 ? new Card(
                     Layout.Vertical()
                         | Text.Block("Images Found")
                         | Text.Code(urlImagesState.Value)
                 ) : null)
                 
                 // Page structure
-                | (urlStructureState.Value.Length > 0 ? new Card(
+                | (selectedTypes.Contains("structure") && urlStructureState.Value.Length > 0 ? new Card(
                     Layout.Vertical()
                         | Text.Block("Page Structure")
                         | Text.Code(urlStructureState.Value)
                 ) : null)
                 
                 // Social media
-                | (urlSocialState.Value.Length > 0 ? new Card(
+                | (selectedTypes.Contains("social") && urlSocialState.Value.Length > 0 ? new Card(
                     Layout.Vertical()
                         | Text.Block("Social Media & SEO")
                         | Text.Code(urlSocialState.Value)
                 ) : null)
                 
                 // External links
-                | (urlLinksState.Value.Length > 0 ? new Card(
+                | (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0 ? new Card(
                     Layout.Vertical()
                         | Text.Block("External Links")
                         | Text.Code(urlLinksState.Value)
