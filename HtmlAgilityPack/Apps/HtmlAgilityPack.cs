@@ -224,7 +224,6 @@ public class HtmlAgilityPackApp : ViewBase
             return social;
         };
 
-
         var eventHandler = (Event<Button> e) =>
         {
             urlTitleState.Set("");
@@ -251,34 +250,73 @@ public class HtmlAgilityPackApp : ViewBase
             parsingState.Set(false);
         };
 
-        return Layout.Vertical().Gap(2).Padding(2)
-                   | urlState.ToTextInput().WithLabel("Enter Site URL:")
-                   | new Button("Parse Site HTML", eventHandler).Loading(parsingState.Value)
-                   | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
-                   
-                   // Basic information
-                   | (urlTitleState.Value.Length > 0 ? Text.Block("Site Title:") : null)
-                   | (urlTitleState.Value.Length > 0 ? Text.Code(urlTitleState.Value) : null)     
-                   
-                   // Meta data
-                   | (urlMetaState.Value.Length > 0 ? Text.Block("Site Meta Data:") : null)
-                   | (urlMetaState.Value.Length > 0 ? Text.Code(urlMetaState.Value) : null)
-                   
-                   // Images
-                   | (urlImagesState.Value.Length > 0 ? Text.Block("Images Found:") : null)
-                   | (urlImagesState.Value.Length > 0 ? Text.Code(urlImagesState.Value) : null)
-                   
-                   // Page structure
-                   | (urlStructureState.Value.Length > 0 ? Text.Block("Page Structure:") : null)
-                   | (urlStructureState.Value.Length > 0 ? Text.Code(urlStructureState.Value) : null)
-                   
-                   // Social media
-                   | (urlSocialState.Value.Length > 0 ? Text.Block("Social Media & SEO:") : null)
-                   | (urlSocialState.Value.Length > 0 ? Text.Code(urlSocialState.Value) : null)
-                   
-                   // External links
-                   | (urlLinksState.Value.Length > 0 ? Text.Block("External Links:") : null)
-                   | (urlLinksState.Value.Length > 0 ? Text.Code(urlLinksState.Value) : null)
-                 ;
+        // Left side - Form
+        var formCard = new Card(
+            Layout.Vertical().Gap(3)
+                | Text.Block("HTML Parser")
+                | urlState.ToTextInput().WithLabel("Enter Site URL:")
+                | new Button("Parse Site HTML", eventHandler).Loading(parsingState.Value)
+                | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
+        );
+
+        // Right side - Results
+        var resultsContent = urlTitleState.Value.Length == 0 && urlMetaState.Value.Length == 0 && 
+                           urlImagesState.Value.Length == 0 && urlStructureState.Value.Length == 0 && 
+                           urlSocialState.Value.Length == 0 && urlLinksState.Value.Length == 0
+            ? Layout.Vertical(Text.Muted("Enter a URL and click 'Parse Site HTML' to see results"))
+            : Layout.Vertical().Gap(3)
+                // Basic information
+                | (urlTitleState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("Site Title")
+                        | Text.Code(urlTitleState.Value)
+                ) : null)
+                
+                // Meta data
+                | (urlMetaState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("Site Meta Data")
+                        | Text.Code(urlMetaState.Value)
+                ) : null)
+                
+                // Images
+                | (urlImagesState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("Images Found")
+                        | Text.Code(urlImagesState.Value)
+                ) : null)
+                
+                // Page structure
+                | (urlStructureState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("Page Structure")
+                        | Text.Code(urlStructureState.Value)
+                ) : null)
+                
+                // Social media
+                | (urlSocialState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("Social Media & SEO")
+                        | Text.Code(urlSocialState.Value)
+                ) : null)
+                
+                // External links
+                | (urlLinksState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("External Links")
+                        | Text.Code(urlLinksState.Value)
+                ) : null)
+                
+                // Error display
+                | (errorState.Value.Length > 0 ? new Card(
+                    Layout.Vertical()
+                        | Text.Block("Error")
+                        | Text.Block(errorState.Value)
+                ) : null);
+
+        return Layout.Horizontal(
+            formCard,
+            new Card(resultsContent).Height(Size.Fit().Min(Size.Full()))
+        );
     }
 }
