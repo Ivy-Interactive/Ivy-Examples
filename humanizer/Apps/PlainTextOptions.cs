@@ -1,6 +1,4 @@
-using System.Text.RegularExpressions;
-using Humanizer;
-
+namespace HumanizerExample;
 public class PlainTextOptions : ViewBase
 {
     readonly IState<string> InputText;

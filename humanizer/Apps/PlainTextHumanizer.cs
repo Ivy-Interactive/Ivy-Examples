@@ -1,4 +1,4 @@
-using Humanizer;
+namespace HumanizerExample;
 
 [App(icon: Icons.Box)]
 public class PlainTextHumanizerApp : ViewBase
