@@ -25,7 +25,7 @@ public class RepositoryOverviewView : ViewBase
 
         this.UseEffect(() =>
         {
-            return Task.Run(async () =>
+            Task.Run(async () =>
             {
                 try
                 {
@@ -46,6 +46,8 @@ public class RepositoryOverviewView : ViewBase
                     isLoading.Set(false);
                 }
             });
+            
+            return Task.FromResult<IDisposable>(null!);
         }, _refreshTrigger);
 
         if (isLoading.Value)
