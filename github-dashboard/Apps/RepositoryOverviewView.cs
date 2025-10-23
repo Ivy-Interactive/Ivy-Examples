@@ -43,8 +43,6 @@ public class RepositoryOverviewView : ViewBase
             {
                 isLoading.Set(false);
             }
-            
-            return null; // No cleanup needed
         }, _refreshTrigger);
 
         if (isLoading.Value)
