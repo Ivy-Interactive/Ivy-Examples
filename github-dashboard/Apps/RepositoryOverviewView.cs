@@ -8,12 +8,14 @@ public class RepositoryOverviewView : ViewBase
     private readonly IGitHubApiService _gitHubService;
     private readonly string _owner;
     private readonly string _repo;
+    private readonly int _refreshTrigger;
 
-    public RepositoryOverviewView(IGitHubApiService gitHubService, string owner, string repo)
+    public RepositoryOverviewView(IGitHubApiService gitHubService, string owner, string repo, int refreshTrigger)
     {
         _gitHubService = gitHubService;
         _owner = owner;
         _repo = repo;
+        _refreshTrigger = refreshTrigger;
     }
 
     public override object? Build()
@@ -33,7 +35,7 @@ public class RepositoryOverviewView : ViewBase
                     repositoryData.Set(response.Data);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Handle error silently for now
             }
@@ -41,7 +43,7 @@ public class RepositoryOverviewView : ViewBase
             {
                 isLoading.Set(false);
             }
-        }, []);
+        }, _refreshTrigger);
 
         if (isLoading.Value)
         {
@@ -67,7 +69,7 @@ public class RepositoryOverviewView : ViewBase
     {
         return Layout.Vertical().Gap(4)
             | Text.H2("Repository Overview")
-            | Text.Error(errorMessage);
+            | Text.Danger(errorMessage);
     }
 
     private object RepositoryMetrics(RepositoryInfo repo)
@@ -88,23 +90,25 @@ public class RepositoryOverviewView : ViewBase
 
     private object RepositoryInfoCard(RepositoryInfo repo)
     {
-        return Card()
-            | Layout.Vertical().Gap(3)
-                | Layout.Horizontal().JustifyBetween().AlignCenter()
+        return Card(
+            Layout.Vertical().Gap(3)
+                | Layout.Horizontal().Gap(4).AlignCenter()
                     | Text.H3(repo.Name)
                     | Badge.Success(repo.IsPrivate ? "Private" : "Public")
                 | Text.Muted(repo.Description ?? "No description available")
                 | Layout.Horizontal().Gap(4)
                     | Text.Small($"Created: {FormatDate(repo.CreatedAt)}")
-                    | Text.Small($"Default branch: {repo.DefaultBranch}");
+                    | Text.Small($"Default branch: {repo.DefaultBranch}")
+        ).Title("Repository Information");
     }
 
     private object MetricCard(string title, string value)
     {
-        return Card()
-            | Layout.Vertical().Gap(2)
+        return Card(
+            Layout.Vertical().Gap(2)
                 | Text.Small(title)
-                | Text.Large(value);
+                | Text.Large(value)
+        ).Title(title);
     }
 
     private string FormatSize(long bytes)
