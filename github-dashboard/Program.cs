@@ -1,17 +1,28 @@
+using GitHubDashboard.Apps;
 using GitHubDashboard.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
-var builder = WebApplication.CreateBuilder(args);
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
+
+var server = new Server();
 
 // Add services
-builder.Services.AddHttpClient<IGitHubApiService, GitHubApiService>();
-builder.Services.AddMemoryCache();
-builder.Services.AddLogging();
+server.Services.AddHttpClient<IGitHubApiService, GitHubApiService>();
+server.Services.AddMemoryCache();
+server.Services.AddLogging();
 
-var app = builder.Build();
+#if DEBUG
+server.UseHotReload();
+#endif
 
-// Configure the application
-app.UseIvy();
+server.AddAppsFromAssembly();
+server.AddConnectionsFromAssembly();
 
-app.Run();
+var chromeSettings = new ChromeSettings()
+    .DefaultApp<GitHubDashboardApp>()
+    .UseTabs(preventDuplicates: true);
+
+server.UseChrome(chromeSettings);
+await server.RunAsync();
