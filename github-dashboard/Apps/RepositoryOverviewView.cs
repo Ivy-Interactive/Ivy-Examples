@@ -25,7 +25,7 @@ public class RepositoryOverviewView : ViewBase
 
         this.UseEffect(() =>
         {
-            Task.Run(async () =>
+            return Task.Run(async () =>
             {
                 try
                 {
