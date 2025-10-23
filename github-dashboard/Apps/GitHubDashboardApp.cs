@@ -63,7 +63,7 @@ public class GitHubDashboardApp : ViewBase
         return Layout.Horizontal().Gap(1)
             | tabs.Select((tab, index) => 
                 new Button(tab.Item1, _ => { })
-                    .Variant(selectedTab == index ? ButtonVariant.Default : ButtonVariant.Ghost)
+                    .Variant(selectedTab == index ? ButtonVariant.Primary : ButtonVariant.Ghost)
                     .Width(Size.Units(25))
             ).ToArray();
     }
