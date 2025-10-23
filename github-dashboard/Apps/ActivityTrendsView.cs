@@ -76,9 +76,9 @@ public class ActivityTrendsView : ViewBase
                 | Layout.Vertical().Gap(2)
                     | commits.Take(10).Select(commit => 
                         Layout.Horizontal().Gap(3)
-                            | Text.Small(commit.Commit.Author.Date.ToString("MMM dd, yyyy HH:mm"))
-                            | Text.Medium(commit.Commit.Message.Split('\n')[0])
-                            | Text.Muted($"by {commit.Commit.Author.Name}")
+                            | Text.Small(commit.CommitDate.ToString("MMM dd, yyyy HH:mm"))
+                            | Text.P(commit.Message.Split('\n')[0])
+                            | Text.Muted($"by {commit.AuthorName}")
                     ).ToArray()
         ).Title("Recent Commits");
     }
@@ -86,7 +86,7 @@ public class ActivityTrendsView : ViewBase
     private object CommitStatsCard(List<CommitInfo> commits)
     {
         var commitsByDay = commits
-            .GroupBy(c => c.Commit.Author.Date.Date)
+            .GroupBy(c => c.CommitDate.Date)
             .OrderByDescending(g => g.Key)
             .Take(7)
             .ToList();
@@ -98,10 +98,10 @@ public class ActivityTrendsView : ViewBase
                     | commitsByDay.Select(dayGroup => 
                         Layout.Horizontal().Gap(3)
                             | Text.Small(dayGroup.Key.ToString("MMM dd"))
-                            | Text.Medium($"{dayGroup.Count()} commits")
+                            | Text.P($"{dayGroup.Count()} commits")
                             | Layout.Horizontal().Gap(1)
                                 | dayGroup.Take(5).Select(commit => 
-                                    Text.Small($"• {commit.Commit.Author.Name}")
+                                    Text.Small($"• {commit.AuthorName}")
                                 ).ToArray()
                     ).ToArray()
         ).Title("Daily Commit Activity");

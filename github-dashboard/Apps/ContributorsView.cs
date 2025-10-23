@@ -80,7 +80,7 @@ public class ContributorsView : ViewBase
                     | topContributors.Select((contributor, index) => 
                         Layout.Horizontal().Gap(3)
                             | Text.Small($"#{index + 1}")
-                            | Text.Medium(contributor.Login)
+                            | Text.P(contributor.Login)
                             | Text.Muted($"{contributor.Contributions} contributions")
                             | Text.Small($"({contributor.Contributions * 100.0 / totalContributions:F1}%)")
                     ).ToArray()
@@ -106,7 +106,7 @@ public class ContributorsView : ViewBase
                     | contributorsByRange.Select(range => 
                         Layout.Horizontal().Gap(3)
                             | Text.Small(range.Item1)
-                            | Text.Medium($"{range.Item2} contributors")
+                            | Text.P($"{range.Item2} contributors")
                     ).ToArray()
         ).Title("Contribution Distribution");
     }

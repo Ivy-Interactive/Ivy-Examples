@@ -80,7 +80,7 @@ public class LanguageAnalysisView : ViewBase
                     | topLanguages.Select((language, index) => 
                         Layout.Horizontal().Gap(3)
                             | Text.Small($"#{index + 1}")
-                            | Text.Medium(language.Name)
+                            | Text.P(language.Name)
                             | Text.Muted($"{language.Percentage:F1}%")
                             | Text.Small(FormatBytes(language.Bytes))
                     ).ToArray()
@@ -100,17 +100,17 @@ public class LanguageAnalysisView : ViewBase
                     | (primaryLanguage != null ? 
                         Layout.Horizontal().Gap(3)
                             | Text.Strong("Primary:")
-                            | Text.Medium(primaryLanguage.Name)
+                            | Text.P(primaryLanguage.Name)
                             | Text.Muted($"{primaryLanguage.Percentage:F1}%")
                             | Text.Small($"({FormatBytes(primaryLanguage.Bytes)})")
                         : Text.Muted("No primary language"))
                     | Layout.Horizontal().Gap(3)
                         | Text.Strong("Others:")
-                        | Text.Medium($"{otherLanguages.Count} languages")
+                        | Text.P($"{otherLanguages.Count} languages")
                         | Text.Muted($"{otherLanguages.Sum(l => l.Percentage):F1}%")
                     | Layout.Horizontal().Gap(3)
                         | Text.Strong("Total:")
-                        | Text.Medium(FormatBytes(totalBytes))
+                        | Text.P(FormatBytes(totalBytes))
         ).Title("Language Details");
     }
 
