@@ -267,6 +267,9 @@ public class HtmlAgilityPackApp : ViewBase
                     .WithLabel("Select data to extract:")
                 | new Button("Parse Site HTML", eventHandler).Loading(parsingState.Value)
                 | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
+                | new Spacer().Height(Size.Units(5))
+                | Text.Small("This demo uses HtmlAgilityPack library to parse HTML and extract website data.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [HtmlAgilityPack](https://github.com/zzzprojects/html-agility-pack)")
         );
 
         // Right side - Results
