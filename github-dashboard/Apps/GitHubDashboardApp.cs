@@ -49,7 +49,7 @@ public class GitHubDashboardApp : ViewBase
                 | Badge.Success("Live Data");
     }
 
-    private object RefreshControls(ISignal<int> refreshTrigger)
+    private object RefreshControls(object refreshTrigger)
     {
         return Layout.Horizontal().Gap(2).AlignCenter()
             | Button("Refresh Data", () => refreshTrigger.Set(refreshTrigger.Value + 1))
@@ -57,7 +57,7 @@ public class GitHubDashboardApp : ViewBase
             | Text.Small($"Last refresh: {DateTime.Now:HH:mm:ss}");
     }
 
-    private object TabsLayout((string key, string label, string icon)[] tabs, ISignal<string> selectedTab)
+    private object TabsLayout((string key, string label, string icon)[] tabs, object selectedTab)
     {
         return Layout.Horizontal().Gap(1)
             | tabs.Select(tab => 
