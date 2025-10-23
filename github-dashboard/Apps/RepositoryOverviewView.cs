@@ -90,11 +90,11 @@ public class RepositoryOverviewView : ViewBase
 
     private object RepositoryInfoCard(RepositoryInfo repo)
     {
-        return Card(
+        return new Card(
             Layout.Vertical().Gap(3)
-                | Layout.Horizontal().Gap(4).AlignCenter()
+                | Layout.Horizontal().Gap(4)
                     | Text.H3(repo.Name)
-                    | Badge.Success(repo.IsPrivate ? "Private" : "Public")
+                    | new Badge(repo.IsPrivate ? "Private" : "Public", variant: BadgeVariant.Success)
                 | Text.Muted(repo.Description ?? "No description available")
                 | Layout.Horizontal().Gap(4)
                     | Text.Small($"Created: {FormatDate(repo.CreatedAt)}")
@@ -104,7 +104,7 @@ public class RepositoryOverviewView : ViewBase
 
     private object MetricCard(string title, string value)
     {
-        return Card(
+        return new Card(
             Layout.Vertical().Gap(2)
                 | Text.Small(title)
                 | Text.Large(value)
