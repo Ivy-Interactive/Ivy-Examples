@@ -4,13 +4,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Ivy_HandleBars</RootNamespace>
+    <RootNamespace>HandlebarsNetExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
     <PackageReference Include="Handlebars.Net.Helpers" Version="2.5.3" />
-    <PackageReference Include="Ivy" Version="1.0.110" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
 
 </Project>
