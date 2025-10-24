@@ -178,8 +178,8 @@ public class MarkdownBuilderApp() : ViewBase
     private static FileNode BuildNode(string path)
     {
         var name = System.IO.Path.GetFileName(path);
-        // убираем возможный порядковый префикс "01_"
-        var display = System.Text.RegularExpressions.Regex.Replace(name, "^\\d+_", "");
+        // Показываем реальные имена файлов и папок (с нумерацией)
+        var display = name;
         if (System.IO.Directory.Exists(path))
         {
             var children = System.IO.Directory.GetFileSystemEntries(path)

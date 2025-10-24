@@ -18,7 +18,7 @@ public static class TemplateServer
                 | new IvyLogo()
                 | Text.Muted($"Version {version}")
             )
-            .DefaultApp<Apps.Module1.Theme1.Section1.Paragraph1App>()
+            .DefaultApp<Apps.CourseRepositoryApp>()
             .UsePages();
         server.UseChrome(() => new DefaultSidebarChrome(chromeSettings));
 

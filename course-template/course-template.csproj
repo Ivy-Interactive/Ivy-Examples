@@ -18,14 +18,23 @@
   <ItemGroup>
     <None Include="Modules/**/*.md" />
     <Compile Include="**/*.cs" Exclude="obj/**/*.cs;bin/**/*.cs;Generated/**/*.cs;Helpers/Generator/**/*.cs" />
+    <MdFiles Include="Modules/**/*.md" />
+    <!-- Собираем существующие g.cs, чтобы понять, нужно ли делать полную генерацию -->
+    <ExistingGenerated Include="Generated/**/*.g.cs" />
   </ItemGroup>
 
-  <Target Name="TransformMarkdown" BeforeTargets="CoreCompile">
-    <Exec Command="dotnet run --project $(MSBuildProjectDirectory)/Helpers/Generator/Generator.csproj -- convert $(MSBuildProjectDirectory)/Modules/*.md $(MSBuildProjectDirectory)/Generated $(MSBuildProjectFullPath)" />
-    <ItemGroup>
-      <Compile Include="Generated/**/*.g.cs" />
-    </ItemGroup>
+  <!-- Единое подключение всех сгенерированных .g.cs (без дублирования в таргетах) -->
+  <ItemGroup>
+    <Compile Include="Generated/**/*.g.cs" />
+  </ItemGroup>
+
+  <!-- Полная генерация при первом запуске (если папка Generated отсутствует) -->
+  <Target Name="GenerateMarkdownFull" BeforeTargets="CoreCompile"
+          Condition="'@(ExistingGenerated)' == ''">
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)/Helpers/Generator/Generator.csproj&quot; -- convert &quot;$(MSBuildProjectDirectory)/Modules/*.md&quot; &quot;$(MSBuildProjectDirectory)/Generated&quot; &quot;$(MSBuildProjectFullPath)&quot;" />
   </Target>
+
+  <!-- Инкрементальная генерация отключена в MSBuild: выполняется приложением через GenerationService.RegenerateSingleBlocking -->
 
   <ItemGroup>
     <Watch Remove="Modules/**/*" />

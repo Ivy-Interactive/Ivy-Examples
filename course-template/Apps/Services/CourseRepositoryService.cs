@@ -17,12 +17,19 @@ internal class CourseRepositoryService(FileSystemService fs)
         if (modulesRoot == null)
             return (false, "Modules folder not found", null);
 
-        if (!IsPathUnder(modulesRoot, parentFullPath) || !Directory.Exists(parentFullPath))
+        if (!IsPathUnder(modulesRoot, parentFullPath))
             return (false, "Parent folder is invalid or outside of Modules", null);
+        if (!Directory.Exists(parentFullPath))
+        {
+            try { Directory.CreateDirectory(parentFullPath); }
+            catch (Exception ex) { return (false, ex.Message, null); }
+        }
 
         var safeName = SanitizeName(displayName);
         if (string.IsNullOrWhiteSpace(safeName))
             safeName = "Item";
+        if (char.IsDigit(safeName[0]))
+            safeName = "_" + safeName;
 
         var (nextOrder, digits) = GetNextOrder(parentFullPath);
         var nameWithOrder = FormatWithOrder(safeName, nextOrder, digits);
@@ -44,7 +51,7 @@ internal class CourseRepositoryService(FileSystemService fs)
             if (!File.Exists(indexPath))
             {
                 var title = FileSystemService.RemoveOrderPrefix(nameWithOrder);
-                File.WriteAllText(indexPath, $"# {title}\n\n");
+                System.IO.File.WriteAllText(indexPath, $"---\ngroupExpanded: true\n---\n");
             }
 
             return (true, "Folder created", folderPath);
@@ -67,6 +74,8 @@ internal class CourseRepositoryService(FileSystemService fs)
         var safeName = SanitizeName(displayName);
         if (string.IsNullOrWhiteSpace(safeName))
             safeName = "Page";
+        if (char.IsDigit(safeName[0]))
+            safeName = "_" + safeName;
 
         var (nextOrder, digits) = GetNextOrder(parentFullPath);
         var fileName = FormatWithOrder(safeName, nextOrder, digits) + ".md";
@@ -82,8 +91,18 @@ internal class CourseRepositoryService(FileSystemService fs)
         try
         {
             var title = safeName;
-            File.WriteAllText(filePath, $"# {title}\n\n");
+            using (var fs = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
+            using (var sw = new StreamWriter(fs))
+            {
+                sw.Write($"# {title}\n\n");
+            }
             return (true, "Page created", filePath);
+        }
+        catch (IOException)
+        {
+            // If file exists, still consider success and return path
+            if (System.IO.File.Exists(filePath)) return (true, "Page already exists", filePath);
+            throw;
         }
         catch (Exception ex)
         {
@@ -106,13 +125,37 @@ internal class CourseRepositoryService(FileSystemService fs)
             {
                 if (PathsEqual(modulesRoot, fullPath))
                     return (false, "Cannot delete Modules root");
+                
+                // Удаляем папку в Modules
                 Directory.Delete(fullPath, recursive: true);
+                
+                // Удаляем всю папку Generated для полной перегенерации
+                var projectRoot = _fs.FindProjectRootFromPath(fullPath);
+                var generatedRoot = System.IO.Path.Combine(projectRoot, "Generated");
+                
+                if (System.IO.Directory.Exists(generatedRoot))
+                {
+                    System.IO.Directory.Delete(generatedRoot, recursive: true);
+                }
+                
                 return (true, "Folder deleted");
             }
 
             if (File.Exists(fullPath))
             {
+                // Удаляем .md файл
                 File.Delete(fullPath);
+                
+                // Удаляем соответствующий .g.cs файл, если он существует
+                var projectRoot = _fs.FindProjectRootFromPath(fullPath);
+                var generatedRoot = System.IO.Path.Combine(projectRoot, "Generated");
+                var expectedGeneratedPath = _fs.GetExpectedGeneratedPath(fullPath, projectRoot, generatedRoot);
+                
+                if (System.IO.File.Exists(expectedGeneratedPath))
+                {
+                    System.IO.File.Delete(expectedGeneratedPath);
+                }
+                
                 return (true, "File deleted");
             }
 

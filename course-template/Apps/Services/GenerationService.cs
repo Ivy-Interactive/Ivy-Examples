@@ -43,6 +43,24 @@ internal class GenerationService(FileSystemService fs)
             // swallow errors for now; upstream handles UX state
         }
     }
+
+    public void RegenerateAllBlocking()
+    {
+        try
+        {
+            var modulesRoot = _fs.FindModulesFolder();
+            if (string.IsNullOrEmpty(modulesRoot) || !System.IO.Directory.Exists(modulesRoot)) return;
+            var allMd = System.IO.Directory.EnumerateFiles(modulesRoot, "*.md", System.IO.SearchOption.AllDirectories).ToArray();
+            foreach (var md in allMd)
+            {
+                RegenerateSingleBlocking(md);
+            }
+        }
+        catch
+        {
+            // swallow errors; UI handles notifications elsewhere
+        }
+    }
 }
 
 
