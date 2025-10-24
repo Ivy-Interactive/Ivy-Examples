@@ -1,95 +1,113 @@
-using System.Text.RegularExpressions;
-using Humanizer;
-
+namespace HumanizerExample;
 public class PlainTextOptions : ViewBase
 {
     readonly IState<string> InputText;
     IState<ImmutableArray<string>> HumanizedTexts;
     public IState<int> TruncateValue;
+    readonly IState<string> SelectedTransformation;
 
     public PlainTextOptions(
         IState<string> inputText,
         IState<ImmutableArray<string>> humanizedTexts,
-        IState<int> truncateValue)
+        IState<int> truncateValue,
+        IState<string> selectedTransformation)
     {
         InputText = inputText;
         HumanizedTexts = humanizedTexts;
         TruncateValue = truncateValue;
+        SelectedTransformation = selectedTransformation;
     }
 
     public override object? Build()
     {
-        return Layout.Horizontal().Width(Size.Full())
-                // Humanize
-                | new DropDownMenu(@evt =>
-                    {
-                        if (Enum.TryParse<LetterCasing>(@evt.Value.ToString(), out var selected))
-                        {
-                            var currentText = InputText.Value;
-                            currentText = currentText.Humanize(selected);
-                            HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
-                        }
-                    },
-                    new Button("Humanize"), // The button label
-                    MenuItem.Default($"{LetterCasing.Sentence}"),
-                    MenuItem.Default($"{LetterCasing.Title}"),
-                    MenuItem.Default($"{LetterCasing.AllCaps}"),
-                    MenuItem.Default($"{LetterCasing.LowerCase}")
-                )
-                // Truncate
-                | new DropDownMenu(@evt =>
-                    {
-                        if (Enum.TryParse<LetterCasing>(@evt.Value.ToString(), out var selected))
-                        {
-                            var currentText = InputText.Value;
-                            currentText = currentText
-                                .Humanize(selected)
-                                .Truncate(TruncateValue.Value, Truncator.FixedLength);
-                            HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
-                        }
-                    },
-                    new Button("Truncate"),
-                    MenuItem.Default($"{LetterCasing.Sentence}"),
-                    MenuItem.Default($"{LetterCasing.Title}"),
-                    MenuItem.Default($"{LetterCasing.AllCaps}"),
-                    MenuItem.Default($"{LetterCasing.LowerCase}")
-                )
-                // Pascalize
-                | new Button("Pascalize", onClick: _ =>
-                    {
-                        var currentText = InputText.Value;
-                        currentText = currentText.Pascalize();
-                        HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
-                    }).Variant(ButtonVariant.Primary)
-                // Camelize
-                | new Button("Camelize", onClick: _ =>
-                    {
-                        var currentText = InputText.Value;
-                        currentText = currentText.Camelize();
-                        HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
-                    }).Variant(ButtonVariant.Primary)
-                // Underscore
-                | new Button("Underscore", onClick: _ =>
-                    {
-                        var currentText = InputText.Value;
-                        currentText = currentText.Underscore();
-                        currentText = NormalizeSeparator(currentText, '_');
-                        HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
-                    }).Variant(ButtonVariant.Primary)
-                // Kebaberize
-                | new Button("Kebaberize", onClick: _ =>
-                    {
-                        var currentText = InputText.Value;
-                        currentText = currentText.Kebaberize();
-                        currentText = NormalizeSeparator(currentText, '-');
-                        HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
-                    }).Variant(ButtonVariant.Primary)
-                // Clear History
-                | new Button("Clear History", onClick: _ =>
-                    {
-                        HumanizedTexts.Set([]);
-                    }).Variant(ButtonVariant.Destructive)
-                 ;
+        
+        var transformationOptions = new[]
+        {
+            "Humanize (Sentence)",
+            "Humanize (Title)", 
+            "Humanize (All Caps)",
+            "Humanize (Lower Case)",
+            "Truncate (Sentence)",
+            "Truncate (Title)",
+            "Truncate (All Caps)",
+            "Truncate (Lower Case)",
+            "Pascalize",
+            "Camelize",
+            "Underscore",
+            "Kebaberize"
+        };
+
+        // Function to process transformation
+        void ProcessTransformation()
+        {
+            if (string.IsNullOrEmpty(SelectedTransformation.Value) || string.IsNullOrEmpty(InputText.Value))
+                return;
+
+            var currentText = InputText.Value;
+            var selectedOption = SelectedTransformation.Value;
+            
+            switch (selectedOption)
+            {
+                case "Humanize (Sentence)":
+                    currentText = currentText.Humanize(LetterCasing.Sentence);
+                    break;
+                case "Humanize (Title)":
+                    currentText = currentText.Humanize(LetterCasing.Title);
+                    break;
+                case "Humanize (All Caps)":
+                    currentText = currentText.Humanize(LetterCasing.AllCaps);
+                    break;
+                case "Humanize (Lower Case)":
+                    currentText = currentText.Humanize(LetterCasing.LowerCase);
+                    break;
+                case "Truncate (Sentence)":
+                    currentText = currentText.Humanize(LetterCasing.Sentence).Truncate(TruncateValue.Value, Truncator.FixedLength);
+                    break;
+                case "Truncate (Title)":
+                    currentText = currentText.Humanize(LetterCasing.Title).Truncate(TruncateValue.Value, Truncator.FixedLength);
+                    break;
+                case "Truncate (All Caps)":
+                    currentText = currentText.Humanize(LetterCasing.AllCaps).Truncate(TruncateValue.Value, Truncator.FixedLength);
+                    break;
+                case "Truncate (Lower Case)":
+                    currentText = currentText.Humanize(LetterCasing.LowerCase).Truncate(TruncateValue.Value, Truncator.FixedLength);
+                    break;
+                case "Pascalize":
+                    currentText = currentText.Pascalize();
+                    break;
+                case "Camelize":
+                    currentText = currentText.Camelize();
+                    break;
+                case "Underscore":
+                    currentText = currentText.Underscore();
+                    currentText = NormalizeSeparator(currentText, '_');
+                    break;
+                case "Kebaberize":
+                    currentText = currentText.Kebaberize();
+                    currentText = NormalizeSeparator(currentText, '-');
+                    break;
+            }
+            
+            HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
+        }
+
+        return Layout.Vertical().Gap(3)
+            | Layout.Vertical().Gap(2)
+                // Transformation Select
+                | SelectedTransformation.ToSelectInput(transformationOptions.ToOptions())
+                    .Placeholder("Select transformation...")
+                    .Width(Size.Full())
+                    .WithLabel("Transformation Options:")
+                // Transform Button
+                | new Button("Transform", onClick: _ => ProcessTransformation())
+                    .Variant(ButtonVariant.Primary)
+                    .Width(Size.Full())
+                    .Disabled(string.IsNullOrEmpty(SelectedTransformation.Value) || string.IsNullOrEmpty(InputText.Value))
+                // Clear History Button
+                | new Button("Clear History", onClick: _ => { HumanizedTexts.Set([]); })
+                    .Variant(ButtonVariant.Destructive)
+                    .Width(Size.Full());
+                
     }
 
     /// <summary>
