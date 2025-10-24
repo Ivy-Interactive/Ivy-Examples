@@ -28,6 +28,8 @@ public class PlainTextHumanizerApp : ViewBase
                         .Disabled(!selectedTransformation.Value.Contains("Truncate"))
                         .WithLabel("Truncate Value:")
                     | options
+                    | Text.Small("This demo uses Humanizer library for transforming text using various humanization techniques.")
+                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Humanizer](https://github.com/Humanizr/Humanizer)")
             ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()))
             // Right Card - Results Section  
             | new Card(
