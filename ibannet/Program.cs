@@ -1,4 +1,4 @@
-using IbanApp.Apps;
+using IbanNetExample;
 using System.Globalization;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
@@ -11,7 +11,7 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<IbanModel>()
+    .DefaultApp<IbanNetApp>()
     .UseTabs(preventDuplicates: true);
 
 server.UseChrome(chromeSettings);

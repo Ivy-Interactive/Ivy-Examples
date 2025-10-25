@@ -5,11 +5,11 @@ using IbanNet;               // IbanNet provides validation, parsing, and genera
 using IbanNet.Registry;      // Access to country-specific IBAN formats and metadata
 using Ivy;                   // Ivy UI framework for building interactive apps
 
-namespace IbanApp.Apps;
+namespace IbanNetExample;
 
 // Ivy app declaration with icon and title
 [App(icon: Icons.Globe, title: "IBAN Demo App")]
-public class IbanModel : ViewBase
+public class IbanNetApp : ViewBase
 {
     public override object? Build()
     {
