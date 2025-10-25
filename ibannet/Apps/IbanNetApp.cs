@@ -6,6 +6,17 @@ public record CountryInfo(string Code, string Name)
     public string DisplayText => $"{Name} ({Code})";
 }
 
+// IBAN breakdown model for structured display
+public record IbanBreakdown
+{
+    public string Country { get; init; } = "";
+    public string BankId { get; init; } = "";
+    public string BranchId { get; init; } = "";
+    public string Obfuscated { get; init; } = "";
+    public string AccountNumber { get; init; } = "";
+    public string CheckDigits { get; init; } = "";
+}
+
 // Ivy app declaration with icon and title
 [App(icon: Icons.Globe, title: "IbanNet")]
 public class IbanNetApp : ViewBase
@@ -24,7 +35,7 @@ public class IbanNetApp : ViewBase
         var selectedCountry = UseState<string?>(default(string)); // Tracks selected country code (e.g., "GB")
         var ibanGenerated = UseState(() => "");                   // Tracks generated IBAN
         var ibanInput = UseState(() => "");                       // Tracks IBAN input from user or generator
-        var breakdown = UseState(() => "");                       // Stores parsed IBAN details
+        var breakdown = UseState<IbanBreakdown?>(() => null);     // Stores parsed IBAN details
         var showGeneratedIban = UseState(false);                  // State to control visibility of generated IBAN
 
         // Helper method to get country name from code
@@ -112,23 +123,22 @@ public class IbanNetApp : ViewBase
             if (!validation.IsValid)
             {
                 client.Toast("Invalid IBAN");
-                breakdown.Value = "";
+                breakdown.Value = null;
                 return;
             }
 
             // Parses IBAN into structured components
             var iban = parser.Parse(ibanInput.Value);
-            client.Toast("Valid IBAN");
-            breakdown.Value =
-                $"Country: {iban.Country.TwoLetterISORegionName}\n" +
-                $"Bank ID: {iban.BankIdentifier}\n" +
-                $"Branch ID: {iban.BranchIdentifier}\n" +
-                $"Obfuscated: {iban.ToString(IbanFormat.Obfuscated)}"; // Masks sensitive digits
+            breakdown.Value = new IbanBreakdown
+            {
+                Country = $"{GetCountryName(iban.Country.TwoLetterISORegionName)} ({iban.Country.TwoLetterISORegionName})",
+                BankId = iban.BankIdentifier ?? "",
+                BranchId = iban.BranchIdentifier ?? "",
+                AccountNumber = "", // Not available in IbanNet
+                CheckDigits = "", // Not available in IbanNet
+                Obfuscated = iban.ToString(IbanFormat.Obfuscated) // Masks sensitive digits
+            };
         }
-
-        // Simulates copying the IBAN to clipboard
-        var copyMessage = UseState(() => "");
-        void CopyIban() => copyMessage.Value = $"Copied: {ibanInput.Value}";
 
         // Left card: IBAN generation and input
         var cardLeft = new Card(Layout.Vertical()
@@ -144,25 +154,31 @@ public class IbanNetApp : ViewBase
                 : null)
 
             // IBAN generator
-            | new Button("Generate Sample IBAN", GenerateSampleIban)); // Triggers dynamic generation
-            
+            | new Button("Generate Sample IBAN", GenerateSampleIban) // Triggers dynamic generation
+            | new Spacer()
+            | Text.Small("This demo uses IbanNet library for generating and validating IBANs.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [IbanNet](https://github.com/skwasjer/IbanNet)")
+            );
             
 
         // Right card: Results
-        var cardRight = new Card(Layout.Vertical().Gap(6).Padding(2)
+        var cardRight = new Card(Layout.Vertical()
             | Text.H3("IBAN Validator")
             
             // Manual IBAN input
             | Text.Label("Enter or edit IBAN:") // Prompt
             | new TextInput(ibanInput).Placeholder("Enter IBAN here...") // Input field
 
-            // Validate and copy actions
-            | Layout.Horizontal().Gap(8)
-                | new Button("Validate IBAN", ValidateIban) // Validates current input
-                | new Button("Copy IBAN", CopyIban)         // Simulates copy action
-            | (copyMessage.Value != "" ? Text.Small(copyMessage.Value) : null)
+            
+            | new Button("Validate IBAN", ValidateIban)
 
-            | (breakdown.Value != "" ? Text.Block(breakdown.Value) : null)); // Shows parsed details
+            | (breakdown.Value != null ? breakdown.Value
+                .ToDetails()
+                .RemoveEmpty() // Remove empty fields
+                .Builder(x => x.Obfuscated, b => b.CopyToClipboard()) // Make obfuscated IBAN copyable
+                .Builder(x => x.BankId, b => b.Text()) // Ensure proper text formatting
+                .Builder(x => x.BranchId, b => b.Text()) // Ensure proper text formatting
+                : null)); // Shows parsed details
 
         // Main layout: centered cards
         return Layout.Center().Gap(14)
