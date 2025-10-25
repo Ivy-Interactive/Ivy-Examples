@@ -85,9 +85,8 @@ public class IbanNetApp : ViewBase
         var copyMessage = UseState(() => "");
         void CopyIban() => copyMessage.Value = $"📋 Copied: {ibanInput.Value}";
 
-        // Ivy UI layout: vertical stack with spacing and padding
-        return Layout.Vertical().Gap(5).Padding(5)
-
+        // Left card: IBAN generation and input
+        var cardLeft = new Card(Layout.Vertical().Gap(6).Padding(2)
             | Text.H2("🌍 IBAN Explorer") // App title
 
             // Country selector
@@ -96,8 +95,12 @@ public class IbanNetApp : ViewBase
             | Text.Small($"Selected: {selectedCountry.Value ?? "None"}") // Display selected country
 
             // IBAN generator
-            | new Button("Generate Sample IBAN", GenerateSampleIban) // Triggers dynamic generation
+            | new Button("Generate Sample IBAN", GenerateSampleIban)); // Triggers dynamic generatio
 
+        // Right card: Results
+        var cardRight = new Card(Layout.Vertical().Gap(6).Padding(2)
+            | Text.H3("Results")
+            
             // Manual IBAN input
             | Text.Label("Enter or edit IBAN:") // Prompt
             | new TextInput(ibanInput).Placeholder("Enter IBAN here...") // Input field
@@ -106,10 +109,14 @@ public class IbanNetApp : ViewBase
             | Layout.Horizontal().Gap(8)
                 | new Button("Validate IBAN", ValidateIban) // Validates current input
                 | new Button("Copy IBAN", CopyIban)         // Simulates copy action
+            | (copyMessage.Value != "" ? Text.Small(copyMessage.Value) : null)
 
-            // Result panel
-            | (result.Value != null ? Text.Block(result.Value) : null) // Shows validation result
-            | (breakdown.Value != "" ? Text.Block(breakdown.Value) : null) // Shows parsed details
-            | (copyMessage.Value != "" ? Text.Small(copyMessage.Value) : null); // Shows copy confirmation
+            | (result.Value != null ? Text.Block(result.Value) : Text.Small("No results yet..."))
+            | (breakdown.Value != "" ? Text.Block(breakdown.Value) : null)); // Shows parsed details
+
+        // Main layout: centered cards with gap 14
+        return Layout.Center().Gap(14)
+            | cardLeft
+            | cardRight;
     }
 }
