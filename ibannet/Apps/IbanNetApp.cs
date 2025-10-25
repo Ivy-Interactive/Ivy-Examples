@@ -1,7 +1,13 @@
 namespace IbanNetExample;
 
+// Country data with code and name
+public record CountryInfo(string Code, string Name)
+{
+    public string DisplayText => $"{Name} ({Code})";
+}
+
 // Ivy app declaration with icon and title
-[App(icon: Icons.Globe, title: "IBAN Demo App")]
+[App(icon: Icons.Globe, title: "IbanNet")]
 public class IbanNetApp : ViewBase
 {
     public override object? Build()
@@ -17,24 +23,59 @@ public class IbanNetApp : ViewBase
         var result = UseState(() => (string?)null);               // Stores validation result message
         var breakdown = UseState(() => "");                       // Stores parsed IBAN details
 
+        // Helper method to get country name from code
+        string GetCountryName(string code)
+        {
+            try
+            {
+                var regionInfo = new RegionInfo(code);
+                return regionInfo.EnglishName;
+            }
+            catch
+            {
+                return code;
+            }
+        }
+
+        // Create country list with both code and name
+        var countriesList = registry
+            .Select(c => new CountryInfo(
+                c.TwoLetterISORegionName,
+                GetCountryName(c.TwoLetterISORegionName)))
+            .Distinct()
+            .OrderBy(c => c.Name)
+            .ToArray();
+
         // Ivy async select input: searchable dropdown for country codes
         Task<Option<string>[]> QueryCountries(string query)
         {
-            var countries = registry
-                .Select(c => c.TwoLetterISORegionName) // Extract ISO country codes
-                .Where(c => c.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Distinct()
-                .OrderBy(c => c)
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return Task.FromResult(countriesList
+                    .Select(c => new Option<string>(c.DisplayText, c.Code))
+                    .ToArray());
+            }
+
+            var matches = countriesList
+                .Where(c => c.Code.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                           c.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Select(c => new Option<string>(c.DisplayText, c.Code))
                 .ToArray();
 
-            return Task.FromResult(countries.Select(c => new Option<string>(c)).ToArray());
+            return Task.FromResult(matches);
         }
 
         // Ivy async select input: resolves selected country
         Task<Option<string>?> LookupCountry(string country)
         {
             if (string.IsNullOrEmpty(country)) return Task.FromResult<Option<string>?>(null);
-            return Task.FromResult<Option<string>?>(new Option<string>(country));
+            
+            var countryInfo = countriesList.FirstOrDefault(c => c.Code == country);
+            if (countryInfo == null) return Task.FromResult<Option<string>?>(null);
+            
+            return Task.FromResult<Option<string>?>(new Option<string>(
+                countryInfo.DisplayText, 
+                countryInfo.Code));
         }
 
         // Generates a valid IBAN using IbanNet's built-in generator
@@ -54,7 +95,7 @@ public class IbanNetApp : ViewBase
             {
                 // Handles unsupported countries or generation errors
                 ibanInput.Value = "";
-                result.Value = $"❌ Could not generate IBAN for {countryCode}";
+                result.Value = $"Could not generate IBAN for {countryCode}";
                 breakdown.Value = ex.Message;
             }
         }
@@ -66,14 +107,14 @@ public class IbanNetApp : ViewBase
 
             if (!validation.IsValid)
             {
-                result.Value = "❌ Invalid IBAN";
+                result.Value = "Invalid IBAN";
                 breakdown.Value = "";
                 return;
             }
 
             // Parses IBAN into structured components
             var iban = parser.Parse(ibanInput.Value);
-            result.Value = $"✅ Valid IBAN";
+            result.Value = $"Valid IBAN";
             breakdown.Value =
                 $"Country: {iban.Country.TwoLetterISORegionName}\n" +
                 $"Bank ID: {iban.BankIdentifier}\n" +
@@ -83,16 +124,15 @@ public class IbanNetApp : ViewBase
 
         // Simulates copying the IBAN to clipboard
         var copyMessage = UseState(() => "");
-        void CopyIban() => copyMessage.Value = $"📋 Copied: {ibanInput.Value}";
+        void CopyIban() => copyMessage.Value = $"Copied: {ibanInput.Value}";
 
         // Left card: IBAN generation and input
         var cardLeft = new Card(Layout.Vertical().Gap(6).Padding(2)
-            | Text.H2("🌍 IBAN Explorer") // App title
+            | Text.H2("IBAN Explorer") // App title
 
             // Country selector
             | Text.Label("Select a country:") // Prompt
             | selectedCountry.ToAsyncSelectInput(QueryCountries, LookupCountry, placeholder: "Search countries...")
-            | Text.Small($"Selected: {selectedCountry.Value ?? "None"}") // Display selected country
 
             // IBAN generator
             | new Button("Generate Sample IBAN", GenerateSampleIban)); // Triggers dynamic generatio
@@ -116,7 +156,7 @@ public class IbanNetApp : ViewBase
 
         // Main layout: centered cards with gap 14
         return Layout.Center().Gap(14)
-            | cardLeft
-            | cardRight;
+            | cardLeft.Width(Size.Fraction(0.45f)).Height(Size.Fraction(0.65f))
+            | cardRight.Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(Size.Fraction(0.65f)));
     }
 }
