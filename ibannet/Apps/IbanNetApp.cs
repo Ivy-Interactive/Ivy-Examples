@@ -1,10 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using IbanNet;               // IbanNet provides validation, parsing, and generation of IBANs
-using IbanNet.Registry;      // Access to country-specific IBAN formats and metadata
-using Ivy;                   // Ivy UI framework for building interactive apps
-
 namespace IbanNetExample;
 
 // Ivy app declaration with icon and title
