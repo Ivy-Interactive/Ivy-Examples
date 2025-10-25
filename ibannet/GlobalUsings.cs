@@ -24,5 +24,10 @@ global using System.Collections.Immutable;
 global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
+global using System;
+global using System.Linq;
+global using System.Threading.Tasks;
+global using IbanNet;
+global using IbanNet.Registry;
 
-namespace IbanApp;
+namespace IbanNetExample;
