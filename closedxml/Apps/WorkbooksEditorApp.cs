@@ -29,7 +29,7 @@ public class WorkbooksListBlade : ViewBase
             if (refreshToken.ReturnValue is string fileName)
             {
                 blades.Pop(this, true);
-                blades.Push(this, new WorkbookEditorBlade(fileName));
+                blades.Push(this, new WorkbookEditorBlade(fileName), fileName, width: Size.Units(100));
             }
         }, [refreshToken]);
 
@@ -97,12 +97,6 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
         {
             workbookRepository.SetCurrentFile(fileName);
         }, [EffectTrigger.AfterInit()]);
-
-        var currentFile = workbookRepository.GetCurrentFile();
-
-        if (currentFile == null)
-            return Text.Block("No workbook selected");
-
         // Get the first worksheet - passing fileName directly to avoid shared state issues
         var table = workbookRepository.GetCurrentTable(fileName);
 
