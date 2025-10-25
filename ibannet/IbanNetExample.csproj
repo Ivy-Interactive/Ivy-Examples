@@ -14,12 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Ivy framework -->
-    <PackageReference Include="Autofac" Version="8.4.0" />
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="Ivy" Version="1.*" />
-
-    <!-- IbanNet core only -->
     <PackageReference Include="IbanNet" Version="5.19.0" />
   </ItemGroup>
 
