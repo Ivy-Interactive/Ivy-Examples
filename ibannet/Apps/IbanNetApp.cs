@@ -17,11 +17,15 @@ public class IbanNetApp : ViewBase
         var parser = new IbanParser(IbanRegistry.Default);       // Parses IBAN into structured components
         var registry = IbanRegistry.Default;                     // Registry of 126 supported countries and formats
 
+        // Get client for toast notifications
+        var client = UseService<IClientProvider>();
+        
         // Ivy state hooks for UI interactivity
         var selectedCountry = UseState<string?>(default(string)); // Tracks selected country code (e.g., "GB")
+        var ibanGenerated = UseState(() => "");                   // Tracks generated IBAN
         var ibanInput = UseState(() => "");                       // Tracks IBAN input from user or generator
-        var result = UseState(() => (string?)null);               // Stores validation result message
         var breakdown = UseState(() => "");                       // Stores parsed IBAN details
+        var showGeneratedIban = UseState(false);                  // State to control visibility of generated IBAN
 
         // Helper method to get country name from code
         string GetCountryName(string code)
@@ -81,22 +85,22 @@ public class IbanNetApp : ViewBase
         // Generates a valid IBAN using IbanNet's built-in generator
         void GenerateSampleIban()
         {
-            var countryCode = selectedCountry.Value ?? "GB"; // Default to GB if none selected
+            var countryCode = selectedCountry.Value;
             var generator = new IbanGenerator(IbanRegistry.Default); // Uses registry to generate valid IBAN
 
             try
             {
                 var iban = generator.Generate(countryCode); // Generates a checksum-valid IBAN
-                ibanInput.Value = iban.ToString();          // Update input field with generated IBAN
-                result.Value = null;
-                breakdown.Value = "";
+                ibanGenerated.Value = iban.ToString();          // Update input field with generated IBAN
+                showGeneratedIban.Value = true;             // Show the generated IBAN
+                client.Toast($"IBAN generated: {iban}");
             }
             catch (Exception ex)
             {
                 // Handles unsupported countries or generation errors
-                ibanInput.Value = "";
-                result.Value = $"Could not generate IBAN for {countryCode}";
-                breakdown.Value = ex.Message;
+                ibanGenerated.Value = "";
+                showGeneratedIban.Value = false;
+                client.Toast($"{ex.Message}", "Error");
             }
         }
 
@@ -107,14 +111,14 @@ public class IbanNetApp : ViewBase
 
             if (!validation.IsValid)
             {
-                result.Value = "Invalid IBAN";
+                client.Toast("Invalid IBAN");
                 breakdown.Value = "";
                 return;
             }
 
             // Parses IBAN into structured components
             var iban = parser.Parse(ibanInput.Value);
-            result.Value = $"Valid IBAN";
+            client.Toast("Valid IBAN");
             breakdown.Value =
                 $"Country: {iban.Country.TwoLetterISORegionName}\n" +
                 $"Bank ID: {iban.BankIdentifier}\n" +
@@ -127,19 +131,26 @@ public class IbanNetApp : ViewBase
         void CopyIban() => copyMessage.Value = $"Copied: {ibanInput.Value}";
 
         // Left card: IBAN generation and input
-        var cardLeft = new Card(Layout.Vertical().Gap(6).Padding(2)
-            | Text.H2("IBAN Explorer") // App title
+        var cardLeft = new Card(Layout.Vertical()
+            | Text.H3("IBAN Generator") // App title
 
             // Country selector
             | Text.Label("Select a country:") // Prompt
             | selectedCountry.ToAsyncSelectInput(QueryCountries, LookupCountry, placeholder: "Search countries...")
+            // Generated IBAN display (only shown after generation)
+            | (showGeneratedIban.Value ? Layout.Vertical().Gap(4)
+                | Text.Label("Generated IBAN:")
+                | Text.Code(ibanGenerated.Value)
+                : null)
 
             // IBAN generator
-            | new Button("Generate Sample IBAN", GenerateSampleIban)); // Triggers dynamic generatio
+            | new Button("Generate Sample IBAN", GenerateSampleIban)); // Triggers dynamic generation
+            
+            
 
         // Right card: Results
         var cardRight = new Card(Layout.Vertical().Gap(6).Padding(2)
-            | Text.H3("Results")
+            | Text.H3("IBAN Validator")
             
             // Manual IBAN input
             | Text.Label("Enter or edit IBAN:") // Prompt
@@ -151,10 +162,9 @@ public class IbanNetApp : ViewBase
                 | new Button("Copy IBAN", CopyIban)         // Simulates copy action
             | (copyMessage.Value != "" ? Text.Small(copyMessage.Value) : null)
 
-            | (result.Value != null ? Text.Block(result.Value) : Text.Small("No results yet..."))
             | (breakdown.Value != "" ? Text.Block(breakdown.Value) : null)); // Shows parsed details
 
-        // Main layout: centered cards with gap 14
+        // Main layout: centered cards
         return Layout.Center().Gap(14)
             | cardLeft.Width(Size.Fraction(0.45f)).Height(Size.Fraction(0.65f))
             | cardRight.Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(Size.Fraction(0.65f)));
