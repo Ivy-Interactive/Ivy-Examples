@@ -1,4 +1,3 @@
 ---
 groupExpanded: true
-icon: FileText
 ---

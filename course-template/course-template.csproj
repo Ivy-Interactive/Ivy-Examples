@@ -18,14 +18,27 @@
   <ItemGroup>
     <None Include="Modules/**/*.md" />
     <Compile Include="**/*.cs" Exclude="obj/**/*.cs;bin/**/*.cs;Generated/**/*.cs;Helpers/Generator/**/*.cs" />
+    <MdFiles Include="Modules/**/*.md" />
+    <!-- Собираем существующие g.cs, чтобы понять, нужно ли делать полную генерацию -->
+    <ExistingGenerated Include="Generated/**/*.g.cs" />
   </ItemGroup>
 
-  <Target Name="TransformMarkdown" BeforeTargets="CoreCompile">
-    <Exec Command="dotnet run --project $(MSBuildProjectDirectory)/Helpers/Generator/Generator.csproj -- convert $(MSBuildProjectDirectory)/Modules/*.md $(MSBuildProjectDirectory)/Generated $(MSBuildProjectFullPath)" />
+  <!-- Полная генерация при первом запуске (если папка Generated отсутствует) -->
+  <Target Name="GenerateMarkdownFull" BeforeTargets="CoreCompile"
+          Condition="'@(ExistingGenerated)' == ''">
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)/Helpers/Generator/Generator.csproj&quot; -- convert &quot;$(MSBuildProjectDirectory)/Modules/*.md&quot; &quot;$(MSBuildProjectDirectory)/Generated&quot; &quot;$(MSBuildProjectFullPath)&quot;" />
+    <!-- Динамически добавляем сгенерированные файлы в Compile после генерации -->
     <ItemGroup>
       <Compile Include="Generated/**/*.g.cs" />
     </ItemGroup>
   </Target>
+
+  <!-- Подключение существующих .g.cs файлов при обычной компиляции -->
+  <ItemGroup Condition="'@(ExistingGenerated)' != ''">
+    <Compile Include="Generated/**/*.g.cs" />
+  </ItemGroup>
+
+  <!-- Инкрементальная генерация отключена в MSBuild: выполняется приложением через GenerationService.RegenerateSingleBlocking -->
 
   <ItemGroup>
     <Watch Remove="Modules/**/*" />

@@ -10,7 +10,7 @@ public static class TemplateServer
         server.UseHotReload();
 
         var version = typeof(Server).Assembly.GetName().Version!.ToString().EatRight(".0");
-        server.SetMetaTitle($"Ivy Course Template {version}");
+        server.SetMetaTitle($"Ivy Course Repository {version}");
 
         var chromeSettings = new ChromeSettings()
             .Header(
@@ -18,7 +18,7 @@ public static class TemplateServer
                 | new IvyLogo()
                 | Text.Muted($"Version {version}")
             )
-            .DefaultApp<Apps.Module1.Theme1.Section1.Paragraph1App>()
+            .DefaultApp<Apps.CourseRepositoryApp>()
             .UsePages();
         server.UseChrome(() => new DefaultSidebarChrome(chromeSettings));
 
