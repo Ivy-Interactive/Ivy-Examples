@@ -110,6 +110,112 @@ internal class CourseRepositoryService(FileSystemService fs)
         }
     }
 
+    public (bool ok, string message, string? newPath) RenamePath(string fullPath, string newDisplayName)
+    {
+        var modulesRoot = _fs.FindModulesFolder();
+        if (modulesRoot == null)
+            return (false, "Modules folder not found", null);
+
+        if (!IsPathUnder(modulesRoot, fullPath))
+            return (false, "Target path is outside of Modules", null);
+
+        if (!Directory.Exists(fullPath) && !File.Exists(fullPath))
+            return (false, "Path does not exist", null);
+
+        try
+        {
+            var parentPath = System.IO.Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrEmpty(parentPath))
+                return (false, "Cannot determine parent directory", null);
+
+            var isFolder = Directory.Exists(fullPath);
+            var oldName = System.IO.Path.GetFileName(fullPath);
+
+            // Получаем текущий порядковый номер из старого имени
+            var (currentOrder, _) = ExtractOrderAndName(oldName);
+            
+            var safeName = SanitizeName(newDisplayName);
+            if (string.IsNullOrWhiteSpace(safeName))
+                safeName = isFolder ? "Folder" : "Page";
+            if (char.IsDigit(safeName[0]))
+                safeName = "_" + safeName;
+
+            // Используем существующий порядковый номер
+            var digits = currentOrder.HasValue ? currentOrder.Value.ToString().Length : 2;
+            var nameWithOrder = currentOrder.HasValue 
+                ? FormatWithOrder(safeName, currentOrder.Value, digits)
+                : safeName;
+
+            if (!isFolder && !nameWithOrder.EndsWith(".md"))
+                nameWithOrder += ".md";
+
+            var newPath = System.IO.Path.Combine(parentPath, nameWithOrder);
+
+            // Проверка на конфликт имен
+            if ((Directory.Exists(newPath) || File.Exists(newPath)) && !PathsEqual(fullPath, newPath))
+                return (false, "Item with this name already exists", null);
+
+            if (PathsEqual(fullPath, newPath))
+                return (false, "New name is the same as current name", null);
+
+            if (isFolder)
+            {
+                // Переименовываем папку
+                Directory.Move(fullPath, newPath);
+                
+                // Удаляем всю папку Generated для полной перегенерации
+                var projectRoot = _fs.FindProjectRootFromPath(newPath);
+                var generatedRoot = System.IO.Path.Combine(projectRoot, "Generated");
+                
+                if (System.IO.Directory.Exists(generatedRoot))
+                {
+                    System.IO.Directory.Delete(generatedRoot, recursive: true);
+                }
+                
+                return (true, "Folder renamed", newPath);
+            }
+            else
+            {
+                // Копируем содержимое файла
+                var content = File.ReadAllText(fullPath);
+                
+                // Удаляем старый .g.cs файл
+                var projectRoot = _fs.FindProjectRootFromPath(fullPath);
+                var generatedRoot = System.IO.Path.Combine(projectRoot, "Generated");
+                var oldGeneratedPath = _fs.GetExpectedGeneratedPath(fullPath, projectRoot, generatedRoot);
+                
+                if (System.IO.File.Exists(oldGeneratedPath))
+                {
+                    System.IO.File.Delete(oldGeneratedPath);
+                }
+                
+                // Переименовываем файл
+                File.Move(fullPath, newPath);
+                
+                return (true, "File renamed", newPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message, null);
+        }
+    }
+
+    private static (int? order, string name) ExtractOrderAndName(string fileName)
+    {
+        // Убираем расширение если есть
+        var nameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(fileName);
+        if (string.IsNullOrEmpty(nameWithoutExt))
+            nameWithoutExt = fileName;
+            
+        var m = Regex.Match(nameWithoutExt, "^(\\d+)_(.+)$");
+        if (m.Success && int.TryParse(m.Groups[1].Value, out var order))
+        {
+            return (order, m.Groups[2].Value);
+        }
+        return (null, nameWithoutExt);
+    }
+
     public (bool ok, string message) DeletePath(string fullPath)
     {
         var modulesRoot = _fs.FindModulesFolder();

@@ -24,8 +24,8 @@ public class CourseRepositoryApp() : ViewBase
 		var selectedPath = this.UseState<string?>();
 		var refreshKey = this.UseState(0);
 		
-		// Preview mode
-		var isPreviewMode = this.UseState(false);
+		// Preview mode (включен по умолчанию)
+		var isPreviewMode = this.UseState(true);
 
 		var modulesPath = fs.FindModulesFolder();
 		var tree = BuildTree(modulesPath, isPreviewMode.Value);
@@ -34,8 +34,8 @@ public class CourseRepositoryApp() : ViewBase
 		{
 			if (node.IsFolder)
 			{
-				// В Preview Mode получаем иконку из _Index.md файла
-				var icon = Icons.Folder;
+				// В Preview Mode получаем иконку из _Index.md файла, иначе используем Icons.Folder
+				Icons? icon = isPreviewMode.Value ? null : Icons.Folder;
 				if (isPreviewMode.Value)
 				{
 					var indexPath = System.IO.Path.Combine(node.FullPath, "_Index.md");
@@ -86,8 +86,8 @@ public class CourseRepositoryApp() : ViewBase
 		var sidebarHeader = Vertical().Padding(2)
 			| H3("Course Repository");
 
-		object sidebarContent = tree != null
-			? (object)(Layout.Vertical().Width(Size.Fraction(0.5f)) | new SidebarMenu(OnSelect, ToMenuItem(tree)))
+		object sidebarContent = tree != null && tree.Children != null
+			? (object)(Layout.Vertical().Width(Size.Fraction(0.5f)) | new SidebarMenu(OnSelect, tree.Children.Select(ToMenuItem).ToArray()))
 			: Text.Muted("Modules folder not found");
 
 		string? GetParentDir(string? path)
@@ -111,10 +111,33 @@ public class CourseRepositoryApp() : ViewBase
 		var inlineNewPageName = this.UseState<string?>(() => null);
 		var inlineNewFolderName = this.UseState<string?>(() => null);
 		var isSaving = this.UseState(false);
+		
+		// Inline rename mode
+		var isInlineRename = this.UseState(false);
+		var inlineRenameName = this.UseState<string?>(() => null);
 
-		object actionsColumn = !isInlineNewPage.Value && !isInlineNewFolder.Value
+		object actionsColumn = !isInlineNewPage.Value && !isInlineNewFolder.Value && !isInlineRename.Value
 			? (object)(Vertical().Gap(2)
-				| new Button("Edit").Large().Width(Size.Full()).Icon(Icons.Pen).Disabled(!hasSelection)
+				| new Button("Rename").Large().Width(Size.Full()).Icon(Icons.Pen).Disabled(!hasSelection).HandleClick(() =>
+				{
+					if (string.IsNullOrEmpty(selectedPath.Value)) return;
+					
+					// Получаем текущее имя без префикса и расширения
+					var currentName = System.IO.Path.GetFileName(selectedPath.Value);
+					var isFolder = Directory.Exists(selectedPath.Value);
+					
+					// Убираем префикс порядка (например "01_")
+					var nameWithoutPrefix = System.Text.RegularExpressions.Regex.Replace(currentName, "^\\d+_", "");
+					
+					// Убираем расширение для файлов
+					if (!isFolder && nameWithoutPrefix.EndsWith(".md"))
+					{
+						nameWithoutPrefix = nameWithoutPrefix.Substring(0, nameWithoutPrefix.Length - 3);
+					}
+					
+					inlineRenameName.Value = nameWithoutPrefix;
+					isInlineRename.Value = true;
+				})
 				| new Button("New Page").Large().Width(Size.Full()).Icon(Icons.FilePlus).Disabled(!isFolderSelection).HandleClick(() =>
 				{
 					isInlineNewPage.Value = true;
@@ -123,7 +146,7 @@ public class CourseRepositoryApp() : ViewBase
 				{
 					isInlineNewFolder.Value = true;
 				})
-				| new Button(isPreviewMode.Value ? "Preview Mode: On" : "Preview Mode: Off").Large().Width(Size.Full()).Icon(isPreviewMode.Value ? Icons.Eye : Icons.EyeClosed).Disabled(false).HandleClick(() =>
+				| new Button(isPreviewMode.Value ? "Preview Mode: On" : "Preview Mode: Off").Large().Width(Size.Full()).Icon(isPreviewMode.Value ? Icons.Eye : Icons.EyeClosed).HandleClick(() =>
 				{
 					isPreviewMode.Value = !isPreviewMode.Value;
 					refreshKey.Value++; // Принудительное обновление дерева
@@ -184,39 +207,81 @@ public class CourseRepositoryApp() : ViewBase
 					})
 					| new Button("Cancel").Variant(ButtonVariant.Outline).Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() => { inlineNewPageName.Set((string?)null); isInlineNewPage.Set(false); })
 				)
-				: (object)(Vertical().Gap(2)
-					| new Button(isSaving.Value ? "Saving..." : "Save").Icon(Icons.Save).Primary().Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() =>
-					{
-						if (string.IsNullOrWhiteSpace(inlineNewFolderName.Value)) { client.Toast("Enter name", "Warning"); return; }
-						var parent = GetParentDir(selectedPath.Value);
-						if (parent == null) return;
-						isSaving.Value = true;
-						try
+				: isInlineRename.Value
+					? (object)(Vertical().Gap(2)
+						| new Button(isSaving.Value ? "Saving..." : "Save").Icon(Icons.Save).Primary().Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() =>
 						{
-							var res = repo.CreateFolder(parent, inlineNewFolderName.Value);
-							if (!res.ok) { client.Toast(res.message, "Error"); return; }
-							if (res.createdPath != null)
+							if (string.IsNullOrWhiteSpace(inlineRenameName.Value)) { client.Toast("Enter name", "Warning"); return; }
+							if (string.IsNullOrEmpty(selectedPath.Value)) return;
+							
+							isSaving.Value = true;
+							try
 							{
-								selectedPath.Set(res.createdPath);
-								// регенерация _Index.md файла
-								generator.RegenerateSingleBlocking(System.IO.Path.Combine(res.createdPath, "_Index.md"));
-								if (appRepository is AppRepository impl) impl.Reload();
-								client.Sender.Send("HotReload", null);
-								navigator.Navigate(this.GetType());
+								var isFolder = Directory.Exists(selectedPath.Value);
+								var res = repo.RenamePath(selectedPath.Value, inlineRenameName.Value);
+								if (!res.ok) { client.Toast(res.message, "Error"); return; }
+								if (res.newPath != null)
+								{
+									selectedPath.Set(res.newPath);
+									
+									// Полная перегенерация для папок, инкрементальная для файлов
+									if (isFolder)
+									{
+										generator.RegenerateAllBlocking();
+									}
+									else
+									{
+										generator.RegenerateSingleBlocking(res.newPath);
+									}
+									
+									if (appRepository is AppRepository impl) impl.Reload();
+									client.Sender.Send("HotReload", null);
+									navigator.Navigate(this.GetType());
+								}
+								refreshKey.Value++;
+								client.Toast(isFolder ? "Folder renamed" : "File renamed", "Success");
+								inlineRenameName.Set((string?)null); isInlineRename.Set(false);
 							}
-							refreshKey.Value++;
-							client.Toast("Folder created", "Success");
-							inlineNewFolderName.Set((string?)null); isInlineNewFolder.Set(false);
-						}
-						finally
+							finally
+							{
+								isSaving.Value = false;
+							}
+						})
+						| new Button("Cancel").Variant(ButtonVariant.Outline).Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() => { inlineRenameName.Set((string?)null); isInlineRename.Set(false); })
+					)
+					: (object)(Vertical().Gap(2)
+						| new Button(isSaving.Value ? "Saving..." : "Save").Icon(Icons.Save).Primary().Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() =>
 						{
-							isSaving.Value = false;
-						}
-					})
-					| new Button("Cancel").Variant(ButtonVariant.Outline).Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() => { inlineNewFolderName.Set((string?)null); isInlineNewFolder.Set(false); })
-				);
+							if (string.IsNullOrWhiteSpace(inlineNewFolderName.Value)) { client.Toast("Enter name", "Warning"); return; }
+							var parent = GetParentDir(selectedPath.Value);
+							if (parent == null) return;
+							isSaving.Value = true;
+							try
+							{
+								var res = repo.CreateFolder(parent, inlineNewFolderName.Value);
+								if (!res.ok) { client.Toast(res.message, "Error"); return; }
+								if (res.createdPath != null)
+								{
+									selectedPath.Set(res.createdPath);
+									// регенерация _Index.md файла
+									generator.RegenerateSingleBlocking(System.IO.Path.Combine(res.createdPath, "_Index.md"));
+									if (appRepository is AppRepository impl) impl.Reload();
+									client.Sender.Send("HotReload", null);
+									navigator.Navigate(this.GetType());
+								}
+								refreshKey.Value++;
+								client.Toast("Folder created", "Success");
+								inlineNewFolderName.Set((string?)null); isInlineNewFolder.Set(false);
+							}
+							finally
+							{
+								isSaving.Value = false;
+							}
+						})
+						| new Button("Cancel").Variant(ButtonVariant.Outline).Width(Size.Full()).Disabled(isSaving.Value).HandleClick(() => { inlineNewFolderName.Set((string?)null); isInlineNewFolder.Set(false); })
+					);
 
-		object selectedInfo = !isInlineNewPage.Value && !isInlineNewFolder.Value
+		object selectedInfo = !isInlineNewPage.Value && !isInlineNewFolder.Value && !isInlineRename.Value
 			? (selectedPath.Value != null
 				? (object)(Layout.Horizontal().Align(Align.Left).Gap(2)
 					| Text.Muted("Selected:")
@@ -227,9 +292,13 @@ public class CourseRepositoryApp() : ViewBase
 				? (object)(Layout.Horizontal().Align(Align.Left).Gap(2)
 					| Text.Muted("Name:")
 					| inlineNewPageName.ToTextInput("Enter name...").Width(Size.Grow()))
-				: (object)(Layout.Horizontal().Align(Align.Left).Gap(2)
-					| Text.Muted("Name:")
-					| inlineNewFolderName.ToTextInput("Enter name...").Width(Size.Grow()));
+				: isInlineRename.Value
+					? (object)(Layout.Horizontal().Align(Align.Left).Gap(2)
+						| Text.Muted("New name:")
+						| inlineRenameName.ToTextInput("Enter new name...").Width(Size.Grow()))
+					: (object)(Layout.Horizontal().Align(Align.Left).Gap(2)
+						| Text.Muted("Name:")
+						| inlineNewFolderName.ToTextInput("Enter name...").Width(Size.Grow()));
 
 		var mainContent = Vertical().Padding(2).Gap(3)
 			| (isInlineNewPage.Value
@@ -243,7 +312,16 @@ public class CourseRepositoryApp() : ViewBase
 				)
 				: isInlineNewFolder.Value
 					? (object)H4("Create new folder")
-					: (object)H4("Actions"))
+					: isInlineRename.Value
+						? (object)(Layout.Vertical().Gap(0)
+							| H4("Rename")
+							| (Layout.Horizontal().Align(Align.Left).Gap(1)
+								| Text.Muted("Current:")
+								| (selectedPath.Value != null && Directory.Exists(selectedPath.Value) ? Icons.Folder.ToIcon().Small() : Icons.FileText.ToIcon().Small())
+								| Text.Muted($"{FormatSelectedName(selectedPath.Value ?? "")}")
+							)
+						)
+						: (object)H4("Actions"))
 			| selectedInfo
 			| new Separator()
 			| actionsColumn;
@@ -309,6 +387,15 @@ public class CourseRepositoryApp() : ViewBase
 			
 			// Убираем префиксы для отображения
 			var display = System.Text.RegularExpressions.Regex.Replace(name, "^\\d+_", "");
+			
+			// Убираем расширение .md для файлов
+			if (!Directory.Exists(path) && display.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+			{
+				display = display.Substring(0, display.Length - 3);
+			}
+			
+			// Разбиваем CamelCase на слова с пробелами (например "HowIvyWorks" → "How Ivy Works")
+			display = System.Text.RegularExpressions.Regex.Replace(display, "(?<!^)(?=[A-Z])", " ");
 			
 			if (Directory.Exists(path))
 			{
