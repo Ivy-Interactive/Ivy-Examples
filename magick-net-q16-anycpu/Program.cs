@@ -1,4 +1,4 @@
-using MagickNetExample.Apps;
+using MagickNet;
 
 // Set culture for consistent behavior
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
@@ -16,7 +16,7 @@ server.AddConnectionsFromAssembly();
 
 // Configure Chrome to start with MagickApp
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<MagickApp>()
+    .DefaultApp<MagickNetApp>()
     .UseTabs(preventDuplicates: true);
 
 server.UseChrome(chromeSettings);

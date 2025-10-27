@@ -10,3 +10,5 @@ global using Ivy.Views.Forms;
 global using Ivy.Widgets.Inputs;
 global using System.Globalization;
 global using ImageMagick;
+
+namespace MagickNet;

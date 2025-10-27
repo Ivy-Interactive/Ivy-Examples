@@ -1,7 +1,7 @@
-namespace MagickNetExample.Apps;
+namespace MagickNet;
 
 [App(title: "Magick.NET Demo")]
-public class MagickApp : ViewBase
+public class MagickNetApp : ViewBase
 {
     public override object? Build()
     {
