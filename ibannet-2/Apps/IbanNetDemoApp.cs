@@ -3,10 +3,10 @@ using IbanNet.Registry;
 using IbanNet.Registry.Swift;
 using IbanNet.Registry.Wikipedia;
 
-namespace IvyHello.Apps
+namespace IbanNetExample
 {
     [App(icon: Icons.PartyPopper, title: "IBAN Demo")]
-    public class IbanDemoApp : ViewBase
+    public class IbanNetDemoApp : ViewBase
     {
         private readonly IbanValidator _validator;
         private readonly IbanParser _parser;
@@ -15,7 +15,7 @@ namespace IvyHello.Apps
         private readonly WikipediaRegistryProvider _wikiProvider = new();
         
         /// <summary>Initialize components for IBAN parsing, validation, and registry</summary>
-        public IbanDemoApp()
+        public IbanNetDemoApp()
         {
             _registry = new IbanRegistry { Providers = { _swiftProvider, _wikiProvider } };
             _parser = new IbanParser(_registry);
