@@ -73,8 +73,12 @@
                 | Text.Label("Generate Test IBAN:")
                 | countrySelect.Placeholder("Select Country")
                 | generateBtn
+                | new Spacer()
                 | (string.IsNullOrEmpty(outputState.Value) ? null : Callout.Error(outputState.Value, "Validation Error"))
-            ).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Full()));
+                | new Spacer()
+                | Text.Small("This demo uses IbanNet library to validate and generate IBAN numbers.")
+			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [IbanNet](https://github.com/skwasjer/IbanNet)")
+                ).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Full()));
 
             // Right Card - Results
             var rightCard = new Card(
