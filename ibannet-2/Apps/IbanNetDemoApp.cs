@@ -1,9 +1,4 @@
-﻿using IbanNet;
-using IbanNet.Registry;
-using IbanNet.Registry.Swift;
-using IbanNet.Registry.Wikipedia;
-
-namespace IbanNetExample
+﻿namespace IbanNetExample
 {
     [App(icon: Icons.PartyPopper, title: "IBAN Demo")]
     public class IbanNetDemoApp : ViewBase
