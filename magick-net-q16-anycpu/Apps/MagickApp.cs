@@ -69,7 +69,7 @@ public class MagickApp : ViewBase
                 var originalSize = $"{image.Width}x{image.Height}";
                 var originalFormat = image.Format.ToString();
 
-                image.Resize(new MagickGeometry(targetWidth, targetHeight) { IgnoreAspectRatio = true });
+                image.Resize(new MagickGeometry((uint)targetWidth, (uint)targetHeight) { IgnoreAspectRatio = true });
                 var resizedSize = $"{image.Width}x{image.Height}";
 
                 processedImageBytes.Value = image.ToByteArray();
