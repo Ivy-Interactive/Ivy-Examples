@@ -1,6 +1,6 @@
 ﻿namespace IbanNetExample
 {
-    [App(icon: Icons.PartyPopper, title: "IBAN Demo")]
+    [App(icon: Icons.PartyPopper, title: "IbanNet Demo")]
     public class IbanNetDemoApp : ViewBase
     {
         private readonly IbanValidator _validator;
@@ -55,31 +55,42 @@
                     var generated = generator.Generate(selectedCountry.Value);
                     HandleIbanChanged(generated.ToString());
                     outputState.Set("");
-
                 }
                 catch
                 {
                     outputState.Set("Cannot generate IBAN for selected country");
                 }
             });
-            var inputLayout = Layout.Center().Height(Size.Full())
-                        | new Card(
-                            Layout.Vertical().Gap(6).Padding(2)
-                            | Text.Label("IBAN")
-                            | Layout.Horizontal(ibanInput, badge)
-                            | new Separator()
-                            | Text.Label("IBAN Generator")
-                            | Layout.Horizontal(countrySelect, generateBtn)
-                            | new Separator()
-                            | Text.Danger(outputState.Value ?? "")
-                            ).Width(Size.Units(120).Max(600));
 
-            return Layout.Horizontal().Height(Size.Full())
-                | Layout.Grid().Columns(2)
-                    | inputLayout
-                    | (hasValidIban
+            // Left Card - Input and Generation
+            var leftCard = new Card(
+                Layout.Vertical()
+                | Text.H3("IBAN Input & Generator")
+                | Text.Muted("IBAN validation and generation tool for testing international bank account numbers")
+                | new Spacer()
+                | Text.Label("Enter IBAN:")
+                | Layout.Horizontal(ibanInput, badge).Gap(8)
+                | Text.Label("Generate Test IBAN:")
+                | countrySelect.Placeholder("Select Country")
+                | generateBtn
+                | (string.IsNullOrEmpty(outputState.Value) ? null : Callout.Error(outputState.Value, "Validation Error"))
+            ).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Full()));
+
+            // Right Card - Results
+            var rightCard = new Card(
+                Layout.Vertical()
+                | (hasValidIban
                     ? new IbanDetailsView(iban)
-                    : null); ;
+                    :Layout.Vertical()
+                    | Text.H3("IBAN Details")
+                    | Layout.Vertical()
+                        | Callout.Info("Enter a valid IBAN number in the left panel or generate a test IBAN to see detailed information here.", "Instructions")
+                        | Callout.Info("IBAN (International Bank Account Number) is a standardized format for bank account identification.", "About IBAN"))
+            ).Width(Size.Fraction(0.55f)).Height(Size.Fit().Min(Size.Full()));
+
+            return Layout.Horizontal().Gap(10).Align(Align.TopCenter)
+                | leftCard
+                | rightCard;
 
             /// <summary>Handles user input: validates IBAN, updates states and error messages.</summary>
             void HandleIbanChanged(string? value)
@@ -116,6 +127,7 @@
         {
             return Layout.Vertical()
                             | Text.H3($"IBAN Info: {iban}")
+                            | Text.Muted("Comprehensive breakdown of IBAN structure, country information, bank details, and validation results")
                             | new
                             {
                                 Country = new
@@ -124,8 +136,6 @@
                                     iban.Country.NativeName,
                                     ISO = iban.Country.TwoLetterISORegionName,
                                     IsSepaMember = iban.Country.Sepa.IsMember,
-                                    IncludedCountries = string.Join(", ", iban.Country.IncludedCountries),
-                                    iban.Country.LastUpdatedDate,
                                 }.ToDetails(),
                                 BBAN = iban.Bban,
                                 iban.BankIdentifier,
@@ -136,6 +146,7 @@
                                     Print = iban.ToString(IbanFormat.Print),
                                     Obfuscated = iban.ToString(IbanFormat.Obfuscated)
                                 }.ToDetails()
+                                    .Builder(x => x.Electronic, b => b.CopyToClipboard())
                             }.ToDetails();
         }
     }
