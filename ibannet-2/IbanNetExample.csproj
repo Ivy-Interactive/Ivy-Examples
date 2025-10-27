@@ -17,7 +17,7 @@
   
   <ItemGroup>
     <PackageReference Include="IbanNet" Version="5.19.0" />
-    <PackageReference Include="Ivy" Version="1.0.113.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
   
 
