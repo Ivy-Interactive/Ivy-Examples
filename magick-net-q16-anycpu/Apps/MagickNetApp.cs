@@ -1,24 +1,24 @@
 namespace MagickNet;
 
-[App(title: "Magick.NET Image Studio")]
+[App(title: "Magick.NET")]
 public class MagickNetApp : ViewBase
 {
     public override object? Build()
     {
         // State management
         var resultState = UseState("Welcome to Magick.NET Image Studio! Upload an image to start creating amazing effects.");
-        var fileInputState = UseState<FileInput?>(() => null);
+        var fileInputState = UseState((FileInput?)null);
         var uploadedImageBytes = UseState<byte[]?>(() => null);
         var processedImageBytes = UseState<byte[]?>(() => null);
         var processedImageDataUri = UseState<string?>(() => null);
         var selectedEffect = UseState("resize");
         var selectedFormat = UseState("png");
-        
+
         // Resize parameters
         var widthState = UseState(400);
         var heightState = UseState(300);
         var maintainAspectRatio = UseState(true);
-        
+
         // Effect parameters
         var blurRadius = UseState(5.0);
         var sharpenRadius = UseState(1.0);
@@ -31,6 +31,7 @@ public class MagickNetApp : ViewBase
         var flipVertical = UseState(false);
         var quality = UseState(90);
 
+        var client = this.UseService<IClientProvider>();
         var uploadUrl = this.UseUpload(
             fileBytes =>
             {
@@ -48,11 +49,11 @@ public class MagickNetApp : ViewBase
                     resultState.Value = $"Image uploaded successfully!\n" +
                                       $"Original: {originalSize} ({originalFormat})\n" +
                                       $"Size: {fileSize:F1} KB\n" +
-                                      $"Choose an effect and click 'Process & Download' to transform your image!";
+                                      $"Choose an effect and click 'Magic Image' to transform your image!";
                 }
                 catch (Exception ex)
                 {
-                    resultState.Value = $"Error uploading image: {ex.Message}";
+                    client.Toast($"Error uploading image: {ex.Message}", "Upload Error");
                     uploadedImageBytes.Value = null;
                 }
             },
@@ -67,7 +68,7 @@ public class MagickNetApp : ViewBase
             {
                 if (uploadedImageBytes.Value == null)
                 {
-                    resultState.Value = "Please upload an image first.";
+                    client.Toast("Please upload an image first.", "Validation Error");
                     return;
                 }
 
@@ -79,7 +80,7 @@ public class MagickNetApp : ViewBase
                 switch (selectedEffect.Value)
                 {
                     case "resize":
-                        var geometry = maintainAspectRatio.Value 
+                        var geometry = maintainAspectRatio.Value
                             ? new MagickGeometry((uint)widthState.Value, (uint)heightState.Value) { IgnoreAspectRatio = false }
                             : new MagickGeometry((uint)widthState.Value, (uint)heightState.Value) { IgnoreAspectRatio = true };
                         image.Resize(geometry);
@@ -191,7 +192,7 @@ public class MagickNetApp : ViewBase
             }
             catch (Exception ex)
             {
-                resultState.Value = $"Error processing image: {ex.Message}";
+                client.Toast($"Error processing image: {ex.Message}", "Processing Error");
                 processedImageBytes.Value = null;
             }
         };
@@ -210,8 +211,8 @@ public class MagickNetApp : ViewBase
         // Left Card - Controls Panel
         var leftCard = new Card(
                        Layout.Vertical()
-                       | Text.H3("Image Processing Controls")
-                       | new Separator()
+                       | Text.H3("Digital Image Alchemy")
+                       | Text.Muted("Transform your images with powerful effects and filters!")
 
                        // File upload section
                        | Text.H4("Upload Image")
@@ -220,7 +221,7 @@ public class MagickNetApp : ViewBase
 
                        // Effect selection
                        | Text.H4("Choose Effect")
-                       
+
                         | selectedEffect.ToSelectInput(new[]
                         {
                             new Option<string>("Resize", "resize"),
@@ -236,7 +237,7 @@ public class MagickNetApp : ViewBase
 
                        // Effect parameters
                        | Text.H4("Effect Parameters")
-                       | (selectedEffect.Value == "resize" 
+                       | (selectedEffect.Value == "resize"
                            ? Layout.Vertical()
                              | (Layout.Horizontal().Gap(4)
                                | Text.Block("Width:")
@@ -277,7 +278,6 @@ public class MagickNetApp : ViewBase
                              | flipHorizontal.ToBoolInput(variant: BoolInputs.Checkbox).Label("Flip horizontally")
                              | flipVertical.ToBoolInput(variant: BoolInputs.Checkbox).Label("Flip vertically")
                            : Text.Block("No additional parameters needed for this effect."))
-
                        // Output format
                        | Text.H4("Output Format")
                         | selectedFormat.ToSelectInput(new[]
@@ -294,33 +294,32 @@ public class MagickNetApp : ViewBase
                              | Text.Block("Quality:")
                              | new NumberInput<int>(quality).Min(1).Max(100).Step(1)
                            : Text.Block(""))
-
-                       // Magic Image button
+                           
+                       | (Layout.Horizontal().Gap(4)
                        | (uploadedImageBytes.Value != null
                            ? new Button("Magic Image", onClick: () => processImage())
                            : new Button("Magic Image").Disabled())
+                       | new Button("Download")
+                           .Primary()
+                           .Icon(Icons.Download)
+                           .Url(downloadUrl.Value)
+                           .Disabled(processedImageBytes.Value == null))
                      );
 
         // Right Card - Image Display Panel
         var rightCard = new Card(
                        Layout.Vertical()
                        | Text.H3("Image Preview")
-                       | new Separator()
-                       // Status/Results
-                       | Text.H4("Status")
-                       | Text.Block(resultState.Value)
-
-                       // Processed Image Display
-                       | (processedImageDataUri.Value != null
-                           ? new Image(processedImageDataUri.Value)
-                           : Text.Block("Process an image to see the result here"))
+                       | Text.Muted(resultState.Value)
+                       | new Spacer().Height(Size.Units(10))
+                       | (Layout.Horizontal().Align(Align.Center)
+                       | new Image(processedImageDataUri.Value))
+                       
                      );
 
         return Layout.Vertical().Padding(3)
                | Layout.Center()
-               | Text.H2("Magick.NET Image Studio")
-               | Text.Block("Transform your images with powerful effects and filters!")
-               | (Layout.Horizontal().Gap(4)
+               | (Layout.Horizontal().Gap(10)
                   | leftCard
                   | rightCard);
     }
