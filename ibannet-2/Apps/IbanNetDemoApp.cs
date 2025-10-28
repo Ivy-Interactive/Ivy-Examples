@@ -26,26 +26,9 @@
 
             var countries = _registry.OrderBy(c => c.TwoLetterISORegionName).Select(c => c.TwoLetterISORegionName).ToArray();
             var countrySelect = selectedCountry.ToSelectInput(countries.ToOptions());
-            var ibanInput = new TextInput(ibanState.Value, e => HandleIbanChanged(e.Value), placeholder: "Enter IBAN here");
+            var ibanInput = new TextInput(ibanState.Value, e => HandleIbanChanged(e.Value), placeholder: "Enter IBAN here")
+                .Invalid(string.IsNullOrEmpty(outputState.Value) ? null : outputState.Value);
             bool hasValidIban = _parser.TryParse(ibanState.Value, out var iban);
-
-            // Create a badge based on the validation state
-            var badge = string.IsNullOrEmpty(badgeState.Value)
-                ? null
-                : new Badge(
-                    badgeState.Value,
-                    icon: badgeState.Value switch
-                    {
-                        "Valid" => Icons.Check,
-                        "Invalid" => Icons.X,
-                        _ => Icons.Info
-                    },
-                    variant: badgeState.Value switch
-                    {
-                        "Valid" => BadgeVariant.Primary,
-                        "Invalid" => BadgeVariant.Destructive,
-                        _ => BadgeVariant.Secondary
-                    });
 
             var generateBtn = new Button("Generate Test IBAN", () =>
             {
@@ -69,12 +52,10 @@
                 | Text.Muted("IBAN validation and generation tool for testing international bank account numbers")
                 | new Spacer()
                 | Text.Label("Enter IBAN:")
-                | Layout.Horizontal(ibanInput, badge).Gap(8)
+                | ibanInput
                 | Text.Label("Generate Test IBAN:")
                 | countrySelect.Placeholder("Select Country")
                 | generateBtn
-                | new Spacer()
-                | (string.IsNullOrEmpty(outputState.Value) ? null : Callout.Error(outputState.Value, "Validation Error"))
                 | new Spacer()
                 | Text.Small("This demo uses IbanNet library to validate and generate IBAN numbers.")
 			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [IbanNet](https://github.com/skwasjer/IbanNet)")
