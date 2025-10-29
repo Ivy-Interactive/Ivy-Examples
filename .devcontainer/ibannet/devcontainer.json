@@ -1,14 +1,14 @@
 {
-    "name": "IbanNet-2",
+    "name": "IbanNet",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/ibannet-2",
+    "workspaceFolder": "/workspaces/Ivy-Examples/ibannet",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],
     "portsAttributes": {
       "5010": {
-        "label": "IbanNet-2",
+        "label": "IbanNet",
         "onAutoForward": "openPreview"
       }
     },
