@@ -18,6 +18,9 @@ Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
 Web application created using [Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework).
 
 **Ivy** - The ultimate framework for building internal tools with LLM code generation by unifying front-end and back-end into a single C# codebase. With Ivy, you can build robust internal tools and dashboards using C# and AI assistance based on your existing database.
+Web application created using [Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework).
+
+**Ivy** - The ultimate framework for building internal tools with LLM code generation by unifying front-end and back-end into a single C# codebase. With Ivy, you can build robust internal tools and dashboards using C# and AI assistance based on your existing database.
 
 Ivy is a web framework for building interactive web applications using C# and .NET.
 
@@ -76,6 +79,7 @@ This specific implementation creates an **IBAN Management** application that all
 
 ## How to Deploy
 
+Deploy this example to Ivy's hosting platform:
 Deploy this example to Ivy's hosting platform:
 
 1. **Navigate to the example**:
