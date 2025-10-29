@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "magick-net-q16-anycpu", "magick-net-q16-anycpu.csproj", "{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagickNetQ16AnyCpuExample", "MagickNetQ16AnyCpuExample.csproj", "{2EC1C58B-7DE3-131C-E896-671FF7B5D3CA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

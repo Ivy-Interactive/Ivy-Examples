@@ -1,4 +1,4 @@
-using MagickNetExample.Apps;
+using MagickNet;
 
 // Set culture for consistent behavior
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
@@ -15,10 +15,12 @@ server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
 // Configure Chrome to start with MagickApp
+var customHeader = Layout.Vertical().Gap(2)
+    |new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fmagick-net-q16-anycpu%2Fdevcontainer.json&location=EuropeWest");
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<MagickApp>()
-    .UseTabs(preventDuplicates: true);
-
+    .DefaultApp<MagickNetApp>()
+    .UseTabs(preventDuplicates: true)
+    .Header(customHeader);
 server.UseChrome(chromeSettings);
 
 // Start the server
