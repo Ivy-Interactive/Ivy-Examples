@@ -1,4 +1,4 @@
-﻿namespace Ivy.Mapster.Models
+﻿namespace MapsterExample
 {
     public class PersonDto
     {

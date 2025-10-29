@@ -1,5 +1,4 @@
-using Ivy.Mapster.Apps;
-
+using MapsterExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
 #if DEBUG

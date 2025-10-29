@@ -1,11 +1,6 @@
-﻿using System.Text.Json;
-using Ivy.Mapster.Mapping;
-using Ivy.Mapster.Models;
-using Mapster;
-
-namespace Ivy.Mapster.Apps
+﻿namespace MapsterExample
 {
-    [App(icon: Icons.PersonStanding, title: "Mapster Demo")]
+    [App(icon: Icons.PersonStanding, title: "Mapster")]
     public class MapsterApp : ViewBase
     {
         public override object? Build()

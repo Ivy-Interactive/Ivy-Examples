@@ -1,7 +1,4 @@
-﻿using Ivy.Mapster.Models;
-using Mapster;
-
-namespace Ivy.Mapster.Mapping
+﻿namespace MapsterExample
 {
     public class MapsterConfig : IRegister
     {
