@@ -108,6 +108,9 @@
                             | toPersonButton
                         )
                        )
+                       | new Spacer()
+                       | Text.Small("This demo uses Mapster library for mapping objects.")
+                       | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Mapster](https://github.com/MapsterMapper/Mapster)")
                    );
         }
 
