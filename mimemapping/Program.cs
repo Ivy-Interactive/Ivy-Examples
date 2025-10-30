@@ -1,4 +1,4 @@
-﻿using MimeMappingDemo.Apps;
+﻿using MimeMappingExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
 #if DEBUG

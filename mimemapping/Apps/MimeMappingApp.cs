@@ -1,4 +1,4 @@
-﻿namespace MimeMappingDemo.Apps;
+﻿namespace MimeMappingExample;
 
 [App(icon: Icons.FileText, title: "MimeMapping Demo")]
 public class MimeMappingApp : ViewBase
