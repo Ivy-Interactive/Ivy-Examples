@@ -2,6 +2,8 @@
 {
     public class MapsterConfig : IRegister
     {
+        private static readonly Random _random = new();
+
         public void Register(TypeAdapterConfig config)
         {
             config.NewConfig<Person, PersonDto>()
@@ -10,7 +12,7 @@
                 .Map(dest => dest.HasSingleWordName, src => !src.FirstName.Contains(' ') && !src.LastName.Contains(' '));
 
             config.NewConfig<PersonDto, Person>()
-                .Map(dest => dest.Age, src => src.IsAdult ? 18 : 0)
+                .Map(dest => dest.Age, src => src.IsAdult ? _random.Next(18, 101) : _random.Next(0, 18))
                 .AfterMapping((src, dest) =>
                 {
                     var parts = src.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);

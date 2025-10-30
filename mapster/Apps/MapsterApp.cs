@@ -83,7 +83,7 @@
                | new Card(
                        Layout.Vertical()
                        | Text.H2("Mapster Demo")
-                       | Text.Muted("Interactive demonstration of Mapster library capabilities")
+                       | Text.Muted("Mapster is a powerful object-to-object mapping library for .NET that automatically transfers data between similar objects. It provides flexible mapping configuration, supports validation, and handles complex transformations like combining FirstName + LastName into FullName or splitting FullName back into components.")
                        | (Layout.Horizontal().Gap(4)
 
                        // left card - Person
