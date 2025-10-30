@@ -79,24 +79,36 @@
                 }
             };
 
-            return Layout.Center()
+            return Layout.Vertical()
                | new Card(
-                       Layout.Vertical().Gap(12)
-                       | Text.H4("Person")
-                       | personJsonState.ToCodeInput()
-                           .Width(Size.Units(100).Max(500))
-                           .Height(Size.Auto())
-                           .Language(Languages.Json)
-                       | toDtoButton
-                       | Text.H4("PersonDto")
-                       | dtoJsonState.ToCodeInput()
-                           .Width(Size.Units(100).Max(500))
-                           .Height(Size.Auto())
-                           .Language(Languages.Json)
-                           .Invalid(GetValidationError())
-                       | toPersonButton
-                   )
-                   .Width(Size.Units(120).Max(600));
+                       Layout.Vertical()
+                       | Text.H2("Mapster Demo")
+                       | Text.Muted("Interactive demonstration of Mapster library capabilities")
+                       | (Layout.Horizontal().Gap(4)
+
+                       // left card - Person
+                       | new Card(
+                        Layout.Vertical()
+                        | Text.H4("Class: \"Person\" ")
+                        | Text.Muted("Change the Person class below, click the button and see how the PersonDto class on the right changes")
+                        | personJsonState.ToCodeInput()
+                            .Height(Size.Auto())
+                            .Language(Languages.Json)
+                        | toDtoButton)
+
+                       // right card - PersonDto
+                       | new Card(
+                        Layout.Vertical()
+                        | Text.H4("Class: \"PersonDto\" ")
+                        | Text.Muted("Change the PersonDto class below, click the button and see how the Person class on the left changes")
+                        | dtoJsonState.ToCodeInput()
+                            .Height(Size.Auto())
+                            .Language(Languages.Json)
+                            .Invalid(GetValidationError())
+                            | toPersonButton
+                        )
+                       )
+                   );
         }
 
         private static string ToPrettyJson(object? obj) =>
