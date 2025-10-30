@@ -20,6 +20,25 @@
                 IsAdult = true
             }));
 
+            // Helper function to validate DTO
+            string? GetValidationError()
+            {
+                try
+                {
+                    var dto = JsonSerializer.Deserialize<PersonDto>(dtoJsonState.Value);
+                    if (dto != null)
+                    {
+                        var wordCount = dto.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+                        if (wordCount > 2 && dto.HasSingleWordName)
+                        {
+                            return "FullName contains 2 or more words but HasSingleWordName is true";
+                        }
+                    }
+                }
+                catch { }
+                return null;
+            }
+
             // Person -> PersonDto
             var toDtoButton = new Button("Person -> PersonDto")
             {
@@ -74,6 +93,7 @@
                            .Width(Size.Units(100).Max(500))
                            .Height(Size.Auto())
                            .Language(Languages.Json)
+                           .Invalid(GetValidationError())
                        | toPersonButton
                    )
                    .Width(Size.Units(120).Max(600));
