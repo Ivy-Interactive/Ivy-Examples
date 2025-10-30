@@ -16,11 +16,8 @@
   
   
   <ItemGroup>
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="Mapster" Version="7.4.0" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="C:\git\Ivy-Interactive\Ivy-Framework\Ivy\Ivy.csproj" />
   </ItemGroup>
 
 </Project>
