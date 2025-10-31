@@ -30,6 +30,5 @@ global using System.Reactive.Linq;
 global using System.Linq;
 global using System.Collections.Generic;
 global using MiniExcelLibs;
-global using UseOfMiniExcel.Models;
 
 namespace MiniExcelExample;

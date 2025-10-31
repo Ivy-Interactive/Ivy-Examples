@@ -1,4 +1,4 @@
-namespace MiniExcelExample.Apps;
+namespace MiniExcelExample;
 
 [App(icon: Icons.Sheet, title: "MiniExcel")]
 public class MiniExcelApp : ViewBase
