@@ -13,6 +13,14 @@ public class MimeMappingApp : ViewBase
         var fileUpload = this.UseState<FileInput?>(() => null);
         var mimeTypeInput = this.UseState<string>();
         var searchQuery = this.UseState<string>();
+        var currentPage = this.UseState(1);
+        const int itemsPerPage = 8;
+
+        // Reset to page 1 when search query changes
+        UseEffect(() =>
+        {
+            currentPage.Set(1);
+        }, [searchQuery]);
 
         var uploadUrl = this.UseUpload(
             uploadedBytes => { }, // No action needed for file upload
@@ -29,12 +37,28 @@ public class MimeMappingApp : ViewBase
             ? MimeUtility.GetExtensions(mimeTypeInput.Value)
             : null;
 
-        var filteredTypes = string.IsNullOrEmpty(searchQuery.Value)
-            ? MimeUtility.TypeMap.Take(50)
+        // Get all filtered types
+        var allFilteredTypes = string.IsNullOrEmpty(searchQuery.Value)
+            ? MimeUtility.TypeMap.ToList()
             : MimeUtility.TypeMap.Where(kvp =>
                 kvp.Key.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) ||
-                kvp.Value?.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) == true)
-              .Take(100);
+                kvp.Value?.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+        // Get paginated types
+        var totalItems = allFilteredTypes.Count;
+        var totalPages = (int)Math.Ceiling(totalItems / (double)itemsPerPage);
+        
+        // Ensure current page is valid
+        if (currentPage.Value < 1)
+        {
+            currentPage.Set(1);
+        }
+        else if (totalPages > 0 && currentPage.Value > totalPages)
+        {
+            currentPage.Set(totalPages);
+        }
+        
+        var filteredTypes = allFilteredTypes.Skip((currentPage.Value - 1) * itemsPerPage).Take(itemsPerPage);
 
         return Layout.Vertical()
             | Text.H2("MimeMapping Library Demo")
@@ -42,8 +66,8 @@ public class MimeMappingApp : ViewBase
 
             // Tab navigation
             | Layout.Tabs(
-                new Tab("Detect MIME Type", BuildFileInputDemo(inputMethod, fileInput, fileUpload, uploadUrl, currentFileName, detectedMimeType)),
-                new Tab("Browse Types", BuildBrowseTypesDemo(searchQuery, filteredTypes)),
+                new Tab("Detect Type", BuildFileInputDemo(inputMethod, fileInput, fileUpload, uploadUrl, currentFileName, detectedMimeType)),
+                new Tab("Browse Types", BuildBrowseTypesDemo(searchQuery, filteredTypes, currentPage, totalPages, totalItems)),
                 new Tab("Reverse Lookup", BuildReverseLookupDemo(mimeTypeInput, extensions))
             ).Variant(TabsVariant.Tabs)
 
@@ -117,17 +141,17 @@ public class MimeMappingApp : ViewBase
             ));
     }
 
-    private object BuildBrowseTypesDemo(IState<string> searchQuery, IEnumerable<KeyValuePair<string, string?>> filteredTypes)
+    private object BuildBrowseTypesDemo(IState<string> searchQuery, IEnumerable<KeyValuePair<string, string?>> filteredTypes, IState<int> currentPage, int totalPages, int totalItems)
     {
         return Layout.Vertical().Gap(3)
             | Text.H3("Browse Available MIME Types")
-            | Text.Block($"Showing {MimeUtility.TypeMap.Count} total MIME types. Search to filter:")
+            | Text.Muted($"Showing {filteredTypes.Count()} of {totalItems} types")
             | searchQuery.ToInput(placeholder: "Search by extension or MIME type...")
-            | new Card(
-                Layout.Vertical().Gap(2)
-                | filteredTypes.ToTable()
-            )
-            | Text.Muted($"Showing {filteredTypes.Count()} of {MimeUtility.TypeMap.Count} types");
+            | new Card(filteredTypes.ToTable().Width(Size.Full()))
+            | (totalPages > 1
+                ? new Pagination(currentPage.Value, totalPages, evt => currentPage.Set(evt.Value))
+                : null);
+            
     }
 
     private object BuildReverseLookupDemo(IState<string> mimeTypeInput, string[]? extensions)
