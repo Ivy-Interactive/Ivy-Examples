@@ -51,13 +51,40 @@ public class MimeMappingApp : ViewBase
 
     private object BuildFileInputDemo(IState<InputMethod> inputMethod, IState<string> fileInput, IState<FileInput?> fileUpload, IState<string?> uploadUrl, string? currentFileName, string? detectedMimeType)
     {
+        // Validation
+        string? fileInputError = null;
+        string? fileUploadError = null;
+        
+        if (inputMethod.Value == InputMethod.UploadFile && fileUpload.Value != null)
+        {
+            var detected = MimeUtility.GetMimeMapping(fileUpload.Value.Name);
+            if (detected == MimeUtility.UnknownMimeType)
+            {
+                fileUploadError = "Unknown file type - returns default application/octet-stream";
+            }
+        }
+        else if (inputMethod.Value == InputMethod.EnterFileName && !string.IsNullOrEmpty(fileInput.Value))
+        {
+            var detected = MimeUtility.GetMimeMapping(fileInput.Value);
+            if (detected == MimeUtility.UnknownMimeType)
+            {
+                fileInputError = "Unknown file type - returns default application/octet-stream";
+            }
+        }
+        
+        // Check if inputs have values
+        bool hasUploadValue = inputMethod.Value == InputMethod.UploadFile && fileUpload.Value != null;
+        bool hasInputValue = inputMethod.Value == InputMethod.EnterFileName && !string.IsNullOrEmpty(fileInput.Value);
+        
         object inputSection = inputMethod.Value == InputMethod.UploadFile
             ? Layout.Vertical()
                 | Text.Label("Choose File")
                 | fileUpload.ToFileInput(uploadUrl)
+                    .Invalid(fileUploadError)
             : Layout.Vertical()
                 | Text.Label("Enter File Name")
-                | fileInput.ToInput(placeholder: "e.g., image.jpg, document.pdf, archive.zip");
+                | fileInput.ToInput(placeholder: "e.g., image.jpg, document.pdf, archive.zip")
+                    .Invalid(fileInputError);
 
         return Layout.Horizontal().Gap(5)
             | new Card(
@@ -72,17 +99,17 @@ public class MimeMappingApp : ViewBase
 
             | new Card(
             Layout.Vertical().Gap(5)
-            | (detectedMimeType != null ?
-                new Card(
-                    Layout.Vertical()
-                    | Text.H4("Detection Result:")
-                    | Text.Block($"File: {currentFileName}")
-                    | Text.Block($"MIME Type: {detectedMimeType}")
-                    | (detectedMimeType == MimeUtility.UnknownMimeType ?
-                        Text.Muted("Unknown file type - returns default application/octet-stream") :
-                        Text.Success(" Known file type detected"))
-                ) :
-                Text.Muted("Enter a file name or select a file above to see the MIME type detection")
+            | Text.H3("Detection Result")
+            | (detectedMimeType != null && currentFileName != null && (hasUploadValue || hasInputValue) && fileUploadError == null && fileInputError == null
+                ? Layout.Vertical()
+                | Text.Muted("To detect a different file, simply select or enter a new file name")
+                | new Card(
+                    new { File = currentFileName, MimeType = detectedMimeType }
+                        .ToDetails()
+                        .Builder(x => x.MimeType, b => b.CopyToClipboard())
+                        .Builder(x => x.File, b => b.CopyToClipboard())
+                )
+                : Text.Muted("Enter a file name or select a file above to see the MIME type detection")
             ));
     }
 
