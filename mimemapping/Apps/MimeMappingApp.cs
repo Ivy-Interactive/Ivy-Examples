@@ -156,35 +156,49 @@ public class MimeMappingApp : ViewBase
 
     private object BuildReverseLookupDemo(IState<string> mimeTypeInput, string[]? extensions)
     {
-        return Layout.Vertical().Gap(3)
-            | Text.H3("MIME Type to Extensions Lookup")
-            | Text.Block("Enter a MIME type to find all associated file extensions:")
-            | mimeTypeInput.ToInput(placeholder: "e.g., image/jpeg, application/pdf, text/html")
-            | (extensions != null && extensions.Length > 0 ? 
-                new Card(
-                    Layout.Vertical().Gap(2)
-                    | Text.H4("Associated Extensions:")
-                    | Text.Block($"MIME Type: {mimeTypeInput.Value}")
-                    | Layout.Horizontal().Gap(1).Wrap()
-                        | extensions.Select(ext => new Badge(ext)).ToArray()
-                    | Text.Muted($"Found {extensions.Length} extension(s)")
-                ) :
-                !string.IsNullOrEmpty(mimeTypeInput.Value) ?
-                new Card(
-                    Layout.Vertical().Gap(2)
-                    | Text.H4("No Extensions Found")
-                    | Text.Block($"MIME Type: {mimeTypeInput.Value}")
-                    | Text.Muted("This MIME type is not recognized or has no associated extensions")
-                ) :
-                Text.Muted("Enter a MIME type above to find associated extensions"))
-            | new Separator()
-            | Text.H4("Try these examples:")
-            | Layout.Grid().Columns(2).Gap(1)
-                | new Button("image/jpeg", onClick: () => mimeTypeInput.Set("image/jpeg"))
-                | new Button("application/pdf", onClick: () => mimeTypeInput.Set("application/pdf"))
-                | new Button("text/html", onClick: () => mimeTypeInput.Set("text/html"))
-                | new Button("application/json", onClick: () => mimeTypeInput.Set("application/json"))
-                | new Button("video/mp4", onClick: () => mimeTypeInput.Set("video/mp4"))
-                | new Button("application/zip", onClick: () => mimeTypeInput.Set("application/zip"));
+        // Validation
+        string? mimeTypeError = null;
+        bool isValidInput = !string.IsNullOrEmpty(mimeTypeInput.Value);
+        bool hasValidExtensions = extensions != null && extensions.Length > 0;
+
+        if (isValidInput)
+        {
+            // Validate MIME type format (should contain "/")
+            if (!mimeTypeInput.Value.Contains('/'))
+            {
+                mimeTypeError = "Invalid MIME type format. Expected format: type/subtype (e.g., image/jpeg)";
+            }
+            else if (isValidInput && mimeTypeError == null && !hasValidExtensions)
+            {
+                mimeTypeError = "This MIME type is not recognized or has no associated extensions";
+            }
+        }
+        
+        // Determine if we should show results
+        bool showResults = isValidInput && mimeTypeError == null && hasValidExtensions;
+        // bool showNoResults = isValidInput && mimeTypeError == null && !hasValidExtensions;
+
+        return Layout.Horizontal().Gap(5)
+            | new Card(
+                Layout.Vertical().Gap(5)
+                | Text.H3("MIME Type to Extensions Lookup")
+                | Text.Muted("Enter a MIME type to find all associated file extensions")
+                | mimeTypeInput.ToInput(placeholder: "e.g., image/jpeg, application/pdf, text/html")
+                    .Invalid(mimeTypeError)
+                )
+            
+            | new Card(
+                Layout.Vertical().Gap(5)
+                | Text.H3("Lookup Result")
+                | Text.Muted("Results will appear here when a valid MIME type is entered")
+                | (showResults
+                    ? new Card(
+                        Layout.Vertical()
+                        | Text.Muted($"Found {extensions.Length} extension(s)")
+                        | (Layout.Horizontal().Gap(1)
+                            | extensions!.Select(ext => new Badge(ext)).ToArray())
+                        ) : null
+                )
+            );
     }
 }
