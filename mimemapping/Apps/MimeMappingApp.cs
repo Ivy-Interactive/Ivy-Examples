@@ -4,7 +4,7 @@
 public class MimeMappingApp : ViewBase
 {
     private enum InputMethod { UploadFile, EnterFileName }
-    
+
     public override object? Build()
     {
         var selectedTab = this.UseState(0);
@@ -13,25 +13,25 @@ public class MimeMappingApp : ViewBase
         var fileUpload = this.UseState<FileInput?>(() => null);
         var mimeTypeInput = this.UseState<string>();
         var searchQuery = this.UseState<string>();
-        
+
         var uploadUrl = this.UseUpload(
             uploadedBytes => { }, // No action needed for file upload
             "*/*",
             "uploaded-file"
         );
-        
+
         var currentFileName = inputMethod.Value == InputMethod.UploadFile ? fileUpload.Value?.Name : fileInput.Value;
-        var detectedMimeType = currentFileName != null 
-            ? MimeUtility.GetMimeMapping(currentFileName) 
+        var detectedMimeType = currentFileName != null
+            ? MimeUtility.GetMimeMapping(currentFileName)
             : null;
-            
-        var extensions = !string.IsNullOrEmpty(mimeTypeInput.Value) 
-            ? MimeUtility.GetExtensions(mimeTypeInput.Value) 
+
+        var extensions = !string.IsNullOrEmpty(mimeTypeInput.Value)
+            ? MimeUtility.GetExtensions(mimeTypeInput.Value)
             : null;
 
         var filteredTypes = string.IsNullOrEmpty(searchQuery.Value)
             ? MimeUtility.TypeMap.Take(50)
-            : MimeUtility.TypeMap.Where(kvp => 
+            : MimeUtility.TypeMap.Where(kvp =>
                 kvp.Key.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) ||
                 kvp.Value?.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) == true)
               .Take(100);
@@ -45,8 +45,12 @@ public class MimeMappingApp : ViewBase
                 new Tab("Detect MIME Type", BuildFileInputDemo(inputMethod, fileInput, fileUpload, uploadUrl, currentFileName, detectedMimeType)),
                 new Tab("Browse Types", BuildBrowseTypesDemo(searchQuery, filteredTypes)),
                 new Tab("Reverse Lookup", BuildReverseLookupDemo(mimeTypeInput, extensions))
-            )
-            .Variant(TabsVariant.Tabs);
+            ).Variant(TabsVariant.Tabs)
+
+            | new Spacer()
+            | Text.Small("This demo uses MimeMapping library for detecting MIME types from file extensions.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MimeMapping](https://github.com/zone117x/MimeMapping)")
+            ;
     }
 
     private object BuildFileInputDemo(IState<InputMethod> inputMethod, IState<string> fileInput, IState<FileInput?> fileUpload, IState<string?> uploadUrl, string? currentFileName, string? detectedMimeType)
