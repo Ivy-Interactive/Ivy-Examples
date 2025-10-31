@@ -1,9 +1,4 @@
-using System;
-using System.Linq;
-using MiniExcelLibs;
-using UseOfMiniExcel.Models;
-
-namespace UseOfMiniExcel.Apps
+namespace MiniExcelExample
 {
    
 

@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Ivy;
-using MiniExcelLibs;
-using UseOfMiniExcel.Models;
-namespace UseOfMiniExcel.Apps
+namespace MiniExcelExample
 {
     [App(icon: Icons.PartyPopper, title: "AddStudentToExcel")]
     public class AddStudentToXlsx : ViewBase
@@ -56,7 +50,7 @@ namespace UseOfMiniExcel.Apps
                 | (new Card(
                     Layout.Vertical().Gap(8).Padding(12)
 
-                    | new Confetti(new IvyLogo()) // fun visual 🎉
+                    | new Confetti(new IvyLogo()) // fun visual
                     | Text.H2("Add Student to Excel")
 
                     // Name input (state bound, keeps value until save)

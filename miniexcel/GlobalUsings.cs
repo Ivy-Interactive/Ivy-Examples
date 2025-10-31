@@ -25,5 +25,9 @@ global using System.Collections.Immutable;
 global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
+global using System.Linq;
+global using System.Collections.Generic;
+global using MiniExcelLibs;
+global using UseOfMiniExcel.Models;
 
-namespace UseOfMiniExcel;
+namespace MiniExcelExample;
