@@ -181,6 +181,7 @@ public class MiniExcelViewApp : ViewBase
     {
         var client = UseService<IClientProvider>();
         var fileInput = this.UseState<FileInput?>(() => null);
+        var actionMode = this.UseState("Export");
 
         // Export download from MemoryStream
         var downloadUrl = this.UseDownload(
@@ -242,21 +243,22 @@ public class MiniExcelViewApp : ViewBase
             "imported-file"
         );
 
+        object? actionWidget = actionMode.Value == "Export"
+            ? new Button("Download Excel File")
+                .Icon(Icons.Download)
+                .Primary()
+                .Url(downloadUrl.Value)
+                .Width(Size.Full())
+            : fileInput.ToFileInput(uploadUrl, "Choose File")
+                .Accept(".xlsx");
+
         return Layout.Horizontal().Gap(4)
             | new Card(
                 Layout.Vertical().Gap(3)
                 | Text.H3("Data Management")
                 | Text.Muted("Upload and download Excel files with students data")
-                | Layout.Horizontal().Gap(3)
-                    | new Button("Export to Excel")
-                        .Icon(Icons.Download)
-                        .Primary()
-                        .Url(downloadUrl.Value)
-                        .Width(Size.Auto())
-                    | Text.Label("Import from Excel:")
-                | fileInput.ToFileInput(uploadUrl, "Choose File")
-                    .Accept(".xlsx")
-                        .Width(Size.Auto())
+                | actionMode.ToSelectInput(new[] { "Export", "Import" }.ToOptions())
+                | actionWidget
             ).Width(Size.Fraction(0.4f))
             | new Card(
                 Layout.Vertical()
