@@ -1,6 +1,6 @@
 namespace MiniExcelExample;
 
-public class StudentEditSheet(IState<bool> isOpen, Guid studentId, Action? onClose = null) : ViewBase
+public class StudentEditSheet(IState<bool> isOpen, Guid studentId, RefreshToken? refreshToken = null, Action? onClose = null) : ViewBase
 {
     public override object? Build()
     {
@@ -13,6 +13,7 @@ public class StudentEditSheet(IState<bool> isOpen, Guid studentId, Action? onClo
             {
                 StudentService.UpdateStudent(student.Value!);
                 client.Toast("Student updated");
+                refreshToken?.Refresh();
                 onClose?.Invoke();
             }
             catch (Exception ex)

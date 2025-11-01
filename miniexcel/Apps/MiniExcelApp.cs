@@ -112,10 +112,9 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
         var editButton = new Button("Edit")
             .Icon(Icons.Pencil)
             .Secondary()
-            .ToTrigger((isOpen) => new StudentEditSheet(isOpen, studentId, () => 
+            .ToTrigger((isOpen) => new StudentEditSheet(isOpen, studentId, refreshToken, () => 
             {
                 RefreshStudentData();
-                refreshToken.Refresh();
                 onRefresh?.Invoke();
             }));
 
@@ -168,11 +167,24 @@ public class MiniExcelViewApp : ViewBase
         // Load students from shared service
         var students = this.UseState(() => StudentService.GetStudents());
 
-        // Reload students when refresh token changes
+        // Load data on init AND when manually refreshed (Best Practice from docs)
         this.UseEffect(() =>
         {
             students.Set(StudentService.GetStudents());
         }, [refreshToken.ToTrigger()]);
+
+        // Listen to global data changes from StudentService (for cross-app sync)
+        // Subscribe to event and refresh both state and token
+        this.UseEffect(() =>
+        {
+            void OnDataChanged()
+            {
+                students.Set(StudentService.GetStudents());
+                refreshToken.Refresh(); // Also trigger refresh for other effects
+            }
+            
+            StudentService.DataChanged += OnDataChanged;
+        }, []);
 
         return BuildTableViewPage(students, refreshToken);
     }
@@ -269,6 +281,7 @@ public class MiniExcelViewApp : ViewBase
                         .Hidden(s => s.ID)
                         .Width(Size.Full())
                         .Height(Size.Fit())
+                        .Key($"students-{students.Value.Count}-{students.Value.Sum(s => s.GetHashCode())}") // Force re-render when data changes
                     : Layout.Center()
                         | Text.Muted("No data to display")
             ));

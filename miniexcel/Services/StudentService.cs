@@ -2,6 +2,28 @@ namespace MiniExcelExample;
 
 public static class StudentService
 {
+    // Global event for notifying all views about data changes
+    public static event Action? DataChanged;
+    
+    // Static callback for MiniExcelViewApp to refresh data
+    private static Action? _refreshCallback;
+
+    public static void RegisterRefreshCallback(Action callback)
+    {
+        _refreshCallback = callback;
+    }
+    
+    public static void UnregisterRefreshCallback()
+    {
+        _refreshCallback = null;
+    }
+
+    private static void NotifyDataChanged()
+    {
+        DataChanged?.Invoke();
+        _refreshCallback?.Invoke();
+    }
+
     private static List<Student> _students = new()
     {
         new()
@@ -83,11 +105,13 @@ public static class StudentService
     public static void UpdateStudents(List<Student> students)
     {
         _students = students;
+        NotifyDataChanged();
     }
 
     public static void AddStudent(Student student)
     {
         _students.Add(student);
+        NotifyDataChanged();
     }
 
     public static void UpdateStudent(Student student)
@@ -100,12 +124,14 @@ public static class StudentService
             existing.Age = student.Age;
             existing.Course = student.Course;
             existing.Grade = student.Grade;
+            NotifyDataChanged();
         }
     }
 
     public static void DeleteStudent(Guid studentId)
     {
         _students.RemoveAll(s => s.ID == studentId);
+        NotifyDataChanged();
     }
 }
 
