@@ -271,6 +271,9 @@ public class MiniExcelViewApp : ViewBase
                 | Text.Muted("Upload and download Excel files with students data")
                 | actionMode.ToSelectInput(new[] { "Export", "Import" }.ToOptions())
                 | actionWidget
+                | new Spacer().Height(Size.Units(5))
+                | Text.Small("This demo uses MiniExcel to manage students data.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MiniExcel](https://github.com/mini-software/MiniExcel)")
             ).Width(Size.Fraction(0.4f))
             | new Card(
                 Layout.Vertical()
@@ -284,6 +287,7 @@ public class MiniExcelViewApp : ViewBase
                         .Key($"students-{students.Value.Count}-{students.Value.Sum(s => s.GetHashCode())}") // Force re-render when data changes
                     : Layout.Center()
                         | Text.Muted("No data to display")
+                     
             ));
     }
 }
