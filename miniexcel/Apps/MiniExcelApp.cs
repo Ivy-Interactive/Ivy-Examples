@@ -1,208 +1,217 @@
 namespace MiniExcelExample;
 
-[App(icon: Icons.Sheet, title: "MiniExcel")]
-public class MiniExcelApp : ViewBase
+[App(icon: Icons.Sheet, title: "MiniExcel - Edit")]
+public class MiniExcelEditApp : ViewBase
 {
     public override object? Build()
     {
-        var selectedTab = this.UseState(0);
-        var client = UseService<IClientProvider>();
+        return this.UseBlades(() => new StudentsListBlade(), "Students");
+    }
+}
 
-        // In-memory data store (no files needed!)
-        var students = this.UseState(() => new List<Student>
+public class StudentsListBlade : ViewBase
+{
+    public override object? Build()
+    {
+        var blades = this.UseContext<IBladeController>();
+        var refreshToken = this.UseRefreshToken();
+        var students = this.UseState(() => StudentService.GetStudents());
+
+        // Reload students when refresh token changes
+        this.UseEffect(() =>
         {
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Alice Johnson",
-                Email = "alice.johnson@university.edu",
-                Age = 20,
-                Course = "Computer Science",
-                Grade = 95.5m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Bob Smith",
-                Email = "bob.smith@university.edu",
-                Age = 22,
-                Course = "Mathematics",
-                Grade = 88.0m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Carol Williams",
-                Email = "carol.williams@university.edu",
-                Age = 19,
-                Course = "Physics",
-                Grade = 92.3m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "David Brown",
-                Email = "david.brown@university.edu",
-                Age = 23,
-                Course = "Computer Science",
-                Grade = 76.5m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Emily Davis",
-                Email = "emily.davis@university.edu",
-                Age = 21,
-                Course = "Engineering",
-                Grade = 98.7m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Frank Miller",
-                Email = "frank.miller@university.edu",
-                Age = 25,
-                Course = "Business Administration",
-                Grade = 81.2m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Grace Wilson",
-                Email = "grace.wilson@university.edu",
-                Age = 20,
-                Course = "Biology",
-                Grade = 89.8m
-            },
-            new()
-            {
-                ID = Guid.NewGuid(),
-                Name = "Henry Moore",
-                Email = "henry.moore@university.edu",
-                Age = 22,
-                Course = "Computer Science",
-                Grade = 94.1m
-            }
+            students.Set(StudentService.GetStudents());
+        }, [refreshToken]);
+
+        var onItemClick = new Action<Event<ListItem>>(e =>
+        {
+            var student = (Student)e.Sender.Tag!;
+            blades.Push(this, new StudentDetailBlade(student.ID), student.Name);
         });
 
-        return Layout.Vertical()
-            | Text.H2("MiniExcel Library Demo")
-            | Text.Muted("Fast, Low-Memory, Easy Excel helper for .NET. All operations use MemoryStream - no files required!")
-            
-            // Tab navigation
-            | Layout.Tabs(
-                new Tab("1. Strongly Typed", BuildStronglyTypedTab(client, students)),
-                new Tab("2. LINQ Extensions", BuildLinqTab(client, students)),
-                new Tab("3. Import & Export", BuildImportExportTab(client, students))
-            ).Variant(TabsVariant.Tabs)
+        var items = students.Value.Select(student =>
+            new ListItem(
+                title: student.Name,
+                subtitle: $"{student.Course} • Grade: {student.Grade}",
+                onClick: onItemClick,
+                tag: student
+            )
+        );
 
-            | new Spacer()
-            | Text.Small("This demo uses MiniExcel library with Ivy Framework - all data stored in memory using MemoryStream.")
-            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MiniExcel](https://github.com/mini-software/MiniExcel)");
+        var addButton = Icons.Plus
+            .ToButton()
+            .Primary()
+            .ToTrigger((isOpen) => new StudentCreateDialog(isOpen, refreshToken, students));
+
+        return BladeHelper.WithHeader(
+            addButton
+            ,
+            students.Value.Count > 0
+                ? new List(items)
+                : Layout.Center()
+                    | Text.Muted("No students. Add the first record.")
+        );
     }
+}
 
-    private object BuildStronglyTypedTab(IClientProvider client, IState<List<Student>> students)
+public class StudentDetailBlade(Guid studentId) : ViewBase
+{
+    public override object? Build()
     {
-        // Query from MemoryStream
-        List<Student> queriedStudents;
-        using (var stream = new MemoryStream())
+        var blades = this.UseContext<IBladeController>();
+        var refreshToken = this.UseRefreshToken();
+        var student = this.UseState<Student?>(() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId));
+        var (alertView, showAlert) = this.UseAlert();
+
+        // Reload student when refresh token changes
+        this.UseEffect(() =>
         {
-            MiniExcel.SaveAs(stream, students.Value);
-            stream.Position = 0;
-            queriedStudents = MiniExcel.Query<Student>(stream).ToList();
+            student.Set(StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId));
+        }, [refreshToken]);
+
+        if (student.Value == null)
+        {
+            return Layout.Center()
+                | Text.Danger("Student not found");
         }
 
-        return Layout.Horizontal().Gap(6)
-            | new Card(
-                Layout.Vertical().Gap(5)
-                | Text.H3("Strongly Typed Query")
-                | Text.Muted("MiniExcel.Query<T> from MemoryStream")
-                | Text.Block($"✓ Total records: {queriedStudents.Count}")
-                | Text.Success("✓ All data loaded from memory")
-                | new Separator()
-                | Text.Small("Features:")
-                | Text.Small("• Automatic property mapping")
-                | Text.Small("• Type conversion (Guid, DateTime, bool)")
-                | Text.Small("• Low memory usage")
-                | new Separator()
-                | Text.Code(@"using (var stream = new MemoryStream()) {
-    MiniExcel.SaveAs(stream, students);
-    stream.Position = 0;
-    var rows = MiniExcel.Query<T>(stream);
-}")
-            ).Width(Size.Fraction(0.35f))
+        var studentValue = student.Value;
 
-            | new Card(
-                queriedStudents.Take(10).ToTable()
-                    .Width(Size.Full())
-                    .Builder(s => s.Name, b => b.Text())
-                    .Builder(s => s.Email, b => b.Text())
-                    .Builder(s => s.Age, b => b.Default())
-                    .Builder(s => s.Course, b => b.Text())
-                    .Builder(s => s.Grade, b => b.Default())
-            ).Width(Size.Fraction(0.65f));
+        var onEdit = new Action(() =>
+        {
+            blades.Push(this, new StudentEditBlade(studentId), $"Edit {studentValue.Name}");
+        });
+
+        var onDelete = new Action(() =>
+        {
+            showAlert($"Are you sure you want to delete {studentValue.Name}?", result =>
+            {
+                if (result.IsOk())
+                {
+                    var currentStudents = StudentService.GetStudents();
+                    currentStudents.RemoveAll(s => s.ID == studentId);
+                    StudentService.UpdateStudents(currentStudents);
+                    refreshToken.Refresh();
+                    blades.Pop(this, refresh: true);
+                }
+            }, "Delete Student", AlertButtonSet.OkCancel);
+        });
+
+        return new Fragment()
+            | BladeHelper.WithHeader(
+                Layout.Horizontal()
+                    | new Button("Edit")
+                        .Icon(Icons.Pencil)
+                        .Variant(ButtonVariant.Outline)
+                        .HandleClick(onEdit)
+                    | new Button("Delete")
+                        .Icon(Icons.Trash)
+                        .Variant(ButtonVariant.Outline)
+                        .HandleClick(onDelete)
+                ,
+                Layout.Vertical().Gap(4)
+                    | new Card(
+                        Layout.Vertical().Gap(3)
+                        | Text.H3(studentValue.Name)
+                        | new Separator()
+                        | Layout.Vertical().Gap(2)
+                            | Text.Label($"Email: {studentValue.Email}")
+                            | Text.Label($"Age: {studentValue.Age}")
+                            | Text.Label($"Course: {studentValue.Course}")
+                            | Text.Label($"Grade: {studentValue.Grade}")
+                    )
+            )
+            | alertView;
     }
+}
 
-    private object BuildLinqTab(IClientProvider client, IState<List<Student>> students)
+public class StudentEditBlade(Guid studentId) : ViewBase
+{
+    public override object? Build()
     {
-        // Query with LINQ from MemoryStream
-        int total = 0;
-        Student? first = null;
-        List<Student> top5 = new();
-        int whereCount = 0;
+        var blades = this.UseContext<IBladeController>();
+        var refreshToken = this.UseRefreshToken();
+        var student = this.UseState(() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId));
+        var client = UseService<IClientProvider>();
+
+        if (student.Value == null)
+        {
+            return Layout.Center()
+                | Text.Danger("Student not found");
+        }
+
+        UseEffect(() =>
+        {
+            try
+            {
+                // Only update if form is valid
+                if (string.IsNullOrWhiteSpace(student.Value.Name) ||
+                    string.IsNullOrWhiteSpace(student.Value.Email) ||
+                    string.IsNullOrWhiteSpace(student.Value.Course))
+                {
+                    return;
+                }
+
+                // Check if student was actually changed
+                var existing = StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
+                if (existing != null && (existing.Name != student.Value.Name ||
+                                         existing.Email != student.Value.Email ||
+                                         existing.Age != student.Value.Age ||
+                                         existing.Course != student.Value.Course ||
+                                         existing.Grade != student.Value.Grade))
+                {
+                    StudentService.UpdateStudent(student.Value);
+                    refreshToken.Refresh(); // Sync with other pages
+                    client.Toast("✓ Student updated");
+                    blades.Pop(this, refresh: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                client.Toast($"Update error: {ex.Message}", "Error");
+            }
+        }, [student]);
+
+        return BladeHelper.WithHeader(
+            Layout.Horizontal()
+                | new Button("Save")
+                    .Icon(Icons.Check)
+                    .Primary()
+            ,
+            student
+                .ToForm()
+                .Place(s => s.Name, s => s.Email)
+                .Remove(s => s.ID)
+                .Required(s => s.Name, s => s.Email, s => s.Course)
+                .Builder(s => s.Email, e => e.ToEmailInput())
+                .Builder(s => s.Age, e => e.ToNumberInput().Min(1).Max(150))
+                .Builder(s => s.Grade, e => e.ToNumberInput().Min(0).Max(100).Step(0.1))
+        );
+    }
+}
+
+[App(icon: Icons.Sheet, title: "MiniExcel - View")]
+public class MiniExcelViewApp : ViewBase
+{
+    public override object? Build()
+    {
+        var refreshToken = this.UseRefreshToken();
         
-        using (var stream = new MemoryStream())
+        // Load students from shared service
+        var students = this.UseState(() => StudentService.GetStudents());
+
+        // Reload students when refresh token changes
+        this.UseEffect(() =>
         {
-            MiniExcel.SaveAs(stream, students.Value);
-            stream.Position = 0;
-            
-            total = MiniExcel.Query<Student>(stream).Count();
-            stream.Position = 0;
-            first = MiniExcel.Query<Student>(stream).FirstOrDefault();
-            stream.Position = 0;
-            top5 = MiniExcel.Query<Student>(stream).Take(5).ToList();
-            stream.Position = 0;
-            whereCount = MiniExcel.Query<Student>(stream).Where(s => s.Age > 20).Count();
-        }
+            students.Set(StudentService.GetStudents());
+        }, [refreshToken]);
 
-        return Layout.Horizontal().Gap(6)
-            | new Card(
-                Layout.Vertical().Gap(5)
-                | Text.H3("LINQ Extensions")
-                | Text.Muted("Query supports First, Take, Skip, Where, OrderBy etc.")
-                | new Separator()
-                | Layout.Vertical().Gap(3)
-                    | Text.Block($"Total: {total}")
-                    | Text.Block($"Age > 20: {whereCount}")
-                    | Text.Block($"First: {first?.Name ?? "None"}")
-                | new Separator()
-                | Text.Small("Features:")
-                | Text.Small("• First(), FirstOrDefault()")
-                | Text.Small("• Take(), Skip()")
-                | Text.Small("• Where(), OrderBy()")
-                | Text.Small("• Count(), Any()")
-                | new Separator()
-                | Text.Code(@"stream.Query<T>()
-    .Where(x => x.Age > 20)
-    .OrderByDescending(x => x.Grade)
-    .Take(10)")
-            ).Width(Size.Fraction(0.35f))
-
-            | new Card(
-                top5.Count > 0
-                    ? top5.ToTable()
-                        .Width(Size.Full())
-                        .Builder(s => s.Name, b => b.Text())
-                        .Builder(s => s.Age, b => b.Default())
-                        .Builder(s => s.Grade, b => b.Default())
-                    : Layout.Center()
-                        | Text.Muted("No data to display")
-            ).Width(Size.Fraction(0.65f));
+        return BuildTableViewPage(students, refreshToken);
     }
 
-    private object BuildImportExportTab(IClientProvider client, IState<List<Student>> students)
+    private object BuildTableViewPage(IState<List<Student>> students, RefreshToken refreshToken)
     {
-        var importedStudents = this.UseState<List<Student>>(() => new List<Student>());
+        var client = UseService<IClientProvider>();
         var fileInput = this.UseState<FileInput?>(() => null);
 
         // Export download from MemoryStream
@@ -225,57 +234,78 @@ public class MiniExcelApp : ViewBase
                 {
                     using var ms = new MemoryStream(uploadedBytes);
                     var imported = MiniExcel.Query<Student>(ms).ToList();
-                    importedStudents.Set(imported);
+                    
+                    // Merge imported students with existing ones (by ID)
+                    var currentStudents = StudentService.GetStudents();
+                    foreach (var importedStudent in imported)
+                    {
+                        var existing = currentStudents.FirstOrDefault(s => s.ID == importedStudent.ID);
+                        if (existing != null)
+                        {
+                            // Update existing
+                            existing.Name = importedStudent.Name;
+                            existing.Email = importedStudent.Email;
+                            existing.Age = importedStudent.Age;
+                            existing.Course = importedStudent.Course;
+                            existing.Grade = importedStudent.Grade;
+                        }
+                        else
+                        {
+                            // Add new
+                            if (importedStudent.ID == Guid.Empty)
+                            {
+                                importedStudent.ID = Guid.NewGuid();
+                            }
+                            currentStudents.Add(importedStudent);
+                        }
+                    }
+                    
+                    StudentService.UpdateStudents(currentStudents);
+                    students.Set(StudentService.GetStudents()); // Trigger update
+                    refreshToken.Refresh(); // Sync with other pages
                     client.Toast($"✓ Imported {imported.Count} students");
                 }
                 catch (Exception ex)
                 {
-                    client.Toast($"Import failed: {ex.Message}", "Error");
+                    client.Toast($"Import error: {ex.Message}", "Error");
                 }
             },
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "imported-file"
         );
 
-        return Layout.Horizontal().Gap(6)
+        return Layout.Vertical().Gap(4)
             | new Card(
-                Layout.Vertical().Gap(5)
-                | Text.H3("Import & Export")
-                | Text.Muted("Stream-based operations")
-                | new Button("Export Excel")
-                    .Url(downloadUrl.Value)
-                    .Icon(Icons.Download)
-                    .Primary()
-                    .Width(Size.Full())
+                Layout.Vertical().Gap(3)
+                | Text.H3("View and Import/Export")
+                | Text.Muted("Table of all students with import and export functionality")
                 | new Separator()
-                | Text.Label("Import Excel:")
+                | Layout.Horizontal().Gap(3)
+                    | new Button("Export to Excel")
+                        .Icon(Icons.Download)
+                        .Primary()
+                        .Url(downloadUrl.Value)
+                        .Width(Size.Auto())
+                    | new Separator()
+                    | Text.Label("Import from Excel:")
                 | fileInput.ToFileInput(uploadUrl, "Choose File")
                     .Accept(".xlsx")
+                        .Width(Size.Auto())
                 | new Separator()
-                | Text.Small("Features:")
-                | Text.Small("• Memory-efficient streams")
-                | Text.Small("• Upload/Download")
-                | Text.Small("• Error handling")
-                | new Separator()
-                | Text.Code(@"// Export
-using var ms = new MemoryStream();
-MiniExcel.SaveAs(ms, data);
-
-// Import
-using var ms = new MemoryStream(bytes);
-var rows = MiniExcel.Query<T>(ms);")
-            ).Width(Size.Fraction(0.4f))
-
+                | Text.Label($"Total records: {students.Value.Count}")
+            )
             | new Card(
-                importedStudents.Value.Count > 0
-                    ? importedStudents.Value.ToTable()
+                students.Value.Count > 0
+                    ? students.Value.ToTable()
                         .Width(Size.Full())
                         .Builder(s => s.Name, b => b.Text())
+                        .Builder(s => s.Email, b => b.Text())
                         .Builder(s => s.Age, b => b.Default())
+                        .Builder(s => s.Course, b => b.Text())
                         .Builder(s => s.Grade, b => b.Default())
                     : Layout.Center()
-                        | Text.Muted("Imported data appears here")
-            ).Width(Size.Fraction(0.6f));
+                        | Text.Muted("No data to display")
+            );
     }
 }
 

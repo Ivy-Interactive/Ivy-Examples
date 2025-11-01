@@ -7,7 +7,7 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<MiniExcelApp>()
+    .DefaultApp<MiniExcelEditApp>()
     .UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 await server.RunAsync();
