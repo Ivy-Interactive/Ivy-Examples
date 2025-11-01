@@ -13,13 +13,19 @@
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
 
+  
+  
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="IbanNet" Version="5.19.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
+  
+  
 
   <ItemGroup>
     <Folder Include="Apps" />
+    <Folder Include="Connections" />
   </ItemGroup>
 
 </Project>
+

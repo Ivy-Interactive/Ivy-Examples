@@ -21,7 +21,7 @@
         ]
       },
       "codespaces": {
-        "openFiles": ["Apps/IbanNetApp.cs"]
+        "openFiles": ["Apps/IbanNetDemoApp.cs"]
       }
     }
   }
