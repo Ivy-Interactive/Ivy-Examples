@@ -26,4 +26,4 @@ global using System.Globalization;
 global using System.Reactive.Linq;
 global using MimeMapping;
 
-namespace MimeMappingDemo;
+namespace MimeMappingExample;
