@@ -7,6 +7,6 @@ namespace MiniExcelExample
         public string Email { get; set; } = string.Empty;
         public int Age { get; set; }
         public string Course { get; set; } = string.Empty;
-        public decimal Grade { get; set; }
+        public double Grade { get; set; }
     }
 }

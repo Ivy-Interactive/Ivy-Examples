@@ -18,7 +18,7 @@ public class StudentCreateDialog(IState<bool> isOpen, RefreshToken refreshToken,
         public string Course { get; init; } = "";
 
         [Range(0, 100)]
-        public decimal Grade { get; init; } = 0;
+        public double Grade { get; init; } = 0;
     }
 
     public override object? Build()

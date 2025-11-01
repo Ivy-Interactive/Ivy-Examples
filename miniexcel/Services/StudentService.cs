@@ -11,7 +11,7 @@ public static class StudentService
             Email = "alice.johnson@university.edu",
             Age = 20,
             Course = "Computer Science",
-            Grade = 95.5m
+            Grade = 95.5
         },
         new()
         {
@@ -20,7 +20,7 @@ public static class StudentService
             Email = "bob.smith@university.edu",
             Age = 22,
             Course = "Mathematics",
-            Grade = 88.0m
+            Grade = 88.0
         },
         new()
         {
@@ -29,7 +29,7 @@ public static class StudentService
             Email = "carol.williams@university.edu",
             Age = 19,
             Course = "Physics",
-            Grade = 92.3m
+            Grade = 92.3
         },
         new()
         {
@@ -38,7 +38,7 @@ public static class StudentService
             Email = "david.brown@university.edu",
             Age = 23,
             Course = "Computer Science",
-            Grade = 76.5m
+            Grade = 76.5
         },
         new()
         {
@@ -47,7 +47,7 @@ public static class StudentService
             Email = "emily.davis@university.edu",
             Age = 21,
             Course = "Engineering",
-            Grade = 98.7m
+            Grade = 98.7
         },
         new()
         {
@@ -56,7 +56,7 @@ public static class StudentService
             Email = "frank.miller@university.edu",
             Age = 25,
             Course = "Business Administration",
-            Grade = 81.2m
+            Grade = 81.2
         },
         new()
         {
@@ -65,7 +65,7 @@ public static class StudentService
             Email = "grace.wilson@university.edu",
             Age = 20,
             Course = "Biology",
-            Grade = 89.8m
+            Grade = 89.8
         },
         new()
         {
@@ -74,7 +74,7 @@ public static class StudentService
             Email = "henry.moore@university.edu",
             Age = 22,
             Course = "Computer Science",
-            Grade = 94.1m
+            Grade = 94.1
         }
     };
 

@@ -242,38 +242,34 @@ public class MiniExcelViewApp : ViewBase
             "imported-file"
         );
 
-        return Layout.Vertical().Gap(4)
+        return Layout.Horizontal().Gap(4)
             | new Card(
                 Layout.Vertical().Gap(3)
-                | Text.H3("View and Import/Export")
-                | Text.Muted("Table of all students with import and export functionality")
-                | new Separator()
+                | Text.H3("Data Management")
+                | Text.Muted("Upload and download Excel files with students data")
                 | Layout.Horizontal().Gap(3)
                     | new Button("Export to Excel")
                         .Icon(Icons.Download)
                         .Primary()
                         .Url(downloadUrl.Value)
                         .Width(Size.Auto())
-                    | new Separator()
                     | Text.Label("Import from Excel:")
                 | fileInput.ToFileInput(uploadUrl, "Choose File")
                     .Accept(".xlsx")
                         .Width(Size.Auto())
-                | new Separator()
-                | Text.Label($"Total records: {students.Value.Count}")
-            )
+            ).Width(Size.Fraction(0.4f))
             | new Card(
-                students.Value.Count > 0
-                    ? students.Value.ToTable()
+                Layout.Vertical()
+                | Text.H3("Data Overview")
+                | Text.Muted($"Search, filter and view all students data. Total records: {students.Value.Count}")
+                | (students.Value.Count > 0
+                    ? students.Value.AsQueryable().ToDataTable()
+                        .Hidden(s => s.ID)
                         .Width(Size.Full())
-                        .Builder(s => s.Name, b => b.Text())
-                        .Builder(s => s.Email, b => b.Text())
-                        .Builder(s => s.Age, b => b.Default())
-                        .Builder(s => s.Course, b => b.Text())
-                        .Builder(s => s.Grade, b => b.Default())
+                        .Height(Size.Fit())
                     : Layout.Center()
                         | Text.Muted("No data to display")
-            );
+            ));
     }
 }
 
