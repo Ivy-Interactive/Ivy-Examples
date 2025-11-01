@@ -52,9 +52,8 @@ public class StudentCreateDialog(IState<bool> isOpen, RefreshToken refreshToken,
                     
                     client.Toast($"Student '{newStudent.Name}' added");
                     
-                    // Reset form and close dialog
+                    // Reset form - ToDialog will auto-close
                     student.Set(new StudentCreateRequest());
-                    isOpen.Set(false);
                 }
             }
             catch (Exception ex)

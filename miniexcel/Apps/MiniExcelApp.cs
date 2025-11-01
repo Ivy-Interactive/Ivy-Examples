@@ -22,7 +22,7 @@ public class StudentsListBlade : ViewBase
         this.UseEffect(() =>
         {
             students.Set(StudentService.GetStudents());
-        }, [refreshToken]);
+        }, [refreshToken.ToTrigger()]);
 
         // Filter students based on search term
         var filteredStudents = string.IsNullOrWhiteSpace(searchTerm.Value)
@@ -38,7 +38,7 @@ public class StudentsListBlade : ViewBase
         var onItemClick = new Action<Event<ListItem>>(e =>
         {
             var student = (Student)e.Sender.Tag!;
-            blades.Push(this, new StudentDetailBlade(student.ID), student.Name);
+            blades.Push(this, new StudentDetailBlade(student.ID, () => refreshToken.Refresh()), student.Name);
         });
 
         var items = filteredStudents.Select(student =>
@@ -71,33 +71,53 @@ public class StudentsListBlade : ViewBase
     }
 }
 
-public class StudentDetailBlade(Guid studentId) : ViewBase
+public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : ViewBase
 {
     public override object? Build()
     {
         var blades = this.UseContext<IBladeController>();
         var refreshToken = this.UseRefreshToken();
-        var student = this.UseState<Student?>(() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId));
         var (alertView, showAlert) = this.UseAlert();
 
-        // Reload student when refresh token changes
-        this.UseEffect(() =>
-        {
-            student.Set(StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId));
-        }, [refreshToken]);
-
-        // If student was deleted, close the blade
-        if (student.Value == null)
+        var initialStudent = StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
+        
+        if (initialStudent == null)
         {
             return null; // Blade will be closed automatically
         }
 
+        var student = this.UseState(initialStudent);
+        
+        // Helper function to get current student from service
+        Student? GetCurrentStudent() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
+        
+        // Targeted refresh function - only called when needed
+        void RefreshStudentData()
+        {
+            var updatedStudent = GetCurrentStudent();
+            if (updatedStudent != null)
+            {
+                student.Set(updatedStudent);
+            }
+        }
+        
+        // Update local data when refresh token changes (for external updates)
+        this.UseEffect(() =>
+        {
+            RefreshStudentData();
+        }, [refreshToken.ToTrigger()]);
+
         var studentValue = student.Value;
 
-        var onEdit = new Action(() =>
-        {
-            blades.Push(this, new StudentEditBlade(studentId), $"Edit {studentValue.Name}");
-        });
+        var editButton = new Button("Edit")
+            .Icon(Icons.Pencil)
+            .Secondary()
+            .ToTrigger((isOpen) => new StudentEditSheet(isOpen, studentId, () => 
+            {
+                RefreshStudentData();
+                refreshToken.Refresh();
+                onRefresh?.Invoke();
+            }));
 
         var onDelete = new Action(() =>
         {
@@ -107,6 +127,7 @@ public class StudentDetailBlade(Guid studentId) : ViewBase
                 {
                     StudentService.DeleteStudent(studentId);
                     refreshToken.Refresh(); // Update other pages and trigger parent blade refresh
+                    onRefresh?.Invoke(); // Notify parent to refresh
                     blades.Pop(refresh: true); // Close blade and refresh parent list
                 }
             }, "Delete Student", AlertButtonSet.OkCancel);
@@ -126,10 +147,7 @@ public class StudentDetailBlade(Guid studentId) : ViewBase
                             Grade = studentValue.Grade
                         }.ToDetails(),
                         Layout.Horizontal()
-                        | new Button("Edit")
-                            .Icon(Icons.Pencil)
-                            .Secondary()
-                            .HandleClick(onEdit)
+                        | editButton
                         | new Button("Delete")
                             .Icon(Icons.Trash)
                             .Destructive()
@@ -137,62 +155,6 @@ public class StudentDetailBlade(Guid studentId) : ViewBase
                     )
             )
             | alertView;
-    }
-}
-
-public class StudentEditBlade(Guid studentId) : ViewBase
-{
-    public override object? Build()
-    {
-        var blades = this.UseContext<IBladeController>();
-        var refreshToken = this.UseRefreshToken();
-        var student = this.UseState(() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId));
-        var client = UseService<IClientProvider>();
-
-        UseEffect(() =>
-        {
-            try
-            {
-                // Only update if form is valid
-                if (string.IsNullOrWhiteSpace(student.Value.Name) ||
-                    string.IsNullOrWhiteSpace(student.Value.Email) ||
-                    string.IsNullOrWhiteSpace(student.Value.Course))
-                {
-                    return;
-                }
-
-                // Check if student was actually changed
-                var existing = StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
-                if (existing != null && (existing.Name != student.Value.Name ||
-                                         existing.Email != student.Value.Email ||
-                                         existing.Age != student.Value.Age ||
-                                         existing.Course != student.Value.Course ||
-                                         existing.Grade != student.Value.Grade))
-                {
-                    StudentService.UpdateStudent(student.Value);
-                    refreshToken.Refresh(); // Update parent blade and other pages
-                    client.Toast("Student updated");
-                    blades.Pop(refresh: true); // Close blade and refresh parent list
-                }
-            }
-            catch (Exception ex)
-            {
-                client.Toast($"Update error: {ex.Message}", "Error");
-            }
-        }, [student]);
-
-        return BladeHelper.WithHeader(
-            Text.H4($"Edit {student.Value.Name}")
-            ,
-            student
-                .ToForm()
-                .Place(s => s.Name, s => s.Email)
-                .Remove(s => s.ID)
-                .Required(s => s.Name, s => s.Email, s => s.Course)
-                .Builder(s => s.Email, e => e.ToEmailInput())
-                .Builder(s => s.Age, e => e.ToNumberInput().Min(1).Max(150))
-                .Builder(s => s.Grade, e => e.ToNumberInput().Min(0).Max(100).Step(0.1))
-        );
     }
 }
 
@@ -210,7 +172,7 @@ public class MiniExcelViewApp : ViewBase
         this.UseEffect(() =>
         {
             students.Set(StudentService.GetStudents());
-        }, [refreshToken]);
+        }, [refreshToken.ToTrigger()]);
 
         return BuildTableViewPage(students, refreshToken);
     }
