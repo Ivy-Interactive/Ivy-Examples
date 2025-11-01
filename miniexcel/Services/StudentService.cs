@@ -102,5 +102,10 @@ public static class StudentService
             existing.Grade = student.Grade;
         }
     }
+
+    public static void DeleteStudent(Guid studentId)
+    {
+        _students.RemoveAll(s => s.ID == studentId);
+    }
 }
 

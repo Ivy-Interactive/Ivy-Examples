@@ -11,7 +11,7 @@ public class StudentCreateDialog(IState<bool> isOpen, RefreshToken refreshToken,
         [EmailAddress]
         public string Email { get; init; } = "";
 
-        [Range(1, 150)]
+        [Range(18, 110)]
         public int Age { get; init; } = 0;
 
         [Required]
@@ -50,7 +50,7 @@ public class StudentCreateDialog(IState<bool> isOpen, RefreshToken refreshToken,
                     students.Set(StudentService.GetStudents()); // Trigger update
                     refreshToken.Refresh(); // Sync with other pages
                     
-                    client.Toast($"✓ Student '{newStudent.Name}' added");
+                    client.Toast($"Student '{newStudent.Name}' added");
                     
                     // Reset form and close dialog
                     student.Set(new StudentCreateRequest());
@@ -68,7 +68,7 @@ public class StudentCreateDialog(IState<bool> isOpen, RefreshToken refreshToken,
             .Place(s => s.Name, s => s.Email)
             .Required(s => s.Name, s => s.Email, s => s.Course)
             .Builder(s => s.Email, e => e.ToEmailInput())
-            .Builder(s => s.Age, e => e.ToNumberInput().Min(1).Max(150))
+            .Builder(s => s.Age, e => e.ToNumberInput().Min(18).Max(110))
             .Builder(s => s.Grade, e => e.ToNumberInput().Min(0).Max(100).Step(0.1))
             .ToDialog(isOpen, title: "Add Student", submitTitle: "Add");
     }
