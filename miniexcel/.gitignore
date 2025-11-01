@@ -3,3 +3,5 @@ obj/
 *.sln.iml
 .idea/**/*
 **/.idea/*
+**/.vs/*
+**/.vscode/*
