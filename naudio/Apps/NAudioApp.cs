@@ -1,7 +1,7 @@
-using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 
-[App(icon: Icons.AudioLines, title: "NAudio Demo")]
+namespace NAudioExample;
+
+[App(icon: Icons.AudioLines, title: "NAudio")]
 public class NAudioApp : ViewBase
 {
     public override object? Build()

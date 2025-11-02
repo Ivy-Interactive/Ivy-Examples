@@ -26,5 +26,7 @@ global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
 global using NAudio;
+global using NAudio.Wave;
+global using NAudio.Wave.SampleProviders;
 
-namespace NAudioDemo;
+namespace NAudioExample;
