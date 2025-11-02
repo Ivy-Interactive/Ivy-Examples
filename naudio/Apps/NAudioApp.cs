@@ -77,7 +77,7 @@ public class NAudioApp : ViewBase
         var genUrl = this.UseDownload(() => genBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"generated_tone_{genVersion.Value}.wav");
         var mixUrl = this.UseDownload(() => mixBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"mixed_audio_{mixVersion.Value}.wav");
 
-        return Layout.Vertical().Width(Size.Units(200).Max(1000))
+        return Layout.Vertical().Align(Align.TopCenter)
             | new Card(
                 Layout.Vertical()
                 | Text.H1("NAudio")
@@ -170,7 +170,7 @@ public class NAudioApp : ViewBase
                                 .Controls(true)
                         : null!)
                 )
-            );
+            ).Width(Size.Units(200).Max(Size.Full()));
     }
 
     private static ISampleProvider LoadAudio(string filePath)
