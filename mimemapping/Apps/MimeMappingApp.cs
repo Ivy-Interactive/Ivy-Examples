@@ -7,7 +7,6 @@ public class MimeMappingApp : ViewBase
 
     public override object? Build()
     {
-        var selectedTab = this.UseState(0);
         var inputMethod = this.UseState(InputMethod.UploadFile);
         var fileInput = this.UseState<string>();
         var fileUpload = this.UseState<FileInput?>(() => null);
@@ -176,7 +175,6 @@ public class MimeMappingApp : ViewBase
         
         // Determine if we should show results
         bool showResults = isValidInput && mimeTypeError == null && hasValidExtensions;
-        // bool showNoResults = isValidInput && mimeTypeError == null && !hasValidExtensions;
 
         return Layout.Horizontal().Gap(5)
             | new Card(
