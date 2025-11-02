@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.113.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 
