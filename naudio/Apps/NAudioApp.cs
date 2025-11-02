@@ -170,6 +170,9 @@ public class NAudioApp : ViewBase
                                 .Controls(true)
                                 .Key($"audio-mix-{mixVersion.Value}")
                         : null!)
+                    | new Spacer().Height(Size.Units(10))
+                    | Text.Small("This demo uses NAudio library for generating and mixing audio.")
+                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [NAudio](https://github.com/naudio/NAudio)")
                 )
             ).Width(Size.Units(200).Max(Size.Full()));
     }
