@@ -77,28 +77,26 @@ public class NAudioApp : ViewBase
         var genUrl = this.UseDownload(() => genBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"generated_tone_{genVersion.Value}.wav");
         var mixUrl = this.UseDownload(() => mixBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"mixed_audio_{mixVersion.Value}.wav");
 
-        return Layout.Vertical().Gap(4).Padding(3).Width(Size.Units(200).Max(1000))
+        return Layout.Vertical().Width(Size.Units(200).Max(1000))
             | new Card(
-                Layout.Vertical().Gap(4).Padding(3)
-                | Text.H2("NAudio")
-                | Text.Muted("Upload a file or create your own sound and mix them together")
-                
+                Layout.Vertical()
+                | Text.H1("NAudio")
+                | Text.Muted("Upload audio files, generate custom tones with adjustable parameters, and mix them together. Perfect for audio experimentation and sound design.")
+
                 // Section 1: Upload File
-                | new Separator()
                 | Text.H3("Upload File")
-                | (Layout.Vertical().Gap(2).Padding(2)
+                | (Layout.Vertical()
                     | fileInput.ToFileInput(uploadUrl, "Choose Audio File").Accept("audio/*")
                     | (uploadBytes.Value != null && uploadName.Value != null
                         ? new Callout($"File loaded: {uploadName.Value}\n" +
                             $"Format: {format.Value?.SampleRate}Hz, {format.Value?.Channels} channel(s), {format.Value?.BitsPerSample} bits\n" +
                             $"Duration: {duration.Value?.TotalSeconds:F2} seconds", variant: CalloutVariant.Info)
-                        : Text.Muted("No file uploaded"))
+                        : Callout.Info("No file uploaded"))
                 )
 
                 // Section 2: Generate Sound
-                | new Separator()
                 | Text.H3("Generate Sound")
-                | (Layout.Vertical().Gap(3).Padding(2)
+                | (Layout.Vertical()
                     | Text.Label("Wave Type")
                     | waveType.ToSelectInput(typeof(SignalGeneratorType).ToOptions())
                     | Text.Label("Frequency (Hz)")
@@ -134,16 +132,14 @@ public class NAudioApp : ViewBase
                 )
 
                 // Section 3: Mix Audio
-                | new Separator()
                 | Text.H3("Mix Audio")
-                | (Layout.Vertical().Gap(3).Padding(2)
+                | (Layout.Vertical()
                     | (genBytes.Value == null
                         ? new Callout("Generate a sound first", variant: CalloutVariant.Warning)
-                        : Text.Small($"Generated sound ready ({genBytes.Value.Length / 1024} KB)"))
+                        : Text.Muted($"Generated sound ready ({genBytes.Value.Length / 1024} KB)"))
                     | (uploadBytes.Value == null
                         ? new Callout("Upload a file first", variant: CalloutVariant.Warning)
-                        : Text.Small($"Uploaded file ready ({uploadBytes.Value.Length / 1024} KB)"))
-                    | new Separator()
+                        : Text.Muted($"Uploaded file ready ({uploadBytes.Value.Length / 1024} KB)"))
                     | Text.Label("Generated Sound Volume")
                     | new NumberInput<float>(mixGenVol).Min(0).Max(1).Step(0.01).Variant(NumberInputs.Slider)
                     | Text.Label("Uploaded File Volume")
@@ -172,7 +168,6 @@ public class NAudioApp : ViewBase
                             | Text.Small("Mixed Audio")
                             | new Audio(mixUrl.Value)
                                 .Controls(true)
-                            | new Button("Download").Primary().Icon(Icons.Download).Url(mixUrl.Value).Width(Size.Full())
                         : null!)
                 )
             );
