@@ -168,6 +168,7 @@ public class NAudioApp : ViewBase
                             | Text.Small("Mixed Audio")
                             | new Audio(mixUrl.Value)
                                 .Controls(true)
+                                .Key($"audio-mix-{mixVersion.Value}")
                         : null!)
                 )
             ).Width(Size.Units(200).Max(Size.Full()));
