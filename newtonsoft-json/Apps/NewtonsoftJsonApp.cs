@@ -115,9 +115,11 @@
                         | new Button("Deserialize", _ => HandleButtonClick())
                             .Disabled(!isSerialized.Value)
                             .Icon(Icons.ArrowRight, Align.Right)
-
+                        | new Spacer()
+                        | Text.Small("This demo uses Newtonsoft.Json library to serialize and deserialize JSON data.")
+                        | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json)")
                         )
-                        .Width(Size.Half())
+                        .Width(Size.Half()).Height(Size.Fit().Min(Size.Full()))
 
                     | new Card(
                         Layout.Vertical()
@@ -151,7 +153,7 @@
                         | new Button("Serialize", _ => HandleButtonClick())
                             .Disabled(isSerialized.Value)
                             .Icon(Icons.ArrowLeft, Align.Left)
-                    ).Width(Size.Half());
+                    ).Width(Size.Half()).Height(Size.Fit().Min(Size.Full()));
         }
     }
 }
