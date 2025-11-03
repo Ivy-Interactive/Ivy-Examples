@@ -1,129 +1,202 @@
-﻿namespace MimeMappingDemo.Apps;
+﻿namespace MimeMappingExample;
 
-[App(icon: Icons.FileText, title: "MimeMapping Demo")]
+[App(icon: Icons.FileText, title: "MimeMapping")]
 public class MimeMappingApp : ViewBase
 {
+    private enum InputMethod { UploadFile, EnterFileName }
+
     public override object? Build()
     {
-        var selectedTab = this.UseState(0);
+        var inputMethod = this.UseState(InputMethod.UploadFile);
         var fileInput = this.UseState<string>();
+        var fileUpload = this.UseState<FileInput?>(() => null);
         var mimeTypeInput = this.UseState<string>();
         var searchQuery = this.UseState<string>();
-        
-        var detectedMimeType = fileInput.Value != null 
-            ? MimeUtility.GetMimeMapping(fileInput.Value) 
-            : null;
-            
-        var extensions = !string.IsNullOrEmpty(mimeTypeInput.Value) 
-            ? MimeUtility.GetExtensions(mimeTypeInput.Value) 
+        var currentPage = this.UseState(1);
+        const int itemsPerPage = 8;
+
+        // Reset to page 1 when search query changes
+        UseEffect(() =>
+        {
+            currentPage.Set(1);
+        }, [searchQuery]);
+
+        var uploadUrl = this.UseUpload(
+            uploadedBytes => { }, // No action needed for file upload
+            "*/*",
+            "uploaded-file"
+        );
+
+        var currentFileName = inputMethod.Value == InputMethod.UploadFile ? fileUpload.Value?.Name : fileInput.Value;
+        var detectedMimeType = currentFileName != null
+            ? MimeUtility.GetMimeMapping(currentFileName)
             : null;
 
-        var filteredTypes = string.IsNullOrEmpty(searchQuery.Value)
-            ? MimeUtility.TypeMap.Take(50)
-            : MimeUtility.TypeMap.Where(kvp => 
+        var extensions = !string.IsNullOrEmpty(mimeTypeInput.Value)
+            ? MimeUtility.GetExtensions(mimeTypeInput.Value)
+            : null;
+
+        // Get all filtered types
+        var allFilteredTypes = string.IsNullOrEmpty(searchQuery.Value)
+            ? MimeUtility.TypeMap.ToList()
+            : MimeUtility.TypeMap.Where(kvp =>
                 kvp.Key.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) ||
-                kvp.Value?.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) == true)
-              .Take(100);
+                kvp.Value?.Contains(searchQuery.Value, StringComparison.OrdinalIgnoreCase) == true).ToList();
 
-        return Layout.Vertical().Gap(2).Padding(2)
-            | Text.H1("MimeMapping Library Demo")
-            | Text.Muted("Interactive demonstration of file extension to MIME type mapping capabilities")
-            | new Separator()
-            
+        // Get paginated types
+        var totalItems = allFilteredTypes.Count;
+        var totalPages = (int)Math.Ceiling(totalItems / (double)itemsPerPage);
+        
+        // Ensure current page is valid
+        if (currentPage.Value < 1)
+        {
+            currentPage.Set(1);
+        }
+        else if (totalPages > 0 && currentPage.Value > totalPages)
+        {
+            currentPage.Set(totalPages);
+        }
+        
+        var filteredTypes = allFilteredTypes.Skip((currentPage.Value - 1) * itemsPerPage).Take(itemsPerPage);
+
+        return Layout.Vertical()
+            | Text.H2("MimeMapping Library Demo")
+            | Text.Muted("Detect MIME types from file extensions, search and browse all supported types, and perform reverse lookup to find file extensions by MIME type. Upload files or enter file names to see real-time detection.")
+
             // Tab navigation
-            | Layout.Horizontal().Gap(1)
-                | new Button("File Input Demo", onClick: () => selectedTab.Set(0))
-                    .Variant(selectedTab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Secondary)
-                | new Button("Browse Types", onClick: () => selectedTab.Set(1))
-                    .Variant(selectedTab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Secondary)
-                | new Button("Reverse Lookup", onClick: () => selectedTab.Set(2))
-                    .Variant(selectedTab.Value == 2 ? ButtonVariant.Primary : ButtonVariant.Secondary)
-            
-            // Tab content with proper scrolling
-            | new Card(
-                (selectedTab.Value switch
-                {
-                    0 => BuildFileInputDemo(fileInput, detectedMimeType),
-                    1 => BuildBrowseTypesDemo(searchQuery, filteredTypes),
-                    2 => BuildReverseLookupDemo(mimeTypeInput, extensions),
-                    _ => Text.Block("Select a tab above")
-                })
-            ).Height(Size.Full()).Width(Size.Full());
+            | Layout.Tabs(
+                new Tab("Detect Type", BuildFileInputDemo(inputMethod, fileInput, fileUpload, uploadUrl, currentFileName, detectedMimeType)),
+                new Tab("Browse Types", BuildBrowseTypesDemo(searchQuery, filteredTypes, currentPage, totalPages, totalItems)),
+                new Tab("Reverse Lookup", BuildReverseLookupDemo(mimeTypeInput, extensions))
+            ).Variant(TabsVariant.Tabs)
+
+            | new Spacer()
+            | Text.Small("This demo uses MimeMapping library for detecting MIME types from file extensions.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MimeMapping](https://github.com/zone117x/MimeMapping)")
+            ;
     }
 
-    private object BuildFileInputDemo(IState<string> fileInput, string? detectedMimeType)
+    private object BuildFileInputDemo(IState<InputMethod> inputMethod, IState<string> fileInput, IState<FileInput?> fileUpload, IState<string?> uploadUrl, string? currentFileName, string? detectedMimeType)
     {
-        return Layout.Vertical().Gap(3)
-            | Text.H3("File Extension to MIME Type Detection")
-            | Text.Block("Enter a file name, extension, or full path to detect its MIME type:")
-            | fileInput.ToInput(placeholder: "e.g., image.jpg, document.pdf, archive.zip")
-            | (detectedMimeType != null ? 
-                new Card(
-                    Layout.Vertical().Gap(2)
-                    | Text.H4("Detection Result:")
-                    | Text.Block($"File: {fileInput.Value}")
-                    | Text.Block($"MIME Type: {detectedMimeType}")
-                    | (detectedMimeType == MimeUtility.UnknownMimeType ? 
-                        Text.Muted("Unknown file type - returns default application/octet-stream") :
-                        Text.Success(" Known file type detected"))
-                ) :
-                Text.Muted("Enter a file name above to see the MIME type detection"))
-            | new Separator()
-            | Text.H4("Try these examples:")
-            | Layout.Grid().Columns(2).Gap(1)
-                | new Button("image.png", onClick: () => fileInput.Set("image.png"))
-                | new Button("document.pdf", onClick: () => fileInput.Set("document.pdf"))
-                | new Button("archive.zip", onClick: () => fileInput.Set("archive.zip"))
-                | new Button("data.json", onClick: () => fileInput.Set("data.json"))
-                | new Button("video.mp4", onClick: () => fileInput.Set("video.mp4"))
-                | new Button("unknown.xyz", onClick: () => fileInput.Set("unknown.xyz"));
+        // Validation
+        string? fileInputError = null;
+        string? fileUploadError = null;
+        
+        if (inputMethod.Value == InputMethod.UploadFile && fileUpload.Value != null)
+        {
+            var detected = MimeUtility.GetMimeMapping(fileUpload.Value.Name);
+            if (detected == MimeUtility.UnknownMimeType)
+            {
+                fileUploadError = "Unknown file type - returns default application/octet-stream";
+            }
+        }
+        else if (inputMethod.Value == InputMethod.EnterFileName && !string.IsNullOrEmpty(fileInput.Value))
+        {
+            var detected = MimeUtility.GetMimeMapping(fileInput.Value);
+            if (detected == MimeUtility.UnknownMimeType)
+            {
+                fileInputError = "Unknown file type - returns default application/octet-stream";
+            }
+        }
+        
+        // Check if inputs have values
+        bool hasUploadValue = inputMethod.Value == InputMethod.UploadFile && fileUpload.Value != null;
+        bool hasInputValue = inputMethod.Value == InputMethod.EnterFileName && !string.IsNullOrEmpty(fileInput.Value);
+        
+        object inputSection = inputMethod.Value == InputMethod.UploadFile
+            ? Layout.Vertical()
+                | Text.Label("Choose File")
+                | fileUpload.ToFileInput(uploadUrl)
+                    .Invalid(fileUploadError)
+            : Layout.Vertical()
+                | Text.Label("Enter File Name")
+                | fileInput.ToInput(placeholder: "e.g., image.jpg, document.pdf, archive.zip")
+                    .Invalid(fileInputError);
+
+        return Layout.Horizontal().Gap(5)
+            | new Card(
+            Layout.Vertical().Gap(5)
+            | Text.H3("Detect MIME Type")
+            | Text.Muted("Upload a file or enter a file name to detect the MIME type")
+            | (Layout.Vertical().Gap(5)
+                | Text.Label("Select input method:")
+                | inputMethod.ToSelectInput(typeof(InputMethod).ToOptions())
+                | inputSection)
+            )
+
+            | new Card(
+            Layout.Vertical().Gap(5)
+            | Text.H3("Detection Result")
+            | (detectedMimeType != null && currentFileName != null && (hasUploadValue || hasInputValue) && fileUploadError == null && fileInputError == null
+                ? Layout.Vertical()
+                | Text.Muted("To detect a different file, simply select or enter a new file name")
+                | new Card(
+                    new { File = currentFileName, MimeType = detectedMimeType }
+                        .ToDetails()
+                        .Builder(x => x.MimeType, b => b.CopyToClipboard())
+                        .Builder(x => x.File, b => b.CopyToClipboard())
+                )
+                : Text.Muted("Enter a file name or select a file above to see the MIME type detection")
+            ));
     }
 
-    private object BuildBrowseTypesDemo(IState<string> searchQuery, IEnumerable<KeyValuePair<string, string?>> filteredTypes)
+    private object BuildBrowseTypesDemo(IState<string> searchQuery, IEnumerable<KeyValuePair<string, string?>> filteredTypes, IState<int> currentPage, int totalPages, int totalItems)
     {
         return Layout.Vertical().Gap(3)
             | Text.H3("Browse Available MIME Types")
-            | Text.Block($"Showing {MimeUtility.TypeMap.Count} total MIME types. Search to filter:")
+            | Text.Muted($"Showing {filteredTypes.Count()} of {totalItems} types")
             | searchQuery.ToInput(placeholder: "Search by extension or MIME type...")
-            | new Card(
-                Layout.Vertical().Gap(2)
-                | filteredTypes.ToTable()
-                    .Width(Size.Full())
-            )
-            | Text.Muted($"Showing {filteredTypes.Count()} of {MimeUtility.TypeMap.Count} types");
+            | new Card(filteredTypes.ToTable().Width(Size.Full()))
+            | (totalPages > 1
+                ? new Pagination(currentPage.Value, totalPages, evt => currentPage.Set(evt.Value))
+                : null);
+            
     }
 
     private object BuildReverseLookupDemo(IState<string> mimeTypeInput, string[]? extensions)
     {
-        return Layout.Vertical().Gap(3)
-            | Text.H3("MIME Type to Extensions Lookup")
-            | Text.Block("Enter a MIME type to find all associated file extensions:")
-            | mimeTypeInput.ToInput(placeholder: "e.g., image/jpeg, application/pdf, text/html")
-            | (extensions != null && extensions.Length > 0 ? 
-                new Card(
-                    Layout.Vertical().Gap(2)
-                    | Text.H4("Associated Extensions:")
-                    | Text.Block($"MIME Type: {mimeTypeInput.Value}")
-                    | Layout.Horizontal().Gap(1).Wrap()
-                        | extensions.Select(ext => new Badge(ext)).ToArray()
-                    | Text.Muted($"Found {extensions.Length} extension(s)")
-                ) :
-                !string.IsNullOrEmpty(mimeTypeInput.Value) ?
-                new Card(
-                    Layout.Vertical().Gap(2)
-                    | Text.H4("No Extensions Found")
-                    | Text.Block($"MIME Type: {mimeTypeInput.Value}")
-                    | Text.Muted("This MIME type is not recognized or has no associated extensions")
-                ) :
-                Text.Muted("Enter a MIME type above to find associated extensions"))
-            | new Separator()
-            | Text.H4("Try these examples:")
-            | Layout.Grid().Columns(2).Gap(1)
-                | new Button("image/jpeg", onClick: () => mimeTypeInput.Set("image/jpeg"))
-                | new Button("application/pdf", onClick: () => mimeTypeInput.Set("application/pdf"))
-                | new Button("text/html", onClick: () => mimeTypeInput.Set("text/html"))
-                | new Button("application/json", onClick: () => mimeTypeInput.Set("application/json"))
-                | new Button("video/mp4", onClick: () => mimeTypeInput.Set("video/mp4"))
-                | new Button("application/zip", onClick: () => mimeTypeInput.Set("application/zip"));
+        // Validation
+        string? mimeTypeError = null;
+        bool isValidInput = !string.IsNullOrEmpty(mimeTypeInput.Value);
+        bool hasValidExtensions = extensions != null && extensions.Length > 0;
+
+        if (isValidInput)
+        {
+            // Validate MIME type format (should contain "/")
+            if (!mimeTypeInput.Value.Contains('/'))
+            {
+                mimeTypeError = "Invalid MIME type format. Expected format: type/subtype (e.g., image/jpeg)";
+            }
+            else if (isValidInput && mimeTypeError == null && !hasValidExtensions)
+            {
+                mimeTypeError = "This MIME type is not recognized or has no associated extensions";
+            }
+        }
+        
+        // Determine if we should show results
+        bool showResults = isValidInput && mimeTypeError == null && hasValidExtensions;
+
+        return Layout.Horizontal().Gap(5)
+            | new Card(
+                Layout.Vertical().Gap(5)
+                | Text.H3("MIME Type to Extensions Lookup")
+                | Text.Muted("Enter a MIME type to find all associated file extensions")
+                | mimeTypeInput.ToInput(placeholder: "e.g., image/jpeg, application/pdf, text/html")
+                    .Invalid(mimeTypeError)
+                )
+            
+            | new Card(
+                Layout.Vertical().Gap(5)
+                | Text.H3("Lookup Result")
+                | Text.Muted("Results will appear here when a valid MIME type is entered")
+                | (showResults
+                    ? new Card(
+                        Layout.Vertical()
+                        | Text.Muted($"Found {extensions.Length} extension(s)")
+                        | (Layout.Horizontal().Gap(1)
+                            | extensions!.Select(ext => new Badge(ext)).ToArray())
+                        ) : null
+                )
+            );
     }
 }
