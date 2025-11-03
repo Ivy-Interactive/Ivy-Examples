@@ -1,8 +1,6 @@
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
-using System.Reflection;
+using NewtonsoftJsonExample;
 [App(icon: Icons.File)]
-public class NewtonsoftJsonExample : ViewBase
+public class NewtonsoftJsonExamples : ViewBase
 {
     private string _inputJson = SampleJson.Pretty;
     private string _jsonPath = "$.store.book[?(@.price < 10)].title";
