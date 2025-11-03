@@ -12,12 +12,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="OllamaSharp" Version="5.4.5" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Connections" />
   </ItemGroup>
 
 </Project>
