@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>IbanNetExample</RootNamespace>
+    <UserSecretsId>f52e120c-8469-4a17-b0a2-a12160a40975</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
