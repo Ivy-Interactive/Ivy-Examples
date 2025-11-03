@@ -1,7 +1,7 @@
 ﻿namespace NewtonsoftJsonExample
 {
 
-    [App(title: "Newtonsoft Demo", icon: Icons.File)]
+    [App(title: "Newtonsoft.Json", icon: Icons.File)]
     public class NewtonsoftJsonApp : ViewBase
     {
         public override object? Build()
