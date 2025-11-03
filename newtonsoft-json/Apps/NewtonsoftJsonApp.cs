@@ -7,21 +7,51 @@
         public override object? Build()
         {
             var client = UseService<IClientProvider>();
+            var defaultUser = new UserData
+            {
+                FullName = "John Doe",
+                Email = "johndoe@example.com",
+                DateCreated = DateTime.Parse("2013-01-20T00:00:00Z", null, System.Globalization.DateTimeStyles.AdjustToUniversal),
+                Roles = new List<string> { "User", "Admin" }
+            };
+
             var user = UseState<UserData>(() => new UserData());
+            var date = UseState<DateTime>(DateTime.UtcNow);
+            var roles = UseState<List<string>>(() => new List<string>(defaultUser.Roles));
+            var email = UseState("");
+            var emailInvalid = UseState("");
             var isSerialized = UseState<bool>(true);
 
-            string json = @"{
-                  'FullName': 'John Doe',
-                  'Email': 'johndoe@example.com',
-                  'IsActive': true,
-                  'DateCreated': '2013-01-20T00:00:00Z',
-                  'Roles': [
-                    'User',
-                    'Admin'
-                  ]
-                }";
-
+            var json = JsonConvert.SerializeObject(defaultUser, Formatting.Indented);
             var rawData = UseState<string>(json);
+
+            UseEffect(() =>
+            {
+                user.Set(u => new UserData
+                {
+                    FullName = u.FullName,
+                    Email = email.Value,
+                    DateCreated = u.DateCreated,
+                    Roles = new List<string>(u.Roles)
+                });
+            }, [email.ToTrigger()]);
+
+            // Simple email validation (Ivy-style via Invalid)
+            UseEffect(() =>
+            {
+                if (string.IsNullOrWhiteSpace(email.Value))
+                {
+                    emailInvalid.Set("");
+                }
+                else if (!(email.Value.Contains("@") && email.Value.Contains(".")))
+                {
+                    emailInvalid.Set("Please enter a valid email address");
+                }
+                else
+                {
+                    emailInvalid.Set("");
+                }
+            }, [email.ToTrigger()]);
 
             void HandleButtonClick()
             {
@@ -39,7 +69,14 @@
             {
                 try
                 {
-                    var rawInfo = JsonConvert.SerializeObject(user.Value, Formatting.Indented);
+                    var toSerialize = new UserData
+                    {
+                        FullName = user.Value.FullName,
+                        Email = user.Value.Email,
+                        DateCreated = date.Value,
+                        Roles = new List<string>(roles.Value)
+                    };
+                    var rawInfo = JsonConvert.SerializeObject(toSerialize, Formatting.Indented);
                     rawData.Set(rawInfo);
                     isSerialized.Set(true);
                 }
@@ -55,6 +92,9 @@
                 {
                     var userData = JsonConvert.DeserializeObject<UserData>(rawData.Value);
                     user.Set(userData!);
+                    date.Set(userData!.DateCreated);
+                    email.Set(userData!.Email ?? "");
+                    roles.Set(userData!.Roles ?? new List<string>());
 
                     isSerialized.Set(false);
                 }
@@ -65,45 +105,53 @@
             }
 
             return
-                Layout.Horizontal().Center()
+                Layout.Horizontal().Gap(8)
                     | new Card(
                         Layout.Vertical()
-                        | Text.H4("Simple Json Data")
-                        | rawData.ToCodeInput(variant: CodeInputs.Default, language: Languages.Json).Height(80)
+						| Text.H4("Source JSON")
+						| Text.Muted("Edit sample JSON (add roles, tweak fields) then click Deserialize to load it here.")
+                        | rawData.ToCodeInput(variant: CodeInputs.Default, language: Languages.Json).Height(Size.Fit())
                             .Disabled(!isSerialized.Value)
+                        | new Button("Deserialize", _ => HandleButtonClick())
+                            .Disabled(!isSerialized.Value)
+                            .Icon(Icons.ArrowRight, Align.Right)
+
                         )
-                        .Width(Size.Half()).Height(150)
-                    | new Button(isSerialized.Value ? "Deserialize" : "Serialize",
-                        _ => HandleButtonClick())
-                        .Icon(isSerialized.Value ? Icons.ArrowRight : Icons.ArrowLeft,
-                            isSerialized.Value ? Align.Right : Align.Left)
+                        .Width(Size.Half())
 
                     | new Card(
-                        Layout.Vertical().Scroll().Padding(10)
-                        | Text.H4(user.Value != null ? user.Value.FullName : string.Empty)
+                        Layout.Vertical()
+						| Text.H4("User Editor")
+						| Text.Muted("Modify user fields, pick date and roles, then click Serialize to push changes back to JSON.")
 
-                        | new TextInput(user.Value?.FullName ?? string.Empty, placeholder: "Full name", onChange: e =>
+                        | Text.Label("Full name")
+                        | new TextInput(user.Value?.FullName ?? string.Empty, e =>
                             {
-                                user.Set(userData =>
+                                user.Set(userData => new UserData
                                 {
-                                    userData.FullName = e.Value;
-                                    return userData;
+                                    FullName = e.Value,
+                                    Email = userData.Email,
+                                    DateCreated = userData.DateCreated,
+                                    Roles = new List<string>(userData.Roles)
                                 });
-                            }).WithMargin(top: 5, left: 0, right: 0, bottom: 0)
+                            })
+                            .Placeholder("Full name")
+                            .Disabled(isSerialized.Value)
 
-                        | new TextInput(user.Value?.Email ?? string.Empty, placeholder: "Email", onChange: e =>
-                            {
-                                user.Set(userData =>
-                                {
-                                    userData.Email = e.Value;
-                                    return userData;
-                                });
-                            }).WithMargin(top: 5, left: 0, right: 0, bottom: 0)
-                        | Text.P(user.Value?.DateCreated.ToLongDateString()).WithMargin(top: 5, left: 0, right: 0, bottom: 0)
+                        | Text.Label("Email")
+                        | email.ToEmailInput()
+                            .Placeholder("Email")
+                            .Invalid(emailInvalid.Value)
+                            .Disabled(isSerialized.Value)
 
-                        | Text.H4("Roles")
-                        | new List(user.Value.Roles.Select(x => new ListItem(x)).ToList()).WithMargin(top: -7, left: -4, right: 0, bottom: 0)
-                    ).Width(Size.Half()).Height(150);
+                        | Text.Label("Date created")
+                        | date.ToDateInput().Disabled(isSerialized.Value)
+                        | Text.Label("Roles")
+                        | roles.ToSelectInput(new[] { "User", "Admin" }.ToOptions()).Variant(SelectInputs.Toggle).Disabled(isSerialized.Value)
+                        | new Button("Serialize", _ => HandleButtonClick())
+                            .Disabled(isSerialized.Value)
+                            .Icon(Icons.ArrowLeft, Align.Left)
+                    ).Width(Size.Half());
         }
     }
 }
