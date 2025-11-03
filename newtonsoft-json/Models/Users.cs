@@ -1,4 +1,5 @@
-﻿public class UserData
+﻿namespace NewtonsoftJsonExample;
+public class UserData
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string FullName { get; set; } = string.Empty;

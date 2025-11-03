@@ -1,4 +1,5 @@
-﻿public sealed class Store
+﻿namespace NewtonsoftJsonExample;
+public sealed class Store
 {
     [JsonProperty("store")]
     public StoreInner? Inner { get; set; }

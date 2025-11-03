@@ -1,5 +1,5 @@
-using NewtonsoftJsonExample;
-[App(icon: Icons.File)]
+namespace NewtonsoftJsonExample;
+[App(icon: Icons.File, title: "Newtonsoft Examples")]
 public class NewtonsoftJsonExamples : ViewBase
 {
     private string _inputJson = SampleJson.Pretty;

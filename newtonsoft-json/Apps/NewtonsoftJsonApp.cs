@@ -1,5 +1,4 @@
-﻿
-namespace NewtonsoftJsonExample
+﻿namespace NewtonsoftJsonExample
 {
 
     [App(title: "Newtonsoft Demo", icon: Icons.File)]
