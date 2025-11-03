@@ -6,18 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>IvyHelloWorld</RootNamespace>
+    <RootNamespace>NodaTimeExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" /> 
     <PackageReference Include="NodaTime" Version="3.2.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Connections" />
   </ItemGroup>
 
 </Project>

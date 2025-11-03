@@ -1,8 +1,4 @@
-﻿using Ivy.Shared;
-using NodaTime;
-using NodaTime.Text;
-
-namespace Ivy.nodatime.Sample.Apps;
+﻿namespace NodaTimeExample;
 
 /// <summary>
 /// Virender Thakur's Notes:

@@ -1,7 +1,4 @@
-﻿using System.Reflection;
-using Ivy.Shared;
-
-namespace Ivy.nodatime.Sample.Apps;
+﻿namespace NodaTimeExample;
 
 public abstract class SampleBase : ViewBase
 {
