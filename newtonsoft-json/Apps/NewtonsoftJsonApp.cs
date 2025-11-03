@@ -18,6 +18,7 @@
             var user = UseState<UserData>(() => new UserData());
             var date = UseState<DateTime>(DateTime.UtcNow);
             var roles = UseState<List<string>>(() => new List<string>(defaultUser.Roles));
+            var availableRoles = UseState<List<string>>(() => new List<string>(defaultUser.Roles));
             var email = UseState("");
             var emailInvalid = UseState("");
             var isSerialized = UseState<bool>(true);
@@ -39,11 +40,8 @@
             // Simple email validation (Ivy-style via Invalid)
             UseEffect(() =>
             {
-                if (string.IsNullOrWhiteSpace(email.Value))
-                {
-                    emailInvalid.Set("");
-                }
-                else if (!(email.Value.Contains("@") && email.Value.Contains(".")))
+                
+                if (!(email.Value.Contains("@") && email.Value.Contains(".")))
                 {
                     emailInvalid.Set("Please enter a valid email address");
                 }
@@ -95,6 +93,13 @@
                     date.Set(userData!.DateCreated);
                     email.Set(userData!.Email ?? "");
                     roles.Set(userData!.Roles ?? new List<string>());
+                    // Update available role options by merging any new roles from JSON
+                    var mergedRoles = new HashSet<string>(availableRoles.Value, StringComparer.OrdinalIgnoreCase);
+                    foreach (var r in userData!.Roles ?? Enumerable.Empty<string>())
+                    {
+                        if (!string.IsNullOrWhiteSpace(r)) mergedRoles.Add(r);
+                    }
+                    availableRoles.Set(mergedRoles.OrderBy(r => r).ToList());
 
                     isSerialized.Set(false);
                 }
@@ -149,7 +154,7 @@
                         | Text.Label("Date created")
                         | date.ToDateInput().Disabled(isSerialized.Value)
                         | Text.Label("Roles")
-                        | roles.ToSelectInput(new[] { "User", "Admin" }.ToOptions()).Variant(SelectInputs.Toggle).Disabled(isSerialized.Value)
+                        | roles.ToSelectInput(availableRoles.Value.ToOptions()).Variant(SelectInputs.Toggle).Disabled(isSerialized.Value)
                         | new Button("Serialize", _ => HandleButtonClick())
                             .Disabled(isSerialized.Value)
                             .Icon(Icons.ArrowLeft, Align.Left)
