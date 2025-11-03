@@ -31,5 +31,7 @@ global using System.Reactive.Linq;
 global using System.Linq;
 global using System.Collections.Generic;
 global using MiniExcelLibs;
+global using System.IO;
+global using System.Collections.Concurrent;
 
 namespace MiniExcelExample;

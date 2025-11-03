@@ -16,10 +16,18 @@ public class StudentEditSheet(IState<bool> isOpen, Guid studentId, RefreshToken?
                 refreshToken?.Refresh();
                 onClose?.Invoke();
             }
-            catch (Exception ex)
-            {
-                client.Toast($"Update error: {ex.Message}", "Error");
-            }
+			catch (InvalidOperationException ex)
+			{
+				client.Toast($"Update error: {ex.Message}", "Error");
+			}
+			catch (ArgumentException ex)
+			{
+				client.Toast($"Update error: {ex.Message}", "Error");
+			}
+			catch (Exception ex)
+			{
+				client.Toast($"Update error: {ex.Message}", "Error");
+			}
         }, [student]);
 
         if (student.Value == null)

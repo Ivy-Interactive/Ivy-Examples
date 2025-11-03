@@ -211,7 +211,7 @@ public class MiniExcelViewApp : ViewBase
         var uploadUrl = this.UseUpload(
             uploadedBytes =>
             {
-                try
+					try
                 {
                     using var ms = new MemoryStream(uploadedBytes);
                     var imported = MiniExcel.Query<Student>(ms).ToList();
@@ -246,11 +246,23 @@ public class MiniExcelViewApp : ViewBase
                     students.Set(StudentService.GetStudents()); // Trigger update
                     refreshToken.Refresh(); // Sync with other pages
                     client.Toast($"Imported {imported.Count} students");
-                }
-                catch (Exception ex)
-                {
-                    client.Toast($"Import error: {ex.Message}", "Error");
-                }
+					}
+					catch (IOException ex)
+					{
+						client.Toast($"Import error: {ex.Message}", "Error");
+					}
+					catch (FormatException ex)
+					{
+						client.Toast($"Import error: {ex.Message}", "Error");
+					}
+					catch (SystemException ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not ThreadAbortException)
+					{
+						client.Toast($"Import error: {ex.Message}", "Error");
+					}
+					catch (Exception ex)
+					{
+						client.Toast($"Import error: {ex.Message}", "Error");
+					}
             },
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "imported-file"
