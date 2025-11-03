@@ -216,30 +216,31 @@ public class MiniExcelViewApp : ViewBase
                     using var ms = new MemoryStream(uploadedBytes);
                     var imported = MiniExcel.Query<Student>(ms).ToList();
                     
-                    // Merge imported students with existing ones (by ID)
-                    var currentStudents = StudentService.GetStudents();
-                    foreach (var importedStudent in imported)
-                    {
-                        var existing = currentStudents.FirstOrDefault(s => s.ID == importedStudent.ID);
-                        if (existing != null)
-                        {
-                            // Update existing
-                            existing.Name = importedStudent.Name;
-                            existing.Email = importedStudent.Email;
-                            existing.Age = importedStudent.Age;
-                            existing.Course = importedStudent.Course;
-                            existing.Grade = importedStudent.Grade;
-                        }
-                        else
-                        {
-                            // Add new
-                            if (importedStudent.ID == Guid.Empty)
-                            {
-                                importedStudent.ID = Guid.NewGuid();
-                            }
-                            currentStudents.Add(importedStudent);
-                        }
-                    }
+					// Merge imported students with existing ones (by ID)
+					var currentStudents = StudentService.GetStudents();
+					var studentsById = currentStudents.ToDictionary(s => s.ID);
+					foreach (var importedStudent in imported)
+					{
+						if (importedStudent.ID != Guid.Empty && studentsById.TryGetValue(importedStudent.ID, out var existing))
+						{
+							// Update existing
+							existing.Name = importedStudent.Name;
+							existing.Email = importedStudent.Email;
+							existing.Age = importedStudent.Age;
+							existing.Course = importedStudent.Course;
+							existing.Grade = importedStudent.Grade;
+						}
+						else
+						{
+							// Add new
+							if (importedStudent.ID == Guid.Empty)
+							{
+								importedStudent.ID = Guid.NewGuid();
+							}
+							currentStudents.Add(importedStudent);
+							studentsById[importedStudent.ID] = importedStudent;
+						}
+					}
                     
                     StudentService.UpdateStudents(currentStudents);
                     students.Set(StudentService.GetStudents()); // Trigger update
