@@ -1,4 +1,4 @@
-namespace SquirrelExample.Apps;
+namespace SquirrelExample;
 
 [App(icon: Icons.Table, title: "Squirrel CSV Demo")]
 public class SquirrelCsvApp : ViewBase
