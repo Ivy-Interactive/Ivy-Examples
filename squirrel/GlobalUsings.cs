@@ -26,5 +26,9 @@ global using System.Collections.Immutable;
 global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
+global using System.Dynamic;
+global using System.IO;
+global using Path = System.IO.Path;
+global using Squirrel;
 
 namespace SquirrelExample;

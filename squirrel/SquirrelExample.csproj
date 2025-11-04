@@ -14,6 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="fashion_products.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Ivy" Version="1.0.125.0" />
     <PackageReference Include="TableAPI" Version="1.0.3" />
   </ItemGroup>
