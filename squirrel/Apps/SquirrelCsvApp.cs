@@ -259,8 +259,27 @@ public class SquirrelCsvApp : ViewBase
 
         var tableUi = BuildDataTable();
         var sortDirections = new[] { "Ascending", "Descending" };
-        var allBrands = typedProducts.Value.Select(p => p.Brand).Distinct().OrderBy(b => b).ToList();
-        var allCategories = typedProducts.Value.Select(p => p.Category).Distinct().OrderBy(c => c).ToList();
+        
+        // Get unique brands and categories from original table (not filtered)
+        List<string> GetUniqueValuesFromOriginalTable(string columnName)
+        {
+            if (originalTable.Value == null) return new List<string>();
+            var values = new HashSet<string>();
+            for (int i = 0; i < originalTable.Value.RowCount; i++)
+            {
+                try
+                {
+                    var value = Convert.ToString(originalTable.Value[i][columnName]) ?? "";
+                    if (!string.IsNullOrEmpty(value))
+                        values.Add(value);
+                }
+                catch { }
+            }
+            return values.OrderBy(v => v).ToList();
+        }
+        
+        var allBrands = GetUniqueValuesFromOriginalTable("Brand");
+        var allCategories = GetUniqueValuesFromOriginalTable("Category");
 
         var left = new Card(
             Layout.Vertical().Gap(6).Scroll()
@@ -310,30 +329,7 @@ public class SquirrelCsvApp : ViewBase
             | new Separator()
             | Text.Small("Actions")
             | new Button("Export Filtered CSV").Url(exportUrl.Value).Icon(Icons.Download).Disabled(typedProducts.Value.Count == 0)
-            | Text.Muted("Export current filtered and sorted data")
-            | new Button("Save to File", _ =>
-            {
-                if (originalTable.Value != null)
-                {
-                    try
-                    {
-                        var table = originalTable.Value;
-                        if (sortField.Value != "None")
-                        {
-                            table = table.SortBy(sortField.Value);
-                        }
-                        SaveTableToFile(table, CsvPath);
-                        client.Toast("File saved successfully!", "Success");
-                        ApplyFiltersAndSort();
-                    }
-                    catch (Exception ex)
-                    {
-                        client.Error(ex);
-                    }
-                }
-            }).Icon(Icons.Save).Primary().Disabled(originalTable.Value == null)
-            | Text.Muted("Save sorted data to original file")
-            
+            | Text.Muted("Export current filtered and sorted data")            
             | new Separator()
             | (dataStats.Value.rows > 0
                 ? Text.Muted($"Total: {dataStats.Value.rows} rows, Showing: {typedProducts.Value.Count} rows")
