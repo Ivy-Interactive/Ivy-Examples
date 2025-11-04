@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.125.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
   </ItemGroup>
   
   <ItemGroup>
