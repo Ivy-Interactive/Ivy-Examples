@@ -15,12 +15,11 @@ public class ChatBlade : ViewBase
 
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
         var client = UseService<IClientProvider>();
         
         _messages = UseState(ImmutableArray.Create<ChatMessage>());
 
-        // Ініціалізуємо клієнт при першому рендері
+        // Initialize client on first render
         UseEffect(async () =>
         {
             if (_ollamaApiClient == null)

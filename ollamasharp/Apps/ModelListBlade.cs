@@ -12,12 +12,11 @@ public class ModelListBlade : ViewBase
     public override object? Build()
     {
         var blades = UseContext<IBladeController>();
-        var client = UseService<IClientProvider>();
         
         _models = UseState(ImmutableArray.Create<ModelListRecord>());
         _modelsLoaded = UseState(false);
 
-        // Автоматично завантажуємо моделі при першому рендері
+        // Automatically load models on first render
         UseEffect(async () =>
         {
             if (!_modelsLoaded.Value && _models.Value.IsEmpty)
@@ -49,7 +48,7 @@ public class ModelListBlade : ViewBase
         {
             return Layout.Vertical().Gap(6).Padding(2)
                 | Text.H3("Models")
-                | Text.Muted("No models available. Click 'Refresh Models' to load models from Ollama.");
+                | Text.Muted("No models available. Please ensure Ollama is running and models are installed.");
         }
 
         return new FilteredListView<ModelListRecord>(
