@@ -30,5 +30,6 @@ global using System.Dynamic;
 global using System.IO;
 global using Path = System.IO.Path;
 global using Squirrel;
+global using SquirrelExample.Models;
 
 namespace SquirrelExample;
