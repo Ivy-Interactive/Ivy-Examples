@@ -95,9 +95,9 @@
                     roles.Set(userData!.Roles ?? new List<string>());
                     // Update available role options by merging any new roles from JSON
                     var mergedRoles = new HashSet<string>(availableRoles.Value, StringComparer.OrdinalIgnoreCase);
-                    foreach (var r in userData!.Roles ?? Enumerable.Empty<string>())
+                    foreach (var r in (userData!.Roles ?? Enumerable.Empty<string>()).Where(r => !string.IsNullOrWhiteSpace(r)))
                     {
-                        if (!string.IsNullOrWhiteSpace(r)) mergedRoles.Add(r);
+                        mergedRoles.Add(r);
                     }
                     availableRoles.Set(mergedRoles.OrderBy(r => r).ToList());
 
