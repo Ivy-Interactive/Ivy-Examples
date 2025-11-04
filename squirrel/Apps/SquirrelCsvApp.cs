@@ -162,16 +162,72 @@ public class SquirrelCsvApp : ViewBase
         // Auto-load on first render
         UseEffect(LoadFromCsv);
 
-        // Export current data via Squirrel ToCsv
+        // Export current filtered and sorted data to CSV (only visible columns)
         var exportUrl = this.UseDownload(
             () =>
             {
-                var csvPath = Path.Combine(AppContext.BaseDirectory, "fashion_products.csv");
-                return File.ReadAllBytes(csvPath);
+                if (typedProducts.Value.Count == 0)
+                {
+                    return Array.Empty<byte>();
+                }
+
+                // Create CSV content from current filtered/sorted data
+                using var ms = new MemoryStream();
+                using var writer = new StreamWriter(ms, leaveOpen: true);
+                
+                // Build header and column order based on visible columns
+                var columns = new List<(string name, Func<FashionProduct, string> getValue)>();
+                
+                if (visibleColumns.Value.Contains("User ID"))
+                    columns.Add(("User ID", p => p.UserId.ToString(CultureInfo.InvariantCulture)));
+                if (visibleColumns.Value.Contains("Product ID"))
+                    columns.Add(("Product ID", p => p.ProductId.ToString(CultureInfo.InvariantCulture)));
+                if (visibleColumns.Value.Contains("Product Name"))
+                    columns.Add(("Product Name", p => EscapeCsvField(p.ProductName)));
+                if (visibleColumns.Value.Contains("Brand"))
+                    columns.Add(("Brand", p => EscapeCsvField(p.Brand)));
+                if (visibleColumns.Value.Contains("Category"))
+                    columns.Add(("Category", p => EscapeCsvField(p.Category)));
+                if (visibleColumns.Value.Contains("Price"))
+                    columns.Add(("Price", p => p.Price.ToString(CultureInfo.InvariantCulture)));
+                if (visibleColumns.Value.Contains("Rating"))
+                    columns.Add(("Rating", p => p.Rating.ToString(CultureInfo.InvariantCulture)));
+                if (visibleColumns.Value.Contains("Color"))
+                    columns.Add(("Color", p => EscapeCsvField(p.Color)));
+                if (visibleColumns.Value.Contains("Size"))
+                    columns.Add(("Size", p => EscapeCsvField(p.Size)));
+                
+                // Write header
+                writer.WriteLine(string.Join(",", columns.Select(c => c.name)));
+                
+                // Write data rows
+                foreach (var product in typedProducts.Value)
+                {
+                    var line = string.Join(",", columns.Select(c => c.getValue(product)));
+                    writer.WriteLine(line);
+                }
+                
+                writer.Flush();
+                ms.Position = 0;
+                return ms.ToArray();
             },
             "text/csv",
-            "fashion_products.csv"
+            "fashion_products_filtered.csv"
         );
+        
+        // Helper function to escape CSV fields
+        string EscapeCsvField(string? field)
+        {
+            if (string.IsNullOrEmpty(field))
+                return "";
+            
+            // If field contains comma, quote, or newline, wrap in quotes and escape quotes
+            if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
+            {
+                return "\"" + field.Replace("\"", "\"\"") + "\"";
+            }
+            return field;
+        }
 
         // Build DataTable with visible columns only
         object BuildDataTable()
@@ -179,12 +235,29 @@ public class SquirrelCsvApp : ViewBase
             if (typedProducts.Value.Count == 0)
                 return new Callout("Data not loaded yet", variant: CalloutVariant.Info);
 
-            var table = typedProducts.Value.AsQueryable().ToTable();
+            if (visibleColumns.Value.Count == 0)
+                return new Callout("No columns selected", variant: CalloutVariant.Info);
+
+            // Build table with only visible columns by creating anonymous objects conditionally
+            var table = typedProducts.Value.Select(p => new
+            {
+                UserID = visibleColumns.Value.Contains("User ID") ? p.UserId : (int?)null,
+                ProductID = visibleColumns.Value.Contains("Product ID") ? p.ProductId : (int?)null,
+                ProductName = visibleColumns.Value.Contains("Product Name") ? p.ProductName : null,
+                Brand = visibleColumns.Value.Contains("Brand") ? p.Brand : null,
+                Category = visibleColumns.Value.Contains("Category") ? p.Category : null,
+                Price = visibleColumns.Value.Contains("Price") ? p.Price : (decimal?)null,
+                Rating = visibleColumns.Value.Contains("Rating") ? p.Rating : (double?)null,
+                Color = visibleColumns.Value.Contains("Color") ? p.Color : null,
+                Size = visibleColumns.Value.Contains("Size") ? p.Size : null
+            }).ToTable()
+            .RemoveEmptyColumns();
             
+            // Apply proper headers for visible columns only
             if (visibleColumns.Value.Contains("User ID"))
-                table = table.Header(p => p.UserId, "User ID");
+                table = table.Header(p => p.UserID, "User ID");
             if (visibleColumns.Value.Contains("Product ID"))
-                table = table.Header(p => p.ProductId, "Product ID");
+                table = table.Header(p => p.ProductID, "Product ID");
             if (visibleColumns.Value.Contains("Product Name"))
                 table = table.Header(p => p.ProductName, "Product Name");
             if (visibleColumns.Value.Contains("Brand"))
@@ -223,17 +296,17 @@ public class SquirrelCsvApp : ViewBase
             | Text.Small("Column Visibility")
             | Layout.Vertical().Gap(2)
                 | allColumns.Select(col => 
-                    Layout.Horizontal().Gap(2)
-                        | (visibleColumns.Value.Contains(col) ? Icons.Square : Icons.Square)
-                        | Text.Small(col)
-                        | new Spacer()
-                        | new Button(visibleColumns.Value.Contains(col) ? "Hide" : "Show", _ =>
-                        {
-                            var cols = new HashSet<string>(visibleColumns.Value);
-                            if (cols.Contains(col)) cols.Remove(col); else cols.Add(col);
-                            visibleColumns.Value = cols;
-                        }).Small()
-                ).ToArray()
+                {
+                    var colState = UseState(() => visibleColumns.Value.Contains(col));
+                    UseEffect(() => colState.Set(visibleColumns.Value.Contains(col)), [visibleColumns]);
+                    return new BoolInput(colState.Value, e =>
+                    {
+                        var cols = new HashSet<string>(visibleColumns.Value);
+                        if (e.Value) cols.Add(col); else cols.Remove(col);
+                        visibleColumns.Value = cols;
+                        colState.Set(e.Value);
+                    }).Label(col);
+                }).ToArray()
             
             | new Separator()
             | Text.Small("Filters")
@@ -248,31 +321,31 @@ public class SquirrelCsvApp : ViewBase
             | Text.Label("Brands")
             | Layout.Vertical().Gap(2)
                 | allBrands.Select(brand =>
-                    Layout.Horizontal().Gap(2)
-                        | (selectedBrands.Value.Contains(brand) ? Icons.Square : Icons.Square)
-                        | Text.Small(brand)
-                        | new Spacer()
-                        | new Button(selectedBrands.Value.Contains(brand) ? "Remove" : "Add", _ =>
-                        {
-                            var brands = new HashSet<string>(selectedBrands.Value);
-                            if (brands.Contains(brand)) brands.Remove(brand); else brands.Add(brand);
-                            selectedBrands.Value = brands;
-                        }).Small()
-                ).ToArray()
+                {
+                    var brandState = UseState(() => selectedBrands.Value.Contains(brand));
+                    UseEffect(() => brandState.Set(selectedBrands.Value.Contains(brand)), [selectedBrands]);
+                    return new BoolInput(brandState.Value, e =>
+                    {
+                        var brands = new HashSet<string>(selectedBrands.Value);
+                        if (e.Value) brands.Add(brand); else brands.Remove(brand);
+                        selectedBrands.Value = brands;
+                        brandState.Set(e.Value);
+                    }).Label(brand);
+                }).ToArray()
             | Text.Label("Categories")
             | Layout.Vertical().Gap(2)
                 | allCategories.Select(category =>
-                    Layout.Horizontal().Gap(2)
-                        | (selectedCategories.Value.Contains(category) ? Icons.Square : Icons.Square)
-                        | Text.Small(category)
-                        | new Spacer()
-                        | new Button(selectedCategories.Value.Contains(category) ? "Remove" : "Add", _ =>
-                        {
-                            var cats = new HashSet<string>(selectedCategories.Value);
-                            if (cats.Contains(category)) cats.Remove(category); else cats.Add(category);
-                            selectedCategories.Value = cats;
-                        }).Small()
-                ).ToArray()
+                {
+                    var categoryState = UseState(() => selectedCategories.Value.Contains(category));
+                    UseEffect(() => categoryState.Set(selectedCategories.Value.Contains(category)), [selectedCategories]);
+                    return new BoolInput(categoryState.Value, e =>
+                    {
+                        var cats = new HashSet<string>(selectedCategories.Value);
+                        if (e.Value) cats.Add(category); else cats.Remove(category);
+                        selectedCategories.Value = cats;
+                        categoryState.Set(e.Value);
+                    }).Label(category);
+                }).ToArray()
             
             | new Separator()
             | Text.Small("Sorting")
@@ -285,7 +358,10 @@ public class SquirrelCsvApp : ViewBase
             
             | new Separator()
             | Text.Small("Actions")
-            | new Button("Export CSV").Url(exportUrl.Value)
+            | new Button("Export Filtered CSV").Url(exportUrl.Value)
+                .Icon(Icons.Download)
+                .Disabled(typedProducts.Value.Count == 0)
+            | Text.Muted("Export current filtered and sorted data")
             
             | new Separator()
             | (dataStats.Value.rows > 0
