@@ -33,7 +33,7 @@ public class SquirrelCsvApp : ViewBase
         // Column visibility state - use array for Toggle select
         var visibleColumns = UseState(() => AllColumns.ToArray());
         var page = UseState(1);
-        var pageSize = 25;
+        var pageSize = 20;
 
         // Load from CSV file using Squirrel
         void LoadFromCsv()
@@ -359,7 +359,7 @@ public class SquirrelCsvApp : ViewBase
         ).Height(Size.Fit().Min(Size.Full()));
 
         return Layout.Horizontal()
-            | left.Width(Size.Fraction(0.4f))
+            | left.Width(Size.Fraction(0.5f))
             | right;
     }
 }
