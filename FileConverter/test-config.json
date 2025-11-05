@@ -1,0 +1,20 @@
+{
+  "name": "Test JSON File",
+  "description": "This is a sample JSON file for testing upload functionality",
+  "version": "1.0.0",
+  "features": [
+    "file upload",
+    "format validation",
+    "data processing"
+  ],
+  "metadata": {
+    "created": "2024-01-01",
+    "author": "Test User",
+    "tags": ["test", "json", "upload"]
+  },
+  "settings": {
+    "maxFileSize": "10MB",
+    "allowedTypes": ["json", "csv", "txt"],
+    "enableValidation": true
+  }
+}

@@ -1,0 +1,9 @@
+Hello World
+This is a sample text file
+for testing the file converter
+You can try different conversions:
+- Uppercase
+- Lowercase
+- Reverse text
+- Add line numbers
+and more!

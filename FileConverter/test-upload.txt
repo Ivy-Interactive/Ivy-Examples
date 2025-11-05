@@ -1,0 +1,18 @@
+This is a sample text file for testing file upload functionality.
+It contains multiple lines of text to demonstrate various conversion features.
+
+Line 1: Basic text content
+Line 2: More content for testing
+Line 3: Additional lines for conversion testing
+
+The file includes:
+- Multiple paragraphs
+- Various punctuation marks
+- Numbers and special characters: 123!@#$%^&*()
+
+This content will be useful for testing:
+- Uppercase conversion
+- Lowercase conversion  
+- Line numbering
+- Text reversal
+- And other file processing features
