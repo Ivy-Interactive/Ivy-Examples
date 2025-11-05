@@ -10,7 +10,7 @@ public class FileUploaderApp : ViewBase
     public override object? Build()
     {
         return Layout.Vertical()
-            | Text.H1("File Upload & Download Test Suite")
+            | Text.H1("File Upload")
             | Text.P("Comprehensive testing of all upload and download functionality")
             | Layout.Vertical().Gap(4)
                 | TestBasicFileUpload()
@@ -20,7 +20,6 @@ public class FileUploaderApp : ViewBase
                 | TestUploadStatusFeedback()
                 | TestImageUploadWithPreview()
                 | TestTextFilePreview()
-                | TestDownloadFeatures()
                 | TestErrorHandling();
     }
 
@@ -332,67 +331,6 @@ public class FileUploaderApp : ViewBase
          .Description("Test image upload with live preview");
     }
 
-    private object TestDownloadFeatures()
-    {
-        var client = UseService<IClientProvider>();
-        var progress = UseState(0.0);
-        var downloadUrl = this.UseDownload(
-            () =>
-            {
-                // Simulate large file generation
-                var content = GenerateLargeContent();
-                return Encoding.UTF8.GetBytes(content);
-            },
-            "text/plain",
-            $"test-download-{DateTime.Now:yyyy-MM-dd-HH-mm}.txt"
-        );
-
-        var csvDownloadUrl = this.UseDownload(
-            () =>
-            {
-                var csvContent = "Name,Email,Age\nJohn,john@example.com,30\nJane,jane@example.com,25\nBob,bob@example.com,35";
-                return Encoding.UTF8.GetBytes(csvContent);
-            },
-            "text/csv",
-            $"export-{DateTime.Now:yyyy-MM-dd}.csv"
-        );
-
-        var jsonDownloadUrl = this.UseDownload(
-            () =>
-            {
-                var jsonData = new
-                {
-                    timestamp = DateTime.Now,
-                    message = "Test JSON download",
-                    data = new[] { "item1", "item2", "item3" }
-                };
-                var jsonContent = JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true });
-                return Encoding.UTF8.GetBytes(jsonContent);
-            },
-            "application/json",
-            $"data-{DateTime.Now:yyyy-MM-dd}.json"
-        );
-
-        return new Card(
-            Layout.Vertical()
-                | Layout.Vertical().Gap(2)
-                    | Layout.Horizontal().Gap(2)
-                        | (downloadUrl.Value != null 
-                            ? new Button("Download Large Text File").Url(downloadUrl.Value)
-                            : null)
-                        | (csvDownloadUrl.Value != null 
-                            ? new Button("Download CSV Export").Url(csvDownloadUrl.Value)
-                            : null)
-                    | (jsonDownloadUrl.Value != null 
-                        ? new Button("Download JSON Data").Url(jsonDownloadUrl.Value)
-                        : null)
-                | (progress.Value > 0
-                    ? Text.P($"Download Progress: {progress.Value:P0}")
-                    : null)
-        ).Title("Download Features")
-         .Description("Test various download scenarios");
-    }
-
     private object TestErrorHandling()
     {
         var client = UseService<IClientProvider>();
@@ -630,22 +568,5 @@ public class FileUploaderApp : ViewBase
             len /= 1024;
         }
         return $"{len:0.##} {sizes[order]}";
-    }
-
-    private string GenerateLargeContent()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("Large Test File Content");
-        sb.AppendLine($"Generated at: {DateTime.Now}");
-        sb.AppendLine();
-
-        for (int i = 1; i <= 1000; i++)
-        {
-            sb.AppendLine($"Line {i}: This is test content for line number {i}. " +
-                         $"Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-                         $"Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
-        }
-
-        return sb.ToString();
     }
 }
