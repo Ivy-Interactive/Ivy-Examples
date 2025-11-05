@@ -1,95 +1,98 @@
-# RestSharp Demo Application
+# RestSharp
 
-This is an interactive Ivy demo application showcasing Restsharp (Simple REST and HTTP API Client for .NET) integration with the Ivy framework.
+<img width="1277" height="771" alt="image" src="https://github.com/user-attachments/assets/4a5301c0-3867-43ff-8ec2-49a455b49627" />
 
-## Features
+<img width="1199" height="831" alt="image" src="https://github.com/user-attachments/assets/32880c79-311a-4bfd-9955-7238b6a5bcd7" />
 
-This demo application demonstrates the core features of Restsharp (working with rest Api's):
-
-- Call a rest api with Get, Post, Put, Patch and Delete methods
-- Assign the request headers
-- Assign the request body
-- Show the response and status code
-- Formatting text as json
+<img width="1201" height="679" alt="image" src="https://github.com/user-attachments/assets/b3ea40c6-a791-410b-bde9-2d8a9a9a73d2" />
 
 
+## One-Click Development Environment
 
-## Getting Started
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Frestsharp%2Fdevcontainer.json&location=EuropeWest)
 
-### Prerequisites
-- .NET 9.0 SDK
-- Ivy Framework
+Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+- **.NET 9.0** SDK pre-installed
+- **Ready-to-run** development environment
+- **No local setup** required
 
-### Running the Application
+## Created Using Ivy
 
-1. Navigate to the restsharp directory:
+Web application created using [Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework).
+
+**Ivy** - The ultimate framework for building internal tools with LLM code generation by unifying front-end and back-end into a single C# codebase. With Ivy, you can build robust internal tools and dashboards using C# and AI assistance based on your existing database.
+
+Ivy is a web framework for building interactive web applications using C# and .NET.
+
+## Interactive Example For REST API Testing
+
+This example demonstrates REST API testing and HTTP request handling using the [RestSharp library](https://github.com/restsharp/RestSharp) integrated with Ivy. RestSharp is a simple REST and HTTP API client for .NET that makes it easy to interact with RESTful services.
+
+**What This Application Does:**
+
+This specific implementation creates a **REST API Client** that allows users to:
+
+- **Send HTTP Requests**: Supports GET, POST, PUT, PATCH, and DELETE methods
+- **Test REST APIs**: Interact with RESTful APIs like `restful-api.dev` for testing
+- **View Responses**: See formatted JSON responses with syntax highlighting
+- **Manage Request Body**: Edit JSON request bodies with a code editor for POST/PUT/PATCH requests
+- **Handle Resource IDs**: Automatically handle resource IDs for operations on specific objects
+- **Format JSON**: Toggle JSON formatting for better readability
+- **Status Indicators**: Visual feedback with success/error callouts based on HTTP status codes
+- **Interactive UI**: Clean card-based layout with Request and Response sections
+
+**Technical Implementation:**
+
+- Uses RestSharp's `RestClient` and `RestRequest` for HTTP operations
+- Supports all standard HTTP methods (GET, POST, PUT, PATCH, DELETE)
+- Automatic URL construction with resource IDs
+- JSON request/response handling with System.Text.Json
+- Code input components with JSON language support
+- Real-time status code display with color-coded callouts
+- Automatic example JSON generation for POST/PUT/PATCH methods
+- Disabled state management for request body when not applicable
+
+**Features:**
+
+- **Dynamic URL Building**: Automatically appends resource IDs to URLs for DELETE/PUT/PATCH operations
+- **Method-Specific UI**: Request body editor is enabled/disabled based on selected HTTP method
+- **JSON Formatting**: Toggle between formatted and raw JSON responses
+- **Error Handling**: Displays error messages and status codes for failed requests
+- **Example Data**: Pre-populated JSON examples for quick testing
+
+## How to Run
+
+1. **Prerequisites**: .NET 9.0 SDK
+2. **Navigate to the example**:
    ```bash
    cd restsharp
    ```
-
-2. Restore dependencies:
+3. **Restore dependencies**:
    ```bash
    dotnet restore
    ```
-
-3. Run the application:
+4. **Run the application**:
    ```bash
-   dotnet run
+   dotnet watch
    ```
+5. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
 
-4. The application will open in your default browser with the RestSharp demo interface.
+## How to Deploy
 
-## RestSharp Integration with Ivy
+Deploy this example to Ivy's hosting platform:
 
-This demo showcases how to integrate Rest api request concepts with Ivy applications:
-
-### Key Components
-
-- **RestsharpApp**: Main application with interactive UI for calling apis with RestSharp
-
-### RestSharp Operations Demonstrated
-
-- **Sending requests**
-   ```csharp
-    var client = new RestClient(options);
-    var request = new RestRequest();
-    var response = client.ExecuteGet(request);;
+1. **Navigate to the example**:
+   ```bash
+   cd restsharp
    ```
+2. **Deploy to Ivy hosting**:
+   ```bash
+   ivy deploy
+   ```
+This will deploy your REST API testing application with a single command.
 
-## Security Notes
+## Learn More
 
-⚠️ **Important Security Considerations:**
-
-- This demo uses a simplified calling the rest apis implementation for educational purposes only
-- The demo uses hardcoded values for demonstration - never use this approach in production
-- Store secret keys securely (e.g., in Azure Key Vault, environment variables, or secure configuration)
-
-## Educational Value
-
-This demo helps developers understand:
-
-1. **RestSharp Basics**: How to send GET, POST, PUT, PATCH, and DELETE requests
-2. **Headers & Body Management**: Assigning headers and body content to requests
-3. **Response Handling**: Reading responses, status codes, and formatting as JSON
-4. **Error Handling**: Dealing with failed requests
-5. **Ivy Integration**: How to build interactive UIs for API calls using Ivy’s state management and UI components
-
-## Contributing
-
-This is part of the Ivy Examples collection. To contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Resources
-
-- [Ivy Framework Documentation](https://docs.ivy.app)
-- [RestSharp Package on GitHub](https://github.com/restsharp/RestSharp)
-- [REST API Tutorial](https://restfulapi.net/)
-- [Ivy Discord Community](https://discord.gg/sSwGzZAYb6)
-
-## License
-
-This project is part of the Ivy Examples collection and follows the same licensing terms.
+- RestSharp for .NET overview: [github.com/restsharp/RestSharp](https://github.com/restsharp/RestSharp)
+- RestSharp Migration Guide: [restsharp.dev/migration](https://restsharp.dev/migration/)
+- Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
