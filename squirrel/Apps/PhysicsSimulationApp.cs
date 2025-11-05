@@ -1,6 +1,6 @@
 namespace SquirrelExample;
 
-[App(icon: Icons.ChartLine, title: "Fashion Products Analysis")]
+[App(icon: Icons.ChartLine, title: "Squirrel Data Chart")]
 public class PhysicsSimulationApp : ViewBase
 {
     public override object? Build()
@@ -110,40 +110,47 @@ public class PhysicsSimulationApp : ViewBase
         detailedTable.AddColumn("Brand", detailedBrands);
         detailedTable.AddColumn("Count", detailedCounts.Select(c => c.ToString()).ToList());
 
-        return Layout.Vertical().Gap(8)
+        return Layout.Horizontal()
             | new Card(
                 Layout.Vertical()
-                | Text.H3("Fashion Products Analysis")
-                | Text.Muted($"Analysis of product quantities by brands and names. Average count: {averageCount:F2}")
-                | new Separator()
-                | Text.H4("Select Product")
+				| Text.H3("Squirrel Data Chart")
+				| Text.Muted($"Analysis of product quantities by brands and names ")
+                | Text.Label("Select Product")
                 | selectedProduct.ToSelectInput(allProductNames.ToOptions())
                     .Variant(SelectInputs.Select)
                     .Placeholder("Select product")
-                | new Separator()
-                | Text.H4(string.IsNullOrEmpty(selectedProduct.Value) 
-                    ? "Product Chart" 
-                    : $"Product Chart - {selectedProduct.Value}")
-                | (string.IsNullOrEmpty(selectedProduct.Value)
-                    ? Text.Muted("Please select a product from the dropdown above to view the chart.")
-                    : selectedProductData.Count > 0 
-                    ? Layout.Vertical()
-                        | Text.Small($"Average count: {selectedProductAverage:F2} products (shown as red line)")
-                        | chartData.ToLineChart(style: LineChartStyles.Dashboard)
-                            .Dimension("Brand", e => e.Brand)
-                            .Measure("Count", e => e.First().Count)
-                            .Measure("Average", e => e.First().Average)
-                            .Key(selectedProduct.Value)
-                        | new Separator()
-                        | Text.H4($"Details for {selectedProduct.Value}")
-                        | (detailedTable.RowCount > 0
-                            ? detailedTable.Rows.Select(row => new
-                            {
-                                Brand = Convert.ToString(row["Brand"]) ?? "",
-                                Count = Convert.ToString(row["Count"]) ?? ""
-                            }).ToTable().Width(Size.Full())
-                            : Text.Muted("No data available"))
-                    : Text.Muted($"No data available for {selectedProduct.Value}"))
-            );
+                | Text.Small("This demo uses Squirrel library to load and manipulate CSV data.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Squirrel](https://github.com/sudipto80/Squirrel)")
+                ).Height(Size.Fit().Min(Size.Full()))
+
+                | new Card(
+                    Layout.Vertical()
+                    | Text.H4(string.IsNullOrEmpty(selectedProduct.Value)
+                        ? "Product Chart"
+                        : $"Product Chart - {selectedProduct.Value}")
+                    | (string.IsNullOrEmpty(selectedProduct.Value)
+                        ? Text.Muted("Please select a product from the dropdown above to view the chart.")
+                        : selectedProductData.Count > 0
+                        ? (
+                            Layout.Vertical()
+                            | Text.Muted("Line chart shows product counts per brand and the overall average (red line)")
+                            | chartData.ToLineChart(style: LineChartStyles.Dashboard)
+                                .Dimension("Brand", e => e.Brand)
+                                .Measure("Count", e => e.First().Count)
+                                .Measure("Average", e => e.First().Average)
+                                .Key(selectedProduct.Value)
+                            | Text.H4($"Details for {selectedProduct.Value}")
+                            | Text.Muted("Table shows product counts per brand")
+                            | (detailedTable.RowCount > 0
+                                ? detailedTable.Rows.Select(row => new
+                                {
+                                    Brand = Convert.ToString(row["Brand"]) ?? "",
+                                    Count = Convert.ToString(row["Count"]) ?? ""
+                                }).ToTable().Width(Size.Full())
+                                : Text.Muted("No data available"))
+                          )
+                        : Text.Muted($"No data available for {selectedProduct.Value}")
+                      )
+                ).Height(Size.Fit().Min(Size.Full()));
     }
 }
