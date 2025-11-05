@@ -27,11 +27,13 @@ public class SquirrelCsvApp : ViewBase
         var ratingMax = UseState(() => (double?)null);
         var priceMin = UseState(() => (decimal?)null);
         var priceMax = UseState(() => (decimal?)null);
-        var selectedBrands = UseState(() => new HashSet<string>());
-        var selectedCategories = UseState(() => new HashSet<string>());
+        var selectedBrands = UseState(() => Array.Empty<string>());
+        var selectedCategories = UseState(() => Array.Empty<string>());
         
-        // Column visibility state
-        var visibleColumns = UseState(() => new HashSet<string>(AllColumns));
+        // Column visibility state - use array for Toggle select
+        var visibleColumns = UseState(() => AllColumns.ToArray());
+        var page = UseState(1);
+        var pageSize = 30;
 
         // Load from CSV file using Squirrel
         void LoadFromCsv()
@@ -100,12 +102,14 @@ public class SquirrelCsvApp : ViewBase
                     filtered = filtered.Where(p => p.Price >= priceMin.Value.Value);
                 if (priceMax.Value.HasValue)
                     filtered = filtered.Where(p => p.Price <= priceMax.Value.Value);
-                if (selectedBrands.Value.Count > 0)
+                if (selectedBrands.Value.Length > 0)
                     filtered = filtered.Where(p => selectedBrands.Value.Contains(p.Brand));
-                if (selectedCategories.Value.Count > 0)
+                if (selectedCategories.Value.Length > 0)
                     filtered = filtered.Where(p => selectedCategories.Value.Contains(p.Category));
 
                 typedProducts.Value = filtered.ToList();
+                // Reset to first page when data changes
+                page.Value = 1;
             }
             catch (Exception ex)
             {
@@ -223,14 +227,14 @@ public class SquirrelCsvApp : ViewBase
         );
 
         // Build DataTable with visible columns only
-        object BuildDataTable()
+        object BuildDataTable(List<FashionProduct> productsSource)
         {
-            if (typedProducts.Value.Count == 0)
+            if (productsSource.Count == 0)
                 return new Callout("Data not loaded yet", variant: CalloutVariant.Info);
-            if (visibleColumns.Value.Count == 0)
+            if (visibleColumns.Value.Length == 0)
                 return new Callout("No columns selected", variant: CalloutVariant.Info);
 
-            var table = typedProducts.Value.Select(p => new
+            var table = productsSource.Select(p => new
             {
                 UserID = visibleColumns.Value.Contains("User ID") ? p.UserId : (int?)null,
                 ProductID = visibleColumns.Value.Contains("Product ID") ? p.ProductId : (int?)null,
@@ -254,10 +258,19 @@ public class SquirrelCsvApp : ViewBase
             if (visibleColumns.Value.Contains("Color")) table = table.Header(p => p.Color, "Color");
             if (visibleColumns.Value.Contains("Size")) table = table.Header(p => p.Size, "Size");
 
-            return table;
+            return table.Width(Size.Full());
         }
 
-        var tableUi = BuildDataTable();
+        // Pagination calculations
+        var totalRows = typedProducts.Value.Count;
+        var numPages = Math.Max(1, (int)Math.Ceiling(totalRows / (double)pageSize));
+        if (page.Value > numPages) page.Value = numPages;
+        var startIndex = Math.Max(0, (page.Value - 1) * pageSize);
+        var pagedProducts = typedProducts.Value.Skip(startIndex).Take(pageSize).ToList();
+        var showingStart = totalRows == 0 ? 0 : startIndex + 1;
+        var showingEnd = totalRows == 0 ? 0 : startIndex + pagedProducts.Count;
+
+        var tableUi = BuildDataTable(pagedProducts);
         var sortDirections = new[] { "Ascending", "Descending" };
         
         // Get unique brands and categories from original table (not filtered)
@@ -282,86 +295,70 @@ public class SquirrelCsvApp : ViewBase
         var allCategories = GetUniqueValuesFromOriginalTable("Category");
 
         var left = new Card(
-            Layout.Vertical().Gap(6).Scroll()
+            Layout.Vertical()
             | Text.H3("Data Edit")
             | Text.Muted("Filter, sort, and customize columns")
+
+            | new Card(
+                Layout.Vertical()
+            | visibleColumns.ToSelectInput(AllColumns.ToOptions())
+                .Variant(SelectInputs.Toggle)).Title("Column Visibility")
+
+            | new Card(
+                Layout.Vertical()
+                | new Card(
+                    Layout.Vertical()
+                    | Text.Small("Rating Range")
+                    | (Layout.Horizontal().Gap(2)
+                        | new NumberInput<double?>(ratingMin).Placeholder("Min").Min(0).Max(5).Step(0.1).Width(Size.Fraction(0.5f))
+                        | new NumberInput<double?>(ratingMax).Placeholder("Max").Min(0).Max(5).Step(0.1).Width(Size.Fraction(0.5f)))
+                    | new Spacer().Height(Size.Units(3))
+                    | Text.Small("Price Range")
+                    | (Layout.Horizontal().Gap(2)
+                        | new NumberInput<decimal?>(priceMin).Placeholder("Min").Min(0).Step(0.01).Width(Size.Fraction(0.5f))
+                        | new NumberInput<decimal?>(priceMax).Placeholder("Max").Min(0).Step(0.01).Width(Size.Fraction(0.5f)))
+                )
+
+                | new Card(
+                    Layout.Vertical()
+                    | Text.Small("Brands")
+                    | selectedBrands.ToSelectInput(allBrands.ToOptions())
+                        .Variant(SelectInputs.Toggle)
+                    | Text.Small("Categories")
+                    | selectedCategories.ToSelectInput(allCategories.ToOptions())
+                        .Variant(SelectInputs.Toggle)
+                )
+            ).Title("Filters")
+
+            | new Card(
+                Layout.Horizontal()
+                | (Layout.Vertical()
+                    | Text.Small("Sort by field")
+                    | sortField.ToSelectInput(SortFieldOptions.ToOptions()).Variant(SelectInputs.Select))
+                | (Layout.Vertical()
+                    | Text.Small("Sort direction")
+                    | sortDirection.ToSelectInput(sortDirections.ToOptions()).Variant(SelectInputs.Select))
+            ).Title("Sorting")
+
             
-            | new Separator()
-            | Text.Small("Column Visibility")
-            | Layout.Vertical().Gap(2)
-                | AllColumns.Select(col => 
-                {
-                    var colState = UseState(() => visibleColumns.Value.Contains(col));
-                    UseEffect(() => colState.Set(visibleColumns.Value.Contains(col)), [visibleColumns]);
-                    return new BoolInput(colState.Value, e =>
-                    {
-                        var cols = new HashSet<string>(visibleColumns.Value);
-                        if (e.Value) cols.Add(col); else cols.Remove(col);
-                        visibleColumns.Value = cols;
-                        colState.Set(e.Value);
-                    }).Label(col);
-                }).ToArray()
-            
-            | new Separator()
-            | Text.Small("Filters")
-            | Text.Label("Rating Range")
-            | Layout.Horizontal().Gap(2)
-                | new NumberInput<double?>(ratingMin).Placeholder("Min").Min(0).Max(5).Step(0.1).Width(Size.Fraction(0.5f))
-                | new NumberInput<double?>(ratingMax).Placeholder("Max").Min(0).Max(5).Step(0.1).Width(Size.Fraction(0.5f))
-            | Text.Label("Price Range")
-            | Layout.Horizontal().Gap(2)
-                | new NumberInput<decimal?>(priceMin).Placeholder("Min").Min(0).Step(0.01).Width(Size.Fraction(0.5f))
-                | new NumberInput<decimal?>(priceMax).Placeholder("Max").Min(0).Step(0.01).Width(Size.Fraction(0.5f))
-            | Text.Label("Brands")
-            | Layout.Vertical().Gap(2)
-                | BuildFilterCheckboxes(allBrands, selectedBrands)
-            | Text.Label("Categories")
-            | Layout.Vertical().Gap(2)
-                | BuildFilterCheckboxes(allCategories, selectedCategories)
-            
-            | new Separator()
-            | Text.Small("Sorting")
-            | Text.Label("Sort by field")
-            | sortField.ToSelectInput(SortFieldOptions.ToOptions()).Variant(SelectInputs.Select)
-            | Text.Label("Sort direction")
-            | sortDirection.ToSelectInput(sortDirections.ToOptions()).Variant(SelectInputs.Select)
-            
-            | new Separator()
-            | Text.Small("Actions")
-            | new Button("Export Filtered CSV").Url(exportUrl.Value).Icon(Icons.Download).Disabled(typedProducts.Value.Count == 0)
-            | Text.Muted("Export current filtered and sorted data")            
-            | new Separator()
-            | (dataStats.Value.rows > 0
-                ? Text.Muted($"Total: {dataStats.Value.rows} rows, Showing: {typedProducts.Value.Count} rows")
-                : Text.Muted("No data loaded yet"))
+            | new Button("Export Filtered CSV").Url(exportUrl.Value).Icon(Icons.Download).Disabled(typedProducts.Value.Count == 0).Width(Size.Full())          
         ).Height(Size.Fit().Min(Size.Full()));
 
         var right = new Card(
             Layout.Vertical()
             | Text.H3("Data Preview")
-            | tableUi
+            | (dataStats.Value.rows > 0
+                ? Text.Muted(totalRows > 0
+                    ? $"Total: {totalRows} rows, Showing: {showingStart}-{showingEnd}"
+                    : "No data loaded yet")
+                : Text.Muted("No data loaded yet"))
+            | new Card(tableUi)
+            | new Pagination(page.Value, numPages, newPage => page.Set(newPage.Value))
         ).Height(Size.Fit().Min(Size.Full()));
 
-        return Layout.Horizontal().Gap(8)
-            | left.Width(Size.Fraction(0.35f))
-            | right.Width(Size.Fraction(0.65f));
-    }
-
-    // Helper method to build filter checkboxes
-    object[] BuildFilterCheckboxes(List<string> items, IState<HashSet<string>> selectedSet)
-    {
-        return items.Select<string, object>(item =>
-        {
-            var itemState = UseState(() => selectedSet.Value.Contains(item));
-            UseEffect(() => itemState.Set(selectedSet.Value.Contains(item)), [selectedSet]);
-            return new BoolInput(itemState.Value, e =>
-            {
-                var set = new HashSet<string>(selectedSet.Value);
-                if (e.Value) set.Add(item); else set.Remove(item);
-                selectedSet.Value = set;
-                itemState.Set(e.Value);
-            }).Label(item);
-        }).ToArray();
+        return Layout.Horizontal()
+            | left.Width(Size.Fraction(0.4f))
+            | right;
     }
 }
 
