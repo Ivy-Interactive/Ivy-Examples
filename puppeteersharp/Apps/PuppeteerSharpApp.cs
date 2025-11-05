@@ -30,6 +30,10 @@ namespace PuppeteerSharpExample
                     | (Layout.Horizontal()
                         | RenderCaptureButton(client)
                         | (RenderDownloadButton(client) ?? null))
+                    | new Spacer()
+                    | Text.Small("This demo uses PuppeteerSharp library for rendering websites.")
+                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [PuppeteerSharp](https://github.com/hardkoded/puppeteer-sharp)")
+                   
                 )
 
                 | new Card(
