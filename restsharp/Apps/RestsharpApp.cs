@@ -5,25 +5,67 @@ public class RestSharpApp : ViewBase
 {
     public override object? Build()
     {
-        var method = UseState<string?>(() => "GET");
+        var method = UseState<string?>(() => "Get");
         var url = UseState<string>(() => "https://api.restful-api.dev/objects");
+        var resourceId = UseState<string>(() => "");
         var requestBody = UseState<string>(() => "");
         var response = UseState<string>(() => "");
         var statusCode = UseState<string?>(() => "");
-        var formatJson = UseState<bool>(() => false);
-        var headerKeyTemp = UseState<string>(() => string.Empty);
-        var headerValueTemp = UseState<string>(() => string.Empty);
-        var headers = UseState(ImmutableArray.Create<HeaderItem>());
+        var formatJson = UseState<bool>(() => true);
 
-
-        var addHeader = (Event<Button> e) =>
+        // Update URL based on method
+        var updateUrlForMethod = (string? newMethod) =>
         {
-            var newHeader = new HeaderItem(headerKeyTemp.Value, headerValueTemp.Value);
-            var updatedHeaders = headers.Value.Add(newHeader);
-            headers.Set(updatedHeaders);
-            headerKeyTemp.Set(String.Empty);
-            headerValueTemp.Set(String.Empty);
+            var baseUrl = "https://api.restful-api.dev/objects";
+            if (newMethod == null) return;
+
+            switch (newMethod.ToUpper())
+            {
+                case "GET":
+                    url.Set(baseUrl);
+                    break;
+                case "POST":
+                    url.Set(baseUrl);
+                    if (string.IsNullOrWhiteSpace(requestBody.Value))
+                    {
+                        requestBody.Set(@"{
+  ""name"": ""New Object"",
+  ""data"": {
+    ""color"": ""Red"",
+    ""capacity"": ""128 GB""
+  }
+}");
+                    }
+                    break;
+                case "PUT":
+                case "PATCH":
+                    url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
+                    if (string.IsNullOrWhiteSpace(requestBody.Value))
+                    {
+                        requestBody.Set(@"{
+  ""name"": ""Updated Object"",
+  ""data"": {
+    ""color"": ""Blue"",
+    ""capacity"": ""256 GB""
+  }
+}");
+                    }
+                    break;
+                case "DELETE":
+                    url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
+                    break;
+            }
         };
+
+        // Update URL when ID changes for methods that need it
+        UseEffect(() =>
+        {
+            if (method.Value?.ToUpper() == "DELETE" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH")
+            {
+                var baseUrl = "https://api.restful-api.dev/objects";
+                url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
+            }
+        }, resourceId, method);
 
         var onSend = () =>
         {
@@ -31,25 +73,26 @@ public class RestSharpApp : ViewBase
             statusCode.Value = string.Empty;
             try
             {
-                var options = new RestClientOptions(url.Value)
+                // Build final URL with ID if needed
+                var finalUrl = url.Value;
+                if ((method.Value?.ToUpper() == "DELETE" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH") 
+                    && !string.IsNullOrWhiteSpace(resourceId.Value) 
+                    && !finalUrl.Contains(resourceId.Value))
+                {
+                    finalUrl = $"{finalUrl.TrimEnd('/')}/{resourceId.Value}";
+                }
+
+                var options = new RestClientOptions(finalUrl)
                 {
                     ThrowOnAnyError = false
                 };
                 var client = new RestClient(options);
                 var request = new RestRequest();
 
-                if (headers.Value.Count() > 0)
-                {
-                    foreach (var headerItem in headers.Value)
-                    {
-                        request.AddHeader(headerItem.Key, headerItem.Value);
-                    }
-                }
-
                 if (requestBody.Value.Length > 0)
                     request.AddBody(requestBody.Value);
 
-                RestResponse restResponse = null;
+                RestResponse? restResponse = null;
 
                 if (Method.Get.ToString().Equals(method.Value, StringComparison.CurrentCultureIgnoreCase))
                     restResponse = client.ExecuteGet(request);
@@ -73,118 +116,77 @@ public class RestSharpApp : ViewBase
                 response.Set(ex.Message);
             }
         };
-        //Align the items
-        return Layout.Vertical()
-            | new StackLayout([
-                    new Button(method.Value ?? "Get").Outline().Width(50)
-                              .WithDropDown(
-                                  Methods
-                                      .Select(o => MenuItem.Default(o.Label).HandleSelect(() => method.Set(o.Label)))
-                                      .ToArray()
-                              )
-                   ,new TextInput(url,placeholder:"URL").Variant(TextInputs.Url).Width(250)
-                   ,new Button("Send", onClick: onSend).Width(50)
 
-                ], Orientation.Horizontal, gap: 3)
+        // Left card - Actions (Request)
+        var requestControls = new List<object>
+        {
+            new Button(method.Value ?? "Get")
+                .Outline()
+                .WithDropDown(
+                    Methods
+                        .Select(o => MenuItem.Default(o.Label).HandleSelect(() =>
+                        {
+                            method.Set(o.Label);
+                            updateUrlForMethod(o.Label);
+                        }))
+                        .ToArray()
+                ),
+            new TextInput(url, placeholder: "URL")
+                .Variant(TextInputs.Url)
+        };
 
-            | Layout.Tabs(
-                        new Tab(
-                            "Request Body",
-                            new TextInput(requestBody)
-                                .Placeholder("Request Body")
-                                .Variant(TextInputs.Textarea)
-                                .Height(30)
-                        ),
+        if (method.Value?.ToUpper() == "DELETE" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH")
+        {
+            requestControls.Add(new TextInput(resourceId, placeholder: "ID"));
+        }
 
-                        new Tab(
-                            "Request Headers",
-                            Layout.Vertical()
-                            | new StackLayout(
-                                [
-                                    headerKeyTemp.ToInput(placeholder: "Header Key"),
-                                    headerValueTemp.ToInput(placeholder: "Header Value"),
-                                    new Button("Add", onClick: addHeader)
-                                ],
-                                Orientation.Horizontal,
-                                gap: 3
-                            )
+        requestControls.Add(new Button("Send", onClick: onSend).Width(50));
 
+        var statusCallout = string.IsNullOrWhiteSpace(statusCode.Value)
+            ? null
+            : statusCode.Value.Contains(HttpStatusCode.OK.ToString())
+                ? Callout.Success($"Request successful! Status code: {statusCode.Value}", "Success")
+                : Callout.Error($"Request failed. Status code: {statusCode.Value}", "Error");
 
-                   | new HeaderView(
-                            new HeaderItem("Header Key", "Header Value"),
-                            true,
-                            () => { }
-                        )
+        var isRequestBodyEnabled = method.Value?.ToUpper() == "POST" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH";
+        var hasResponse = !string.IsNullOrWhiteSpace(response.Value);
 
-                           | headers.Value.Select(header =>
-                            new HeaderView(
-                                header,
-                                false,
-                                () =>
-                                {
-                                    headers.Set(headers.Value.Remove(header));
-                                }
-                            )
-
-)
-
-                )
+        var mainCard = new Card(
+            Layout.Vertical()
+            | Text.H3("RestSharp Demo")
+            | Text.Muted("This is a simple RestSharp demo. It allows you to send HTTP requests to a RESTful API and see the response.")
+            | new Card(
+                Layout.Vertical()
+            | Text.H3("Request")
+            | Text.Muted("This is the request body. It is used to send the request to the API.")
+            | new StackLayout(
+                requestControls.ToArray(),
+                Orientation.Horizontal
             )
+            | requestBody.ToCodeInput()
+                .Language(Languages.Json)
+                .Placeholder(isRequestBodyEnabled ? "Request Body" : "Request Body (not used for this method)")
+                .Height(Size.Fit().Max(50))
+                .Disabled(!isRequestBodyEnabled)
+            )
+            | new Card(
+                Layout.Vertical()
+                | Text.H3("Response")
+                | Text.Muted("This is the response from the API. It is displayed in JSON format.")
+                | (hasResponse
+                    ? Layout.Vertical()
+                        | new Code(formatJson.Value ? FormatStringToJson(response.Value) : response.Value, Languages.Json)
+                            .Height(Size.Fit().Max(70))
+                        | formatJson.ToInput("Format JSON")
+                    : Layout.Vertical()
+                        | new Code("Please execute a request to see the response here", Languages.Json)
+                            .Height(Size.Fit().Max(70)))
+                | statusCallout
+                )
+        ).Width(Size.Fraction(0.45f));
 
-
-
-                   | new Separator()
-                   | Text.Strong("Response Body")
-
-                   | formatJson.ToInput("Format JSON")
-                           | new TextInput(formatJson.Value ? FormatStringToJson(response.Value) : response.Value)
-                           .Placeholder("Response will show here")
-                           .Variant(TextInputs.Textarea)
-                            .Height(30)
-                    | Text.Block($"Status code: {statusCode.Value}").Color(statusCode.Value.Contains(HttpStatusCode.OK.ToString()) ? Colors.Green : Colors.Black)
-
-
-
-
-                 .Width(Size.Units(120).Max(700)
-
-               );
-    }
-    public class HeaderItem
-    {
-        public HeaderItem(string key, string value)
-        {
-            Key = key;
-            Value = value;
-        }
-        public string Key { get; set; }
-        public string Value { get; set; }
-    }
-    public class HeaderView(HeaderItem headerItem, bool isHeader, Action deleteHeader) : ViewBase
-    {
-        public override object? Build()
-        {
-            if (isHeader)
-                return Layout.Horizontal(
-               Text.Strong(headerItem.Key).Width(100),
-               Text.Strong(headerItem.Value).Width(100),
-               Text.Block("")
-           )
-           .Align(Align.Left)
-           .Width(Size.Full());
-
-
-            return Layout.Horizontal(
-               Text.Block(headerItem.Key).Width(100),
-               Text.Block(headerItem.Value).Width(100),
-                new Button(null, _ => deleteHeader())
-                    .Icon(Icons.Trash)
-                    .Variant(ButtonVariant.Outline)
-           )
-           .Align(Align.Left)
-           .Width(Size.Full());
-
-        }
+        return Layout.Vertical().Align(Align.TopCenter)
+            | mainCard.Height(Size.Fit().Min(Size.Full()));
     }
 
     private static readonly Option<Method>[] Methods = [
@@ -216,3 +218,4 @@ public class RestSharpApp : ViewBase
     }
 
 }
+
