@@ -1,4 +1,4 @@
-namespace ScribanDemo.Apps;
+namespace ScribanExample;
 
 [App(icon: Icons.ScrollText, title: "Scriban Demo")]
 public class ScribanApp : ViewBase
