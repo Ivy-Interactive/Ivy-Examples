@@ -6,7 +6,7 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<Acme.InternalProject.Apps.FileConverterApp>()
+    .DefaultApp<Acme.InternalProject.Apps.FileUploaderApp>()
     .UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 await server.RunAsync();

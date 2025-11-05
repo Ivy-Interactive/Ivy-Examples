@@ -5,12 +5,12 @@ using System.Text.Json;
 namespace Acme.InternalProject.Apps;
 
 [App]
-public class FileUploadTestApp : ViewBase
+public class FileUploaderApp : ViewBase
 {
     public override object? Build()
     {
         return Layout.Vertical()
-            | Text.H1("🧪 File Upload & Download Test Suite")
+            | Text.H1("File Upload & Download Test Suite")
             | Text.P("Comprehensive testing of all upload and download functionality")
             | Layout.Vertical().Gap(4)
                 | TestBasicFileUpload()
@@ -45,14 +45,14 @@ public class FileUploadTestApp : ViewBase
                 | (files.Value != null
                     ? Layout.Horizontal().Gap(2)
                         | Text.P($"Selected: {files.Value.Name} ({FormatFileSize(files.Value.Size)})")
-                        | new Button("👁️ Preview").WithSheet(
+                        | new Button("Preview").WithSheet(
                             () => CreateFilePreviewSheet(files.Value, fileBytes.Value),
                             title: $"Preview: {files.Value.Name}",
                             description: $"File size: {FormatFileSize(files.Value.Size)}",
                             width: Size.Fraction(2/3f)
                         )
                     : null)
-        ).Title("📁 Basic File Upload")
+        ).Title("Basic File Upload")
          .Description("Test single file upload with status feedback");
     }
 
@@ -93,9 +93,9 @@ public class FileUploadTestApp : ViewBase
                                 Layout.Vertical().Gap(1)
                                     | Layout.Horizontal().Gap(2)
                                         | GetFileIcon(file.Name)
-                                        | Text.P($"📄 {file.Name}")
+                                        | Text.P($"{file.Name}")
                                         | Text.Small($"({FormatFileSize(file.Size)})")
-                                        | new Button("👁️ Preview").WithSheet(
+                                        | new Button("Preview").WithSheet(
                                             () => CreateFilePreviewSheet(file, fileContents.Value.ContainsKey(file.Name) ? fileContents.Value[file.Name] : null),
                                             title: $"Preview: {file.Name}",
                                             description: $"{GetFileTypeDescription(file.Name)} - {FormatFileSize(file.Size)}",
@@ -111,9 +111,9 @@ public class FileUploadTestApp : ViewBase
                                 Layout.Vertical().Gap(1)
                                     | Layout.Horizontal().Gap(2)
                                         | GetFileIcon(item.file.Name)
-                                        | Text.P($"📄 {item.file.Name}")
+                                        | Text.P($"{item.file.Name}")
                                         | Text.Small($"({FormatFileSize(item.file.Size)})")
-                                        | new Button("👁️ Preview Content").WithSheet(
+                                        | new Button("Preview Content").WithSheet(
                                             () => CreateFilePreviewSheet(item.file, item.bytes),
                                             title: $"Preview: {item.file.Name}",
                                             description: $"{GetFileTypeDescription(item.file.Name)} - {FormatFileSize(item.file.Size)}",
@@ -121,7 +121,7 @@ public class FileUploadTestApp : ViewBase
                                         )
                             ).ToArray()
                     : null)
-        ).Title("📁 Multiple File Upload")
+        ).Title("Multiple File Upload")
          .Description("Test uploading multiple files at once with individual previews");
     }
 
@@ -148,14 +148,14 @@ public class FileUploadTestApp : ViewBase
                 | (files.Value != null
                     ? Layout.Horizontal().Gap(2)
                         | Text.P($"Dropped: {files.Value.Name} ({FormatFileSize(files.Value.Size)})")
-                        | new Button("👁️ Preview").WithSheet(
+                        | new Button("Preview").WithSheet(
                             () => CreateFilePreviewSheet(files.Value, fileBytes.Value),
                             title: $"Preview: {files.Value.Name}",
                             description: $"File size: {FormatFileSize(files.Value.Size)}",
                             width: Size.Fraction(2/3f)
                         )
                     : null)
-        ).Title("🎯 Drag & Drop Upload")
+        ).Title("Drag & Drop Upload")
          .Description("Test drag and drop file upload interface");
     }
 
@@ -191,14 +191,14 @@ public class FileUploadTestApp : ViewBase
                 | (files.Value != null
                     ? Layout.Horizontal().Gap(2)
                         | Text.P($"Validated: {files.Value.Name} ({FormatFileSize(files.Value.Size)})")
-                        | new Button("👁️ Preview").WithSheet(
+                        | new Button("Preview").WithSheet(
                             () => CreateFilePreviewSheet(files.Value, fileBytes.Value),
                             title: $"Preview: {files.Value.Name}",
                             description: $"File size: {FormatFileSize(files.Value.Size)}",
                             width: Size.Fraction(2/3f)
                         )
                     : null)
-        ).Title("✅ File Validation")
+        ).Title("File Validation")
          .Description("Test file type and size validation");
     }
 
@@ -233,14 +233,14 @@ public class FileUploadTestApp : ViewBase
                 | (files.Value != null && !isProcessing.Value
                     ? Layout.Horizontal().Gap(2)
                         | Text.P($"Processed: {files.Value.Name}")
-                        | new Button("👁️ Preview").WithSheet(
+                        | new Button("Preview").WithSheet(
                             () => CreateFilePreviewSheet(files.Value, fileBytes.Value),
                             title: $"Preview: {files.Value.Name}",
                             description: $"File size: {FormatFileSize(files.Value.Size)}",
                             width: Size.Fraction(2/3f)
                         )
                     : null)
-        ).Title("⏳ Upload Status Feedback")
+        ).Title("Upload Status Feedback")
          .Description("Test upload progress and status indicators");
     }
 
@@ -278,18 +278,18 @@ public class FileUploadTestApp : ViewBase
                     ? Layout.Vertical().Gap(2)
                         | Text.H3("File Information:")
                         | Layout.Vertical().Gap(1)
-                            | Text.P($"📄 Name: {files.Value.Name}")
-                            | Text.P($"📏 Size: {FormatFileSize(files.Value.Size)}")
-                            | Text.P($"📅 Last Modified: {files.Value.LastModified:yyyy-MM-dd HH:mm:ss}")
-                            | Text.P($"🔤 Type: {files.Value.Type}")
+                            | Text.P($"Name: {files.Value.Name}")
+                            | Text.P($"Size: {FormatFileSize(files.Value.Size)}")
+                            | Text.P($"Last Modified: {files.Value.LastModified:yyyy-MM-dd HH:mm:ss}")
+                            | Text.P($"Type: {files.Value.Type}")
                         | Layout.Horizontal().Gap(2)
-                            | new Button("👁️ Preview in Sheet").WithSheet(
+                            | new Button("Preview in Sheet").WithSheet(
                                 () => CreateFilePreviewSheet(files.Value, fileBytes.Value),
                                 title: $"Preview: {files.Value.Name}",
                                 description: $"File size: {FormatFileSize(files.Value.Size)}",
                                 width: Size.Fraction(2/3f)
                             )
-                            | new Button("📋 Show Raw Content").HandleClick(_ => 
+                            | new Button("Show Raw Content").HandleClick(_ => 
                                 client.Toast($"Raw content preview:\n\n{textContent.Value?.Substring(0, Math.Min(200, textContent.Value?.Length ?? 0))}...", "Text Content"))
                     : null)
                 | (textContent.Value != null
@@ -300,7 +300,7 @@ public class FileUploadTestApp : ViewBase
                             : textContent.Value)
                         | Text.Small($"Total characters: {textContent.Value.Length}")
                     : null)
-        ).Title("📝 Text File Preview Test")
+        ).Title("Text File Preview Test")
          .Description("Test text file upload, storage, and preview functionality");
     }
 
@@ -328,7 +328,7 @@ public class FileUploadTestApp : ViewBase
                         | new Image(preview.Value).Width(200).Height(150)
                         | Text.P($"Image preview loaded")
                     : null)
-        ).Title("🖼️ Image Upload with Preview")
+        ).Title("Image Upload with Preview")
          .Description("Test image upload with live preview");
     }
 
@@ -378,18 +378,18 @@ public class FileUploadTestApp : ViewBase
                 | Layout.Vertical().Gap(2)
                     | Layout.Horizontal().Gap(2)
                         | (downloadUrl.Value != null 
-                            ? new Button("📄 Download Large Text File").Url(downloadUrl.Value)
+                            ? new Button("Download Large Text File").Url(downloadUrl.Value)
                             : null)
                         | (csvDownloadUrl.Value != null 
-                            ? new Button("📊 Download CSV Export").Url(csvDownloadUrl.Value)
+                            ? new Button("Download CSV Export").Url(csvDownloadUrl.Value)
                             : null)
                     | (jsonDownloadUrl.Value != null 
-                        ? new Button("📋 Download JSON Data").Url(jsonDownloadUrl.Value)
+                        ? new Button("Download JSON Data").Url(jsonDownloadUrl.Value)
                         : null)
                 | (progress.Value > 0
                     ? Text.P($"Download Progress: {progress.Value:P0}")
                     : null)
-        ).Title("⬇️ Download Features")
+        ).Title("Download Features")
          .Description("Test various download scenarios");
     }
 
@@ -441,7 +441,7 @@ public class FileUploadTestApp : ViewBase
                     | (errorDownloadUrl.Value != null 
                         ? new Button("Test Download Error").Url(errorDownloadUrl.Value)
                         : null)
-        ).Title("❌ Error Handling")
+        ).Title("Error Handling")
          .Description("Test error handling for uploads and downloads");
     }
 
@@ -450,13 +450,13 @@ public class FileUploadTestApp : ViewBase
         var extension = System.IO.Path.GetExtension(fileName)?.ToLower();
         return extension switch
         {
-            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => Text.P("🖼️"),
-            ".txt" or ".md" or ".json" or ".csv" or ".log" or ".xml" or ".html" or ".css" or ".js" => Text.P("📝"),
-            ".mp4" or ".avi" or ".mov" or ".wmv" or ".flv" or ".webm" => Text.P("🎥"),
-            ".pdf" => Text.P("📄"),
-            ".zip" or ".rar" or ".7z" => Text.P("📦"),
-            ".exe" or ".msi" => Text.P("⚙️"),
-            _ => Text.P("📁")
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => Text.P("IMG"),
+            ".txt" or ".md" or ".json" or ".csv" or ".log" or ".xml" or ".html" or ".css" or ".js" => Text.P("TXT"),
+            ".mp4" or ".avi" or ".mov" or ".wmv" or ".flv" or ".webm" => Text.P("VID"),
+            ".pdf" => Text.P("PDF"),
+            ".zip" or ".rar" or ".7z" => Text.P("ZIP"),
+            ".exe" or ".msi" => Text.P("EXE"),
+            _ => Text.P("FILE")
         };
     }
 
@@ -573,7 +573,7 @@ public class FileUploadTestApp : ViewBase
                         | Text.P($"Type: {extension ?? "Unknown"}")
                         | Text.P($"Last Modified: {file.LastModified:yyyy-MM-dd HH:mm:ss}")
                         | Text.P($"MIME Type: {file.Type}")
-            ).Title("📄 File Details")
+            ).Title("File Details")
             | (isImage && contentBytes != null
                 ? new Card(
                     Layout.Vertical().Gap(2)
@@ -581,7 +581,7 @@ public class FileUploadTestApp : ViewBase
                         | new Image($"data:image/{extension?.TrimStart('.')};base64,{Convert.ToBase64String(contentBytes)}")
                             .Width(Size.Fraction(1f))
                             .Height(Size.Units(300))
-                ).Title("🖼️ Image")
+                ).Title("Image")
                 : null)
             | (isText && contentBytes != null
                 ? new Card(
@@ -590,7 +590,7 @@ public class FileUploadTestApp : ViewBase
                         | Text.Code(Encoding.UTF8.GetString(contentBytes).Length > 5000 
                             ? Encoding.UTF8.GetString(contentBytes).Substring(0, 5000) + "\n...[truncated]"
                             : Encoding.UTF8.GetString(contentBytes))
-                ).Title("📝 Text")
+                ).Title("Text")
                 : null)
             | (isVideo && contentBytes != null
                 ? new Card(
@@ -598,7 +598,7 @@ public class FileUploadTestApp : ViewBase
                         | Text.H3("Video Preview")
                         | Text.P("Video file detected. Preview not available in this demo.")
                         | Text.P($"Video size: {FormatFileSize(file.Size)}")
-                ).Title("🎥 Video")
+                ).Title("Video")
                 : null)
             | (!isImage && !isText && !isVideo && contentBytes != null
                 ? new Card(
@@ -607,7 +607,7 @@ public class FileUploadTestApp : ViewBase
                         | Text.P($"This is a binary file ({extension ?? "unknown type"})")
                         | Text.P($"File size: {FormatFileSize(file.Size)}")
                         | Text.P($"First 100 bytes (hex): {BitConverter.ToString(contentBytes.Take(100).ToArray())}")
-                ).Title("📁 Binary File")
+                ).Title("Binary File")
                 : null)
             | (contentBytes == null
                 ? new Card(
@@ -615,7 +615,7 @@ public class FileUploadTestApp : ViewBase
                         | Text.H3("File Content Not Available")
                         | Text.P("File content is not available for preview.")
                         | Text.P("This might be because the file hasn't been uploaded yet.")
-                ).Title("⚠️ No Content")
+                ).Title("No Content")
                 : null);
     }
 

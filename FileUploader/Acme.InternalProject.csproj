@@ -15,7 +15,7 @@
 
   
     <ItemGroup>
-      <PackageReference Include="Ivy" Version="1.0.129.0" />
+      <PackageReference Include="Ivy" Version="1.*" />
     </ItemGroup>
     
 
