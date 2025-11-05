@@ -1,6 +1,6 @@
 namespace SquirrelExample;
 
-[App(icon: Icons.Table, title: "Squirrel CSV Demo")]
+[App(icon: Icons.Table, title: "Squirrel Data Editor")]
 public class SquirrelCsvApp : ViewBase
 {
     private static readonly string[] AllColumns = { "User ID", "Product ID", "Product Name", "Brand", "Category", "Price", "Rating", "Color", "Size" };
@@ -33,7 +33,7 @@ public class SquirrelCsvApp : ViewBase
         // Column visibility state - use array for Toggle select
         var visibleColumns = UseState(() => AllColumns.ToArray());
         var page = UseState(1);
-        var pageSize = 30;
+        var pageSize = 25;
 
         // Load from CSV file using Squirrel
         void LoadFromCsv()
@@ -326,8 +326,7 @@ public class SquirrelCsvApp : ViewBase
                         .Variant(SelectInputs.Toggle)
                     | Text.Small("Categories")
                     | selectedCategories.ToSelectInput(allCategories.ToOptions())
-                        .Variant(SelectInputs.Toggle)
-                )
+                        .Variant(SelectInputs.Toggle))
             ).Title("Filters")
 
             | new Card(
@@ -342,6 +341,9 @@ public class SquirrelCsvApp : ViewBase
 
             
             | new Button("Export Filtered CSV").Url(exportUrl.Value).Icon(Icons.Download).Disabled(typedProducts.Value.Count == 0).Width(Size.Full())          
+            | new Spacer()
+            | Text.Small("This demo uses Squirrel library to load and manipulate CSV data.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Squirrel](https://github.com/sudipto80/Squirrel)")
         ).Height(Size.Fit().Min(Size.Full()));
 
         var right = new Card(
