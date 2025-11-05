@@ -1,4 +1,4 @@
-﻿namespace PuppeteerSharpDemo
+﻿namespace PuppeteerSharpExample
 {
     public static class MemoryFileStore
     {

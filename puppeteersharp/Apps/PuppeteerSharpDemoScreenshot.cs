@@ -1,7 +1,4 @@
-using System.Buffers.Text;
-using PuppeteerSharp.Media;
-
-namespace PuppeteerSharpDemo
+namespace PuppeteerSharpExample
 {
     [App(icon: Icons.Image, title: "PuppeteerSharp")]
     public class PuppeteerSharpDemoScreenshot : ViewBase

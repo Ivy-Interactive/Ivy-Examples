@@ -1,5 +1,4 @@
-using Microsoft.AspNetCore.Hosting;
-using PuppeteerSharpDemo;
+using PuppeteerSharpExample;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();

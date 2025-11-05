@@ -1,8 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-
-namespace PuppeteerSharpDemo
+﻿namespace PuppeteerSharpExample
 {
     public class DownloadEndpointStartupFilter : IStartupFilter
     {
