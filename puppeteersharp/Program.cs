@@ -7,7 +7,7 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings().UseTabs(preventDuplicates: true);
+var chromeSettings = new ChromeSettings().DefaultApp<PuppeteerSharpApp>().UseTabs(preventDuplicates: true);
 
 server.UseChrome(chromeSettings);
 var fetcher = new BrowserFetcher();

@@ -1,7 +1,7 @@
 namespace PuppeteerSharpExample
 {
     [App(icon: Icons.Image, title: "PuppeteerSharp")]
-    public class PuppeteerSharpDemoScreenshot : ViewBase
+    public class PuppeteerSharpApp : ViewBase
     {
         private IState<string> url = null!;
         private IState<string?> screenshotPath = null!;
