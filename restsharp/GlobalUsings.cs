@@ -10,7 +10,6 @@ global using System.Collections.Immutable;
 global using System.Reactive.Linq;
 global using System.Text.Json;
 global using System.Net;
-// Note: This demo uses a simplified RestSharp for educational purposes
 global using RestSharp;
 
-namespace RestsharpDemo;
+namespace RestsharpExample;

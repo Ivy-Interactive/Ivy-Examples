@@ -1,7 +1,7 @@
-﻿namespace RestsharpDemo.Apps;
+﻿namespace RestsharpExample;
 
 [App(icon: Icons.Webhook, title: "RestSharp Demo")]
-public class RestsharpApp : ViewBase
+public class RestSharpApp : ViewBase
 {
     public override object? Build()
     {
