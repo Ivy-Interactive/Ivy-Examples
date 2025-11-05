@@ -13,14 +13,11 @@
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
 
-  
-  
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.113.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="PuppeteerSharp" Version="20.2.2" />
   </ItemGroup>
   
-
   <ItemGroup>
     <Folder Include="Connections" />
     <Folder Include="Assets\" />
