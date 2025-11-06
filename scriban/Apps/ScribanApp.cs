@@ -1,6 +1,6 @@
 namespace ScribanExample;
 
-[App(icon: Icons.ScrollText, title: "Scriban Demo")]
+[App(icon: Icons.ScrollText, title: "Scriban")]
 public class ScribanApp : ViewBase
 {
     private const string DefaultModel = "{\n  \"name\": \"Bob Smith\",\n  \"address\": \"1 Smith St, Smithville\",\n  \"orderId\": \"123455\",\n  \"total\": 23435.34,\n  \"items\": [\n    {\n      \"name\": \"1kg carrots\",\n      \"quantity\": 1,\n      \"total\": 4.99\n    },\n    {\n      \"name\": \"2L Milk\",\n      \"quantity\": 1,\n      \"total\": 3.5\n    }\n  ]\n}";
@@ -71,10 +71,12 @@ public class ScribanApp : ViewBase
             }
         }
 
-		var modelEditor = modelState.ToCodeInput().Language(Languages.Json).Height(Size.Units(50));
-		var templateEditor = templateState.ToTextAreaInput().Height(Size.Units(50));
-		var outputViewer = outputState.ToCodeInput().Language(Languages.Text).Height(Size.Units(60));
-		var errorText = state.Value.Error != "" ? Text.Block(state.Value.Error) : null;
+		var modelEditor = modelState.ToCodeInput().Language(Languages.Json).Height(Size.Fit());
+		var templateEditor = templateState.ToCodeInput().Language(Languages.Markdown).Height(Size.Fit());
+		var outputViewer = string.IsNullOrEmpty(outputState.Value)
+			? outputState.ToTextAreaInput("Output will appear here after generation...").Disabled().Height(Size.Units(50))
+			: outputState.ToTextAreaInput().Height(Size.Units(50));
+		
 
         var generateBtn = new Button("Generate")
             .Primary()
@@ -86,31 +88,40 @@ public class ScribanApp : ViewBase
 				outputState.Set(output);
             });
 
-		var modelColumn = Layout.Vertical()
-			| Text.Block("The Model (valid json)") | modelEditor;
+		// Header section with title and description
+		var headerSection = Layout.Vertical()
+			| Text.H2("Scriban Template Engine")
+			| Text.Muted("Scriban is a powerful, fast, and secure templating engine for .NET. Use this tool to create templates with JSON model support. Enter a model in JSON format and a Scriban template to generate the output.");
 
-		var templateColumn = Layout.Vertical()
-			| Text.Markdown("Scriban Template ([Template docs](https://github.com/scriban/scriban))")
-			| templateEditor;
+        // Left card - Model input, Template input and Generate button
+        var leftCardContent = Layout.Vertical()
+            | Text.H4("Model (JSON)")
+            | Text.Muted("Enter the model in JSON format. This will be used to generate the output.")
+            | modelEditor
+            | generateBtn;
+			
 
-		var editorsRow = Layout.Horizontal().Gap(2)
-			| modelColumn
-			| templateColumn;
+		var leftCard = new Card(leftCardContent).Width(Size.Fraction(0.45f));
 
-		var actionsRow = Layout.Horizontal().Width(Size.Full()).Align(Align.Left)
-			| generateBtn;
+        // Right card - Output (markdown/text)
+        var rightCardContent = Layout.Vertical()
+            | Text.H4("Scriban Template")
+            | Text.Muted("Enter the Scriban template to generate the output. Use the model variables in the template to generate the output.")
+            | templateEditor
+            | Text.H4("Output")
+            | outputViewer;
 
-		var outputSection = Layout.Vertical()
-			| Text.Block("Output")
-			| outputViewer
-			| (errorText != null ? errorText : Text.Block(""));
+		var rightCard = new Card(rightCardContent).Width(Size.Fraction(0.55f));
+
+		// Two horizontal cards
+		var cardsRow = Layout.Horizontal().Gap(6).Padding(3)
+			| leftCard
+			| rightCard;
 
 		return Layout.Vertical()
-			.Gap(2)
-			| Text.H2("Scriban Online Demo")
-			| editorsRow
-			| actionsRow
-			| outputSection;
+			.Gap(3)
+			| headerSection
+			| cardsRow;
     }
 
     private static object ToScriptValue(System.Text.Json.JsonElement element)
