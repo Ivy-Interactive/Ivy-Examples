@@ -8,6 +8,7 @@ global using Ivy.Core.Hooks;
 global using Ivy.Helpers;
 global using Ivy.Hooks;
 global using Ivy.Shared;
+global using Ivy.Services;
 global using Ivy.Views;
 global using Ivy.Views.Alerts;
 global using Ivy.Views.Blades;
