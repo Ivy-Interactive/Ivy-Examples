@@ -98,7 +98,10 @@ public class ScribanApp : ViewBase
             | Text.H4("Model (JSON)")
             | Text.Muted("Enter the model in JSON format. This will be used to generate the output.")
             | modelEditor
-            | generateBtn;
+            | generateBtn
+            | Text.Small("This demo uses Scriban to generate the output.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Scriban](https://github.com/scriban/scriban)")
+        ;
 			
 
 		var leftCard = new Card(leftCardContent).Width(Size.Fraction(0.45f));
