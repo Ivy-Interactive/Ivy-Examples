@@ -14,6 +14,7 @@ public class NAudioApp : ViewBase
         var vol = UseState(0.8f);
         var waveType = UseState(SignalGeneratorType.Sin);
         var genBytes = UseState<byte[]?>(() => null);
+        var genDataUrl = UseState<string?>(() => null);
         var genError = UseState<string?>(() => null);
         var genVersion = UseState(() => 0);
 
@@ -27,51 +28,62 @@ public class NAudioApp : ViewBase
         var mixGenVol = UseState(0.5f);
         var mixUploadVol = UseState(0.5f);
         var mixBytes = UseState<byte[]?>(() => null);
+        var mixDataUrl = UseState<string?>(() => null);
         var mixError = UseState<string?>(() => null);
         var mixVersion = UseState(() => 0);
 
         // File upload handler
-        var fileInput = UseState<FileInput?>(() => null);
-        var uploadUrl = this.UseUpload(uploadedBytes =>
+        var uploadedFile = UseState<FileUpload<byte[]>?>(() => null);
+        var uploadUrl = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile))
+            .Accept("audio/*")
+            .MaxFileSize(50 * 1024 * 1024);
+
+        // Process uploaded file when available
+        UseEffect(() =>
         {
-            try
+            if (uploadedFile.Value?.Content is byte[] bytes && bytes.Length > 0)
             {
-                var fileName = fileInput.Value?.Name ?? "uploaded_audio";
-                uploadBytes.Set(uploadedBytes);
-                uploadName.Set(fileName);
-                client.Toast($"File '{fileName}' received, processing...");
-                
-                Task.Run(() =>
+                try
                 {
-                    try
+                    var fileName = uploadedFile.Value.FileName ?? "uploaded_audio";
+                    uploadBytes.Set(bytes);
+                    uploadName.Set(fileName);
+                    client.Toast($"File '{fileName}' received, processing...");
+
+                    Task.Run(() =>
                     {
-                        var info = GetAudioInfo(uploadedBytes);
-                        if (info.HasValue)
+                        try
                         {
-                            format.Set(info.Value.WaveFormat);
-                            duration.Set(info.Value.Duration);
-                            if (info.Value.Duration.HasValue)
+                            var info = GetAudioInfo(bytes);
+                            if (info.HasValue)
                             {
-                                dur.Set(info.Value.Duration.Value.TotalSeconds);
+                                format.Set(info.Value.WaveFormat);
+                                duration.Set(info.Value.Duration);
+                                if (info.Value.Duration.HasValue)
+                                {
+                                    dur.Set(info.Value.Duration.Value.TotalSeconds);
+                                }
+                                client.Toast($"Audio file '{fileName}' loaded successfully");
                             }
-                            client.Toast($"Audio file '{fileName}' loaded successfully");
+                            else
+                            {
+                                client.Toast($"File uploaded but could not read audio format", "Warning");
+                            }
                         }
-                        else
-                            client.Toast($"File uploaded but could not read audio format", "Warning");
-                    }
-                    catch (Exception ex)
-                    {
-                        client.Toast($"Error processing audio: {ex.Message}", "Error");
-                    }
-                });
+                        catch (Exception ex)
+                        {
+                            client.Toast($"Error processing audio: {ex.Message}", "Error");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    client.Toast($"Error uploading: {ex.Message}", "Error");
+                    uploadBytes.Set((byte[]?)null);
+                    uploadName.Set((string?)null);
+                }
             }
-            catch (Exception ex)
-            {
-                client.Toast($"Error uploading: {ex.Message}", "Error");
-                uploadBytes.Set((byte[]?)null);
-                uploadName.Set((string?)null);
-            }
-        }, "audio/*", "audio-upload");
+        }, [uploadedFile]);
 
         // Download URLs
         var genUrl = this.UseDownload(() => genBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"generated_tone_{genVersion.Value}.wav");
@@ -86,7 +98,7 @@ public class NAudioApp : ViewBase
                 // Section 1: Upload File
                 | Text.H3("Upload File")
                 | (Layout.Vertical()
-                    | fileInput.ToFileInput(uploadUrl, "Choose Audio File").Accept("audio/*")
+                    | uploadedFile.ToFileInput(uploadUrl).Placeholder("Choose Audio File")
                     | (uploadBytes.Value != null && uploadName.Value != null
                         ? new Callout($"File loaded: {uploadName.Value}\n" +
                             $"Format: {format.Value?.SampleRate}Hz, {format.Value?.Channels} channel(s), {format.Value?.BitsPerSample} bits\n" +
@@ -113,19 +125,22 @@ public class NAudioApp : ViewBase
                             genError.Set((string?)null);
                             genBytes.Set((byte[]?)null);
                             genVersion.Set(genVersion.Value + 1);
-                            genBytes.Set(GenerateTone(freq.Value, dur.Value, vol.Value, waveType.Value));
+                            var bytes = GenerateTone(freq.Value, dur.Value, vol.Value, waveType.Value);
+                            genBytes.Set(bytes);
+                            genDataUrl.Set("data:audio/wav;base64," + Convert.ToBase64String(bytes));
                             client.Toast("Sound generated successfully");
                         }
                         catch (Exception ex)
                         {
                             genError.Set(ex.Message);
                             genBytes.Set((byte[]?)null);
+                            genDataUrl.Set((string?)null);
                         }
                     }).Width(Size.Full())
-                    | (genBytes.Value != null
+                    | (!string.IsNullOrEmpty(genDataUrl.Value)
                         ? Layout.Vertical().Gap(2)
                             | Text.Small("Generated Audio")
-                            | new Audio(genUrl.Value)
+                            | new Audio(genDataUrl.Value)
                                 .Controls(true)
                                 .Key($"audio-gen-{genVersion.Value}")
                         : null!)
@@ -154,19 +169,22 @@ public class NAudioApp : ViewBase
                             mixError.Set((string?)null);
                             mixBytes.Set((byte[]?)null);
                             mixVersion.Set(mixVersion.Value + 1);
-                            mixBytes.Set(MixAudio(genBytes.Value, uploadBytes.Value, mixGenVol.Value, mixUploadVol.Value));
+                            var mixed = MixAudio(genBytes.Value, uploadBytes.Value, mixGenVol.Value, mixUploadVol.Value);
+                            mixBytes.Set(mixed);
+                            mixDataUrl.Set("data:audio/wav;base64," + Convert.ToBase64String(mixed));
                             client.Toast("Audio mixed successfully");
                         }
                         catch (Exception ex) 
                         { 
                             mixError.Set(ex.Message); 
                             mixBytes.Set((byte[]?)null);
+                            mixDataUrl.Set((string?)null);
                         }
                     }).Disabled(genBytes.Value == null || uploadBytes.Value == null).Width(Size.Full())
-                    | (mixBytes.Value != null
+                    | (!string.IsNullOrEmpty(mixDataUrl.Value)
                         ? Layout.Vertical().Gap(2)
                             | Text.Small("Mixed Audio")
-                            | new Audio(mixUrl.Value)
+                            | new Audio(mixDataUrl.Value)
                                 .Controls(true)
                                 .Key($"audio-mix-{mixVersion.Value}")
                         : null!)

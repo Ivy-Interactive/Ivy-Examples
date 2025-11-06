@@ -37,12 +37,19 @@ public class ExcelDataReaderApp : ViewBase
         var isAnalyzing = UseState(false);
         var selectedSheetIndex = UseState(0);
         var client = UseService<IClientProvider>();
-        var fileInputState = UseState<FileInput?>(() => null);
-        var fileName = fileInputState.Value?.Name;
+        
+        // Upload state for files
+        var uploadState = UseState<FileUpload<byte[]>?>();
+        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
+            .Accept(".xlsx,.xls,.csv")
+            .MaxFileSize(50 * 1024 * 1024);
+        
+        var fileName = uploadState.Value?.FileName;
 
-        // Upload URL for files
-        var uploadUrl = this.UseUpload(
-            uploadedBytes =>
+        // When a file is uploaded, save it to temp file
+        UseEffect(() =>
+        {
+            if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
             {
                 try
                 {
@@ -50,19 +57,19 @@ public class ExcelDataReaderApp : ViewBase
                     var extension = ".xlsx"; // Default
 
                     // Simple extension detection
-                    if (uploadedBytes.Length >= 4)
+                    if (bytes.Length >= 4)
                     {
-                        if (uploadedBytes[0] == 0x50 && uploadedBytes[1] == 0x4B)
+                        if (bytes[0] == 0x50 && bytes[1] == 0x4B)
                         {
                             extension = ".xlsx";
                         }
-                        else if (uploadedBytes[0] == 0xD0 && uploadedBytes[1] == 0xCF)
+                        else if (bytes[0] == 0xD0 && bytes[1] == 0xCF)
                         {
                             extension = ".xls";
                         }
                         else
                         {
-                            var content = System.Text.Encoding.UTF8.GetString(uploadedBytes.Take(100).ToArray());
+                            var content = System.Text.Encoding.UTF8.GetString(bytes.Take(100).ToArray());
                             if (content.Contains(','))
                             {
                                 extension = ".csv";
@@ -71,17 +78,15 @@ public class ExcelDataReaderApp : ViewBase
                     }
 
                     var finalPath = tempPath + extension;
-                    File.WriteAllBytes(finalPath, uploadedBytes);
+                    File.WriteAllBytes(finalPath, bytes);
                     filePath.Set(finalPath);
                 }
                 catch (Exception ex)
                 {
                     client.Toast($"File upload error: {ex.Message}", "Error");
                 }
-            },
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv",
-            "uploaded-file"
-        );
+            }
+        }, [uploadState]);
 
         // Manual analysis trigger
         var startAnalysis = () =>
@@ -116,6 +121,7 @@ public class ExcelDataReaderApp : ViewBase
             if (filePath.Value == null)
             {
                 fileAnalysis.Set((FileAnalysis?)null);
+                uploadState.Reset();
             }
         }, filePath);
 
@@ -125,8 +131,8 @@ public class ExcelDataReaderApp : ViewBase
                 Layout.Vertical(
                     Text.H3("Excel File Analyzer"),
                     Text.Muted("Upload Excel (.xlsx, .xls) or CSV files to analyze their structure, sheets, and data organization."),
-                    fileInputState.ToFileInput(uploadUrl, "Select Excel/CSV file")
-                        .Accept(".xlsx,.xls,.csv")
+                    uploadState.ToFileInput(uploadContext)
+                        .Placeholder("Select Excel/CSV file")
                         .Width(Size.Full()),
 
                     // Action buttons
@@ -138,7 +144,7 @@ public class ExcelDataReaderApp : ViewBase
                         {
                             filePath.Set((string?)null);
                             selectedSheetIndex.Set(0);
-                            fileInputState.Set((FileInput?)null);
+                            uploadState.Reset();
                         })
                         .Destructive()
                         .Disabled(filePath.Value == null || isAnalyzing.Value)

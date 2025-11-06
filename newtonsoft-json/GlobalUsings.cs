@@ -26,5 +26,8 @@ global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
 global using Newtonsoft.Json;
+global using Newtonsoft.Json.Converters;
+global using Newtonsoft.Json.Linq;
+global using System.Reflection;
 
-namespace Ivy.Newtonsoft.Json;
+namespace NewtonsoftJsonExample;
