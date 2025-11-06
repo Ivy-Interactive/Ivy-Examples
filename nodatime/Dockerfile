@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["Ivy.nodatime.Sample.csproj", "./"]
-RUN dotnet restore "Ivy.nodatime.Sample.csproj"
+COPY ["NodaTimeExample.csproj", "./"]
+RUN dotnet restore "NodaTimeExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "Ivy.nodatime.Sample.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "NodaTimeExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Ivy.nodatime.Sample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "NodaTimeExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./Ivy.nodatime.Sample.dll"]
+ENTRYPOINT ["dotnet","./NodaTimeExample.dll"]
