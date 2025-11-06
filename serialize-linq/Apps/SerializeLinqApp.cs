@@ -1,7 +1,4 @@
-﻿using Serialize.Linq.Serializers;
-using System.Linq.Expressions;
-
-namespace SerializeLinq.Apps;
+﻿namespace SerializeLinqExample;
 
 [App(icon: Icons.Pencil, title: "Serialize Linq")]
 public class SerializeLinqApp : ViewBase

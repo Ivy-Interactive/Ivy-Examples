@@ -6,18 +6,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>SerializeLinq</RootNamespace>
+    <RootNamespace>SerializeLinqExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="Serialize.Linq" Version="4.0.167" />
   </ItemGroup>
+
   <ItemGroup>
     <Folder Include="Connections" />
+    <Folder Include="Apps" />
   </ItemGroup>
 
 </Project>
