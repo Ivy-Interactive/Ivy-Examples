@@ -192,7 +192,10 @@ public class MiniExcelViewApp : ViewBase
     private object BuildTableViewPage(IState<List<Student>> students, RefreshToken refreshToken)
     {
         var client = UseService<IClientProvider>();
-        var fileInput = this.UseState<FileInput?>(() => null);
+        var uploadState = this.UseState<FileUpload<byte[]>?>();
+        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
+            .Accept(".xlsx")
+            .MaxFileSize(50 * 1024 * 1024);
         var actionMode = this.UseState("Export");
 
         // Export download from MemoryStream
@@ -207,66 +210,69 @@ public class MiniExcelViewApp : ViewBase
             $"students-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.xlsx"
         );
 
-        // Import upload to MemoryStream
-        var uploadUrl = this.UseUpload(
-            uploadedBytes =>
+        // When a file is uploaded, import it
+        this.UseEffect(() =>
+        {
+            if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
             {
-					try
+                try
                 {
-                    using var ms = new MemoryStream(uploadedBytes);
+                    using var ms = new MemoryStream(bytes);
                     var imported = MiniExcel.Query<Student>(ms).ToList();
                     
-					// Merge imported students with existing ones (by ID)
-					var currentStudents = StudentService.GetStudents();
-					var studentsById = currentStudents.ToDictionary(s => s.ID);
-					foreach (var importedStudent in imported)
-					{
-						if (importedStudent.ID != Guid.Empty && studentsById.TryGetValue(importedStudent.ID, out var existing))
-						{
-							// Update existing
-							existing.Name = importedStudent.Name;
-							existing.Email = importedStudent.Email;
-							existing.Age = importedStudent.Age;
-							existing.Course = importedStudent.Course;
-							existing.Grade = importedStudent.Grade;
-						}
-						else
-						{
-							// Add new
-							if (importedStudent.ID == Guid.Empty)
-							{
-								importedStudent.ID = Guid.NewGuid();
-							}
-							currentStudents.Add(importedStudent);
-							studentsById[importedStudent.ID] = importedStudent;
-						}
-					}
+                    // Merge imported students with existing ones (by ID)
+                    var currentStudents = StudentService.GetStudents();
+                    var studentsById = currentStudents.ToDictionary(s => s.ID);
+                    foreach (var importedStudent in imported)
+                    {
+                        if (importedStudent.ID != Guid.Empty && studentsById.TryGetValue(importedStudent.ID, out var existing))
+                        {
+                            // Update existing
+                            existing.Name = importedStudent.Name;
+                            existing.Email = importedStudent.Email;
+                            existing.Age = importedStudent.Age;
+                            existing.Course = importedStudent.Course;
+                            existing.Grade = importedStudent.Grade;
+                        }
+                        else
+                        {
+                            // Add new
+                            if (importedStudent.ID == Guid.Empty)
+                            {
+                                importedStudent.ID = Guid.NewGuid();
+                            }
+                            currentStudents.Add(importedStudent);
+                            studentsById[importedStudent.ID] = importedStudent;
+                        }
+                    }
                     
                     StudentService.UpdateStudents(currentStudents);
                     students.Set(StudentService.GetStudents()); // Trigger update
                     refreshToken.Refresh(); // Sync with other pages
                     client.Toast($"Imported {imported.Count} students");
-					}
-					catch (IOException ex)
-					{
-						client.Toast($"Import error: {ex.Message}", "Error");
-					}
-					catch (FormatException ex)
-					{
-						client.Toast($"Import error: {ex.Message}", "Error");
-					}
-					catch (SystemException ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not ThreadAbortException)
-					{
-						client.Toast($"Import error: {ex.Message}", "Error");
-					}
-					catch (Exception ex)
-					{
-						client.Toast($"Import error: {ex.Message}", "Error");
-					}
-            },
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "imported-file"
-        );
+                }
+                catch (IOException ex)
+                {
+                    client.Toast($"Import error: {ex.Message}", "Error");
+                }
+                catch (FormatException ex)
+                {
+                    client.Toast($"Import error: {ex.Message}", "Error");
+                }
+                catch (SystemException ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not ThreadAbortException)
+                {
+                    client.Toast($"Import error: {ex.Message}", "Error");
+                }
+                catch (Exception ex)
+                {
+                    client.Toast($"Import error: {ex.Message}", "Error");
+                }
+                finally
+                {
+                    uploadState.Reset();
+                }
+            }
+        }, [uploadState]);
 
         object? actionWidget = actionMode.Value == "Export"
             ? new Button("Download Excel File")
@@ -274,8 +280,8 @@ public class MiniExcelViewApp : ViewBase
                 .Primary()
                 .Url(downloadUrl.Value)
                 .Width(Size.Full())
-            : fileInput.ToFileInput(uploadUrl, "Choose File")
-                .Accept(".xlsx");
+            : uploadState.ToFileInput(uploadContext)
+                .Placeholder("Choose File");
 
         return Layout.Horizontal().Gap(4)
             | new Card(
@@ -301,7 +307,7 @@ public class MiniExcelViewApp : ViewBase
                     : Layout.Center()
                         | Text.Muted("No data to display")
                      
-            ));
+            )).Height(Size.Fit().Min(Size.Full()));
     }
 }
 
