@@ -2,7 +2,7 @@
     "name": "NAudio",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/naudio",
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/naudio",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],
