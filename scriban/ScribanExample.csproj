@@ -6,16 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>ScribanDemo</RootNamespace>
+    <RootNamespace>ScribanExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
-<ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="Scriban" Version="5.9.1" />
   </ItemGroup>
+
   <ItemGroup>
     <Folder Include="Apps" />
     <Folder Include="Connections" />
