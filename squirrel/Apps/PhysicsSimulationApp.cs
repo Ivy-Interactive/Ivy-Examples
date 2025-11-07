@@ -26,8 +26,8 @@ public class PhysicsSimulationApp : ViewBase
         // Use Squirrel Table's Rows collection for iteration
         foreach (var row in originalTable.Rows)
         {
-            var brand = Convert.ToString(row["Brand"]) ?? "";
-            var productName = Convert.ToString(row["Product Name"]) ?? "";
+            var brand = row["Brand"] ?? "";
+            var productName = row["Product Name"] ?? "";
             
             if (string.IsNullOrEmpty(brand) || string.IsNullOrEmpty(productName))
                 continue;
@@ -42,11 +42,7 @@ public class PhysicsSimulationApp : ViewBase
         }
         
         // Get unique product names for dropdown (from all brands)
-        var allProductNames = brandProductCounts.Values
-            .SelectMany(bp => bp.Keys)
-            .Distinct()
-            .OrderBy(p => p)
-            .ToList();
+        var allProductNames = originalTable["Product Name"].OrderBy(t => t).Distinct().ToList();
         
         // State for selected product - start with empty to show placeholder
         var selectedProduct = UseState("");
@@ -58,33 +54,39 @@ public class PhysicsSimulationApp : ViewBase
         var averageCount = allCounts.Count > 0 ? allCounts.Average() : 0.0;
         
         // Create detailed data with brand breakdown for each product using Squirrel Table
-        // Use Squirrel Table's Rows collection to process data
+        // Use SplitOn to group by Product Name, then by Brand
+        var products = originalTable.SplitOn("Product Name");
         var detailedData = new Dictionary<string, Dictionary<string, int>>();
         
-        // Process data using Squirrel Table's row access
-        foreach (var row in originalTable.Rows)
-        {
-            var brand = Convert.ToString(row["Brand"]) ?? "";
-            var productName = Convert.ToString(row["Product Name"]) ?? "";
-            
-            if (string.IsNullOrEmpty(brand) || string.IsNullOrEmpty(productName))
-                continue;
-                
-            if (!detailedData.ContainsKey(productName))
-                detailedData[productName] = new Dictionary<string, int>();
-                
-            if (!detailedData[productName].ContainsKey(brand))
-                detailedData[productName][brand] = 0;
-                
-            detailedData[productName][brand]++;
-        }
+        products.Select(t =>
+                new
+                {
+                    Product = t.Key,
+                    Brands = t.Value.SplitOn("Brand")
+                        .Select(z => new { Brand = z.Key, Count = z.Value.RowCount })
+                }
+            ).ToList()
+            .ForEach(z =>
+            {
+               detailedData.Add(z.Product, new Dictionary<string, int>());
+                foreach (var brand in z.Brands)
+                {
+                    detailedData[z.Product].Add(brand.Brand, brand.Count);
+                }
+            });
         
         // Get data for selected product
         var selectedProductData = !string.IsNullOrEmpty(selectedProduct.Value) && detailedData.ContainsKey(selectedProduct.Value)
             ? detailedData[selectedProduct.Value]
             : new Dictionary<string, int>();
         
-        var brandNames = selectedProductData.Keys.OrderBy(b => b).ToList();
+        // Get brand names from filtered table for selected product
+        var filteredTable = !string.IsNullOrEmpty(selectedProduct.Value) && products.ContainsKey(selectedProduct.Value)
+            ? products[selectedProduct.Value]
+            : null;
+        var brandNames = filteredTable != null && filteredTable.RowCount > 0
+            ? filteredTable["Brand"].OrderBy(b => b).Distinct().ToList()
+            : selectedProductData.Keys.OrderBy(b => b).ToList();
         var brandCounts = brandNames.Select(b => (double)selectedProductData[b]).ToList();
         var selectedProductAverage = brandCounts.Count > 0 ? brandCounts.Average() : 0.0;
         
@@ -144,8 +146,8 @@ public class PhysicsSimulationApp : ViewBase
                             | (detailedTable.RowCount > 0
                                 ? detailedTable.Rows.Select(row => new
                                 {
-                                    Brand = Convert.ToString(row["Brand"]) ?? "",
-                                    Count = Convert.ToString(row["Count"]) ?? ""
+                                    Brand = row["Brand"] ?? "",
+                                    Count = row["Count"] ?? ""
                                 }).ToTable().Width(Size.Full())
                                 : Text.Muted("No data available"))
                           )
