@@ -44,7 +44,7 @@ public class ChatBlade : ViewBase
         );
     }
 
-    private async ValueTask OnSendMessage(Event<Chat, string> @event)
+    private void OnSendMessage(Event<Chat, string> @event)
     {
         if (_ollamaApiClient == null)
         {
