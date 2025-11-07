@@ -3,13 +3,18 @@
 [App(icon: Icons.Webhook, title: "RestSharp Demo")]
 public class RestSharpApp : ViewBase
 {
+    private const string BaseApiUrl = "https://api.restful-api.dev/objects";
+
     private static bool RequiresResourceId(string? method) => 
         method?.ToUpper() is "DELETE" or "PUT" or "PATCH";
+
+    private static string BuildUrlWithResourceId(string? resourceId) =>
+        !string.IsNullOrWhiteSpace(resourceId) ? $"{BaseApiUrl}/{resourceId}" : BaseApiUrl;
 
     public override object? Build()
     {
         var method = UseState<string?>(() => "GET");
-        var url = UseState<string>(() => "https://api.restful-api.dev/objects");
+        var url = UseState<string>(() => BaseApiUrl);
         var resourceId = UseState<string>(() => "");
         var requestBody = UseState<string>(() => "");
         var response = UseState<string>(() => "");
@@ -19,16 +24,15 @@ public class RestSharpApp : ViewBase
         // Update URL based on method
         var updateUrlForMethod = (string? newMethod) =>
         {
-            var baseUrl = "https://api.restful-api.dev/objects";
             if (newMethod == null) return;
 
             switch (newMethod.ToUpper())
             {
                 case "GET":
-                    url.Set(baseUrl);
+                    url.Set(BaseApiUrl);
                     break;
                 case "POST":
-                    url.Set(baseUrl);
+                    url.Set(BaseApiUrl);
                     if (string.IsNullOrWhiteSpace(requestBody.Value))
                     {
                         requestBody.Set(@"{
@@ -42,7 +46,7 @@ public class RestSharpApp : ViewBase
                     break;
                 case "PUT":
                 case "PATCH":
-                    url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
+                    url.Set(BuildUrlWithResourceId(resourceId.Value));
                     if (string.IsNullOrWhiteSpace(requestBody.Value))
                     {
                         requestBody.Set(@"{
@@ -55,7 +59,7 @@ public class RestSharpApp : ViewBase
                     }
                     break;
                 case "DELETE":
-                    url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
+                    url.Set(BuildUrlWithResourceId(resourceId.Value));
                     break;
             }
         };
@@ -65,8 +69,7 @@ public class RestSharpApp : ViewBase
         {
             if (RequiresResourceId(method.Value))
             {
-                var baseUrl = "https://api.restful-api.dev/objects";
-                url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
+                url.Set(BuildUrlWithResourceId(resourceId.Value));
             }
         }, resourceId, method);
 
@@ -77,13 +80,9 @@ public class RestSharpApp : ViewBase
             try
             {
                 // Build final URL with ID if needed
-                var finalUrl = url.Value;
-                if (RequiresResourceId(method.Value) 
-                    && !string.IsNullOrWhiteSpace(resourceId.Value) 
-                    && !finalUrl.Contains(resourceId.Value))
-                {
-                    finalUrl = $"{finalUrl.TrimEnd('/')}/{resourceId.Value}";
-                }
+                var finalUrl = RequiresResourceId(method.Value) 
+                    ? BuildUrlWithResourceId(resourceId.Value)
+                    : url.Value;
 
                 var options = new RestClientOptions(finalUrl)
                 {
@@ -161,7 +160,7 @@ public class RestSharpApp : ViewBase
             | new Card(
                 Layout.Vertical()
             | Text.H3("Request")
-            | Text.Muted("This is the request body. It is used to send the request to the API.")
+            | Text.Muted("Configure and send your HTTP request.")
             | new StackLayout(
                 requestControls.ToArray(),
                 Orientation.Horizontal
