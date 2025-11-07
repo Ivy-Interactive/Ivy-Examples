@@ -9,7 +9,10 @@ public class MimeMappingApp : ViewBase
     {
         var inputMethod = this.UseState(InputMethod.UploadFile);
         var fileInput = this.UseState<string>();
-        var fileUpload = this.UseState<FileInput?>(() => null);
+        var uploadState = this.UseState<FileUpload<byte[]>?>();
+        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
+            .Accept("*/*")
+            .MaxFileSize(50 * 1024 * 1024);
         var mimeTypeInput = this.UseState<string>();
         var searchQuery = this.UseState<string>();
         var currentPage = this.UseState(1);
@@ -21,13 +24,7 @@ public class MimeMappingApp : ViewBase
             currentPage.Set(1);
         }, [searchQuery]);
 
-        var uploadUrl = this.UseUpload(
-            uploadedBytes => { }, // No action needed for file upload
-            "*/*",
-            "uploaded-file"
-        );
-
-        var currentFileName = inputMethod.Value == InputMethod.UploadFile ? fileUpload.Value?.Name : fileInput.Value;
+        var currentFileName = inputMethod.Value == InputMethod.UploadFile ? uploadState.Value?.FileName : fileInput.Value;
         var detectedMimeType = currentFileName != null
             ? MimeUtility.GetMimeMapping(currentFileName)
             : null;
@@ -65,7 +62,7 @@ public class MimeMappingApp : ViewBase
 
             // Tab navigation
             | Layout.Tabs(
-                new Tab("Detect Type", BuildFileInputDemo(inputMethod, fileInput, fileUpload, uploadUrl, currentFileName, detectedMimeType)),
+                new Tab("Detect Type", BuildFileInputDemo(inputMethod, fileInput, uploadState, uploadContext, currentFileName, detectedMimeType)),
                 new Tab("Browse Types", BuildBrowseTypesDemo(searchQuery, filteredTypes, currentPage, totalPages, totalItems)),
                 new Tab("Reverse Lookup", BuildReverseLookupDemo(mimeTypeInput, extensions))
             ).Variant(TabsVariant.Tabs)
@@ -76,15 +73,15 @@ public class MimeMappingApp : ViewBase
             ;
     }
 
-    private object BuildFileInputDemo(IState<InputMethod> inputMethod, IState<string> fileInput, IState<FileInput?> fileUpload, IState<string?> uploadUrl, string? currentFileName, string? detectedMimeType)
+    private object BuildFileInputDemo(IState<InputMethod> inputMethod, IState<string> fileInput, IState<FileUpload<byte[]>?> uploadState, IState<UploadContext> uploadContext, string? currentFileName, string? detectedMimeType)
     {
         // Validation
         string? fileInputError = null;
         string? fileUploadError = null;
         
-        if (inputMethod.Value == InputMethod.UploadFile && fileUpload.Value != null)
+        if (inputMethod.Value == InputMethod.UploadFile && uploadState.Value != null)
         {
-            var detected = MimeUtility.GetMimeMapping(fileUpload.Value.Name);
+            var detected = MimeUtility.GetMimeMapping(uploadState.Value.FileName);
             if (detected == MimeUtility.UnknownMimeType)
             {
                 fileUploadError = "Unknown file type - returns default application/octet-stream";
@@ -100,13 +97,13 @@ public class MimeMappingApp : ViewBase
         }
         
         // Check if inputs have values
-        bool hasUploadValue = inputMethod.Value == InputMethod.UploadFile && fileUpload.Value != null;
+        bool hasUploadValue = inputMethod.Value == InputMethod.UploadFile && uploadState.Value != null;
         bool hasInputValue = inputMethod.Value == InputMethod.EnterFileName && !string.IsNullOrEmpty(fileInput.Value);
         
         object inputSection = inputMethod.Value == InputMethod.UploadFile
             ? Layout.Vertical()
                 | Text.Label("Choose File")
-                | fileUpload.ToFileInput(uploadUrl)
+                | uploadState.ToFileInput(uploadContext)
                     .Invalid(fileUploadError)
             : Layout.Vertical()
                 | Text.Label("Enter File Name")
