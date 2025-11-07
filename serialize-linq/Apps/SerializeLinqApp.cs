@@ -27,7 +27,6 @@ public class SerializeLinqApp : ViewBase
             | operatorState.ToSelectInput(new string[] { "=", "<", "<=", ">", ">=", "!=" }.ToOptions()).Width(Size.Full())
             | Text.Block("Value 2:")
             | value2State.ToNumberInput().Width(Size.Full())
-            | new Separator()
             | new Button("Serialize", () =>
             {
                 Expression<Func<int, bool>>? expression = null;
@@ -80,44 +79,51 @@ public class SerializeLinqApp : ViewBase
                     jsonState.Set("Invalid expression");
                 }
             }).Primary().Width(Size.Full())
-            | new Button("Deserialize Result", () =>
+            | new Button("Deserialize", () =>
             {
                 try
                 {
                     var serializer = new ExpressionSerializer(new JsonSerializer());
                     Expression<Func<int, bool>> expression = (Expression<Func<int, bool>>)serializer.DeserializeText(jsonState.Value);
 
-                    //Expression definition (value1 + operator)
-                    expressionState.Set($"Expression: {expression}");
+                    // Get the operator symbol for display
+                    var operatorSymbol = operatorState.Value ?? "=";
+                    
+                    //Expression definition with substituted values (Value1 operator Value2)
+                    expressionState.Set($"Expression: {value1State.Value} {operatorSymbol} {value2State.Value}");
 
                     //Result of the expresion when using value2
-                    comparisonResultState.Set($"The comparison is {expression.Compile()(value2State.Value).ToString().ToLower()}");
+                    var result = expression.Compile()(value2State.Value);
+                    comparisonResultState.Set(result ? "true" : "false");
                 }
                 catch { }
-            }).Secondary().Width(Size.Full())
+            }).Secondary().Width(Size.Full()).Disabled(string.IsNullOrEmpty(jsonState.Value))
         ).Width(Size.Fraction(0.4f));
 
         // Right card - Results
         var rightCard = new Card(
-            Layout.Vertical().Gap(4).Padding(2)
-            | Text.H3("Results")
-            | Text.Block("Serialization JSON Result:")
-            | (string.IsNullOrEmpty(jsonState.Value) 
-                ? Text.Muted("JSON result will appear here after serialization...")
+            Layout.Vertical()
+            | Text.H2("Results")
+            | Text.Muted("View the serialized expression and comparison result here.")
+            | Text.H4("Comparison Result")
+            | Text.Small("The result of evaluating the deserialized expression with Value 2:")
+            | (string.IsNullOrEmpty(comparisonResultState.Value)
+                ? Text.Muted("Click 'Deserialize' to see the comparison result...")
+                : (comparisonResultState.Value == "true"
+                    ? Callout.Success("The comparison evaluated to true", "Success")
+                    : Callout.Error("The comparison evaluated to false", "Failed")))
+            | (string.IsNullOrEmpty(expressionState.Value)
+                ? null
+                : Callout.Info(expressionState.Value.Replace("Expression: ", ""), "Expression Definition"))
+            | Text.H4("Serialized JSON")
+            | Text.Small("The LINQ expression serialized as JSON:")
+            | (string.IsNullOrEmpty(jsonState.Value)
+                ? Text.Muted("Click 'Serialize' to generate the JSON representation of the expression...")
                 : new Code(jsonState.Value, Languages.Json)
                     .ShowLineNumbers()
                     .ShowCopyButton()
                     .Width(Size.Full())
-                    .Height(Size.Fit().Min(Size.Units(10))))
-            | new Separator()
-            | Text.Block("Expression Definition:")
-            | (string.IsNullOrEmpty(expressionState.Value)
-                ? Text.Muted("Expression definition will appear here after deserialization...")
-                : Text.Block(expressionState.Value))
-            | Text.Block("Comparison Result:")
-            | (string.IsNullOrEmpty(comparisonResultState.Value)
-                ? Text.Muted("Comparison result will appear here after deserialization...")
-                : Text.Block(comparisonResultState.Value))
+                    .Height(Size.Fit().Min(Size.Units(10)).Max(Size.Units(150))))
         ).Width(Size.Fraction(0.6f));
 
         return Layout.Vertical()
