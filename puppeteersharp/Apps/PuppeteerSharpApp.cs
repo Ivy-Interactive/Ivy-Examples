@@ -181,7 +181,7 @@ namespace PuppeteerSharpExample
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: " + ex.Message);
+                // Fallback catch for any unexpected errors not covered by PuppeteerException
                 client.Toast($"An error occurred: {ex.Message}", "Error");
                 screenshotPath.Set((string?)null);
                 screenshotDownloadPath.Set((string?)null);
