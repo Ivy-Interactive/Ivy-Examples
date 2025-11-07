@@ -28,8 +28,16 @@ class Program
         string outputFolder = args[2];
         string? projectFile = args.Length > 3 ? args[3] : null;
 
-        var pattern = Path.GetFileName(inputPattern);
-        var inputFolder = Path.GetFullPath(Path.GetDirectoryName(inputPattern)!);
+        // Support converting a single absolute file path without regenerating the whole tree
+        bool isSingleFile = File.Exists(inputPattern);
+        string pattern = isSingleFile ? Path.GetFileName(inputPattern) : Path.GetFileName(inputPattern);
+        string inputFolder = Path.GetFullPath(Path.GetDirectoryName(inputPattern)!);
+
+        if (isSingleFile)
+        {
+            // Adjust inputFolder to the Modules root to preserve correct relative paths
+            inputFolder = FindModulesRoot(inputFolder);
+        }
         outputFolder = Path.GetFullPath(outputFolder);
 
         Directory.CreateDirectory(outputFolder);
@@ -38,38 +46,50 @@ class Program
         projectFile ??= FindProjectFile(inputFolder);
         var rootNamespace = GetRootNamespace(projectFile);
 
-        var tasks = Directory.GetFiles(inputFolder, pattern, SearchOption.AllDirectories).Select(async absoluteInputPath =>
+        var sourceFiles = isSingleFile
+            ? new[] { Path.GetFullPath(inputPattern) }
+            : Directory.GetFiles(inputFolder, pattern, SearchOption.AllDirectories);
+
+        int successCount = 0;
+        foreach (var absoluteInputPath in sourceFiles)
         {
-            var (order, name) = GetOrderFromFileName(absoluteInputPath);
-
-            if (name == "_Index")
+            try
             {
-                (order, _) = GetOrderFromFileName(Path.GetFileName(Path.GetDirectoryName(absoluteInputPath))!);
+                var (order, name) = GetOrderFromFileName(absoluteInputPath);
+
+                if (name == "_Index")
+                {
+                    (order, _) = GetOrderFromFileName(Path.GetFileName(Path.GetDirectoryName(absoluteInputPath))!);
+                }
+
+                string relativeInputPath = Path.GetRelativePath(inputFolder, absoluteInputPath);
+                string relativeOutputPath = GetRelativeFolderWithoutOrder(inputFolder, absoluteInputPath);
+                string folder = Path.GetFullPath(Path.Combine(outputFolder, relativeOutputPath));
+
+                Directory.CreateDirectory(folder);
+
+                string ivyOutput = Path.Combine(folder, $"{name}.g.cs");
+                var namespaceSuffix = relativeOutputPath
+                    .Replace(Path.DirectorySeparatorChar, '.')
+                    .Replace(Path.AltDirectorySeparatorChar, '.').Trim('.');
+
+                if (namespaceSuffix.StartsWith("Generated."))
+                    namespaceSuffix = namespaceSuffix.Substring("Generated.".Length);
+
+                string @namespace = string.IsNullOrEmpty(namespaceSuffix)
+                    ? $"{rootNamespace}.Apps"
+                    : $"{rootNamespace}.Apps.{namespaceSuffix}";
+
+                await ConvertMarkdownAsync(name, relativeInputPath, absoluteInputPath, ivyOutput, @namespace, order);
+                successCount++;
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error generating {absoluteInputPath}: {ex.Message}");
+            }
+        }
 
-            string relativeInputPath = Path.GetRelativePath(inputFolder, absoluteInputPath);
-            string relativeOutputPath = GetRelativeFolderWithoutOrder(inputFolder, absoluteInputPath);
-            string folder = Path.GetFullPath(Path.Combine(outputFolder, relativeOutputPath));
-
-            Directory.CreateDirectory(folder);
-
-            string ivyOutput = Path.Combine(folder, $"{name}.g.cs");
-            var namespaceSuffix = relativeOutputPath
-                .Replace(Path.DirectorySeparatorChar, '.')
-                .Replace(Path.AltDirectorySeparatorChar, '.').Trim('.');
-
-            if (namespaceSuffix.StartsWith("Generated."))
-                namespaceSuffix = namespaceSuffix.Substring("Generated.".Length);
-
-            string @namespace = string.IsNullOrEmpty(namespaceSuffix)
-                ? $"{rootNamespace}.Apps"
-                : $"{rootNamespace}.Apps.{namespaceSuffix}";
-
-            await ConvertMarkdownAsync(name, relativeInputPath, absoluteInputPath, ivyOutput, @namespace, order);
-        });
-
-        await Task.WhenAll(tasks);
-        Console.WriteLine($"✅ Generated {tasks.Count()} files successfully!");
+        Console.WriteLine($"✅ Generated {successCount} files successfully!");
         return 0;
     }
 
@@ -93,6 +113,18 @@ class Program
             currentFolder = Directory.GetParent(currentFolder)?.FullName;
         }
         throw new FileNotFoundException("No .csproj file found in the directory hierarchy.");
+    }
+
+    static string FindModulesRoot(string startFolder)
+    {
+        var currentFolder = startFolder;
+        while (!string.IsNullOrEmpty(currentFolder))
+        {
+            if (Path.GetFileName(currentFolder).Equals("Modules", StringComparison.OrdinalIgnoreCase))
+                return currentFolder;
+            currentFolder = Directory.GetParent(currentFolder)?.FullName;
+        }
+        throw new DirectoryNotFoundException("Modules folder not found in directory hierarchy.");
     }
 
     static (int? order, string name) GetOrderFromFileName(string filename)
