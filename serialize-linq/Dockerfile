@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["SerializeLinq.csproj", "./"]
-RUN dotnet restore "SerializeLinq.csproj"
+COPY ["SerializeLinqExample.csproj", "./"]
+RUN dotnet restore "SerializeLinqExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "SerializeLinq.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "SerializeLinqExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "SerializeLinq.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "SerializeLinqExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./SerializeLinq.dll"]
+ENTRYPOINT ["dotnet","./SerializeLinqExample.dll"]
