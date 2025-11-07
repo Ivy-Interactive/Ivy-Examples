@@ -30,7 +30,7 @@ public class SerializeLinqApp : ViewBase
             | new Separator()
             | new Button("Serialize", () =>
             {
-                Expression<Func<int, bool>> expression = null;
+                Expression<Func<int, bool>>? expression = null;
                 switch (operatorState.Value)
                 {
                     case "=":
