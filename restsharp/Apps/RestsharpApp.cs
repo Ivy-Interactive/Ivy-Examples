@@ -3,9 +3,12 @@
 [App(icon: Icons.Webhook, title: "RestSharp Demo")]
 public class RestSharpApp : ViewBase
 {
+    private static bool RequiresResourceId(string? method) => 
+        method?.ToUpper() is "DELETE" or "PUT" or "PATCH";
+
     public override object? Build()
     {
-        var method = UseState<string?>(() => "Get");
+        var method = UseState<string?>(() => "GET");
         var url = UseState<string>(() => "https://api.restful-api.dev/objects");
         var resourceId = UseState<string>(() => "");
         var requestBody = UseState<string>(() => "");
@@ -60,7 +63,7 @@ public class RestSharpApp : ViewBase
         // Update URL when ID changes for methods that need it
         UseEffect(() =>
         {
-            if (method.Value?.ToUpper() == "DELETE" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH")
+            if (RequiresResourceId(method.Value))
             {
                 var baseUrl = "https://api.restful-api.dev/objects";
                 url.Set(!string.IsNullOrWhiteSpace(resourceId.Value) ? $"{baseUrl}/{resourceId.Value}" : baseUrl);
@@ -75,7 +78,7 @@ public class RestSharpApp : ViewBase
             {
                 // Build final URL with ID if needed
                 var finalUrl = url.Value;
-                if ((method.Value?.ToUpper() == "DELETE" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH") 
+                if (RequiresResourceId(method.Value) 
                     && !string.IsNullOrWhiteSpace(resourceId.Value) 
                     && !finalUrl.Contains(resourceId.Value))
                 {
@@ -120,7 +123,7 @@ public class RestSharpApp : ViewBase
         // Left card - Actions (Request)
         var requestControls = new List<object>
         {
-            new Button(method.Value ?? "Get")
+            new Button(method.Value ?? "GET")
                 .Outline()
                 .WithDropDown(
                     Methods
@@ -135,7 +138,7 @@ public class RestSharpApp : ViewBase
                 .Variant(TextInputs.Url)
         };
 
-        if (method.Value?.ToUpper() == "DELETE" || method.Value?.ToUpper() == "PUT" || method.Value?.ToUpper() == "PATCH")
+        if (RequiresResourceId(method.Value))
         {
             requestControls.Add(new TextInput(resourceId, placeholder: "ID"));
         }
@@ -192,11 +195,11 @@ public class RestSharpApp : ViewBase
     }
 
     private static readonly Option<Method>[] Methods = [
-        new Option<Method>(Method.Get.ToString(), Method.Get),
-        new Option<Method>(Method.Post.ToString(), Method.Post),
-        new Option<Method>(Method.Put.ToString(), Method.Put),
-        new Option<Method>(Method.Patch.ToString(), Method.Patch),
-        new Option<Method>(Method.Delete.ToString(), Method.Delete)
+        new Option<Method>("GET", Method.Get),
+        new Option<Method>("POST", Method.Post),
+        new Option<Method>("PUT", Method.Put),
+        new Option<Method>("PATCH", Method.Patch),
+        new Option<Method>("DELETE", Method.Delete)
         ];
 
     public string FormatStringToJson(string input)
