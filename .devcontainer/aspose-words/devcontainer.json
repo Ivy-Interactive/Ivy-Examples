@@ -2,7 +2,7 @@
     "name": "Aspose.Words",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/aspose-words",
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/aspose-words",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],
