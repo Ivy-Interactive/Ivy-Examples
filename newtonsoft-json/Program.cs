@@ -1,3 +1,4 @@
+using NewtonsoftJsonExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
 #if DEBUG
@@ -6,6 +7,11 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = new ChromeSettings().DefaultApp<NewtonsoftJsonApp.Apps.NewtonsoftJsonApp>().UseTabs(preventDuplicates: true);
+var customHeader = Layout.Vertical().Gap(2)
+    |new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fnewtonsoft-json%2Fdevcontainer.json&location=EuropeWest");
+var chromeSettings = new ChromeSettings()
+    .DefaultApp<NewtonsoftJsonApp>()
+    .UseTabs(preventDuplicates: true)
+    .Header(customHeader);
 server.UseChrome(chromeSettings);
 await server.RunAsync();

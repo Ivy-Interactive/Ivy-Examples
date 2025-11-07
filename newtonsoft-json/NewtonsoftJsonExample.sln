@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36429.23 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ivy.Newtonsoft.Json", "Ivy.Newtonsoft.Json.csproj", "{A5CFA2D2-0D23-3D00-44CD-5C8EFCDDB1FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewtonsoftJsonExample", "NewtonsoftJsonExample.csproj", "{A5CFA2D2-0D23-3D00-44CD-5C8EFCDDB1FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

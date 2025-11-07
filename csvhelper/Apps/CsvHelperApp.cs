@@ -51,19 +51,25 @@ public class CsvHelperApp : ViewBase
             $"products-{DateTime.UtcNow:yyyy-MM-dd}.csv"
         );
 
-        // Import CSV using UseUpload
-        var uploadUrl = this.UseUpload(
-            uploadedBytes =>
+        // Import CSV using documented upload flow
+        var uploadState = UseState<FileUpload<byte[]>?>();
+        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
+            .Accept(".csv")
+            .MaxFileSize(10 * 1024 * 1024);
+
+        // When a file is uploaded, parse and import
+        UseEffect(() =>
+        {
+            if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
             {
                 try
                 {
-                    using var stream = new MemoryStream(uploadedBytes);
+                    using var stream = new MemoryStream(bytes);
                     using var reader = new StreamReader(stream);
                     using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture));
 
                     var records = csv.GetRecords<ProductModel>().ToList();
-                    
-                    // Assign new IDs and timestamps to imported records
+
                     foreach (var record in records)
                     {
                         record.Id = Guid.NewGuid();
@@ -77,10 +83,8 @@ public class CsvHelperApp : ViewBase
                 {
                     client.Toast($"Failed to import CSV: {ex.Message}");
                 }
-            },
-            "text/csv",
-            "imported-products"
-        );
+            }
+        }, [uploadState]);
 
         // Delete action
         var deleteProduct = new Action<Guid>((id) =>
@@ -125,8 +129,7 @@ public class CsvHelperApp : ViewBase
             Delete = Icons.Trash.ToButton(_ => deleteProduct(p.Id)).Small()
         }).ToTable().Width(Size.Full());
 
-        // File input for CSV import
-        var fileInput = UseState<FileInput?>(() => null);
+        // File input is generated from upload state/context
 
         // Left card - Controls
         var leftCard = new Card(
@@ -166,7 +169,7 @@ public class CsvHelperApp : ViewBase
             | Text.Small("Import CSV File:")
 
             // Import CSV file input
-            | fileInput.ToFileInput(uploadUrl, "Choose File").Accept(".csv")
+            | uploadState.ToFileInput(uploadContext).Placeholder("Choose File")
             | new Spacer()
             | Text.Small("This demo uses CsvHelper library for reading and writing CSV files with custom class objects.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [CsvHelper](https://github.com/JoshClose/CsvHelper)")
