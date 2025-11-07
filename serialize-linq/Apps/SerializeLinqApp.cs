@@ -19,8 +19,7 @@ public class SerializeLinqApp : ViewBase
 
         // Left card - Inputs and buttons
         var leftCard = new Card(
-            Layout.Vertical().Gap(4).Padding(2)
-            | Text.H3("Input Data")
+            Layout.Vertical()
             | Text.Block("Value 1:")
             | value1State.ToNumberInput().Width(Size.Full())
             | Text.Block("Operator:")
@@ -33,22 +32,22 @@ public class SerializeLinqApp : ViewBase
                 switch (operatorState.Value)
                 {
                     case "=":
-                        expression = val => value1State.Value == val;
+                        expression = value_2 => value1State.Value == value_2;
                         break;
                     case "<":
-                        expression = val => value1State.Value < val;
+                        expression = value_2 => value1State.Value < value_2;
                         break;
                     case "<=":
-                        expression = val => value1State.Value <= val;
+                        expression = value_2 => value1State.Value <= value_2;
                         break;
                     case ">":
-                        expression = val => value1State.Value > val;
+                        expression = value_2 => value1State.Value > value_2;
                         break;
                     case ">=":
-                        expression = val => value1State.Value >= val;
+                        expression = value_2 => value1State.Value >= value_2;
                         break;
                     case "!=":
-                        expression = val => value1State.Value != val;
+                        expression = value_2 => value1State.Value != value_2;
                         break;
                 }
                 if (expression != null)
@@ -57,7 +56,7 @@ public class SerializeLinqApp : ViewBase
 
                     //The result is a json representation of the expression
                     var json = serializer.SerializeText(expression);
-                    
+
                     // Format JSON with indentation
                     try
                     {
@@ -71,7 +70,7 @@ public class SerializeLinqApp : ViewBase
                     {
                         // If formatting fails, use original JSON
                     }
-                    
+
                     jsonState.Set(json);
                 }
                 else
@@ -88,7 +87,7 @@ public class SerializeLinqApp : ViewBase
 
                     // Get the operator symbol for display
                     var operatorSymbol = operatorState.Value ?? "=";
-                    
+
                     //Expression definition with substituted values (Value1 operator Value2)
                     expressionState.Set($"Expression: {value1State.Value} {operatorSymbol} {value2State.Value}");
 
@@ -98,13 +97,15 @@ public class SerializeLinqApp : ViewBase
                 }
                 catch { }
             }).Secondary().Width(Size.Full()).Disabled(string.IsNullOrEmpty(jsonState.Value))
-        ).Width(Size.Fraction(0.4f));
+            | new Spacer().Height(Size.Units(5))
+            | Text.Small("This demo demonstrates the use of Serialize.Linq to serialize and deserialize LINQ expressions.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Serialize.Linq](https://github.com/esskar/Serialize.Linq)")
+             
+        ).Title("Input Data").Width(Size.Fraction(0.4f));
 
         // Right card - Results
         var rightCard = new Card(
             Layout.Vertical()
-            | Text.H2("Results")
-            | Text.Muted("View the serialized expression and comparison result here.")
             | Text.H4("Comparison Result")
             | Text.Small("The result of evaluating the deserialized expression with Value 2:")
             | (string.IsNullOrEmpty(comparisonResultState.Value)
@@ -114,7 +115,7 @@ public class SerializeLinqApp : ViewBase
                     : Callout.Error("The comparison evaluated to false", "Failed")))
             | (string.IsNullOrEmpty(expressionState.Value)
                 ? null
-                : Callout.Info(expressionState.Value.Replace("Expression: ", ""), "Expression Definition"))
+                : Callout.Info(expressionState.Value, "Expression Definition"))
             | Text.H4("Serialized JSON")
             | Text.Small("The LINQ expression serialized as JSON:")
             | (string.IsNullOrEmpty(jsonState.Value)
@@ -124,10 +125,11 @@ public class SerializeLinqApp : ViewBase
                     .ShowCopyButton()
                     .Width(Size.Full())
                     .Height(Size.Fit().Min(Size.Units(10)).Max(Size.Units(150))))
-        ).Width(Size.Fraction(0.6f));
+        ).Title("Results").Width(Size.Fraction(0.6f));
 
         return Layout.Vertical()
             | Text.H2("Serialize.Linq Example")
+            | Text.Small("Create comparison expressions with two values and an operator. Serialize them to JSON format and deserialize back to evaluate the comparison result.")
             | (Layout.Horizontal().Gap(8)
                 | leftCard
                 | rightCard);
