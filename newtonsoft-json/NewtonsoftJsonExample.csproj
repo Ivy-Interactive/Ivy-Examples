@@ -6,18 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>OllamaSharpDemo</RootNamespace>
+    <RootNamespace>NewtonsoftJsonExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
-    <PackageReference Include="OllamaSharp" Version="5.4.5" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Connections" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,10 @@ public class MagickNetApp : ViewBase
     {
         // State management
         var resultState = UseState("Welcome to Magick.NET Image Studio! Upload an image to start creating amazing effects.");
-        var fileInputState = UseState((FileInput?)null);
+        var uploadState = UseState<FileUpload<byte[]>?>();
+        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
+            .Accept("image/*")
+            .MaxFileSize(50 * 1024 * 1024);
         var uploadedImageBytes = UseState<byte[]?>(() => null);
         var processedImageBytes = UseState<byte[]?>(() => null);
         var processedImageDataUri = UseState<string?>(() => null);
@@ -32,19 +35,22 @@ public class MagickNetApp : ViewBase
         var quality = UseState(90);
 
         var client = this.UseService<IClientProvider>();
-        var uploadUrl = this.UseUpload(
-            fileBytes =>
+        
+        // When a file is uploaded, process it
+        UseEffect(() =>
+        {
+            if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
             {
                 try
                 {
-                    uploadedImageBytes.Value = fileBytes;
+                    uploadedImageBytes.Value = bytes;
                     processedImageBytes.Value = null;
                     processedImageDataUri.Value = null;
 
-                    using var image = new MagickImage(fileBytes);
+                    using var image = new MagickImage(bytes);
                     var originalSize = $"{image.Width}x{image.Height}";
                     var originalFormat = image.Format.ToString();
-                    var fileSize = fileBytes.Length / 1024.0;
+                    var fileSize = bytes.Length / 1024.0;
 
                     resultState.Value = $"Image uploaded successfully!\n" +
                                       $"Original: {originalSize} ({originalFormat})\n" +
@@ -56,10 +62,8 @@ public class MagickNetApp : ViewBase
                     client.Toast($"Error uploading image: {ex.Message}", "Upload Error");
                     uploadedImageBytes.Value = null;
                 }
-            },
-            "image/*",
-            "uploaded-image"
-        );
+            }
+        }, [uploadState]);
 
         // Function to process image with selected effect
         var processImage = () =>
@@ -216,8 +220,8 @@ public class MagickNetApp : ViewBase
 
                        // File upload section
                        | Text.H4("Upload Image")
-                       | fileInputState.ToFileInput(uploadUrl, "Choose image file to upload")
-                         .Accept("image/*")
+                       | uploadState.ToFileInput(uploadContext)
+                         .Placeholder("Choose image file to upload")
 
                        // Effect selection
                        | Text.H4("Choose Effect")
