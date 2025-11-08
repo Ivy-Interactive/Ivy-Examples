@@ -1,10 +1,11 @@
 # OllamaSharp
 
-<img width="1912" height="913" alt="image" src="https://github.com/user-attachments/assets/84d43256-6536-4dd6-9857-56663529dae6" />
+<img width="1918" height="916" alt="image" src="https://github.com/user-attachments/assets/cc07f9c5-3856-4310-a0d8-e89dc82d8cd2" />
 
-<img width="1919" height="910" alt="image" src="https://github.com/user-attachments/assets/54da1ba3-3d7e-4e5e-9035-4c3dcccbca70" />
+<img width="1918" height="913" alt="image" src="https://github.com/user-attachments/assets/2f46f3af-3bcf-4883-9883-3e467ebc0b4b" />
 
-<img width="1918" height="917" alt="image" src="https://github.com/user-attachments/assets/85241db8-644e-4956-8389-329435241a5e" />
+<img width="1919" height="920" alt="image" src="https://github.com/user-attachments/assets/2afb8cad-3cb9-4d22-b0d4-8d13d3e3c47f" />
+
 
 ## One-Click Development Environment
 
