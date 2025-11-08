@@ -118,55 +118,14 @@ public class SquirrelCsvApp : ViewBase
         }
 
         // Convert Squirrel Table to List<FashionProduct>
-        List<FashionProduct> ConvertTableToProducts(Squirrel.Table table)
-        {
-            int ToInt(object? v) => int.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out var i) ? i : 0;
-            decimal ToDecimal(object? v) => decimal.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0m;
-            double ToDouble(object? v) => double.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0d;
-            string ToText(object? v) => Convert.ToString(v, CultureInfo.InvariantCulture) ?? "";
-
-            var products = new List<FashionProduct>(table.RowCount);
-            for (int r = 0; r < table.RowCount; r++)
-            {
-                object? V(string col)
-                {
-                    try { return table[r][col]; } catch { return null; }
-                }
-
-                products.Add(new FashionProduct
-                {
-                    UserId = ToInt(V("User ID")),
-                    ProductId = ToInt(V("Product ID")),
-                    ProductName = ToText(V("Product Name")),
-                    Brand = ToText(V("Brand")),
-                    Category = ToText(V("Category")),
-                    Price = ToDecimal(V("Price")),
-                    Rating = ToDouble(V("Rating")),
-                    Color = ToText(V("Color")),
-                    Size = ToText(V("Size"))
-                });
-            }
-            return products;
-        }
+        List<FashionProduct> ConvertTableToProducts(Squirrel.Table table) =>
+            RecordTable<FashionProduct>.FromTable(table).Rows.ToList();
 
         // Save Squirrel Table to CSV file
         void SaveTableToFile(Squirrel.Table table, string filePath)
         {
-            // Write CSV manually
             using var writer = new StreamWriter(filePath);
-            // Write headers
-            writer.WriteLine(string.Join(",", AllColumns));
-            // Write rows
-            for (int i = 0; i < table.RowCount; i++)
-            {
-                var row = table[i];
-                var values = AllColumns.Select(col => 
-                {
-                    try { return EscapeCsvField(Convert.ToString(row[col])); }
-                    catch { return ""; }
-                });
-                writer.WriteLine(string.Join(",", values));
-            }
+            writer.WriteLine(table.ToCsv());
         }
 
         string EscapeCsvField(string? field)

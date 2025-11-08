@@ -1,15 +1,12 @@
 namespace SquirrelExample.Models;
 
-public class FashionProduct
-{
-    public int UserId { get; set; }
-    public int ProductId { get; set; }
-    public string ProductName { get; set; } = string.Empty;
-    public string Brand { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public decimal Price { get; set; }
-    public double Rating { get; set; }
-    public string Color { get; set; } = string.Empty;
-    public string Size { get; set; } = string.Empty;
-}
-
+public record FashionProduct(
+    int UserId,
+    int ProductId,
+    string ProductName,
+    string Brand,
+    string Category,
+    decimal Price,
+    double Rating,
+    string Color,
+    string Size);
