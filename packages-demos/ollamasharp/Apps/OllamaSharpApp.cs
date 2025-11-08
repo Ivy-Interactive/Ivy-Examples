@@ -9,7 +9,7 @@ public class OllamaSharpChatApp : ViewBase
     }
 }
 
-[App(icon: Icons.Info, title: "OllamaSharp Introduction")]
+[App(icon: Icons.Info, title: "OllamaSharp Introduction", isVisible: false)]
 public class OllamaSharpIntroductionApp : ViewBase
 {
     public override object? Build()
