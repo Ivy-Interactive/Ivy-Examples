@@ -2,7 +2,7 @@
     "name": "MimeMapping",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/mimemapping",
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/mimemapping",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],

@@ -2,7 +2,7 @@
     "name": "ExcelDataReader",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/exceldatareader",
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/exceldatareader",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],

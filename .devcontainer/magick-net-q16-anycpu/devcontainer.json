@@ -2,7 +2,7 @@
     "name": "Magick.NET-Q16-AnyCPU",
     "image": "mcr.microsoft.com/dotnet/sdk:9.0",
     "features": {},
-    "workspaceFolder": "/workspaces/Ivy-Examples/magick-net-q16-anycpu",
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/magick-net-q16-anycpu",
     "postCreateCommand": "dotnet tool install -g Ivy.Console",
     "postStartCommand": "dotnet watch",
     "forwardPorts": [5010],
