@@ -1,7 +1,7 @@
-namespace ShopifySharpDemo.Apps;
+namespace ShopifySharpExample;
 
-[App(icon: Icons.ShoppingBag, title: "Shopify Products", path: ["Apps"])]
-public class ProductsApp : ViewBase
+[App(icon: Icons.ShoppingBag, title: "ShopifySharp")]
+public class ShopifySharpApp : ViewBase
 {
     public override object? Build()
     {
