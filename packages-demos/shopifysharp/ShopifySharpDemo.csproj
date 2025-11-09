@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.110.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="ShopifySharp" Version="6.25.1" />
    </ItemGroup>
 
