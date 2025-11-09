@@ -1,7 +1,7 @@
-namespace Sharpyaml.Apps;
+namespace SharpYamlExample;
 
 [App(icon: Icons.ScrollText, title: "SharpYaml Demo")]
-public class SharpYamlDemoApp : ViewBase
+public class SharpYamlApp : ViewBase
 {
     private const string DefaultModel = "{\n" +
         "  \"Metadata\": {\n" +
@@ -56,7 +56,7 @@ public class SharpYamlDemoApp : ViewBase
                 errorMsg = "Invalid JSON: " + ex.Message;
                 return "";
             }
-            
+
             try
             {
                 var settings = new SharpYaml.Serialization.SerializerSettings
