@@ -233,22 +233,15 @@ public class SquirrelCsvApp : ViewBase
         var sortDirections = new[] { "Ascending", "Descending" };
         
         // Get unique brands and categories from original table (not filtered)
-        List<string> GetUniqueValuesFromOriginalTable(string columnName)
-        {
-            if (originalTable.Value == null) return new List<string>();
-            var values = new HashSet<string>();
-            for (int i = 0; i < originalTable.Value.RowCount; i++)
-            {
-                try
-                {
-                    var value = Convert.ToString(originalTable.Value[i][columnName]) ?? "";
-                    if (!string.IsNullOrEmpty(value))
-                        values.Add(value);
-                }
-                catch { }
-            }
-            return values.OrderBy(v => v).ToList();
-        }
+        List<string> GetUniqueValuesFromOriginalTable(string columnName) =>
+            originalTable.Value == null
+                ? new List<string>()
+                : originalTable.Value
+                    .ValuesOf(columnName)
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .Distinct()
+                    .OrderBy(v => v)
+                    .ToList();
         
         var allBrands = GetUniqueValuesFromOriginalTable("Brand");
         var allCategories = GetUniqueValuesFromOriginalTable("Category");
