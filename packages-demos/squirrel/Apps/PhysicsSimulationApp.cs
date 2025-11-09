@@ -20,26 +20,16 @@ public class PhysicsSimulationApp : ViewBase
         // Load data from CSV using Squirrel
         var originalTable = DataAcquisition.LoadCsv(csvPath);
         
-        // Group by Brand and Product Name together using Squirrel Table's Rows
-        var brandProductCounts = new Dictionary<string, Dictionary<string, int>>();
-        
-        // Use Squirrel Table's Rows collection for iteration
-        foreach (var row in originalTable.Rows)
-        {
-            var brand = row["Brand"] ?? "";
-            var productName = row["Product Name"] ?? "";
-            
-            if (string.IsNullOrEmpty(brand) || string.IsNullOrEmpty(productName))
-                continue;
-                
-            if (!brandProductCounts.ContainsKey(brand))
-                brandProductCounts[brand] = new Dictionary<string, int>();
-                
-            if (!brandProductCounts[brand].ContainsKey(productName))
-                brandProductCounts[brand][productName] = 0;
-                
-            brandProductCounts[brand][productName]++;
-        }
+        // Group by Brand and Product Name using Squirrel APIs
+        var brandProductCounts = originalTable
+            .SplitOn("Brand")
+            .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Key))
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value
+                    .SplitOn("Product Name")
+                    .Where(inner => !string.IsNullOrWhiteSpace(inner.Key))
+                    .ToDictionary(inner => inner.Key, inner => inner.Value.RowCount));
         
         // Get unique product names for dropdown (from all brands)
         var allProductNames = originalTable["Product Name"].OrderBy(t => t).Distinct().ToList();
