@@ -96,6 +96,12 @@ public class SharpYamlApp : ViewBase
             | Text.H1("SharpYaml Online Demo")
             | Text.Muted("Convert JSON data into YAML using SharpYaml. Update the sample payload or paste your own and click Convert to view the YAML representation.");
 
+        var footerSection = Layout.Vertical()
+            .Gap(1)
+            | Text.Small("This demo uses SharpYaml library for converting JSON to YAML.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [SharpYaml](https://github.com/xoofx/SharpYaml)")
+            ;       
+        
         var convertBtn = new Button("Convert")
             .Primary()
             .HandleClick(_ =>
@@ -139,7 +145,8 @@ public class SharpYamlApp : ViewBase
             .Gap(3)
             .Padding(3)
             | headerSection
-            | cardsRow;
+            | cardsRow
+            | footerSection;
     }
 
     private static object? ToNetObject(System.Text.Json.JsonElement element)
