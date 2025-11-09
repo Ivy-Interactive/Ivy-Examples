@@ -1,6 +1,6 @@
 namespace SharpYamlExample;
 
-[App(icon: Icons.ScrollText, title: "SharpYaml Demo")]
+[App(icon: Icons.ScrollText, title: "SharpYaml")]
 public class SharpYamlApp : ViewBase
 {
     private const string DefaultModel = "{\n" +
@@ -76,9 +76,25 @@ public class SharpYamlApp : ViewBase
             }
         }
 
-		var modelEditor = modelState.ToCodeInput().Language(Languages.Json).Height(Size.Units(40));
-        var outputViewer = outputState.ToCodeInput().Language(Languages.Text).Height(Size.Units(40));
-        var errorText = state.Value.Error != "" ? Text.Block(state.Value.Error) : null;
+        var hasError = !string.IsNullOrWhiteSpace(state.Value.Error);
+        var hasOutput = !string.IsNullOrWhiteSpace(outputState.Value);
+
+        var modelEditor = modelState.ToCodeInput()
+            .Language(Languages.Json)
+            .Height(Size.Fit())
+            .Placeholder("Edit the JSON payload you want to convert...")
+            .ShowCopyButton(true);
+
+        var outputViewer = outputState.ToCodeInput()
+            .Language(Languages.Text)
+            .Height(Size.Fit().Min(Size.Units(10)))
+            .ShowCopyButton(true)
+            .Disabled(hasError || !hasOutput);
+
+        var headerSection = Layout.Vertical()
+            .Gap(1)
+            | Text.H1("SharpYaml Online Demo")
+            | Text.Muted("Convert JSON data into YAML using SharpYaml. Update the sample payload or paste your own and click Convert to view the YAML representation.");
 
         var convertBtn = new Button("Convert")
             .Primary()
@@ -90,22 +106,40 @@ public class SharpYamlApp : ViewBase
                 outputState.Set(output);
             });
 
-        var leftColumn = Layout.Vertical()
-            | Text.Block("The Model (valid json)")
+        var leftCardContent = Layout.Vertical()
+            | Text.H3("JSON Input")
+            | Text.Muted("Edit the JSON payload that you want SharpYaml to serialize.")
             | modelEditor
             | convertBtn;
 
-		var rightColumn = Layout.Vertical()
-			| Text.Block("Output")
-			| outputViewer
-			| (errorText != null ? errorText : Text.Block(""));
+        var leftCard = new Card(leftCardContent);
+
+        var rightCardContent = Layout.Vertical()
+            | Text.H3("YAML Output")
+            | Text.Muted("Review or copy the generated YAML from SharpYaml.");
+
+        if (hasError)
+        {
+            rightCardContent = rightCardContent | Callout.Error(state.Value.Error, "Serialization Error");
+        }
+        else if (!hasOutput)
+        {
+            rightCardContent = rightCardContent | Callout.Info("Click Convert to generate YAML from your JSON input.", "Awaiting Conversion");
+        }
+
+        rightCardContent = rightCardContent | outputViewer;
+
+        var rightCard = new Card(rightCardContent);
+
+        var cardsRow = Layout.Horizontal().Gap(10)
+            | leftCard
+            | rightCard;
 
         return Layout.Vertical()
-            .Gap(2)
-            | Text.H2("SharpYaml Online Demo")
-            | Layout.Horizontal().Gap(2)
-                | leftColumn
-                | rightColumn;
+            .Gap(3)
+            .Padding(3)
+            | headerSection
+            | cardsRow;
     }
 
     private static object? ToNetObject(System.Text.Json.JsonElement element)
