@@ -3,7 +3,31 @@ namespace Sharpyaml.Apps;
 [App(icon: Icons.ScrollText, title: "SharpYaml Demo")]
 public class SharpYamlDemoApp : ViewBase
 {
-    private const string DefaultModel = "{\n  \"List\": [1, 2, 3],\n  \"Name\": \"Hello\",\n  \"Value\": \"World!\"\n}";
+    private const string DefaultModel = "{\n" +
+        "  \"Metadata\": {\n" +
+        "    \"Created\": \"2025-11-09T10:30:00Z\",\n" +
+        "    \"Tags\": [\"demo\", \"yaml\", \"sample\"]\n" +
+        "  },\n" +
+        "  \"Customer\": {\n" +
+        "    \"Name\": \"Ada Lovelace\",\n" +
+        "    \"Email\": \"ada@example.com\",\n" +
+        "    \"Subscribed\": true\n" +
+        "  },\n" +
+        "  \"Orders\": [\n" +
+        "    {\n" +
+        "      \"Id\": 101,\n" +
+        "      \"Items\": [\n" +
+        "        { \"Sku\": \"IVY-001\", \"Quantity\": 2, \"Price\": 19.99 },\n" +
+        "        { \"Sku\": \"IVY-007\", \"Quantity\": 1, \"Price\": 149.0 }\n" +
+        "      ]\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"Id\": 102,\n" +
+        "      \"Items\": []\n" +
+        "    }\n" +
+        "  ],\n" +
+        "  \"Notes\": \"This sample highlights nested objects, arrays and scalars.\"\n" +
+        "}";
 
     public record DemoState
     {
@@ -32,13 +56,14 @@ public class SharpYamlDemoApp : ViewBase
                 errorMsg = "Invalid JSON: " + ex.Message;
                 return "";
             }
-
+            
             try
             {
                 var settings = new SharpYaml.Serialization.SerializerSettings
                 {
                     EmitTags = false,
-                    EmitDefaultValues = true
+                    EmitDefaultValues = true,
+                    SortKeyForMapping = false
                 };
                 var serializer = new SharpYaml.Serialization.Serializer(settings);
                 var yaml = serializer.Serialize(model);
