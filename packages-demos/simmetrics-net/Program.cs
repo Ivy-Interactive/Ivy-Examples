@@ -1,5 +1,4 @@
-using SimMetricsNetDemo.Apps;
-
+using SimMetricsNetExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
 #if DEBUG
@@ -8,7 +7,7 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<SimMetricsNetDemoApp>()
+    .DefaultApp<SimMetricsNetApp>()
     .UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 await server.RunAsync();

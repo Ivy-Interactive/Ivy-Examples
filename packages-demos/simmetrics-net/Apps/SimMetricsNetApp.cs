@@ -1,12 +1,7 @@
-using Bogus;
-using SimMetrics.Net;
-using SimMetrics.Net.API;
-using SimMetrics.Net.Metric;
-
-namespace SimMetricsNetDemo.Apps;
+namespace SimMetricsNetExample;
 
 [App(icon: Icons.SpellCheck)]
-public class SimMetricsNetDemoApp : ViewBase
+public class SimMetricsNetApp : ViewBase
 {
     public override object? Build()
     {
