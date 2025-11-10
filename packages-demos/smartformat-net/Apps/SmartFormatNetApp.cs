@@ -57,40 +57,46 @@ public class SmartFormatNetApp : ViewBase
             }
         }
 
-        return Layout.Horizontal(new Card(
-            Layout.Vertical(
-                Text.H3("SmartFormat.NET"),
-                Text.Muted("Experiment with SmartFormat.NET templates, plug in JSON data, and see pluralization, conditional logic, and list formatting in action."),
+        return
+        Layout.Horizontal().Align(Align.TopCenter)
+            | new Card(
+            Layout.Vertical()
+                | Text.H3("SmartFormat.NET")
+                | Text.Muted("Experiment with SmartFormat.NET templates, plug in JSON data, and see pluralization, conditional logic, and list formatting in action.")
 
-                Text.Label("Examples"),
-                selectedExampleIndex
+                | Text.Label("Examples")
+                | selectedExampleIndex
                     .ToSelectInput(exampleOptions)
-                    .Variant(SelectInputs.Toggle),
+                    .Variant(SelectInputs.Toggle)
 
-                Text.Label("Template"),
-                templateInput
+                | Text.Label("Template")
+                | templateInput
                     .ToCodeInput(placeholder: "Enter template...")
                     .Language(Languages.Text)
                     .ShowCopyButton()
-                    .Height(Size.Fit()),
+                    .Height(Size.Fit())
 
-                Text.Label("Data (JSON)"),
-                jsonInput
+                | Text.Label("Data (JSON)")
+                | jsonInput
                     .ToCodeInput(placeholder: "Enter JSON data...")
                     .Language(Languages.Json)
                     .ShowCopyButton()
-                    .Height(Size.Fit()),
+                    .Height(Size.Fit())
 
-                new Button("Format String", onClick: FormatString)
+                | new Button("Format String").HandleClick(new Action(FormatString))
+                    .HandleClick(new Action(FormatString))
                     .Disabled(string.IsNullOrWhiteSpace(templateInput.Value) || string.IsNullOrWhiteSpace(jsonInput.Value))
-                    .Width(Size.Full()),
-                Layout.Horizontal(
-                    Text.Label("Output: "),
-                    new Code(string.IsNullOrEmpty(outputText.Value) ? "Click 'Format String' to see the result..." : outputText.Value)
+                    .Width(Size.Full())
+
+                | (Layout.Horizontal()
+                    | Text.Label("Output: ")
+                    | new Code(string.IsNullOrEmpty(outputText.Value) ? "Click 'Format String' to see the result..." : outputText.Value)
                         .ShowCopyButton()
-                )
-            )
-        ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()))).Align(Align.TopCenter);
+                    )
+                | new Separator()
+                | Text.Small("This demo uses SmartFormat.NET library to format strings.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [SmartFormat.NET](https://github.com/axuno/SmartFormat)")
+            ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()));
     }
 
     private static object? ToNetObject(JsonElement element)
