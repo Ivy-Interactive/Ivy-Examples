@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>Sharpyaml</RootNamespace>
+    <RootNamespace>SharpYamlExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +14,7 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
-    <PackageReference Include="SharpYaml.NetStandard" Version="1.5.4" />
+    <PackageReference Include="SharpYaml" Version="2.1.4" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Apps" />
