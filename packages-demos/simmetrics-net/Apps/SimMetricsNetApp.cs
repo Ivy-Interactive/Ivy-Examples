@@ -1,22 +1,34 @@
 namespace SimMetricsNetExample;
 
-[App(icon: Icons.SpellCheck)]
+[App(icon: Icons.SpellCheck, title: "SimMetrics.Net")]
 public class SimMetricsNetApp : ViewBase
 {
     public override object? Build()
     {
+        List<NameSimilarity> CreateInitialNameList() =>
+            Enumerable.Range(1, 10)
+                .Select(_ => new NameSimilarity(new Faker().Name.FullName(), 0.0))
+                .ToList();
+
         var inputString = UseState(string.Empty);
-        var inputMetric = UseState(SimMetricType.Levenstein);
+        var inputMetric = UseState<SimMetricType?>(() => null);
         var shortDescription = UseState(string.Empty);
         var longDescription = UseState(string.Empty);
 
         // Using Bogus to generate a list of random names
-        var nameList = UseState(Enumerable.Range(1, 10).Select(_ => new NameSimilarity(new Faker().Name.FullName(), 0.0)).ToList());
+        var nameList = UseState(CreateInitialNameList());
 
         // Define the action to compute the metric calculation based on the input
         Action computeMetricInput = () =>
         {
-            var metric = MetricsFactory[inputMetric.Value];
+            if (string.IsNullOrWhiteSpace(inputString.Value) || inputMetric.Value is not SimMetricType metricType)
+            {
+                shortDescription.Set(string.Empty);
+                longDescription.Set(string.Empty);
+                return;
+            }
+
+            var metric = MetricsFactory[metricType];
 
             shortDescription.Set(metric.ShortDescriptionString);
             longDescription.Set(metric.LongDescriptionString);
@@ -31,13 +43,36 @@ public class SimMetricsNetApp : ViewBase
         // Hook to rerender when inputs change
         UseEffect(computeMetricInput, inputString, inputMetric);
 
-        return Layout.Vertical()
-            | new Card(Layout.Horizontal()
-                    | new TextInput(inputString).Placeholder("Input a name here...")
+        var hasInput = !string.IsNullOrWhiteSpace(inputString.Value);
+        var hasMetric = inputMetric.Value is SimMetricType;
+        var hasResults = hasInput && hasMetric;
+        var inputError = hasInput ? null : "Name is required.";
+        var metricError = hasMetric ? null : "Select a similarity metric.";
+
+        return Layout.Horizontal()
+            | new Card(Layout.Vertical()
+                    | Text.H3("Similarity Setup")
+                    | Text.Muted("Provide the name you want to compare and pick the algorithm for scoring.")
+                    | new TextInput(inputString)
+                        .Placeholder("Input a name here...")
+                        .Invalid(inputError)
+                        .WithField()
+                        .Label("Name")
                     | inputMetric.ToSelectInput(typeof(SimMetricType).ToOptions())
-                ).Description("Input a string and then select the SimMetrics>net function to compute")
-            | (longDescription.Value != string.Empty ? Text.Muted(longDescription) : null)
-            | nameList.Value.ToTable().Header(x => x.Score, shortDescription.Value);
+                        .Placeholder("Select a metric...")
+                        .Invalid(metricError)
+                        .WithField()
+                        .Label("Metric")
+                ).Height(Size.Fit().Min(Size.Full()))
+            | new Card(Layout.Vertical()
+                    | Text.H3(shortDescription.Value != string.Empty ? shortDescription.Value : "Similarity Results")
+                    | Text.Muted(longDescription.Value != string.Empty
+                        ? longDescription.Value
+                        : "Enter a name and metric on the left to calculate similarities against the sample names.")
+                    | (hasResults
+                        ? nameList.Value.ToTable().Header(x => x.Score, shortDescription.Value).Width(Size.Full())
+                        : null)
+                ).Height(Size.Fit().Min(Size.Full()));
     }
 
     internal record NameSimilarity(string Name, double Score);
