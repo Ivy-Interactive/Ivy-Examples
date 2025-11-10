@@ -8,29 +8,37 @@ public class SmartFormatNetApp : ViewBase
         var client = UseService<IClientProvider>();
         
         var templateInput = this.UseState("Hello {Name}! You have {MessageCount:plural:no messages|one message|{} messages}.");
-        var jsonInput = this.UseState("{ \"Name\": \"John\", \"MessageCount\": 5 }");
+        var jsonInput = this.UseState(FormatJson("{ \"Name\": \"John\", \"MessageCount\": 5 }"));
         var outputText = this.UseState("");
-        var selectedExample = this.UseState("Basic");
+        var selectedExampleIndex = this.UseState(-1);
 
         var examples = new Dictionary<string, (string template, string data)>
         {
-            ["Basic"] = ("Hello {Name}!", "{ \"Name\": \"Evans Odiaka\" }"),
             ["Pluralization"] = ("You have {Count:plural:no items|one item|{} items}.", "{ \"Count\": 3 }"),
-            ["Conditional"] = ("{Gender:male?Mr.|female?Ms.|Mx.} {LastName}", "{ \"Gender\": \"male\", \"LastName\": \"Odiaka\" }"),
+            ["Choose"] = ("{Gender:choose(male|female):Mr.|Ms.|Mx.} {LastName}", "{ \"Gender\": \"male\", \"LastName\": \"Odiaka\" }"),
+            ["Conditional"] = ("{Age:cond:>=55?Senior Citizen|>=30?Adult|>=18?Young Adult|>12?Teenager|>2?Child|Baby}", "{ \"Age\": 32 }"),
             ["List"] = ("Team: {Members:list:{}|, |, and }", "{ \"Members\": [\"Evans\", \"Sarah\", \"Mike\"] }"),
             ["Numbers"] = ("Temperature: {Temp}°C = {TempF:0.0}°F", "{ \"Temp\": 25, \"TempF\": 77 }"),
         };
+        var exampleEntries = examples.ToList();
+        var exampleOptions = exampleEntries
+            .Select((entry, index) => new Option<int>(entry.Key, index))
+            .ToArray();
 
-        void LoadExample(string exampleName)
+        void LoadExample(int exampleIndex)
         {
-            if (examples.TryGetValue(exampleName, out var example))
+            if (exampleIndex < 0 || exampleIndex >= exampleEntries.Count)
             {
-                templateInput.Value = example.template;
-                jsonInput.Value = example.data;
-                selectedExample.Value = exampleName;
-                outputText.Value = "";
+                return;
             }
+
+            var example = exampleEntries[exampleIndex].Value;
+            templateInput.Value = example.template;
+            jsonInput.Value = FormatJson(example.data);
+            outputText.Value = "";
         }
+
+        UseEffect(() => LoadExample(selectedExampleIndex.Value), selectedExampleIndex);
 
         void FormatString()
         {
@@ -40,58 +48,49 @@ public class SmartFormatNetApp : ViewBase
                 var data = ToNetObject(jsonDoc.RootElement);
                 var result = Smart.Format(templateInput.Value, data);
                 outputText.Value = result;
-                client.Toast("✅ Formatted successfully!");
+                client.Toast("Formatted successfully!", "Success");
             }
             catch (Exception ex)
             {
-                outputText.Value = $"❌ Error: {ex.Message}";
-                client.Toast($"❌ {ex.Message}");
+                outputText.Value = $"Error: {ex.Message}";
+                client.Toast($"{ex.Message}", "Error");
             }
         }
 
-        return Layout.Vertical(
-                Text.H1("SmartFormat.NET Demo"),
-                Text.P("String formatting with smart pluralization and conditionals"),
-                
-                Text.H3("Examples"),
-                Layout.Horizontal(
-                    examples.Keys.Select(name => 
-                        new Button(name, onClick: () => LoadExample(name))
-                    )
-                ).Wrap(),
-                
+        return Layout.Horizontal(new Card(
+            Layout.Vertical(
+                Text.H3("SmartFormat.NET"),
+                Text.Muted("Experiment with SmartFormat.NET templates, plug in JSON data, and see pluralization, conditional logic, and list formatting in action."),
+
+                Text.Label("Examples"),
+                selectedExampleIndex
+                    .ToSelectInput(exampleOptions)
+                    .Variant(SelectInputs.Toggle),
+
+                Text.Label("Template"),
                 templateInput
-                    .ToTextInput()
-                    .Placeholder("Enter template...")
-                    .WithLabel("Template"),
-                
+                    .ToCodeInput(placeholder: "Enter template...")
+                    .Language(Languages.Text)
+                    .ShowCopyButton()
+                    .Height(Size.Fit()),
+
+                Text.Label("Data (JSON)"),
                 jsonInput
-                    .ToTextInput()
-                    .Placeholder("Enter JSON data...")
-                    .WithLabel("Data (JSON)"),
-                
+                    .ToCodeInput(placeholder: "Enter JSON data...")
+                    .Language(Languages.Json)
+                    .ShowCopyButton()
+                    .Height(Size.Fit()),
+
                 new Button("Format String", onClick: FormatString)
-                    .Disabled(string.IsNullOrWhiteSpace(templateInput.Value) || string.IsNullOrWhiteSpace(jsonInput.Value)),
-                
-                Text.H3("Output"),
-                new Box()
-                    .Color(outputText.Value.StartsWith("❌") ? Colors.Red : Colors.Gray)
-                    .Padding(10)
-                    | Text.P(string.IsNullOrEmpty(outputText.Value) 
-                        ? "Click 'Format String' to see the result..." 
-                        : outputText.Value)
-                        .Color(Colors.White),
-                
-                Text.H3("Features"),
-                Layout.Vertical(
-                    Text.P("Pluralization - handles singular/plural automatically"),
-                    Text.P("Conditionals - different output based on data"),
-                    Text.P("List formatting - join arrays with custom separators"),
-                    Text.P("Number formatting - control decimal places and units")
+                    .Disabled(string.IsNullOrWhiteSpace(templateInput.Value) || string.IsNullOrWhiteSpace(jsonInput.Value))
+                    .Width(Size.Full()),
+                Layout.Horizontal(
+                    Text.Label("Output: "),
+                    new Code(string.IsNullOrEmpty(outputText.Value) ? "Click 'Format String' to see the result..." : outputText.Value)
+                        .ShowCopyButton()
                 )
             )
-            .Width(Size.Units(170))
-            .Padding(20);
+        ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()))).Align(Align.TopCenter);
     }
 
     private static object? ToNetObject(JsonElement element)
@@ -124,6 +123,27 @@ public class SmartFormatNetApp : ViewBase
                 return false;
             default:
                 return null!;
+        }
+    }
+
+    private static string FormatJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return json;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+        catch
+        {
+            return json;
         }
     }
 }
