@@ -10,6 +10,9 @@ public class ShopifySharpApp : ViewBase
         var products = this.UseState<Product[]?>(() => null);
         var isLoading = this.UseState(false);
         var error = this.UseState<string?>(() => null);
+        var sortKey = this.UseState<string>(() => "TITLE");
+        var sortDirection = this.UseState<string>(() => "ASC");
+        var queryFilter = this.UseState<string>(() => "");
 
         async Task LoadProducts()
         {
@@ -24,8 +27,8 @@ public class ShopifySharpApp : ViewBase
                 isLoading.Value = true;
                 error.Value = null;
                 var graph = new GraphService(shopDomain.Value, accessToken.Value);
-                var query = @"query {
-                  products(first: 20, sortKey: TITLE) {
+                var query = @"query ($first: Int!, $sortKey: ProductSortKeys, $reverse: Boolean, $query: String) {
+                  products(first: $first, sortKey: $sortKey, reverse: $reverse, query: $query) {
                     nodes {
                       title
                       images(first: 1) { edges { node { url src } } }
@@ -34,7 +37,27 @@ public class ShopifySharpApp : ViewBase
                   }
                 }";
 
-                var request = new GraphRequest { Query = query };
+                var variables = new Dictionary<string, object>
+                {
+                    ["first"] = 250,
+                    ["reverse"] = string.Equals(sortDirection.Value, "DESC", StringComparison.OrdinalIgnoreCase)
+                };
+
+                if (!string.IsNullOrWhiteSpace(sortKey.Value))
+                {
+                    variables["sortKey"] = sortKey.Value;
+                }
+
+                if (!string.IsNullOrWhiteSpace(queryFilter.Value))
+                {
+                    variables["query"] = queryFilter.Value;
+                }
+
+                var request = new GraphRequest
+                {
+                    Query = query,
+                    Variables = variables
+                };
                 var response = await graph.PostAsync<System.Text.Json.JsonDocument>(request);
 
                 System.Text.Json.JsonElement itemsElement = default;
@@ -141,58 +164,82 @@ public class ShopifySharpApp : ViewBase
             }
         }
 
+        var productsLoaded = products.Value is not null;
+        this.UseEffect(async () =>
+        {
+            if (!productsLoaded || isLoading.Value)
+            {
+                return;
+            }
+
+            await LoadProducts();
+        }, sortKey, sortDirection, queryFilter);
+
         object productCard(Product p)
         {
             var imageUrl = p.Images?.FirstOrDefault()?.Src ?? "";
             var price = p.Variants?.FirstOrDefault()?.Price ?? 0m;
-
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                return new Card(
-                    Layout.Vertical().Gap(3)
-                    | Text.H4(p.Title ?? "Untitled")
-                    | Text.Block(price > 0 ? $"{price:C}" : "")
-                );
-            }
+            var imageSource = string.IsNullOrWhiteSpace(imageUrl)
+                ? "https://placehold.co/200x200?text=No+Image"
+                : imageUrl;
 
             return new Card(
                 Layout.Vertical().Gap(3)
                 | Text.H4(p.Title ?? "Untitled")
-                | new Html($"<img src=\"{imageUrl}\" style=\"width:100%;height:200px;object-fit:cover;border-radius:8px\" />")
+                | (Layout.Center()
+                    | new Image(imageSource))
                 | Text.Block(price > 0 ? $"{price:C}" : "")
             );
         }
 
+        var searchControlsDisabled = !productsLoaded || isLoading.Value;
+
         var header = Layout.Vertical().Gap(3)
-            | Text.H3("Shopify Products")
+            | Text.H3("Shopify Product Explorer")
+            | Text.Muted("Connect to your Shopify store, fetch the full product catalog, and refine the results using the filters below.")
+            | Text.Label("Domain")
             | shopDomain.ToTextInput().Placeholder("Domain (e.g.: example.myshopify.com)")
+            | Text.Label("Access Token")
             | accessToken.ToTextInput().Placeholder("Access Token")
-            | new Button("Get Products", onClick: async _ => await LoadProducts());
+            | Text.Label("Sort by")
+            | sortKey.ToSelectInput(new[] { "TITLE", "CREATED_AT", "UPDATED_AT", "ID" }.ToOptions()).Placeholder("Sort by").Disabled(searchControlsDisabled)
+            | Text.Label("Sort direction")
+            | sortDirection.ToSelectInput(new[] { "ASC", "DESC" }.ToOptions()).Placeholder("Sort direction").Disabled(searchControlsDisabled)
+            | Text.Label("Filter query")
+            | queryFilter.ToTextInput().Placeholder("Filter query (e.g. tag:'summer')").Variant(TextInputs.Search).Disabled(searchControlsDisabled)
+            | new Button("Get Products", onClick: async _ => await LoadProducts()).Disabled(isLoading.Value).Width(Size.Full());
 
         object body;
         if (error.Value != null)
         {
-            body = Text.Block("Error: " + error.Value);
+            body = new Card(body = (Layout.Center() | Text.Block("Error: " + error.Value)));
         }
         else if (isLoading.Value)
         {
-            body = Layout.Center() | Text.Block("Loading products...");
+            body = new Card(Layout.Center() | Text.Block("Loading products..."));
         }
         else if (products.Value == null)
         {
-            body = Layout.Center() | Text.Block("Click the button above to view products");
+            body = new Card(Layout.Center() | Text.Block("Click the button above to view products"));
         }
         else if (products.Value.Length == 0)
         {
-            body = Layout.Center() | Text.Block("No products found.");
+            body = new Card(Layout.Center() | Text.Block("No products found."));
         }
         else
         {
-            body = Layout.Grid().Columns(4) | products.Value.Select(productCard).ToArray();
+            body = new Card(
+                Layout.Vertical()
+                | Text.H3("Products")
+                | Text.Muted("Browse all available products here. Use the filters on the left panel to refine your search."),
+
+                Layout.Grid().Columns(3)
+                | products.Value.Select(productCard).ToArray()
+                ).Height(Size.Fit().Min(Size.Full()));
         }
 
-        return Layout.Vertical().Gap(4)
-               | header
+        return Layout.Horizontal().Gap(4)
+               | new Card(header).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()))
                | body;
     }
     // GraphQL helper DTOs
