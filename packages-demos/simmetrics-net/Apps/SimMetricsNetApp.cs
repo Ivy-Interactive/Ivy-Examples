@@ -48,11 +48,18 @@ public class SimMetricsNetApp : ViewBase
         var hasResults = hasInput && hasMetric;
         var inputError = hasInput ? null : "Name is required.";
         var metricError = hasMetric ? null : "Select a similarity metric.";
+        var tableRows = nameList.Value
+            .Select(n => new
+            {
+                n.Name,
+                Score = n.Score.ToString("P1")
+            })
+            .ToList();
 
         return Layout.Horizontal()
             | new Card(Layout.Vertical()
                     | Text.H3("Similarity Setup")
-                    | Text.Muted("Provide the name you want to compare and pick the algorithm for scoring.")
+                    | Text.Muted("Compare custom input against randomly generated names using configurable string similarity algorithms from SimMetrics.Net.")
                     | new TextInput(inputString)
                         .Placeholder("Input a name here...")
                         .Invalid(inputError)
@@ -73,7 +80,7 @@ public class SimMetricsNetApp : ViewBase
                         ? longDescription.Value
                         : "Enter a name and metric on the left to calculate similarities against the sample names.")
                     | (hasResults
-                        ? nameList.Value.ToTable().Header(x => x.Score, shortDescription.Value).Width(Size.Full())
+                        ? tableRows.ToTable().Header(x => x.Score, shortDescription.Value).Width(Size.Full())
                         : null)
                 ).Height(Size.Fit().Min(Size.Full()));
     }
