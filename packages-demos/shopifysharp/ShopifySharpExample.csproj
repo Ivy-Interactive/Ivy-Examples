@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>ShopifySharpDemo</RootNamespace>
+    <RootNamespace>ShopifySharpExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.110.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="ShopifySharp" Version="6.25.1" />
    </ItemGroup>
 

@@ -27,4 +27,4 @@ global using System.Globalization;
 global using System.Reactive.Linq;
 global using ShopifySharp;
 
-namespace ShopifySharpDemo;
+namespace ShopifySharpExample;
