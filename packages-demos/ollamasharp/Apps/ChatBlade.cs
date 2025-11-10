@@ -17,7 +17,9 @@ public class ChatBlade : ViewBase
     {
         var client = UseService<IClientProvider>();
         
-        _messages = UseState(ImmutableArray.Create<ChatMessage>());
+        _messages = UseState(ImmutableArray.Create<ChatMessage>(
+            new ChatMessage(ChatSender.Assistant, "Hello! How are you? How can I help you today?")
+        ));
 
         // Initialize client on first render
         UseEffect(async () =>
@@ -42,7 +44,7 @@ public class ChatBlade : ViewBase
         );
     }
 
-    private async ValueTask OnSendMessage(Event<Chat, string> @event)
+    private void OnSendMessage(Event<Chat, string> @event)
     {
         if (_ollamaApiClient == null)
         {
@@ -51,18 +53,48 @@ public class ChatBlade : ViewBase
             return;
         }
 
-        _messages.Set(_messages.Value.Add(new ChatMessage(ChatSender.User, @event.Value)));
-        _ollamaApiClient.SelectedModel = _modelName;
+        var currentMessages = _messages.Value;
         
-        var chat = new OllamaSharp.Chat(_ollamaApiClient, @event.Value);
-        var builder = new StringBuilder();
+        // Add user message immediately
+        var messagesWithUser = currentMessages.Add(new ChatMessage(ChatSender.User, @event.Value));
         
-        await foreach (var answerToken in chat.SendAsync(@event.Value))
+        // Add loading state immediately after user message
+        var messagesWithLoading = messagesWithUser.Add(new ChatMessage(ChatSender.Assistant, new ChatStatus("Thinking...")));
+        
+        // Update UI with user message and loading state
+        _messages.Set(messagesWithLoading);
+        
+        // Process the request asynchronously
+        _ = Task.Run(async () =>
         {
-            builder.Append(answerToken);
-        }
+            try
+            {
+                _ollamaApiClient.SelectedModel = _modelName;
+                
+                var chat = new OllamaSharp.Chat(_ollamaApiClient, @event.Value);
+                var builder = new StringBuilder();
+                
+                await foreach (var answerToken in chat.SendAsync(@event.Value))
+                {
+                    builder.Append(answerToken);
+                }
 
-        _messages.Set(_messages.Value.Add(new ChatMessage(ChatSender.Assistant, builder.ToString())));
+                // Remove loading message and add actual response
+                var updatedMessages = _messages.Value.Take(_messages.Value.Length - 1).ToImmutableArray();
+                _messages.Set(updatedMessages.Add(new ChatMessage(ChatSender.Assistant, builder.ToString())));
+            }
+            catch (Exception ex)
+            {
+                // Handle errors gracefully
+                var errorMessages = _messages.Value;
+                // Remove loading if it exists (last message from assistant)
+                if (errorMessages.Length > 0 && errorMessages[errorMessages.Length - 1].Sender == ChatSender.Assistant)
+                {
+                    errorMessages = errorMessages.Take(errorMessages.Length - 1).ToImmutableArray();
+                }
+                _messages.Set(errorMessages.Add(new ChatMessage(ChatSender.Assistant, $"Error: {ex.Message}")));
+            }
+        });
     }
 }
 
