@@ -1,4 +1,4 @@
-﻿using SmartFormatNetDemo.Apps;
+﻿using SmartFormatNetExample;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
@@ -7,6 +7,6 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings().DefaultApp<SmartFormatApp>().UseTabs(preventDuplicates: true);
+var chromeSettings = new ChromeSettings().DefaultApp<SmartFormatNetApp>().UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 await server.RunAsync();

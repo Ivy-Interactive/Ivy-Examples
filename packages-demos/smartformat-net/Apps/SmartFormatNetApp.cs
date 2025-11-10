@@ -1,10 +1,7 @@
-using SmartFormat;
-using System.Text.Json;
-
-namespace SmartFormatNetDemo.Apps;
+namespace SmartFormatNetExample;
 
 [App(icon: Icons.Type, title: "SmartFormat.NET")]
-public class SmartFormatApp : ViewBase
+public class SmartFormatNetApp : ViewBase
 {
     public override object? Build()
     {
