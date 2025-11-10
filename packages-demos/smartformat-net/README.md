@@ -1,24 +1,74 @@
-# SmartFormat.NET Example
+# SmartFormat.NET
 
-This is a simple demo of SmartFormat.NET running in an Ivy app. I built this to explore how the library handles pluralization and conditionals.
+<img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/a7308f0e-a579-4712-b25e-7b8fd2d6c5c0" />
 
-## What is SmartFormat.NET?
+## One-Click Development Environment
 
-It's a string formatting library that goes beyond the standard C# string interpolation. Instead of writing if/else logic for plurals, you can handle it directly in the template string.
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fsmartformat-net%2Fdevcontainer.json&location=EuropeWest)
 
-For example:
-```
-"You have {Count:plural:no items|one item|{} items}."
-```
+Click the badge above to open this SmartFormat.NET demo in GitHub Codespaces with:
+- **.NET 9.0** SDK pre-installed
+- **SmartFormat.NET tooling** ready to go
+- **Zero local setup** required
 
-Works with Count = 0, 1, or 5 without extra code.
+## Created Using Ivy
 
-## Running it
+Web application created with [Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework).
 
-```bash
-cd smartformat-net/SmartFormatNetDemo
-dotnet watch
-```
+**Ivy** unifies UI and backend into one C# codebase, letting you build internal tools and dashboards quickly with LLM-assisted workflows.
 
-Click the example buttons to see different formatting options. You can edit the templates and data to test your own patterns.
+## Interactive Example Using SmartFormat.NET
 
+This demo showcases dynamic string formatting powered by [SmartFormat.NET](https://github.com/axuno/SmartFormat) within an Ivy application.
+
+**What this application demonstrates:**
+
+- **Rich templating UI**: Compose format templates, preview results, and tweak inputs in real time.
+- **Named and positional placeholders**: Showcases nested properties, list formatting, conditional sections, and pluralization.
+- **Reusable templates**: Save, load, and manage templates for common business messages and notifications.
+- **Validation and errors**: Highlights SmartFormat parsing/formatting errors with helpful messages.
+- **Live preview panel**: Instantly renders formatted output as you edit templates or data.
+
+**Technical highlights:**
+
+- Uses `SmartFormatter` with Ivy state containers for reactive formatting.
+- Demonstrates custom formatters and source extensions.
+- Shows how to serialize templates for persistence and sharing.
+- Includes sample datasets for invoices, shipping notifications, and user onboarding flows.
+- Presents a split-pane layout with editor controls and preview display.
+
+## How to Run
+
+1. **Prerequisites**: .NET 9.0 SDK
+2. **Navigate to the example**:
+   ```bash
+   cd packages-demos/smartformat-net
+   ```
+3. **Restore dependencies**:
+   ```bash
+   dotnet restore
+   ```
+4. **Run the application**:
+   ```bash
+   dotnet watch
+   ```
+5. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+
+## How to Deploy
+
+Deploy this example to Ivy's hosting platform:
+
+1. **Navigate to the example**:
+   ```bash
+   cd packages-demos/smartformat-net
+   ```
+2. **Deploy to Ivy hosting**:
+   ```bash
+   ivy deploy
+   ```
+   This publishes the SmartFormat.NET demo with one command.
+
+## Learn More
+
+- SmartFormat.NET documentation: [github.com/axuno/SmartFormat](https://github.com/axuno/SmartFormat)
+- Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
