@@ -1,22 +1,23 @@
 using StripeNetExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
-
-var builder = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-IConfiguration config = builder.Build();
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .Build();
 
 var server = new Server();
 #if DEBUG
 server.UseHotReload();
 #endif
-server.Services.AddSingleton(config);
+server.Services.AddSingleton(configuration);
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
+var customHeader = Layout.Vertical().Gap(2)
+    |new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fstripe-net%2Fdevcontainer.json&location=EuropeWest");
 var chromeSettings = new ChromeSettings()
     .DefaultApp<StripeNetApp>()
-    .UseTabs(preventDuplicates: true);
-server.Services.AddHttpContextAccessor();
+    .UseTabs(preventDuplicates: true)
+    .Header(customHeader);
 server.UseChrome(chromeSettings);
 await server.RunAsync();
