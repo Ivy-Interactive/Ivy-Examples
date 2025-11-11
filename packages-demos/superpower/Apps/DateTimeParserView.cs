@@ -29,22 +29,55 @@
                     {
                         resultState.Set(false);
                         resultDateValueState.Set(DateTime.MinValue);
-                        errorState.Set($"Error occurred: {ex.Message}");
+                        errorState.Set($"Error: {ex.Message}");
                     }
                 }
                 parsingState.Set(false);
             };
 
-            return Layout.Vertical().Gap(2).Padding(2)
-                | dateTextState.ToTextInput().WithLabel("Type a date and time string in ISO-8601 format")
-                | new Button("Parse", eventHandler).Loading(parsingState.Value)
-                | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
-                | (resultState.Value ? new Card(
-                    Layout.Vertical().Gap(1).Padding(1)
-                    | Text.Block("Result:")
-                    | Text.P(resultDateValueState.Value.ToString())
-                ).Width(300) : null)
-                ;
+            // Input Card
+            var inputCard = new Card(
+                Layout.Vertical().Gap(3).Padding(3)
+                | Text.H4("Enter Date and Time")
+                | Layout.Vertical().Gap(2)
+                    | Text.Muted("ISO-8601 format examples:")
+                    | Text.Code("2017-01-01")
+                    | Text.Code("2017-01-01 05:28:10")
+                    | Text.Code("2017-01-01 05:28")
+                    | Text.Code("2017-01-01T05:28:10")
+                    | Text.Code("2017-01-01T05:28")
+                | dateTextState.ToTextInput()
+                    .Placeholder("Enter date and time")
+                    .Width("100%")
+                | new Button("📅 Parse Date", eventHandler)
+                    .Loading(parsingState.Value)
+                    .Variant(ButtonVariant.Primary)
+                    .Width("100%")
+            );
+
+            // Result Card
+            var resultCard = new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                | Text.H4("Result")
+                | (errorState.Value.Length > 0 
+                    ? Layout.Vertical().Gap(2)
+                        | Text.Block("❌ Parsing Error:")
+                        | Text.Code(errorState.Value)
+                    : resultState.Value 
+                        ? Layout.Vertical().Gap(2)
+                            | Text.Block("✅ Parsed Date:")
+                            | Text.H3(resultDateValueState.Value.ToString("yyyy-MM-dd HH:mm:ss"))
+                            | Text.Muted($"Day of Week: {resultDateValueState.Value.DayOfWeek}")
+                            | Text.Muted($"Day of Year: {resultDateValueState.Value.DayOfYear}")
+                        : Layout.Vertical().Gap(2)
+                            | Text.Muted("Waiting for result...")
+                            | Text.Muted("Enter date and click 'Parse Date'")
+                )
+            );
+
+            return Layout.Horizontal().Gap(4)
+                | inputCard
+                | resultCard;
         }
     }
 }

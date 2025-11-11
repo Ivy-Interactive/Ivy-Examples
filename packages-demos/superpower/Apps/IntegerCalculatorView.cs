@@ -33,23 +33,53 @@
                     {
                         resultState.Set(false);
                         resultValueState.Set(0);
-                        errorState.Set($"Error occurred: {ex.Message}");
+                        errorState.Set($"Error: {ex.Message}");
                     }
 
                 }
                 parsingState.Set(false);
             };
 
-            return Layout.Vertical().Gap(2).Padding(2)
-                | expressionState.ToTextInput().WithLabel("Type a simple arithmetic expression like (1 + 2 * 3)")
-                | new Button("Calculate", eventHandler).Loading(parsingState.Value)
-                | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
-                | (resultState.Value ? new Card(
-                    Layout.Vertical().Gap(1).Padding(1)
-                    | Text.Block("Result:")
-                    | Text.P(resultValueState.Value.ToString())
-                ).Width(300) : null)
-                ;
+            // Input Card
+            var inputCard = new Card(
+                Layout.Vertical().Gap(3).Padding(3)
+                | Text.H4("Enter Expression")
+                | Layout.Vertical().Gap(2)
+                    | Text.Muted("Examples:")
+                    | Text.Code("1 + 2 * 3")
+                    | Text.Code("(10 + 5) * 2")
+                    | Text.Code("100 / 4 - 5")
+                | expressionState.ToTextInput()
+                    .Placeholder("Enter arithmetic expression")
+                    .Width("100%")
+                | new Button("🧮 Calculate", eventHandler)
+                    .Loading(parsingState.Value)
+                    .Variant(ButtonVariant.Primary)
+                    .Width("100%")
+            );
+
+            // Result Card
+            var resultCard = new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                | Text.H4("Result")
+                | (errorState.Value.Length > 0 
+                    ? Layout.Vertical().Gap(2)
+                        | Text.Block("❌ Calculation Error:")
+                        | Text.Code(errorState.Value)
+                    : resultState.Value 
+                        ? Layout.Vertical().Gap(2)
+                            | Text.Block("✅ Result:")
+                            | Text.H2(resultValueState.Value.ToString())
+                            | Text.Muted($"Expression: {expressionState.Value}")
+                        : Layout.Vertical().Gap(2)
+                            | Text.Muted("Waiting for calculation...")
+                            | Text.Muted("Enter expression and click 'Calculate'")
+                )
+            );
+
+            return Layout.Horizontal().Gap(4)
+                | inputCard
+                | resultCard;
         }
     }
 }

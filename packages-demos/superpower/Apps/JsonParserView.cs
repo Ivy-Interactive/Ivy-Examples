@@ -4,7 +4,11 @@
     {
         public override object? Build()
         {
-            var jsonState = UseState("");
+            var jsonState = UseState(@"{
+  ""name"": ""John"",
+  ""age"": 30,
+  ""city"": ""New York""
+}");
             var errorState = UseState<string>("");
             var parsedDataState = UseState("");
             var parsingState = UseState(false);
@@ -25,27 +29,47 @@
                     {
                         parsedDataState.Set("");
                         parsingState.Set(false);
-                        errorState.Set($"Error occurred: {error}\nPosition: {errorPosition.Column}");                        
+                        errorState.Set($"Error: {error}\nPosition: {errorPosition.Column}");                        
                     }
                 }
                 parsingState.Set(false);
             };
 
-            return Layout.Vertical().Gap(2).Padding(2)
-                | Text.Block("Enter JSON")
+            // Input Card
+            var inputCard = new Card(
+                Layout.Vertical().Gap(3).Padding(3)
+                | Text.H4("Enter JSON")
                 | new TextInput(jsonState)
-                               .Placeholder("Type or paste JSON here")
-                               .Variant(TextInputs.Textarea)
-                               .Height(100)
-                               .Width(300)
-                | new Button("Parse JSON", eventHandler).Loading(parsingState.Value)
-                | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)
-                | (parsedDataState.Value.Length > 0 ? new Card(
-                    Layout.Vertical().Gap(1).Padding(1)
-                    | Text.Block("Parsed Data:")
-                    | Text.Code(parsedDataState.Value)
-                ).Width(300) : null)
-                ;
+                    .Placeholder("Type or paste JSON here")
+                    .Variant(TextInputs.Textarea)
+                    .Height(300)
+                | new Button("🔍 Parse JSON", eventHandler)
+                    .Loading(parsingState.Value)
+                    .Variant(ButtonVariant.Primary)
+                    .Width("100%")
+            );
+
+            // Result Card
+            var resultCard = new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                | Text.H4("Result")
+                | (errorState.Value.Length > 0 
+                    ? Layout.Vertical().Gap(2)
+                        | Text.Block("❌ Parsing Error:")
+                        | Text.Code(errorState.Value)
+                    : parsedDataState.Value.Length > 0 
+                        ? Layout.Vertical().Gap(2)
+                            | Text.Block("✅ Parsed Data:")
+                            | Text.Code(parsedDataState.Value)
+                        : Layout.Vertical().Gap(2)
+                            | Text.Muted("Waiting for result...")
+                            | Text.Muted("Click 'Parse JSON' button")
+                )
+            );
+
+            return Layout.Horizontal().Gap(4)
+                | inputCard
+                | resultCard;
         }
 
         static string GetIndentedText(object? value, int indent = 0)
