@@ -1,0 +1,27 @@
+{
+    "name": "Stripe.Net",
+    "image": "mcr.microsoft.com/dotnet/sdk:9.0",
+    "features": {},
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/stripe-net",
+    "postCreateCommand": "dotnet tool install -g Ivy.Console",
+    "postStartCommand": "dotnet watch",
+    "forwardPorts": [5010],
+    "portsAttributes": {
+      "5010": {
+        "label": "Stripe.Net",
+        "onAutoForward": "openPreview"
+      }
+    },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-dotnettools.csharp",
+          "ms-vscode.powershell",
+          "ms-dotnettools.csdevkit"
+        ]
+      },
+      "codespaces": {
+        "openFiles": ["Apps/StripeNetApp.cs"]
+      }
+    }
+  }
