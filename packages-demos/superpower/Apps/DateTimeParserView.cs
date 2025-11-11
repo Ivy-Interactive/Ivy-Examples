@@ -39,16 +39,22 @@
             var inputCard = new Card(
                 Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Enter Date and Time")
+                | Text.Muted("Provide an ISO-8601 date/time string and click Parse to see its components.")
                 | new Expandable(
                     "Examples",
                     Layout.Vertical().Gap(2)
+                        | Text.Muted("Date only")
                         | Text.Code("2017-01-01")
+                        | Text.Muted("Date and time with seconds")
                         | Text.Code("2017-01-01 05:28:10")
+                        | Text.Muted("Date and time without seconds")
                         | Text.Code("2017-01-01 05:28")
+                        | Text.Muted("ISO format with 'T'")
                         | Text.Code("2017-01-01T05:28:10")
+                        | Text.Muted("ISO format without seconds")
                         | Text.Code("2017-01-01T05:28")
-                        | Text.Code("2023-12-31T23:59:59Z")
                 )
+                | Text.Label("Date/time input:")
                 | dateTextState.ToTextInput()
                     .Placeholder("Enter date and time")
                     .Width("100%")
@@ -60,7 +66,7 @@
 
             // Result Card
             var resultCard = new Card(
-                Layout.Vertical().Gap(2).Padding(3)
+                Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Result")
                 | (errorState.Value.Length > 0 
                     ? Layout.Vertical().Gap(2)
@@ -68,13 +74,16 @@
                         | Text.Code(errorState.Value)
                     : resultState.Value 
                         ? Layout.Vertical().Gap(2)
-                            | Text.Block("Parsed Date:")
-                            | Text.H3(resultDateValueState.Value.ToString("yyyy-MM-dd HH:mm:ss"))
-                            | Text.Muted($"Day of Week: {resultDateValueState.Value.DayOfWeek}")
-                            | Text.Muted($"Day of Year: {resultDateValueState.Value.DayOfYear}")
+                            | Text.Muted("Parsed date/time details:")
+                            | Text.Label("Formatted date:")
+                            | Text.Code(resultDateValueState.Value.ToString("yyyy-MM-dd HH:mm:ss"))
+                            | Text.Label("Day of Week:")
+                            | Text.Code(resultDateValueState.Value.DayOfWeek.ToString())
+                            | Text.Label("Day of Year:")
+                            | Text.Code(resultDateValueState.Value.DayOfYear.ToString())
                         : Layout.Vertical().Gap(2)
-                            | Text.Muted("Waiting for result...")
-                            | Text.Muted("Enter date and click 'Parse Date'")
+                            | Text.Muted("Parser has not run yet.")
+                            | Text.Muted("Enter a date/time value and press Parse to inspect the parsed output here.")
                 )
             );
 
