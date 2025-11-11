@@ -1,7 +1,8 @@
-﻿using Superpower.Parsers;
-using Superpower;
-using System;
+﻿using System;
 using System.Linq.Expressions;
+using Superpower;
+using Superpower.Model;
+using Superpower.Parsers;
 
 namespace SuperpowerExample.Helpers
 {

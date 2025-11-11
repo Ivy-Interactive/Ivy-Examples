@@ -1,7 +1,4 @@
-﻿using Ivy.Charts;
-using SuperpowerExample.Helpers;
-
-namespace SuperpowerExample.Apps
+﻿namespace SuperpowerExample
 {
     internal class JsonParserView : ViewBase
     {

@@ -1,6 +1,4 @@
-﻿using SuperpowerExample.Helpers;
-
-namespace Superpower.Apps
+﻿namespace SuperpowerExample
 {
     internal class IntegerCalculatorView: ViewBase
     {

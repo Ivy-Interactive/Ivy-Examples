@@ -1,6 +1,4 @@
-using Superpower.Apps;
-
-namespace SuperpowerExample.Apps;
+namespace SuperpowerExample;
 
 [App(icon: Icons.PartyPopper, title: "Superpower Example")]
 public class SuperpowerApp

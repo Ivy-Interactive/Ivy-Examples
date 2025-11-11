@@ -1,8 +1,4 @@
-﻿using Superpower.Model;
-using Superpower.Parsers;
-using Superpower;
-
-namespace SuperpowerExample.Helpers
+﻿namespace SuperpowerExample.Helpers
 {
     class ArithmeticExpressionTokenizer : Tokenizer<ArithmeticExpressionToken>
     {

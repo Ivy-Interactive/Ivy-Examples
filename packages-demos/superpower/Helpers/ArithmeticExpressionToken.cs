@@ -1,6 +1,4 @@
-﻿using Superpower.Display;
-
-namespace SuperpowerExample.Helpers
+﻿namespace SuperpowerExample.Helpers
 {
     enum ArithmeticExpressionToken
     {
