@@ -1,10 +1,4 @@
-﻿using System;
-using System.Linq.Expressions;
-using Superpower;
-using Superpower.Model;
-using Superpower.Parsers;
-
-namespace SuperpowerExample.Helpers
+﻿namespace SuperpowerExample.Helpers
 {
     class ArithmeticExpressionParser
     {
