@@ -1,4 +1,4 @@
-
+using StripeNetExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
 
@@ -15,7 +15,7 @@ server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<StripPayment.Apps.Payment>()
+    .DefaultApp<StripeNetApp>()
     .UseTabs(preventDuplicates: true);
 server.Services.AddHttpContextAccessor();
 server.UseChrome(chromeSettings);

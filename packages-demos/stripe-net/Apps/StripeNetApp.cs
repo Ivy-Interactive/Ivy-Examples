@@ -1,21 +1,7 @@
-﻿using Ivy.Client;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.TagHelpers;
-using Stripe;
-using Stripe.Checkout;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-
-
-namespace StripPayment.Apps
+﻿namespace StripeNetExample
 {
     [App(icon: Icons.Box)]
-    public class Payment : ViewBase
+    public class StripeNetApp : ViewBase
     {
         private string StripAPIKey;
         private string BaseURL;
