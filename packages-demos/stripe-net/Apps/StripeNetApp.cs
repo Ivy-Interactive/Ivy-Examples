@@ -1,158 +1,169 @@
 ﻿namespace StripeNetExample
 {
-    [App(icon: Icons.Box)]
+    [App(icon: Icons.Box, title: "Stripe.Net")]
     public class StripeNetApp : ViewBase
     {
-        private string StripAPIKey;
-        private string BaseURL;
+        private static readonly HashSet<string> ZeroDecimalCurrencies = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf",
+            "ugx", "vnd", "vuv", "xaf", "xof", "xpf"
+        };
+
         public override object? Build()
         {
+            var configuration = UseService<IConfiguration>();
+            var client = UseService<IClientProvider>();
 
-            IConfiguration _config = UseService<IConfiguration>();
-            StripAPIKey = _config["Stripe:SecretKey"];
-            BaseURL = _config["BaseURL"];
-            string? session_id = GetPaymentSessionID();
-            string? paymentstatus = GetPaymentStatus();
+            var apiKey = configuration["Stripe:SecretKey"]
+                ?? throw new InvalidOperationException("Stripe secret key is not configured.");
+            var baseUrl = configuration["BaseURL"]
+                ?? throw new InvalidOperationException("Base URL is not configured.");
 
+            var productName = UseState("Test Product");
+            var amount = UseState(20.00m);
+            var quantity = UseState(1);
+            var currency = UseState("usd");
+            var checkoutUrl = UseState(string.Empty);
+            var isCreatingCheckout = UseState(false);
 
-            if (!string.IsNullOrEmpty(paymentstatus))
+            var currencyOptions = new[]
             {
-                if (paymentstatus == "success")
-                {
-                    if (!string.IsNullOrEmpty(session_id))
-                    {
-                        try
-                        {
-                            StripeConfiguration.ApiKey = StripAPIKey;
-                            SessionService service = new SessionService();
-                            Session session = service.Get(session_id);
-
-                            Decimal amount = (session.AmountTotal ?? 0) / 100.0m;
-                            string currency = session.Currency?.ToUpper() ?? "USD";
-
-                            IClientProvider client = UseService<IClientProvider>();
-                            return Layout.Vertical().Align(Align.Center)
-                                | "✅ Payment succeeded!"
-                                | $"Session ID: {session.Id}"
-                                | $"Payment ID: {session.PaymentIntentId}"
-                                | $"Payment Status: {session.PaymentStatus}"
-                                | $"Amount Paid: {amount} {currency}"
-                                | new Button("Go to Homepage", onClick: _ =>
-                                {
-                                    client.OpenUrl(BaseURL);
-                                });
-                        }
-                        catch (Exception ex)
-                        {
-                            return "✅ Payment succeeded, but no session ID was provided in the URL.";
-                        }
-                    }
-
-                    return "✅ Payment succeeded, but no session ID was provided in the URL.";
-                }
-                else
-                {
-                    return "Payment Canceled";
-
-                }
-            }
-            else
-            {
-                IClientProvider client = UseService<IClientProvider>();
-                return Layout.Horizontal().Align(Align.Left)
-                  | new Button("Make Payment", onClick: _ =>
-                  {
-                      string paymentURL = GetPaymentURL();
-                      client.OpenUrl(paymentURL);
-                  })
-                  ;
-            }
-        }
-
-
-        public string GetPaymentURL()
-        {
-            StripeConfiguration.ApiKey = StripAPIKey;
-
-            SessionCreateOptions options = new SessionCreateOptions
-            {
-                PaymentMethodTypes = new List<string>
-            {
-                "card",
-            },
-                LineItems = new List<SessionLineItemOptions>
-            {
-                new SessionLineItemOptions
-                {
-                    PriceData = new SessionLineItemPriceDataOptions
-                    {
-                        Currency = "usd",
-                        UnitAmount = 2000, // $20.00
-                        ProductData = new SessionLineItemPriceDataProductDataOptions
-                        {
-                            Name = "Test Product",
-                        },
-                    },
-                    Quantity = 1,
-                },
-            },
-                Mode = "payment",
-                SuccessUrl = BaseURL + "?appId=payment&appArgs=paymentstatus=success;session_id={CHECKOUT_SESSION_ID};",
-                CancelUrl = BaseURL + "?appId=payment&appArgs=paymentstatus=cancel;",
-
+                new Option<string>("USD • US Dollar", "usd"),
+                new Option<string>("EUR • Euro", "eur"),
+                new Option<string>("GBP • British Pound", "gbp"),
+                new Option<string>("AUD • Australian Dollar", "aud"),
+                new Option<string>("CAD • Canadian Dollar", "cad"),
+                new Option<string>("JPY • Japanese Yen", "jpy"),
+                new Option<string>("CHF • Swiss Franc", "chf"),
+                new Option<string>("PLN • Polish Złoty", "pln"),
+                new Option<string>("UAH • Ukrainian Hryvnia", "uah"),
             };
-            SessionService service = new SessionService();
-            Session session = service.Create(options);
-            return session.Url;
-        }
 
+            var isZeroDecimal = ZeroDecimalCurrencies.Contains(currency.Value);
+            var totalAmount = Math.Max(amount.Value, 0m) * Math.Max(quantity.Value, 0);
+            var totalLabel = FormatCurrency(totalAmount, currency.Value, isZeroDecimal);
 
-        private string GetPaymentStatus()
-        {
-            return GetPaymentInfo()["paymentstatus"];
-        }
-        private string GetPaymentSessionID()
-        {
-            return GetPaymentInfo()["session_id"];
-        }
-        private Dictionary<string, string> GetPaymentInfo()
-        {
-
-            HttpContext httpContext = UseService<IHttpContextAccessor>()?.HttpContext;
-            string queryString = httpContext?.Request?.QueryString.Value;
-            Dictionary<string, string> result = new Dictionary<string, string>
-                {
-                    { "paymentstatus", "" },
-                    { "session_id", "" }
-                };
-
-            if (string.IsNullOrEmpty(queryString)) return result;
-
-            // Parse the full query string
-            NameValueCollection query = HttpUtility.ParseQueryString(queryString);
-
-            // Extract appArgs
-            string appArgs = query["appArgs"];
-
-            if (!string.IsNullOrEmpty(appArgs))
+            void StartCheckout()
             {
-                string[] pairs = appArgs.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                foreach (string pair in pairs)
+                if (amount.Value <= 0 || quantity.Value <= 0)
                 {
-                    string[] kv = pair.Split('=', 2);
-                    if (kv.Length == 2)
-                    {
-                        string key = kv[0].Trim();
-                        string value = kv[1].Trim();
-
-                        if (result.ContainsKey(key))
-                            result[key] = value;
-                    }
+                    client.Toast("Amount and quantity must be greater than zero.", "Invalid input");
+                    return;
                 }
+
+                isCreatingCheckout.Value = true;
+                try
+                {
+                    var session = CreateCheckoutSession(productName.Value, currency.Value, amount.Value, quantity.Value, apiKey, baseUrl);
+                    checkoutUrl.Value = session.Url ?? string.Empty;
+                    client.Toast(string.IsNullOrEmpty(checkoutUrl.Value) 
+                        ? "Stripe did not return a checkout URL." 
+                        : "Checkout session created. Complete it below.", "Stripe");
+                }
+                catch (Exception ex)
+                {
+                    client.Toast(ex.Message, "Stripe error");
+                }
+                finally
+                {
+                    isCreatingCheckout.Value = false;
+                }
+            } 
+
+            if (!string.IsNullOrEmpty(checkoutUrl.Value))
+            {
+                client.OpenUrl(checkoutUrl.Value);
+                checkoutUrl.Value = string.Empty;
             }
 
-            return result;
+            return Layout.Vertical().Align(Align.TopCenter)
+                | (Layout.Vertical().Width(Size.Fraction(0.4f))
+                | Text.H2("Stripe.Net")
+                | Text.Muted("This demo uses the Stripe Checkout library for payments; enter the details below, create a session, and complete it.")
+                | new Ivy.Card(
+                    Layout.Vertical().Gap(2)
+                        | Text.H3("Configure the payment")
+                        | Text.Muted("Choose currency, amount and quantity. Everything feeds directly into the next checkout session.")
+
+                        | productName
+                            .ToTextInput()
+                            .Placeholder("Product name...")
+                            .WithField()
+                            .Label("Product")
+
+                        | currency
+                            .ToSelectInput(currencyOptions)
+                            .WithField()
+                            .Label("Currency")
+
+                        | amount
+                            .ToNumberInput()
+                            .Min(0.01)
+                            .Step(isZeroDecimal ? 1 : 0.50)
+                            .WithField()
+                            .Label("Unit amount")
+
+                        | quantity
+                            .ToNumberInput()
+                            .Min(1)
+                            .Step(1)
+                            .WithField()
+                            .Label("Quantity")
+
+                        | Text.Muted($"Total: {totalLabel}")
+                        | (isZeroDecimal
+                            ? Text.Muted("Note: selected currency does not use fractional units.")
+                            : Text.Muted("Amounts are calculated in major currency units (e.g. dollars, euros)."))
+
+                        | new Button("Create checkout session", onClick: _ => StartCheckout())
+                            .Primary()
+                            .Icon(Icons.Play)
+                            .Disabled(isCreatingCheckout.Value)
+                )
+                | Text.Small("This demo uses Stripe.Net library for creating checkout sessions.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Stripe.Net](https://github.com/stripe/stripe-dotnet)")
+            );
         }
 
+        private static Session CreateCheckoutSession(string productName, string currencyCode, decimal amount, int quantity, string apiKey, string baseUrl)
+        {
+            var normalizedCurrency = currencyCode.Trim().ToLowerInvariant();
+            var multiplier = ZeroDecimalCurrencies.Contains(normalizedCurrency) ? 1m : 100m;
+            var unitAmount = (long)Math.Round(amount * multiplier, 0);
+
+            StripeConfiguration.ApiKey = apiKey;
+
+            var options = new SessionCreateOptions
+            {
+                PaymentMethodTypes = new List<string> { "card" },
+                LineItems = new List<SessionLineItemOptions>
+                {
+                    new()
+                    {
+                        PriceData = new SessionLineItemPriceDataOptions
+                        {
+                            Currency = normalizedCurrency,
+                            UnitAmount = unitAmount,
+                            ProductData = new SessionLineItemPriceDataProductDataOptions
+                            {
+                                Name = string.IsNullOrWhiteSpace(productName) ? "Custom product" : productName.Trim(),
+                            },
+                        },
+                        Quantity = Math.Max(quantity, 1),
+                    },
+                },
+                Mode = "payment",
+                SuccessUrl = baseUrl,
+                CancelUrl = baseUrl,
+            };
+
+            return new SessionService().Create(options);
+        }
+
+        private static string FormatCurrency(decimal amount, string currencyCode, bool isZeroDecimal)
+        {
+            var format = isZeroDecimal ? "N0" : "N2";
+            return $"{amount.ToString(format, CultureInfo.InvariantCulture)} {currencyCode.ToUpper()}";
+        }
     }
 }
