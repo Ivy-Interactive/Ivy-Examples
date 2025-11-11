@@ -44,15 +44,18 @@
             var inputCard = new Card(
                 Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Enter Expression")
-                | Layout.Vertical().Gap(2)
-                    | Text.Muted("Examples:")
-                    | Text.Code("1 + 2 * 3")
-                    | Text.Code("(10 + 5) * 2")
-                    | Text.Code("100 / 4 - 5")
+                | new Expandable(
+                    "Examples",
+                    Layout.Vertical().Gap(2)
+                        | Text.Code("1 + 2 * 3")
+                        | Text.Code("(10 + 5) * 2")
+                        | Text.Code("100 / 4 - 5")
+                        | Text.Code("(3 + 7) / 2 + 5")
+                )
                 | expressionState.ToTextInput()
                     .Placeholder("Enter arithmetic expression")
                     .Width("100%")
-                | new Button("🧮 Calculate", eventHandler)
+                | new Button("Calculate", eventHandler)
                     .Loading(parsingState.Value)
                     .Variant(ButtonVariant.Primary)
                     .Width("100%")
@@ -64,11 +67,11 @@
                 | Text.H4("Result")
                 | (errorState.Value.Length > 0 
                     ? Layout.Vertical().Gap(2)
-                        | Text.Block("❌ Calculation Error:")
+                        | Text.Block("Calculation Error:")
                         | Text.Code(errorState.Value)
                     : resultState.Value 
                         ? Layout.Vertical().Gap(2)
-                            | Text.Block("✅ Result:")
+                            | Text.Block("Result:")
                             | Text.H2(resultValueState.Value.ToString())
                             | Text.Muted($"Expression: {expressionState.Value}")
                         : Layout.Vertical().Gap(2)
