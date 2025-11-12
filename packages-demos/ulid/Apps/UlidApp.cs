@@ -111,6 +111,8 @@ public class UlidApp : ViewBase
                         | parseContent
                         | parseResult
                 )
+                | Text.Small("This demo uses Ulid library for generating and parsing ULIDs.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Ulid](https://github.com/Cysharp/Ulid)")
             ).Width(Size.Fraction(0.4f));
     }
 }
