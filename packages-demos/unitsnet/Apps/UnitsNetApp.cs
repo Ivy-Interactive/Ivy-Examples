@@ -1,9 +1,7 @@
-namespace UnitsNetDemo.Apps;
+namespace UnitsNetExample;
 
-using UnitsNet;
-
-[App(icon: Icons.Scale, title: "UnitsNet Converter")]
-public class UnitsNetConverterApp : ViewBase
+[App(icon: Icons.Scale, title: "UnitsNet")]
+public class UnitsNetApp : ViewBase
 {
     public override object? Build()
     {
