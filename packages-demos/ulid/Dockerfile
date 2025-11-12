@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["customApp.csproj", "./"]
-RUN dotnet restore "customApp.csproj"
+COPY ["UlidExample.csproj", "./"]
+RUN dotnet restore "UlidExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "customApp.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "UlidExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "customApp.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "UlidExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./customApp.dll"]
+ENTRYPOINT ["dotnet","./UlidExample.dll"]

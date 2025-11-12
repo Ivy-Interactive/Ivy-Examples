@@ -1,10 +1,6 @@
-// using Cysharp;   // for Ulid
-using Ivy;
-using System;
+namespace UlidExample;
 
-namespace customApp.Apps;
-
-[App(icon: Icons.Key, title: "ULID Demo")]
+[App(icon: Icons.Key, title: "ULID")]
 public class UlidApp : ViewBase
 {
     public override object? Build()
