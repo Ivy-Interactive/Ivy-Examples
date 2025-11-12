@@ -1,9 +1,9 @@
-namespace TimeZoneConverterDemo.Apps;
+namespace TimeZoneConverterExample;
 
 using TimeZoneConverter;
 
 [App(icon: Icons.Clock, title: "Time Zone Converter")]
-public class TimeZoneConverterDemoApp : ViewBase
+public class TimeZoneConverterApp : ViewBase
 {
     public override object? Build()
     {
