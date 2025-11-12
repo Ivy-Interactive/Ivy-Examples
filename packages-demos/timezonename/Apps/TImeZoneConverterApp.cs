@@ -174,7 +174,7 @@ public class TimeZoneConverterApp : ViewBase
                     Windows = windowsZoneState.Value,
                     Rails = railsZoneState.Value
                 }.ToDetails()
-        ).Width(Size.Fraction(0.5f));
+                ).Width(Size.Fraction(0.5f));
 
         return Layout.Vertical().Gap(4)
             | (Layout.Vertical().Width(Size.Fraction(0.7f))
@@ -186,6 +186,9 @@ public class TimeZoneConverterApp : ViewBase
             | (Layout.Horizontal().Gap(4)
                 | searchCard
                 | resultCard)
+            | Text.Small("This demo uses TimeZoneNames library to convert between IANA, Windows, and Rails time zone formats.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [TimeZoneNames](https://github.com/mattjohnsonpint/TimeZoneNames)")
+        
         ;
     }
 }
