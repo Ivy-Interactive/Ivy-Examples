@@ -3,9 +3,6 @@
 [App(title: "XLParser", icon: Icons.Sheet)]
 public class XLParserApp : ViewBase
 {
-    private readonly string Title = "XLParser Demo";
-    private readonly string Description = "Enter Excel formula and parse it";    
-
     // Example formulas
     private readonly List<string> ExampleFormulas = new()
     {
@@ -29,8 +26,7 @@ public class XLParserApp : ViewBase
         IState<string> Formula,
         IState<FormulaParseResult> Result,
         IState<List<ParseTreeNodeInfo>> Tokens,
-        IState<ParseTreeNodeInfo?> SelectedToken,
-        IState<Dictionary<string, List<ParseTreeNodeInfo>>> ParsedExamples
+        IState<ParseTreeNodeInfo?> SelectedToken
     );
 
     private enum FormulaParseResult
@@ -43,76 +39,60 @@ public class XLParserApp : ViewBase
 
     public override object? Build()
     {
-        // State management        
         var parserState = new ParserState(
             Formula: UseState("SUM(A1:A10) + IF(B1>10, MAX(B1:B10), MIN(B1:B10))"),
             Result: UseState(FormulaParseResult.Unknown),
             Tokens: UseState(new List<ParseTreeNodeInfo>()),
-            SelectedToken: UseState<ParseTreeNodeInfo?>(),
-            ParsedExamples: UseState(new Dictionary<string, List<ParseTreeNodeInfo>>())
+            SelectedToken: UseState<ParseTreeNodeInfo?>()
         );
         
         return new Card()
-            .Title(Title)
-            .Description(Description)
-            | Layout.Horizontal(
-                // Left Card - Input Section
-                new Card()
-                    .Title("Formula Input")
+            | Layout.Vertical(
+                Text.H4("Excel Formula Parser"),
+                Text.Muted("Parse and analyze Excel formulas to understand their structure and components"),
+                Layout.Horizontal(
+                    // Left Card - Input Section
+                    new Card()
                     | Layout.Vertical(
-                        // Example formulas in Expandable
+                        Text.H4("Input & Formula Structure"),
+                        Text.Muted("Enter or select an Excel formula to parse and view its token structure"),
                         new Expandable(
                             "Example Formulas",
                             Layout.Vertical(
-                                ExampleFormulas.Select(example => 
-                                    new Button(title: example, onClick: _ => 
-                                    {
-                                        parserState.Formula.Set(example);
-                                        HandleParse(parserState);
-                                    })
-                                    .Outline()
-                                    .Secondary()
-                                    .Width(Size.Full())
+                                ExampleFormulas.Select(example =>
+                                    new Code(example)
+                                        .ShowCopyButton()
                                 )
                             )
                             .Gap(1)
                         ),
-                        // Formula Input
                         Text.Label("Excel Formula: "),
                         new TextInput(parserState.Formula),
                         new Button("Parse Formula", onClick: _ => HandleParse(parserState)),
-                        // Parse individual elements in Expandable
-                        parserState.Tokens.Value.Count > 0 
+                        parserState.Result.Value == FormulaParseResult.Parsed && parserState.Tokens.Value.Count > 0
                             ? new Expandable(
-                                "Parse Individual Elements",
+                                "Parsed Tokens",
                                 Layout.Vertical(
                                     parserState.Tokens.Value.Select(token =>
-                                    {
-                                        var isParsed = parserState.ParsedExamples.Value.ContainsKey(token.NodeValue);
-                                        return Layout.Horizontal(
-                                            new Button(
-                                                title: isParsed ? $"[Parsed] {token.NodeValue}" : token.NodeValue,
-                                                onClick: _ => HandleParseElement(token.NodeValue, parserState)
-                                            )
-                                            .Outline()
-                                            .Secondary()
-                                            .Foreground(GetTokenColor(token.NodeValue)),
-                                            isParsed ? Callout.Success("Parsed") : null
+                                        new Button(
+                                            title: token.NodeValue,
+                                            onClick: _ => parserState.SelectedToken.Set(token)
                                         )
-                                        .Gap(1)
-                                        .WithMargin(left: token.Depth * 2, top: 0, right: 0, bottom: 0);
-                                    })
+                                        .Outline()
+                                        .Secondary()
+                                        .Foreground(GetTokenColor(token.NodeValue))
+                                        .WithMargin(left: token.Depth * 2, top: 0, right: 0, bottom: 0)
+                                    )
                                 )
-                                .Gap(1)
+                                .Gap(2)
                             )
                             : null
-                    )
-                    .WithMargin(left: 0, top: 0, right: 1, bottom: 0),
+                    ),
                 // Right Card - Result Section
                 new Card()
-                    .Title("Parse Result")
                     | Layout.Vertical(
-                        // Result Callout
+                        Text.H4("Token Analysis"),
+                        Text.Muted("Select a token from the parsed formula to view its detailed properties and metadata"),
                         parserState.Result.Value switch
                         {
                             FormulaParseResult.Unknown => null,
@@ -121,32 +101,21 @@ public class XLParserApp : ViewBase
                             FormulaParseResult.UnexpectedError => Callout.Error("An unexpected error occurred during parsing."),
                             _ => null
                         },
-                        // Parse Result Section
                         parserState.Result.Value switch
                         {
-                            FormulaParseResult.Unknown => Text.Label("Click 'Parse Formula' to see the result."),
-                            FormulaParseResult.Parsed => Layout.Horizontal(
-                                Layout.Vertical(                         
-                                    Text.Small("Click on tokens to see details."),
-                                    Layout.Vertical(parserState.Tokens.Value.Select(token =>
-                                    {
-                                        return new Button(title: token.NodeValue, onClick: _ => parserState.SelectedToken.Set(token))
-                                            .Outline()
-                                            .Secondary()
-                                            .Foreground(GetTokenColor(token.NodeValue))                                  
-                                            .WithMargin(left: token.Depth, top: 0, right: 0, bottom: 0);
-                                    }))
-                                    .Gap(1)),
+                            FormulaParseResult.Unknown => Text.Label("Enter a formula and click 'Parse Formula' to see the analysis."),
+                            FormulaParseResult.Parsed => Layout.Vertical(
                                 Layout.Vertical(
-                                    Text.Label("Selected Token Details:"),
+                                    Text.Label("Token Properties:"),
                                     GetFilteredNodeInfo(parserState.SelectedToken?.Value?.NodeInfo) is List<NodeMetadata> filteredInfo && filteredInfo.Count > 0
-                                        ? (object)filteredInfo
-                                        : Text.Label("Select a token to see details")
+                                        ? filteredInfo.ToTable().Width(Size.Full())
+                                        : Text.Label("Select a token from the parsed formula to view its properties")
                                 )
                             ),
                             _ => null
                         }
                     )
+                )
             );
     }
 
@@ -159,7 +128,6 @@ public class XLParserApp : ViewBase
             state.Tokens.Set([.. parseTree]);
             state.Result.Set(FormulaParseResult.Parsed);
             state.SelectedToken.Set(parseTree.FirstOrDefault());
-            state.ParsedExamples.Set(new Dictionary<string, List<ParseTreeNodeInfo>>());
         }
         catch (ArgumentException)
         {            
@@ -168,23 +136,6 @@ public class XLParserApp : ViewBase
         catch (Exception)
         {         
             state.Result.Set(FormulaParseResult.UnexpectedError);
-        }
-    }
-
-    private void HandleParseElement(string element, ParserState state)
-    {
-        try
-        {
-            var parseTree = FormulaParser.ParseFormula(element);
-            var currentExamples = new Dictionary<string, List<ParseTreeNodeInfo>>(state.ParsedExamples.Value)
-            {
-                [element] = parseTree
-            };
-            state.ParsedExamples.Set(currentExamples);
-        }
-        catch
-        {
-            // Ignore errors for individual element parsing
         }
     }
 
