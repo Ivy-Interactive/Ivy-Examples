@@ -9,32 +9,152 @@ public class UnitsNetApp : ViewBase
         var fromUnit = UseState(() => "DegreeCelsius");
         var toUnit = UseState(() => "DegreeFahrenheit");
         var valueText = UseState(() => "70");
+        var isFirstRender = UseState(() => true);
+        var lastQuantity = UseState(() => quantity.Value);
+
+        // Search term state
+        var quantitySearchTerm = UseState(() => "Temperature");
+
+        // Clear fromUnit and toUnit when quantity changes (but not on first render)
+        UseEffect(() =>
+        {
+            if (!isFirstRender.Value && lastQuantity.Value != quantity.Value)
+            {
+                fromUnit.Set("");
+                toUnit.Set("");
+            }
+            isFirstRender.Set(false);
+            lastQuantity.Set(quantity.Value);
+        }, quantity);
 
         var result = TryConvert(quantity.Value, fromUnit.Value, toUnit.Value, valueText.Value);
 
-        var header = Layout.Vertical().Gap(1)
-                     | Text.H2("UnitsNet Converter")
-                     | Text.Muted("Enter quantity and unit names from UnitsNet, e.g. Temperature, DegreeCelsius → DegreeFahrenheit");
+        // Header Card
+        var headerCard = new Card(
+            Layout.Vertical().Gap(1)
+            | Text.H2("UnitsNet Converter")
+            | Text.Muted("Convert between different units of measurement using the UnitsNet library")
+        );
+        var footerCard = new Card(
+            Layout.Vertical().Gap(1)
+            | Text.Small("This demo uses UnitsNet library to convert between different units of measurement.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [UnitsNet](https://github.com/angularsen/UnitsNet)")
+                
+        );
 
-        var inputs = Layout.Vertical().Gap(2)
-                     | Text.Label("Quantity")
-                     | quantity.ToAsyncSelectInput(QueryQuantities(), LookupQuantity(), placeholder: "Select Quantity")
-                     | Text.Label("From Unit")
-                     | fromUnit.ToAsyncSelectInput(QueryUnits(quantity), LookupUnit(quantity), placeholder: "Select From Unit")
-                     | Text.Label("To Unit")
-                     | toUnit.ToAsyncSelectInput(QueryUnits(quantity), LookupUnit(quantity), placeholder: "Select To Unit")
-                     | Text.Label("Value")
-                     | valueText.ToInput(placeholder: "e.g. 25");
+        // Get filtered quantity list items
+        var allQuantities = Quantity.Infos.OrderBy(q => q.Name).ToArray();
+        var filteredQuantities = string.IsNullOrEmpty(quantitySearchTerm.Value)
+            ? allQuantities
+            : allQuantities
+                .Where(q => q.Name.Contains(quantitySearchTerm.Value, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        
+        var quantityListItems = filteredQuantities
+            .Select(q => new ListItem(
+                title: q.Name,
+                subtitle: "Quantity type",
+                onClick: () => quantity.Set(q.Name)
+            ))
+            .ToArray();
+        
+        // Quantity Selection Card
+        var quantityCard = new Card(
+            Layout.Vertical().Gap(2)
+            | Text.H4("Select Quantity Type")
+            | (string.IsNullOrEmpty(quantity.Value)
+                ? Text.Muted("Select a quantity type from the list below")
+                : Text.Muted($"Selected: {quantity.Value}"))
+            | quantitySearchTerm.ToSearchInput().Placeholder("Search Quantity Types")
+            | (Layout.Vertical().Gap(2).Height(Size.Units(30))
+            | new List(quantityListItems))
+        );
 
-        var output = Layout.Vertical().Gap(1)
-                     | Text.Label("Result")
-                     | (result is double v
-                         ? Text.H3(v.ToString("G"))
-                         : Text.Muted("n/a"));
+        // Get unit list items
+        var qInfo = Quantity.Infos.FirstOrDefault(q => q.Name.Equals(quantity.Value, StringComparison.OrdinalIgnoreCase))
+                   ?? Quantity.Infos.First();
+        
+        var fromUnitListItems = qInfo.UnitInfos
+            .OrderBy(u => u.Name)
+            .Select(u => new ListItem(
+                title: u.Name,
+                subtitle: $"Unit of {quantity.Value}",
+                onClick: () => fromUnit.Set(u.Name)
+            ))
+            .ToArray();
+        
+        var toUnitListItems = qInfo.UnitInfos
+            .OrderBy(u => u.Name)
+            .Select(u => new ListItem(
+                title: u.Name,
+                subtitle: $"Unit of {quantity.Value}",
+                onClick: () => toUnit.Set(u.Name)
+            ))
+            .ToArray();
 
-        return Layout.Center()
-               | new Card(Layout.Vertical().Gap(4) | header | inputs | output)
-                    .Width(Size.Units(120).Max(720));
+        // Determine conversion info
+        var hasFromUnit = !string.IsNullOrEmpty(fromUnit.Value);
+        var hasToUnit = !string.IsNullOrEmpty(toUnit.Value);
+
+        // From Unit Card
+        var fromUnitCard = new Card(
+            Layout.Vertical().Gap(3)
+            | Text.H4(hasFromUnit ? $"From: {fromUnit.Value}" : "Select a source unit from the list below")
+            | Text.Muted("Select a source unit from the list below and enter a value to convert")
+            | valueText.ToInput(placeholder: "e.g. 25")
+            | (Layout.Vertical().Gap(2).Height(Size.Fit().Max(Size.Units(30)))
+            | new List(fromUnitListItems))
+            
+        );
+
+        // To Unit Card
+        var toUnitCard = new Card(
+            Layout.Vertical().Gap(3)
+            | Text.H4(hasToUnit ? $"To: {toUnit.Value}" : "Select a target unit from the list below")
+            | Text.Muted("Select a target unit from the list below and enter a value to convert")
+            | (hasFromUnit && hasToUnit
+                ? Layout.Vertical().Gap(2)
+                    | (result is double v
+                        ? Text.Code($"{v.ToString("G")}")
+                        : Text.Code("Enter a valid number to convert"))
+                : Text.Code("Select both units to see the result"))
+            | (Layout.Vertical().Gap(2).Height(Size.Fit().Max(Size.Units(30)))
+            | new List(toUnitListItems))
+            
+        );
+
+        // Horizontal layout for unit cards
+        var unitCardsRow = Layout.Vertical()
+            | (Layout.Horizontal().Gap(3)
+            | fromUnitCard
+            | toUnitCard);
+
+        // Input Card
+        var inputCard = new Card(
+            Layout.Vertical().Gap(3)
+            
+        ).Title("Input");
+
+        // Result Card
+        var resultCard = new Card(
+            Layout.Vertical().Gap(3)
+            
+        ).Title("Result");
+
+        // Conversion Cards Row
+        var conversionCardsRow =
+        Layout.Vertical()
+        | new Card(
+            Layout.Horizontal().Gap(3)
+            | inputCard
+            | resultCard);
+
+        // Main vertical layout
+        return Layout.Vertical().Align(Align.TopCenter).Gap(3)
+            | headerCard.Width(Size.Fraction(0.7f))
+            | quantityCard.Width(Size.Fraction(0.7f))
+            | unitCardsRow.Width(Size.Fraction(0.7f))
+            | footerCard.Width(Size.Fraction(0.7f));
     }
 
     private static double? TryConvert(string quantityName, string fromUnitName, string toUnitName, string valueText)
@@ -59,56 +179,5 @@ public class UnitsNetApp : ViewBase
         }
     }
 
-    private static AsyncSelectQueryDelegate<string> QueryQuantities()
-    {
-        return async query =>
-        {
-            await Task.CompletedTask;
-            return Quantity.Infos
-                .Where(q => string.IsNullOrEmpty(query) || q.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(q => q.Name)
-                .Select(q => new Option<string>(q.Name, q.Name))
-                .ToArray();
-        };
-    }
-
-    private static AsyncSelectLookupDelegate<string> LookupQuantity()
-    {
-        return async id =>
-        {
-            await Task.CompletedTask;
-            if (string.IsNullOrEmpty(id)) return null;
-            var q = Quantity.Infos.FirstOrDefault(q => q.Name.Equals(id, StringComparison.OrdinalIgnoreCase));
-            return q == null ? null : new Option<string>(q.Name, q.Name);
-        };
-    }
-
-    private static AsyncSelectQueryDelegate<string> QueryUnits(IState<string> quantity)
-    {
-        return async query =>
-        {
-            await Task.CompletedTask;
-            var qInfo = Quantity.Infos.FirstOrDefault(q => q.Name.Equals(quantity.Value, StringComparison.OrdinalIgnoreCase))
-                       ?? Quantity.Infos.First();
-            return qInfo.UnitInfos
-                .Where(u => string.IsNullOrEmpty(query) || u.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(u => u.Name)
-                .Select(u => new Option<string>(u.Name, u.Name))
-                .ToArray();
-        };
-    }
-
-    private static AsyncSelectLookupDelegate<string> LookupUnit(IState<string> quantity)
-    {
-        return async id =>
-        {
-            await Task.CompletedTask;
-            if (string.IsNullOrEmpty(id)) return null;
-            var qInfo = Quantity.Infos.FirstOrDefault(q => q.Name.Equals(quantity.Value, StringComparison.OrdinalIgnoreCase))
-                       ?? Quantity.Infos.First();
-            var unit = qInfo.UnitInfos.FirstOrDefault(u => u.Name.Equals(id, StringComparison.OrdinalIgnoreCase));
-            return unit == null ? null : new Option<string>(unit.Name, unit.Name);
-        };
-    }
 }
 
