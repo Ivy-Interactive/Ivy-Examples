@@ -1,6 +1,4 @@
-﻿using XLParserDemo.Services;
-
-namespace XLParserDemo.Apps;
+﻿namespace XLParserExample;
 
 [App(title: "XLParser", icon: Icons.Sheet)]
 public class XLParserApp : ViewBase
