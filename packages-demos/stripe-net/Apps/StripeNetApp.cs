@@ -16,7 +16,7 @@
 
             var apiKey = configuration["Stripe:SecretKey"]
                 ?? throw new InvalidOperationException("Stripe secret key is not configured.");
-            var baseUrl = "http://localhost:5010/stripe-net-example/stripe-net";
+            var baseUrl = "http://localhost:5010/stripe-net-example";
 
             var productName = UseState("Test Product");
             var amount = UseState(20.00m);
@@ -132,6 +132,11 @@
 
             StripeConfiguration.ApiKey = apiKey;
 
+            // Build success URL with query parameters for PaymentSuccessApp
+            var encodedProductName = Uri.EscapeDataString(productName);
+            var successUrl = baseUrl + "/payment-success";
+            var cancelUrl = baseUrl + "/stripe-net";
+
             var options = new SessionCreateOptions
             {
                 PaymentMethodTypes = new List<string> { "card" },
@@ -152,8 +157,8 @@
                     },
                 },
                 Mode = "payment",
-                SuccessUrl = baseUrl,
-                CancelUrl = baseUrl,
+                SuccessUrl = successUrl,
+                CancelUrl = cancelUrl,
             };
 
             return new SessionService().Create(options);
