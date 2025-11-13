@@ -26,39 +26,39 @@ Addresses = new Dictionary<string, Address> {
         var yamlOutput = this.UseState<string>();
         var errorMessage = this.UseState<string>();
 
-        return Layout.Vertical().Gap(4).Padding(2)
+        return Layout.Vertical().Align(Align.TopCenter)
+            | (Layout.Vertical().Width(Size.Fraction(0.7f))
             | Text.H2("Serialize a Person Object to YAML")
-            | Text.Block("Edit the C# Person object below to see how YamlDotNet serializes it into YAML.")
-            | new Separator()
+            | Text.Muted("Edit the C# Person object below to see how YamlDotNet serializes it into YAML.")
 
-            | (Layout.Horizontal().Gap(4)
-                | Text.H3("C# Person Code").Width(Size.Full())
-                | Text.H3("YAML Output").Width(Size.Full()))
+            | new Card(
+                Layout.Vertical().Gap(4).Padding(2)
+                | (Layout.Horizontal().Gap(4)
+                    | Text.Label("C# Person Code").Width(Size.Full())
+                    | Text.Label("YAML Output").Width(Size.Full()))
 
-            | (Layout.Horizontal().Gap(4).Padding(2)
-                | personCode.ToCodeInput()
-                    .Width(Size.Full())
-                    .Height(Size.Auto())
-                    .Language(Languages.Csharp)
-                    .Placeholder("Enter your Person C# code here...")
-
-                | new Separator()
-
-                | (string.IsNullOrEmpty(errorMessage.Value)
-                    ? yamlOutput.ToCodeInput()
+                | (Layout.Horizontal().Gap(4)
+                    | personCode.ToCodeInput()
                         .Width(Size.Full())
                         .Height(Size.Auto())
-                        .ShowCopyButton(true)
-                    : Text.Block($"Error: {errorMessage.Value}")
-                        .Color(Colors.Red)))
+                        .Language(Languages.Csharp)
+                        .Placeholder("Enter your Person C# code here...")
 
-            // Convert Button
-            | new Button("Convert to YAML")
-                .HandleClick(() => ConvertToYaml(personCode.Value, yamlOutput, errorMessage))
+                    | (string.IsNullOrEmpty(errorMessage.Value)
+                        ? yamlOutput.ToCodeInput()
+                            .Width(Size.Full())
+                            .Height(Size.Auto())
+                            .ShowCopyButton(true)
+                        : Text.Block($"Error: {errorMessage.Value}")
+                            .Color(Colors.Red)))
 
-            | new Separator()
+                // Convert Button
+                | new Button("Convert to YAML")
+                    .HandleClick(() => ConvertToYaml(personCode.Value, yamlOutput, errorMessage))
+            )
+
             | Text.Small("This demo uses YamlDotNet library to serialize Person objects to YAML format.")
-            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)");
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)"));
     }
 
     private void ConvertToYaml(string personCode, IState<string> yamlOutput, IState<string> errorMessage)

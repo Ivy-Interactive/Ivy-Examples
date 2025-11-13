@@ -23,7 +23,8 @@ addresses:
         var personOutput = this.UseState<string>();
         var errorMessage = this.UseState<string>();
 
-        return Layout.Vertical().Gap(4).Padding(2)
+        return Layout.Vertical().Align(Align.TopCenter)
+            | (Layout.Vertical().Width(Size.Fraction(0.7f))
             | Text.H2("Deserialize YAML to a Person Object")
             | Text.Muted("Edit the YAML below to see how YamlDotNet deserializes it into a Person object:")
             | new Card(
@@ -54,7 +55,7 @@ addresses:
             
 
             | Text.Small("This demo uses YamlDotNet library to deserialize YAML into Person objects.")
-            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)");
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)"));
     }
 
     private void DeserializeToPerson(string yamlInput, IState<string> personOutput, IState<string> errorMessage)
