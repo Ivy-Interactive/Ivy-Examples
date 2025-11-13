@@ -37,6 +37,44 @@ The app reads settings from `appsettings.json` (overridable via environment vari
 - `Stripe:SecretKey` – Your Stripe secret API key (use the test key in development)
 - `BaseURL` – Public URL that Stripe redirects back to after checkout
 
+## Setting Up the Secret Key
+
+Before running the application, you need to configure your Stripe secret API key. There are two ways to set it up:
+
+### Step 1: Get Your Stripe Secret Key
+
+1. **Sign up or log in** to [Stripe Dashboard](https://dashboard.stripe.com/)
+2. Navigate to **Developers** → **API keys**
+3. For development, make sure **Test mode** is enabled (toggle in the top right)
+4. Copy your **Secret key** (starts with `sk_test_...` for test mode)
+
+> **Important:** Never publish secret keys in public repositories or share them with unauthorized parties.
+
+### Step 2: Configure the Secret Key
+
+For better security, especially in production, use environment variables instead of storing the key in a file.
+
+**Windows PowerShell:**
+```powershell
+$env:Stripe__SecretKey = "sk_test_your_secret_key_here"
+```
+
+**Windows Command Prompt:**
+```cmd
+set Stripe__SecretKey=sk_test_your_secret_key_here
+```
+
+**Linux/macOS:**
+```bash
+export Stripe__SecretKey="sk_test_your_secret_key_here"
+```
+
+> **Note:** The double underscore `__` in the environment variable corresponds to the colon `:` in configuration (i.e., `Stripe__SecretKey` → `Stripe:SecretKey`)
+
+After setting the environment variable, run the app in the same console:
+```bash
+dotnet watch
+```
 ## How to Run Locally
 
 1. **Prerequisites:** .NET 9.0 SDK and a Stripe test secret key

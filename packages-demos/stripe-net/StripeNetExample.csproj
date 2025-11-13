@@ -13,25 +13,11 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  
   
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="Stripe.net" Version="49.0.0" />
   </ItemGroup>
-
-  
   
   <ItemGroup>
     <Folder Include="Connections\" />

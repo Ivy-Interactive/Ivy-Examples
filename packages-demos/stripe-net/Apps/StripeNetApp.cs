@@ -1,7 +1,7 @@
 ﻿namespace StripeNetExample
 {
     [App(icon: Icons.Box, title: "Stripe.Net")]
-    public class StripeNetApp : ViewBase
+    public class StripeNetApp : ViewBase, IHaveSecrets
     {
         private static readonly HashSet<string> ZeroDecimalCurrencies = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -16,8 +16,7 @@
 
             var apiKey = configuration["Stripe:SecretKey"]
                 ?? throw new InvalidOperationException("Stripe secret key is not configured.");
-            var baseUrl = configuration["BaseURL"]
-                ?? throw new InvalidOperationException("Base URL is not configured.");
+            var baseUrl = "http://localhost:5010/stripe-net-example/stripe-net";
 
             var productName = UseState("Test Product");
             var amount = UseState(20.00m);
@@ -164,6 +163,14 @@
         {
             var format = isZeroDecimal ? "N0" : "N2";
             return $"{amount.ToString(format, CultureInfo.InvariantCulture)} {currencyCode.ToUpper()}";
+        }
+
+        public Secret[] GetSecrets()
+        {
+            return
+            [
+                new Secret("Stripe:SecretKey")
+            ];
         }
     }
 }
