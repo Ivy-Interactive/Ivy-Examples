@@ -45,9 +45,10 @@ public class XLParserApp : ViewBase
             Tokens: UseState(new List<ParseTreeNodeInfo>()),
             SelectedToken: UseState<ParseTreeNodeInfo?>()
         );
-        
-        return new Card()
-            | Layout.Vertical(
+
+        return Layout.Vertical()
+        | new Card(
+            Layout.Vertical(
                 Text.H4("Excel Formula Parser"),
                 Text.Muted("Parse and analyze Excel formulas to understand their structure and components"),
                 Layout.Horizontal(
@@ -116,7 +117,11 @@ public class XLParserApp : ViewBase
                         }
                     )
                 )
-            );
+            )
+            | Layout.Vertical(
+                Text.Small("This demo uses XLParser library to parse and analyze Excel formulas."),
+                Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [XLParser](https://github.com/spreadsheetlab/XLParser)")
+            ));
     }
 
     private void HandleParse(ParserState state)
