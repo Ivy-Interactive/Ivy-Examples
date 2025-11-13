@@ -25,34 +25,34 @@ addresses:
 
         return Layout.Vertical().Gap(4).Padding(2)
             | Text.H2("Deserialize YAML to a Person Object")
-            | Text.Block("Edit the YAML below to see how YamlDotNet deserializes it into a Person object:")
-            | new Separator()
+            | Text.Muted("Edit the YAML below to see how YamlDotNet deserializes it into a Person object:")
+            | new Card(
+                Layout.Vertical().Gap(4).Padding(2)
+                | (Layout.Horizontal().Gap(4)
+                    | Text.Label("YAML Input").Width(Size.Full())
+                    | Text.Label("Person Object").Width(Size.Full()))
 
-            | (Layout.Horizontal().Gap(4)
-                | Text.H3("YAML Input").Width(Size.Full())
-                | Text.H3("Person Object").Width(Size.Full()))
-
-            | (Layout.Horizontal().Gap(4).Padding(2)
-                | yamlInput.ToCodeInput()
-                    .Width(Size.Full())
-                    .Height(Size.Auto())
-                    .Placeholder("Enter your YAML here...")
-
-                | new Separator()
-
-                | (string.IsNullOrEmpty(errorMessage.Value)
-                    ? personOutput.ToCodeInput()
+                | (Layout.Horizontal().Gap(4)
+                    | yamlInput.ToCodeInput()
                         .Width(Size.Full())
                         .Height(Size.Auto())
-                        .ShowCopyButton(true)
-                    : Text.Block($"Error: {errorMessage.Value}")
-                        .Color(Colors.Red)))
+                        .Placeholder("Enter your YAML here...")
 
-            // Convert Button
-            | new Button("Deserialize to Person")
-                .HandleClick(() => DeserializeToPerson(yamlInput.Value, personOutput, errorMessage))
+                    | (string.IsNullOrEmpty(errorMessage.Value)
+                        ? personOutput.ToCodeInput()
+                            .Width(Size.Full())
+                            .Height(Size.Auto())
+                            .ShowCopyButton(true)
+                        : Text.Block($"Error: {errorMessage.Value}")
+                            .Color(Colors.Red)))
+                            
+                    // Convert Button
+                | new Button("Deserialize to Person")
+                    .HandleClick(() => DeserializeToPerson(yamlInput.Value, personOutput, errorMessage))
+                )
 
-            | new Separator()
+            
+
             | Text.Small("This demo uses YamlDotNet library to deserialize YAML into Person objects.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)");
     }
