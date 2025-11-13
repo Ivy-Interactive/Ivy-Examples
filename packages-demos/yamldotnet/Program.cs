@@ -1,4 +1,4 @@
-using YamlDotNet.Apps;
+using YamlDotNetExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
 #if DEBUG

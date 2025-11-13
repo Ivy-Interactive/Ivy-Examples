@@ -1,8 +1,4 @@
-using YamlDotNet.Models;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
-
-namespace YamlDotNet.Apps;
+namespace YamlDotNetExample;
 
 [App(icon: Icons.Code, title: "YAML Deserialization")]
 public class DeserializationApp : ViewBase

@@ -24,5 +24,8 @@ global using System.Collections.Immutable;
 global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
+global using YamlDotNetExample.Models;
+global using YamlDotNet.Serialization;
+global using YamlDotNet.Serialization.NamingConventions;
 
-namespace YamlDotNetDemo;
+namespace YamlDotNetExample;
