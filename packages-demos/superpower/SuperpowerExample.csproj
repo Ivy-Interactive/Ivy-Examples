@@ -6,14 +6,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>Superpower</RootNamespace>
+    <RootNamespace>SuperpowerExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.118" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="Superpower" Version="3.1.0" />
   </ItemGroup>
   <ItemGroup>
