@@ -10,6 +10,7 @@ public class OpperClient : IDisposable
 {
     private const string DefaultBaseUrl = "https://api.opper.ai";
     private const string CallEndpoint = "/v2/call";
+    private const string ModelsEndpoint = "/v2/models";
     
     private readonly HttpClient _httpClient;
     private readonly bool _disposeHttpClient;
@@ -124,6 +125,64 @@ public class OpperClient : IDisposable
     {
         var request = new OpperCallRequest(name, instructions, input, model);
         return CallAsync(request, cancellationToken);
+    }
+
+    /// <summary>
+    /// List all available language models
+    /// </summary>
+    /// <param name="offset">The offset of the models to return when paginating (default: 0)</param>
+    /// <param name="limit">The number of models to return per page (default: 100, max: 100)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The list of available models</returns>
+    public async Task<OpperModelsResponse> ListModelsAsync(
+        int offset = 0,
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit < 1 || limit > 100)
+            throw new ArgumentException("Limit must be between 1 and 100", nameof(limit));
+
+        if (offset < 0)
+            throw new ArgumentException("Offset must be >= 0", nameof(offset));
+
+        try
+        {
+            var url = $"{ModelsEndpoint}?offset={offset}&limit={limit}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new OpperException(
+                    $"Opper.ai Models API request failed with status code {response.StatusCode}",
+                    (int)response.StatusCode,
+                    errorContent);
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<OpperModelsResponse>(
+                cancellationToken: cancellationToken);
+
+            if (result == null)
+                throw new OpperException("Failed to deserialize models response from Opper.ai API");
+
+            return result;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new OpperException("HTTP request to Opper.ai Models API failed", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new OpperException("Failed to parse models response from Opper.ai API", ex);
+        }
+        catch (OpperException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new OpperException("Unexpected error during Opper.ai Models API call", ex);
+        }
     }
 
     public void Dispose()
