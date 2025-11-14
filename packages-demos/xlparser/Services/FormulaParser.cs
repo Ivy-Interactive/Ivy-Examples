@@ -1,4 +1,4 @@
-﻿namespace XLParserDemo.Services;
+﻿namespace XLParserExample.Services;
 
 internal class FormulaParser
 {
