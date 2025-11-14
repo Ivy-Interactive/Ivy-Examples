@@ -212,13 +212,14 @@ namespace OpperaiExample.Apps
                     ? new Chat(messages.Value.ToArray(), HandleMessageAsync) as object
                     : Layout.Vertical().Gap(3).Padding(4)
                         | Text.H4("Welcome to Opper.ai Chat!")
-                        | Text.Block("To get started, you need an API key from Opper.ai:")
-                        | Layout.Vertical().Gap(1)
-                            | Text.Block("1. Visit https://platform.opper.ai")
-                            | Text.Block("2. Sign up or log in to your account")
-                            | Text.Block("3. Go to Settings → API Keys")
-                            | Text.Block("4. Create a new API key")
-                            | Text.Block("5. Copy your API key and paste it in the field above")
+                        | Text.Muted("To get started, you need an API key from Opper.ai:")
+                        | (Layout.Vertical().Gap(1).Padding(4)
+                            | Text.Markdown("1 Visit [https://platform.opper.ai](https://platform.opper.ai)")
+                            | Text.Markdown("2 Sign up or log in to your [account](https://platform.opper.ai/settings/details)")
+                            | Text.Markdown("3 Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)")
+                            | Text.Markdown("4 Create a new [API key](https://platform.opper.ai/settings/api-keys/create)")
+                            | Text.Markdown("5 Copy your API key and paste it in the field above"))
+
                         | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
             );
 
