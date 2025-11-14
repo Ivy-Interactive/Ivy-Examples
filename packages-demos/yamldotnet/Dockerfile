@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["YamlDotNet.csproj", "./"]
-RUN dotnet restore "YamlDotNet.csproj"
+COPY ["YamlDotNetExample.csproj", "./"]
+RUN dotnet restore "YamlDotNetExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "YamlDotNet.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "YamlDotNetExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "YamlDotNet.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "YamlDotNetExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./YamlDotNet.dll"]
+ENTRYPOINT ["dotnet","./YamlDotNetExample.dll"]

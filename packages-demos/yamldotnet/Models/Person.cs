@@ -1,4 +1,4 @@
-namespace YamlDotNet.Models;
+namespace YamlDotNetExample.Models;
 
 public class Address
 {
