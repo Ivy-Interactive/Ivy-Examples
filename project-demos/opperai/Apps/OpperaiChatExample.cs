@@ -3,7 +3,7 @@ using OpperDotNet;
 
 namespace OpperaiExample.Apps
 {
-    [App(icon: Icons.MessageCircle, title: "Opper.ai Chat Demo")]
+    [App(icon: Icons.MessageCircle, title: "OpperAI Chat")]
     public class OpperaiChatExample : ViewBase
     {
         public override object? Build()
@@ -49,7 +49,7 @@ namespace OpperaiExample.Apps
                 }
             }, [opperClient]);
             const string DefaultModel = "azure/gpt-4o-eu";
-            const string DefaultModelName = "gpt-4o-eu";
+            const string DefaultModelName = "azure/gpt-4o-eu";
             
             // Extract model name from environment variable or use default
             var envModel = Environment.GetEnvironmentVariable("OPPER_MODEL");
@@ -191,27 +191,26 @@ namespace OpperaiExample.Apps
             var hasApiKey = !string.IsNullOrWhiteSpace(apiKey.Value) && opperClient.Value != null;
 
             // Header card: Title (left) | Model Selection (center)
-            var headerCard = new Card(
-                Layout.Horizontal().Gap(3)
-                | Text.H3("Opper.ai Chat")
+            var headerCard =
+            Layout.Vertical()
+                | (Layout.Horizontal()
+                | (Layout.Vertical()
+                | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
 
-
-                | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
-                        .WithField()
-                        .Label("AI Model:")
-                        .Width(Size.Fraction(0.4f))
-                | apiKey.ToPasswordInput(placeholder: "Enter your Opper.ai API key...")
-                        .WithField()
-                        .Label("API Key:")
-                        .Width(Size.Fraction(0.4f))
-            );
+                | (Layout.Vertical().Margin(3, 3, 0, 0)
+                    | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
+                    ).Width(Size.Fraction(0.4f))
+                | (Layout.Vertical().Margin(3, 3, 0, 0)
+                    | apiKey.ToPasswordInput(placeholder: "Enter your Opper.ai API key...")
+                    ).Width(Size.Fraction(0.4f))
+                );
 
             // Chat card - show instruction if no API key, otherwise show chat
             var chatCard = new Card(
                 hasApiKey
                     ? new Chat(messages.Value.ToArray(), HandleMessageAsync) as object
                     : Layout.Vertical().Gap(3).Padding(4)
-                        | Text.H4("Welcome to Opper.ai Chat!")
+                        | Text.H4("Welcome to OpperAI Chat!")
                         | Text.Muted("To get started, you need an API key from Opper.ai:")
                         | (Layout.Vertical().Gap(1).Padding(4)
                             | Text.Markdown("1 Visit [https://platform.opper.ai](https://platform.opper.ai)")
@@ -225,8 +224,8 @@ namespace OpperaiExample.Apps
 
             return Layout.Horizontal()
             | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
-                | headerCard.Width(Size.Fraction(0.6f))
-                | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Fraction(0.8f)))
+                | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Fraction(0.1f)))
+                | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Fraction(0.9f)))
                 );
         }
     }
