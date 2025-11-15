@@ -8,30 +8,56 @@ namespace OpperaiExample.Apps
     {
         public override object? Build()
         {
+            var client = UseService<IClientProvider>();
+            
             // API Key state - initialize from environment variable if available
             var apiKey = UseState<string?>(Environment.GetEnvironmentVariable("OPPER_API_KEY"));
             var opperClient = UseState<OpperClient?>(default(OpperClient?));
+            var isValidating = UseState<bool>(false);
+
+            // Validate API key asynchronously
+            async Task ValidateApiKeyAsync(string? key)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    opperClient.Value?.Dispose();
+                    opperClient.Set(default(OpperClient?));
+                    return;
+                }
+
+                isValidating.Set(true);
+                try
+                {
+                    opperClient.Value?.Dispose();
+                    var testClient = new OpperClient(key);
+                    
+                    // Try to make a simple API call to validate the key
+                    await testClient.ListModelsAsync(limit: 1);
+                    
+                    // If successful, set the client and show success toast
+                    opperClient.Set(testClient);
+                    client.Toast("API key validated successfully!", "Success");
+                }
+                catch (Exception ex)
+                {
+                    // If validation fails, show error toast
+                    opperClient.Set(default(OpperClient?));
+                    var errorMessage = ex is OpperException opperEx 
+                        ? $"API key validation error: {opperEx.Message}"
+                        : $"API key validation error: {ex.Message}";
+                    client.Toast(errorMessage, "Error");
+                }
+                finally
+                {
+                    isValidating.Set(false);
+                }
+            }
 
             // Create or recreate client when API key changes
             UseEffect(() =>
             {
-                if (!string.IsNullOrWhiteSpace(apiKey.Value))
-                {
-                    try
-                    {
-                        opperClient.Value?.Dispose();
-                        opperClient.Set(new OpperClient(apiKey.Value!));
-                    }
-                    catch
-                    {
-                        opperClient.Set(default(OpperClient?));
-                    }
-                }
-                else
-                {
-                    opperClient.Value?.Dispose();
-                    opperClient.Set(default(OpperClient?));
-                }
+                // Validate API key when it changes
+                _ = ValidateApiKeyAsync(apiKey.Value);
             }, [apiKey]);
 
             var conversationHistory = UseState<List<string>>(new List<string>());
@@ -51,11 +77,11 @@ namespace OpperaiExample.Apps
             const string DefaultModel = "azure/gpt-4o-eu";
             const string DefaultModelName = "azure/gpt-4o-eu";
             
-            // Extract model name from environment variable or use default
+            // Extract model name from environment variable or use null (no default)
             var envModel = Environment.GetEnvironmentVariable("OPPER_MODEL");
             var initialModel = !string.IsNullOrWhiteSpace(envModel) 
                 ? (envModel.Contains('/') ? envModel.Split('/').Last() : envModel)
-                : DefaultModelName;
+                : null;
             var selectedModel = UseState<string?>(initialModel);
 
             // Query models asynchronously from API
@@ -152,6 +178,16 @@ namespace OpperaiExample.Apps
                     return;
                 }
 
+                // Check if model is selected
+                if (string.IsNullOrWhiteSpace(selectedModel.Value))
+                {
+                    messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
+                    messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, 
+                        "Please select a model from the dropdown above before sending a message. " +
+                        "The model selection is located in the header area.")));
+                    return;
+                }
+
                 messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
 
                 var history = conversationHistory.Value;
@@ -199,6 +235,7 @@ namespace OpperaiExample.Apps
 
                 | (Layout.Vertical().Margin(3, 3, 0, 0)
                     | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
+                        .Disabled(!hasApiKey)
                     ).Width(Size.Fraction(0.4f))
                 | (Layout.Vertical().Margin(3, 3, 0, 0)
                     | apiKey.ToPasswordInput(placeholder: "Enter your Opper.ai API key...")
