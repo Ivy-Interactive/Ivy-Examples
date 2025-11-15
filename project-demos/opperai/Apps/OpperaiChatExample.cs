@@ -242,27 +242,25 @@ namespace OpperaiExample.Apps
                     ).Width(Size.Fraction(0.4f))
                 );
 
-            // Chat card - show instruction if no API key, otherwise show chat
-            var chatCard = new Card(
-                hasApiKey
-                    ? new Chat(messages.Value.ToArray(), HandleMessageAsync) as object
-                    : Layout.Vertical().Gap(3).Padding(4)
-                        | Text.H4("Welcome to OpperAI Chat!")
-                        | Text.Muted("To get started, you need an API key from Opper.ai:")
-                        | (Layout.Vertical().Gap(1).Padding(4)
-                            | Text.Markdown("1 Visit [https://platform.opper.ai](https://platform.opper.ai)")
-                            | Text.Markdown("2 Sign up or log in to your [account](https://platform.opper.ai/settings/details)")
-                            | Text.Markdown("3 Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)")
-                            | Text.Markdown("4 Create a new [API key](https://platform.opper.ai/settings/api-keys/create)")
-                            | Text.Markdown("5 Copy your API key and paste it in the field above"))
-
-                        | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
-            );
+            // Chat area - show instruction if no API key, otherwise show chat
+            var chatCard = hasApiKey
+                ? Layout.Vertical()
+                    | new Chat(messages.Value.ToArray(), HandleMessageAsync)
+                : Layout.Vertical().Gap(3).Padding(4)
+                    | Text.H4("Welcome to OpperAI Chat!")
+                    | Text.Muted("To get started, you need an API key from Opper.ai:")
+                    | (Layout.Vertical().Gap(1).Padding(4)
+                        | Text.Markdown("1 Visit [https://platform.opper.ai](https://platform.opper.ai)")
+                        | Text.Markdown("2 Sign up or log in to your [account](https://platform.opper.ai/settings/details)")
+                        | Text.Markdown("3 Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)")
+                        | Text.Markdown("4 Create a new [API key](https://platform.opper.ai/settings/api-keys/create)")
+                        | Text.Markdown("5 Copy your API key and paste it in the field above"))
+                    | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!");
 
             return Layout.Horizontal()
             | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
-                | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Fraction(0.1f)))
-                | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Min(Size.Fraction(0.9f)))
+                | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fraction(0.1f))
+                | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Fraction(0.9f))
                 );
         }
     }
