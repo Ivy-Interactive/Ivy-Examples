@@ -3,6 +3,16 @@ using OpperDotNet;
 
 namespace OpperaiExample.Apps
 {
+    public record ApiKeyRequest
+    {
+        public string ApiKey { get; set; } = string.Empty;
+    }
+
+    public record InstructionsRequest
+    {
+        public string Instructions { get; set; } = "You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.";
+    }
+
     [App(icon: Icons.MessageCircle, title: "OpperAI Chat")]
     public class OpperaiChatExample : ViewBase
     {
@@ -14,6 +24,11 @@ namespace OpperaiExample.Apps
             var apiKey = UseState<string?>(Environment.GetEnvironmentVariable("OPPER_API_KEY"));
             var opperClient = UseState<OpperClient?>(default(OpperClient?));
             var isValidating = UseState<bool>(false);
+            var isApiKeyDialogOpen = UseState(false);
+            var apiKeyForm = UseState(new ApiKeyRequest { ApiKey = apiKey.Value ?? string.Empty });
+            var customInstructions = UseState<string>("You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.");
+            var isInstructionsDialogOpen = UseState(false);
+            var instructionsForm = UseState(new InstructionsRequest { Instructions = customInstructions.Value });
 
             // Validate API key asynchronously
             async Task ValidateApiKeyAsync(string? key)
@@ -59,6 +74,46 @@ namespace OpperaiExample.Apps
                 // Validate API key when it changes
                 _ = ValidateApiKeyAsync(apiKey.Value);
             }, [apiKey]);
+
+            // Update form when API key dialog opens
+            UseEffect(() =>
+            {
+                if (isApiKeyDialogOpen.Value)
+                {
+                    // Update form with current API key value when dialog opens
+                    apiKeyForm.Set(new ApiKeyRequest { ApiKey = apiKey.Value ?? string.Empty });
+                }
+            }, [isApiKeyDialogOpen]);
+
+            // Handle API key dialog submission
+            UseEffect(() =>
+            {
+                if (!isApiKeyDialogOpen.Value && !string.IsNullOrWhiteSpace(apiKeyForm.Value.ApiKey))
+                {
+                    // Update API key when dialog is closed with a value
+                    apiKey.Set(apiKeyForm.Value.ApiKey);
+                }
+            }, [isApiKeyDialogOpen]);
+
+            // Update form when instructions dialog opens
+            UseEffect(() =>
+            {
+                if (isInstructionsDialogOpen.Value)
+                {
+                    // Update form with current instructions value when dialog opens
+                    instructionsForm.Set(new InstructionsRequest { Instructions = customInstructions.Value });
+                }
+            }, [isInstructionsDialogOpen]);
+
+            // Handle instructions dialog submission
+            UseEffect(() =>
+            {
+                if (!isInstructionsDialogOpen.Value && !string.IsNullOrWhiteSpace(instructionsForm.Value.Instructions))
+                {
+                    // Update instructions when dialog is closed with a value
+                    customInstructions.Set(instructionsForm.Value.Instructions);
+                }
+            }, [isInstructionsDialogOpen]);
 
             var conversationHistory = UseState<List<string>>(new List<string>());
             
@@ -173,7 +228,7 @@ namespace OpperaiExample.Apps
                 {
                     messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
                     messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, 
-                        "Please enter your Opper.ai API key in the field above to start chatting. " +
+                        "Please click the 'Enter API Key' button above to enter your Opper.ai API key and start chatting. " +
                         "You can get your API key at https://platform.opper.ai/settings/api-keys")));
                     return;
                 }
@@ -202,7 +257,7 @@ namespace OpperaiExample.Apps
                     var response = await opperClient.Value.CallAsync(new OpperCallRequest
                     {
                         Name = "chat",
-                        Instructions = "You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.",
+                        Instructions = customInstructions.Value,
                         Input = contextualInput + $"User: {@event.Value}",
                         Model = selectedModel.Value ?? DefaultModelName
                     });
@@ -238,8 +293,17 @@ namespace OpperaiExample.Apps
                         .Disabled(!hasApiKey)
                     ).Width(Size.Fraction(0.4f))
                 | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | apiKey.ToPasswordInput(placeholder: "Enter your Opper.ai API key...")
-                    ).Width(Size.Fraction(0.4f))
+                    | new Button(
+                        "API Key",
+                        onClick: _ => isApiKeyDialogOpen.Set(true)
+                    ).Secondary().Icon(Icons.Key)
+                    ).Width(Size.Fit())
+                | (Layout.Vertical().Margin(3, 3, 0, 0)
+                    | new Button(
+                        "Configuration",
+                        onClick: _ => isInstructionsDialogOpen.Set(true)
+                    ).Secondary().Icon(Icons.FileText)
+                    ).Width(Size.Fit())
                 );
 
             // Chat area - show instruction if no API key, otherwise show chat
@@ -254,14 +318,28 @@ namespace OpperaiExample.Apps
                         | Text.Markdown("2 Sign up or log in to your [account](https://platform.opper.ai/settings/details)")
                         | Text.Markdown("3 Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)")
                         | Text.Markdown("4 Create a new [API key](https://platform.opper.ai/settings/api-keys/create)")
-                        | Text.Markdown("5 Copy your API key and paste it in the field above"))
+                        | Text.Markdown("5 Click the 'Enter API Key' button above to enter your API key"))
                     | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!");
 
             return Layout.Horizontal()
-            | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
-                | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fraction(0.1f))
-                | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Fraction(0.9f))
-                );
+                    | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
+                        | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fit())
+                        | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Full())
+                        )
+                    | (isApiKeyDialogOpen.Value ? apiKeyForm.ToForm()
+                        .Builder(e => e.ApiKey, e => e.ToPasswordInput(placeholder: "Enter your Opper.ai API key..."))
+                        .Label(e => e.ApiKey, "Enter your Opper.ai API key:")
+                        .ToDialog(isApiKeyDialogOpen,
+                            title: "API Key Configuration",
+                            submitTitle: "Save"
+                        ) : null)
+                    | (isInstructionsDialogOpen.Value ? instructionsForm.ToForm()
+                        .Builder(e => e.Instructions, e => e.ToTextAreaInput(placeholder: "Enter instructions for the AI assistant...").Height(Size.Units(20)))
+                        .Label(e => e.Instructions, "Chat Instructions:")
+                        .ToDialog(isInstructionsDialogOpen,
+                            title: "Chat Instructions Configuration",
+                            submitTitle: "Save"
+                        ) : null);
         }
     }
 }
