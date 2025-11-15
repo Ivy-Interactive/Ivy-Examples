@@ -287,23 +287,24 @@ namespace OpperaiExample.Apps
                 | (Layout.Horizontal()
                 | (Layout.Vertical()
                 | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
-
+                | (Layout.Horizontal().Align(Align.Right)
                 | (Layout.Vertical().Margin(3, 3, 0, 0)
                     | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
                         .Disabled(!hasApiKey)
                     ).Width(Size.Fraction(0.4f))
                 | (Layout.Vertical().Margin(3, 3, 0, 0)
                     | new Button(
+                        "Configuration",
+                        onClick: _ => isInstructionsDialogOpen.Set(true)
+                    ).Secondary().Icon(Icons.FileText).Disabled(!hasApiKey)
+                    ).Width(Size.Fit())
+                | (Layout.Vertical().Margin(3, 3, 0, 0)
+                    | new Button(
                         "API Key",
                         onClick: _ => isApiKeyDialogOpen.Set(true)
                     ).Secondary().Icon(Icons.Key)
                     ).Width(Size.Fit())
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | new Button(
-                        "Configuration",
-                        onClick: _ => isInstructionsDialogOpen.Set(true)
-                    ).Secondary().Icon(Icons.FileText)
-                    ).Width(Size.Fit())
+                )
                 );
 
             // Chat area - show instruction if no API key, otherwise show chat
@@ -320,7 +321,7 @@ namespace OpperaiExample.Apps
                             | Text.Markdown("2 Sign up or log in to your [account](https://platform.opper.ai/settings/details)")
                             | Text.Markdown("3 Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)")
                             | Text.Markdown("4 Create a new [API key](https://platform.opper.ai/settings/api-keys/create)")
-                            | Text.Markdown("5 Click the 'Enter API Key' button above to enter your API key"))
+                            | Text.Markdown("5 Click the 'API Key' button above to enter your API key"))
                         | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
                         ).Width(Size.Fit());
 
