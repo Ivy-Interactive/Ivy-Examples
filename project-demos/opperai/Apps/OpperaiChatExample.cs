@@ -129,15 +129,17 @@ namespace OpperaiExample.Apps
                     conversationHistory.Set(new List<string>());
                 }
             }, [opperClient]);
-            const string DefaultModel = "azure/gpt-4o-eu";
-            const string DefaultModelName = "azure/gpt-4o-eu";
+            const string DefaultModel = "aws/claude-3.5-sonnet-eu";
+            const string DefaultModelName = "aws/claude-3.5-sonnet-eu";
+            // Check if API key is set
+            var hasApiKey = !string.IsNullOrWhiteSpace(apiKey.Value) && opperClient.Value != null;
             
-            // Extract model name from environment variable or use null (no default)
+            // Extract model name from environment variable or use default
             var envModel = Environment.GetEnvironmentVariable("OPPER_MODEL");
             var initialModel = !string.IsNullOrWhiteSpace(envModel) 
                 ? (envModel.Contains('/') ? envModel.Split('/').Last() : envModel)
-                : null;
-            var selectedModel = UseState<string?>(initialModel);
+                : DefaultModelName;
+            var selectedModel = UseState<string>(DefaultModelName);
 
             // Query models asynchronously from API
             async Task<Option<string>[]> QueryModels(string query)
@@ -180,9 +182,6 @@ namespace OpperaiExample.Apps
             // Lookup model by name
             async Task<Option<string>?> LookupModel(string? modelName)
             {
-                if (opperClient.Value == null)
-                    return null;
-
                 if (string.IsNullOrWhiteSpace(modelName))
                     modelName = DefaultModelName;
 
@@ -206,7 +205,7 @@ namespace OpperaiExample.Apps
                             return new Option<string>($"{defaultModelFromApi.HostingProvider}/{defaultModelFromApi.Name}", defaultModelFromApi.Name);
                         }
                         // Fallback: return default model even if not in API response
-                        return new Option<string>($"{DefaultModel} - Default model", DefaultModelName);
+                        return new Option<string>($"{DefaultModel}", DefaultModelName);
                     }
                     
                     return null;
@@ -216,7 +215,7 @@ namespace OpperaiExample.Apps
                     // On error, still return default model option
                     if (modelName == DefaultModelName)
                     {
-                        return new Option<string>($"{DefaultModel} - Default model", DefaultModelName);
+                        return new Option<string>($"{DefaultModel}", DefaultModelName);
                     }
                     return null;
                 }
@@ -277,9 +276,6 @@ namespace OpperaiExample.Apps
                     messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, $"Error: {ex.Message}")));
                 }
             }
-
-            // Check if API key is set
-            var hasApiKey = !string.IsNullOrWhiteSpace(apiKey.Value) && opperClient.Value != null;
 
             // Header card: Title (left) | Model Selection (center)
             var headerCard =
