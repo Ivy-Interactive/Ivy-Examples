@@ -312,12 +312,12 @@ namespace OpperaiExample.Apps
                         Layout.Vertical().Gap(3).Padding(4)
                         | Text.H4("Welcome to OpperAI Chat!")
                         | Text.Muted("To get started, you need an API key from Opper.ai:")
-                        | (Layout.Vertical().Gap(1).Padding(4)
-                            | Text.Markdown("1 Visit [https://platform.opper.ai](https://platform.opper.ai)")
-                            | Text.Markdown("2 Sign up or log in to your [account](https://platform.opper.ai/settings/details)")
-                            | Text.Markdown("3 Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)")
-                            | Text.Markdown("4 Create a new [API key](https://platform.opper.ai/settings/api-keys/create)")
-                            | Text.Markdown("5 Click the 'API Key' button above to enter your API key"))
+                        | (Layout.Vertical().Gap(1).Padding(2)
+                            | Text.Markdown(@"1. Visit [https://platform.opper.ai](https://platform.opper.ai)
+2. Sign up or log in to your [account](https://platform.opper.ai/settings/details)
+3. Go to [Settings → API Keys](https://platform.opper.ai/settings/api-keys)
+4. Create a new [API key](https://platform.opper.ai/settings/api-keys/create)
+5. Click the 'API Key' button above to enter your API key"))
                         | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
                         ).Width(Size.Fit());
 
