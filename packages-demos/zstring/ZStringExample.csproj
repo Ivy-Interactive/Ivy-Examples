@@ -14,7 +14,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.113" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="ZString" Version="2.6.0" />
   </ItemGroup>
   
