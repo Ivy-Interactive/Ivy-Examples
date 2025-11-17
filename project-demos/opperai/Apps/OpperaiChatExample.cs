@@ -310,7 +310,7 @@ namespace OpperaiExample.Apps
                         settingsForm.ToForm()
                             .Builder(e => e.ApiKey, e => e.ToPasswordInput(placeholder: "Enter your Opper.ai API key..."))
                             .Label(e => e.ApiKey, "API Key:")
-                            .Builder(e => e.Instructions, e => e.ToTextAreaInput(placeholder: "Enter instructions for the AI assistant...").Height(Size.Units(30)).Disabled(!hasApiKey))
+                            .Builder(e => e.Instructions, e => e.ToTextAreaInput(placeholder: "Enter instructions for the AI assistant...").Height(Size.Units(30)))
                             .Label(e => e.Instructions, "Instructions:")
                             .ToDialog(isSettingsDialogOpen,
                                 title: "API key/Settings",
