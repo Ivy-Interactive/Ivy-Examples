@@ -21,6 +21,15 @@ public class RestSharpApp : ViewBase
         var statusCode = UseState<string?>(() => "");
         var formatJson = UseState<bool>(() => true);
 
+        // Update URL when ID changes for methods that need it
+        UseEffect(() =>
+        {
+            if (RequiresResourceId(method.Value))
+            {
+                url.Set(BuildUrlWithResourceId(resourceId.Value));
+            }
+        }, resourceId, method);
+
         // Update URL based on method
         var updateUrlForMethod = (string? newMethod) =>
         {
@@ -63,15 +72,6 @@ public class RestSharpApp : ViewBase
                     break;
             }
         };
-
-        // Update URL when ID changes for methods that need it
-        UseEffect(() =>
-        {
-            if (RequiresResourceId(method.Value))
-            {
-                url.Set(BuildUrlWithResourceId(resourceId.Value));
-            }
-        }, resourceId, method);
 
         var onSend = () =>
         {
