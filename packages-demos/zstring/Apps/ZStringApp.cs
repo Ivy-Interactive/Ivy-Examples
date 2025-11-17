@@ -44,6 +44,84 @@ public class ZStringApp : ViewBase
                     var tpl = ZString.PrepareUtf16<int, int>("x:{0}, y:{1:000}");
                     return tpl.Format(10, 20);
                 }
+            ),
+            ["AppendJoin"] = (
+                "using var sb = ZString.CreateStringBuilder();\n" +
+                "sb.AppendJoin(\" -> \", new[] { \"Start\", \"Middle\", \"End\" });\n" +
+                "var output = sb.ToString();",
+                () =>
+                {
+                    using var sb = ZString.CreateStringBuilder();
+                    sb.AppendJoin(" -> ", new[] { "Start", "Middle", "End" });
+                    return sb.ToString();
+                }
+            ),
+            ["AppendFormat Multiple"] = (
+                "using var sb = ZString.CreateStringBuilder();\n" +
+                "sb.AppendFormat(\"Name: {0}, Age: {1}, Score: {2:F2}\", \"Alice\", 28, 95.678);\n" +
+                "var output = sb.ToString();",
+                () =>
+                {
+                    using var sb = ZString.CreateStringBuilder();
+                    sb.AppendFormat("Name: {0}, Age: {1}, Score: {2:F2}", "Alice", 28, 95.678);
+                    return sb.ToString();
+                }
+            ),
+            ["AppendLine"] = (
+                "using var sb = ZString.CreateStringBuilder();\n" +
+                "sb.AppendLine(\"First line\");\n" +
+                "sb.AppendLine(\"Second line\");\n" +
+                "sb.AppendLine();\n" +
+                "sb.AppendLine(\"After empty line\");\n" +
+                "var output = sb.ToString();",
+                () =>
+                {
+                    using var sb = ZString.CreateStringBuilder();
+                    sb.AppendLine("First line");
+                    sb.AppendLine("Second line");
+                    sb.AppendLine();
+                    sb.AppendLine("After empty line");
+                    return sb.ToString();
+                }
+            ),
+            ["Append With Format"] = (
+                "using var sb = ZString.CreateStringBuilder();\n" +
+                "sb.Append(3.14159, \"F4\");\n" +
+                "sb.Append(\" | \");\n" +
+                "sb.Append(1234.56, \"C\");\n" +
+                "sb.Append(\" | \");\n" +
+                "sb.Append(42, \"X\");\n" +
+                "var output = sb.ToString();",
+                () =>
+                {
+                    using var sb = ZString.CreateStringBuilder();
+                    sb.Append(3.14159, "F4");
+                    sb.Append(" | ");
+                    sb.Append(1234.56, "C");
+                    sb.Append(" | ");
+                    sb.Append(42, "X");
+                    return sb.ToString();
+                }
+            ),
+            ["TryCopyTo"] = (
+                "using var sb = ZString.CreateStringBuilder();\n" +
+                "sb.Append(\"Hello, World!\");\n" +
+                "var buffer = new char[sb.Length];\n" +
+                "var span = new Span<char>(buffer);\n" +
+                "sb.TryCopyTo(span, out int written);\n" +
+                "var output = new string(span[..written]);",
+                () =>
+                {
+                    using var sb = ZString.CreateStringBuilder();
+                    sb.Append("Hello, World!");
+                    var buffer = new char[sb.Length];
+                    var span = new Span<char>(buffer);
+                    if (sb.TryCopyTo(span, out int written))
+                    {
+                        return new string(span[..written]);
+                    }
+                    return "Failed to copy";
+                }
             )
         };
         UseEffect(() => {
