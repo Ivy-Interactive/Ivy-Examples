@@ -44,6 +44,21 @@ public class TimeZoneConverterApp : ViewBase
                 .Where(z => z.Contains(railsSearchTerm.Value, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
+        // Update time on mount and when IANA zone changes
+        UseEffect(() =>
+        {
+            try
+            {
+                var timeZoneInfo = TZConvert.GetTimeZoneInfo(ianaZoneState.Value);
+                currentTimeState.Set(TimeZoneInfo.ConvertTime(DateTime.Now, timeZoneInfo)
+                    .ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+            catch
+            {
+                currentTimeState.Set("Invalid time zone");
+            }
+        }, [ianaZoneState]);
+
         // Update time function
         var updateTime = () =>
         {
@@ -117,12 +132,6 @@ public class TimeZoneConverterApp : ViewBase
             updateTime();
         }));
 
-        // Update time on mount and when IANA zone changes
-        UseEffect(() =>
-        {
-            updateTime();
-        }, [ianaZoneState]);
-
         // Build search content based on selected type
         object BuildSearchContent()
         {
@@ -130,18 +139,21 @@ public class TimeZoneConverterApp : ViewBase
             {
                 "IANA" => Layout.Vertical().Gap(4)
                     | ianaSearchTerm.ToTextInput(ianaZoneState.Value)
+                        .Variant(TextInputs.Search)
                         .WithField()
                         .Label("Search IANA Time Zones")
                     | Layout.Vertical(new List(ianaListItems.ToArray())).Height(Size.Units(70)),
                 
                 "Windows" => Layout.Vertical().Gap(4)
                     | windowsSearchTerm.ToTextInput(windowsZoneState.Value)
+                        .Variant(TextInputs.Search)
                         .WithField()
                         .Label("Search Windows Time Zones")
                     | Layout.Vertical(new List(windowsListItems.ToArray())).Height(Size.Units(70)),
                 
                 "Rails" => Layout.Vertical().Gap(4)
                     | railsSearchTerm.ToTextInput(railsZoneState.Value)
+                        .Variant(TextInputs.Search)
                         .WithField()
                         .Label("Search Rails Time Zones")
                     | Layout.Vertical(new List(railsListItems.ToArray())).Height(Size.Units(70)),
