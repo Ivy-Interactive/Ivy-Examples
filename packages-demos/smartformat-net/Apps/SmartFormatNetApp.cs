@@ -25,6 +25,8 @@ public class SmartFormatNetApp : ViewBase
             .Select((entry, index) => new Option<int>(entry.Key, index))
             .ToArray();
 
+        UseEffect(() => LoadExample(selectedExampleIndex.Value), selectedExampleIndex);
+
         void LoadExample(int exampleIndex)
         {
             if (exampleIndex < 0 || exampleIndex >= exampleEntries.Count)
@@ -37,8 +39,6 @@ public class SmartFormatNetApp : ViewBase
             jsonInput.Value = FormatJson(example.data);
             outputText.Value = "";
         }
-
-        UseEffect(() => LoadExample(selectedExampleIndex.Value), selectedExampleIndex);
 
         void FormatString()
         {
