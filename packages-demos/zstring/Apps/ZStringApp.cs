@@ -92,6 +92,10 @@ public class ZStringApp : ViewBase
                     .WithField()
                     .Label("Select Operation")
                 | (codeBlocks ?? Text.Muted("Please select an operation from the dropdown above"))
+                | new Spacer().Height(Size.Units(5))
+                | Text.Small("This demo uses ZString library to format strings.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ZString](https://github.com/Cysharp/ZString)")
+            
             ).Width(Size.Fraction(0.4f));
     }
 }
