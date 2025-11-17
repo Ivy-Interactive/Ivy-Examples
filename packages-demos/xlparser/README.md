@@ -1,6 +1,6 @@
 # XLParser
 
-<img width="1367" height="921" alt="image" src="https://github.com/user-attachments/assets/1278fa3c-460b-403c-9d29-5318a939a20c" />
+<img width="1605" height="913" alt="image" src="https://github.com/user-attachments/assets/07510f2e-d5fc-4ce9-8182-d9cca43992ae" />
 
 ## One-Click Development Environment
 
@@ -24,7 +24,7 @@ This demo showcases Excel formula parsing and analysis powered by [XLParser](htt
 **What this application demonstrates:**
 
 - **Formula parsing**: Enter any Excel formula and parse it into its component tokens and structure.
-- **Token visualization**: View parsed tokens with color-coded, hierarchical display showing the formula's parse tree.
+- **Token visualization**: View parsed tokens, hierarchical display showing the formula's parse tree.
 - **Token analysis**: Select any token to view its detailed properties and metadata, including:
   - Token type and classification
   - Binary/unary operation detection
@@ -39,7 +39,6 @@ This demo showcases Excel formula parsing and analysis powered by [XLParser](htt
 - Uses `ExcelFormulaParser` from XLParser library for robust formula parsing.
 - Demonstrates parse tree traversal and token extraction.
 - Shows hierarchical token display with depth-based indentation.
-- Implements color-coded token visualization for better readability.
 - Filters token metadata to show only relevant properties.
 - Presents a split-pane layout with input controls and analysis display.
 
