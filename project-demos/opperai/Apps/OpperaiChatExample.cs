@@ -273,8 +273,12 @@ namespace OpperaiExample.Apps
             // Header: Title (left) | Model Selection and buttons (right)
             var header = Layout.Vertical()
                 | (Layout.Horizontal()
+                | (Layout.Horizontal().Align(Align.Left)
                 | (Layout.Vertical()
                     | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
+                | (Layout.Vertical()
+                    | new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fopperai%2Fdevcontainer.json&location=EuropeWest"))
+                    .Width(Size.Fraction(0.3f)))
                 | (Layout.Horizontal().Align(Align.Right)
                     | (Layout.Vertical().Margin(3, 3, 0, 0)
                         | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
@@ -315,14 +319,12 @@ namespace OpperaiExample.Apps
             // var body = Layout.Vertical().Gap(2).Align(Align.TopCenter)
             //     | ;
 
-            return Layout.Horizontal()
+            return Layout.Vertical()
                     | new HeaderLayout(
-                        header:
-                            Layout.Vertical()
-                            | header,
+                        header: header,
 
                         content:
-                            Layout.Horizontal().Align(Align.TopCenter).Height(Size.Fraction(0.9f))
+                            Layout.Horizontal().Align(Align.TopCenter)
                             | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Units(173).Max(Size.Full()))
                         )
 
