@@ -1,7 +1,3 @@
-using Ivy;
-using Ivy.Shared;      // for Colors.*
-using Cysharp.Text;
-
 namespace ZStringExample;
 
 [App(icon: Icons.PartyPopper, title: "ZString Demo")]
