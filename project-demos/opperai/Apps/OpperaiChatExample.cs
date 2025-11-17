@@ -10,7 +10,7 @@ namespace OpperaiExample.Apps
 
     public record InstructionsRequest
     {
-        public string Instructions { get; set; } = "You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.";
+        public string Instructions { get; set; } = "You are a helpful AI assistant. When responding:\n\n1. Use Markdown formatting for better readability (headers, lists, code blocks, etc.)\n2. For mathematical expressions, use LaTeX notation with proper delimiters:\n   - Inline math: $expression$ (e.g., $\\sqrt{-1}$ or $x^2 + y^2 = r^2$)\n   - Block math: $$expression$$ for displayed equations\n   - Examples: $\\sqrt{-1} = i$, $E = mc^2$, $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$\n3. Ensure all math expressions render clearly and correctly\n4. Keep your responses concise, relevant, and well-formatted.";
     }
 
     [App(icon: Icons.MessageCircle, title: "OpperAI Chat")]
@@ -26,7 +26,7 @@ namespace OpperaiExample.Apps
             var isValidating = UseState<bool>(false);
             var isApiKeyDialogOpen = UseState(false);
             var apiKeyForm = UseState(new ApiKeyRequest { ApiKey = apiKey.Value ?? string.Empty });
-            var customInstructions = UseState<string>("You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.");
+            var customInstructions = UseState<string>("You are a helpful AI assistant. When responding:\n\n1. Use Markdown formatting for better readability (headers, lists, code blocks, etc.)\n2. For mathematical expressions, use LaTeX notation with proper delimiters:\n   - Inline math: $expression$ (e.g., $\\sqrt{-1}$ or $x^2 + y^2 = r^2$)\n   - Block math: $$expression$$ for displayed equations\n   - Examples: $\\sqrt{-1} = i$, $E = mc^2$, $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$\n3. Ensure all math expressions render clearly and correctly\n4. Keep your responses concise, relevant, and well-formatted.");
             var isInstructionsDialogOpen = UseState(false);
             var instructionsForm = UseState(new InstructionsRequest { Instructions = customInstructions.Value });
             var conversationHistory = UseState<List<string>>(new List<string>());
@@ -256,7 +256,9 @@ namespace OpperaiExample.Apps
 
                     history.Add($"Assistant: {response.Message}");
                     conversationHistory.Set(history);
-                    messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, response.Message)));
+                    // Use Text.Markdown to render markdown and LaTeX expressions
+                    var messageContent = Text.Markdown(response.Message);
+                    messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, messageContent)));
                 }
                 catch (OpperException ex)
                 {
