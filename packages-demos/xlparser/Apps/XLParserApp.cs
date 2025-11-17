@@ -13,15 +13,6 @@ public class XLParserApp : ViewBase
         "INDEX(MATCH(A1, B:B, 0), 1)"
     };
 
-    // Component state for token coloring, preserved across renders.
-    private readonly Queue<Colors> _chromaticColors = new([
-        Colors.Red, Colors.Orange, Colors.Amber, Colors.Yellow, Colors.Lime,
-        Colors.Green, Colors.Emerald, Colors.Teal, Colors.Cyan, Colors.Sky,
-        Colors.Blue, Colors.Indigo, Colors.Violet, Colors.Purple, Colors.Fuchsia,
-        Colors.Pink, Colors.Rose
-    ]);
-    private readonly Dictionary<string, Colors> _foundTokenTypes = [];
-
     private record ParserState(
         IState<string> Formula,
         IState<FormulaParseResult> Result,
@@ -81,7 +72,6 @@ public class XLParserApp : ViewBase
                                         )
                                         .Outline()
                                         .Secondary()
-                                        .Foreground(GetTokenColor(token.NodeValue))
                                         .WithMargin(left: token.Depth * 2, top: 0, right: 0, bottom: 0)
                                     )
                                 )
@@ -148,15 +138,5 @@ public class XLParserApp : ViewBase
     {
         if (nodeInfo == null) return null;
         return nodeInfo.Where(metadata => metadata.Value != "False").ToList();
-    }
-
-    private Colors GetTokenColor(string tokenName)
-    {
-        if (!_foundTokenTypes.TryGetValue(tokenName, out var color))
-        {
-            color = _chromaticColors.Count > 0 ? _chromaticColors.Dequeue() : Colors.Gray;
-            _foundTokenTypes[tokenName] = color;
-        }
-        return color;
     }
 }
