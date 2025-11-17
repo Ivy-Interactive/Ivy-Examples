@@ -10,7 +10,7 @@ namespace OpperaiExample.Apps
 
     public record InstructionsRequest
     {
-        public string Instructions { get; set; } = "You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.";
+        public string Instructions { get; set; } = "You are a helpful AI assistant. When responding:\n\n1. Use Markdown formatting for better readability (headers, lists, code blocks, etc.)\n2. For mathematical expressions, use LaTeX notation with proper delimiters:\n   - Inline math: $expression$ (e.g., $\\sqrt{-1}$ or $x^2 + y^2 = r^2$)\n   - Block math: $$expression$$ for displayed equations\n   - Examples: $\\sqrt{-1} = i$, $E = mc^2$, $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$\n3. Ensure all math expressions render clearly and correctly\n4. Keep your responses concise, relevant, and well-formatted.";
     }
 
     [App(icon: Icons.MessageCircle, title: "OpperAI Chat")]
@@ -26,47 +26,14 @@ namespace OpperaiExample.Apps
             var isValidating = UseState<bool>(false);
             var isApiKeyDialogOpen = UseState(false);
             var apiKeyForm = UseState(new ApiKeyRequest { ApiKey = apiKey.Value ?? string.Empty });
-            var customInstructions = UseState<string>("You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.");
+            var customInstructions = UseState<string>("You are a helpful AI assistant. When responding:\n\n1. Use Markdown formatting for better readability (headers, lists, code blocks, etc.)\n2. For mathematical expressions, use LaTeX notation with proper delimiters:\n   - Inline math: $expression$ (e.g., $\\sqrt{-1}$ or $x^2 + y^2 = r^2$)\n   - Block math: $$expression$$ for displayed equations\n   - Examples: $\\sqrt{-1} = i$, $E = mc^2$, $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$\n3. Ensure all math expressions render clearly and correctly\n4. Keep your responses concise, relevant, and well-formatted.");
             var isInstructionsDialogOpen = UseState(false);
             var instructionsForm = UseState(new InstructionsRequest { Instructions = customInstructions.Value });
-
-            // Validate API key asynchronously
-            async Task ValidateApiKeyAsync(string? key)
-            {
-                if (string.IsNullOrWhiteSpace(key))
-                {
-                    opperClient.Value?.Dispose();
-                    opperClient.Set(default(OpperClient?));
-                    return;
-                }
-
-                isValidating.Set(true);
-                try
-                {
-                    opperClient.Value?.Dispose();
-                    var testClient = new OpperClient(key);
-                    
-                    // Try to make a simple API call to validate the key
-                    await testClient.ListModelsAsync(limit: 1);
-                    
-                    // If successful, set the client and show success toast
-                    opperClient.Set(testClient);
-                    client.Toast("API key validated successfully!", "Success");
-                }
-                catch (Exception ex)
-                {
-                    // If validation fails, show error toast
-                    opperClient.Set(default(OpperClient?));
-                    var errorMessage = ex is OpperException opperEx 
-                        ? $"API key validation error: {opperEx.Message}"
-                        : $"API key validation error: {ex.Message}";
-                    client.Toast(errorMessage, "Error");
-                }
-                finally
-                {
-                    isValidating.Set(false);
-                }
-            }
+            var conversationHistory = UseState<List<string>>(new List<string>());
+            var messages = UseState(ImmutableArray.Create<Ivy.ChatMessage>(
+                new Ivy.ChatMessage(ChatSender.Assistant, "Hello! I'm an AI assistant powered by Opper.ai. How can I help you today?")
+            ));
+            var selectedModel = UseState<string>("aws/claude-3.5-sonnet-eu");
 
             // Create or recreate client when API key changes
             UseEffect(() =>
@@ -115,12 +82,6 @@ namespace OpperaiExample.Apps
                 }
             }, [isInstructionsDialogOpen]);
 
-            var conversationHistory = UseState<List<string>>(new List<string>());
-            
-            var messages = UseState(ImmutableArray.Create<Ivy.ChatMessage>(
-                new Ivy.ChatMessage(ChatSender.Assistant, "Hello! I'm an AI assistant powered by Opper.ai. How can I help you today?")
-            ));
-
             // Reset messages when API key is removed
             UseEffect(() =>
             {
@@ -129,17 +90,49 @@ namespace OpperaiExample.Apps
                     conversationHistory.Set(new List<string>());
                 }
             }, [opperClient]);
+
+            // Constants and computed values
             const string DefaultModel = "aws/claude-3.5-sonnet-eu";
             const string DefaultModelName = "aws/claude-3.5-sonnet-eu";
-            // Check if API key is set
             var hasApiKey = !string.IsNullOrWhiteSpace(apiKey.Value) && opperClient.Value != null;
-            
-            // Extract model name from environment variable or use default
-            var envModel = Environment.GetEnvironmentVariable("OPPER_MODEL");
-            var initialModel = !string.IsNullOrWhiteSpace(envModel) 
-                ? (envModel.Contains('/') ? envModel.Split('/').Last() : envModel)
-                : DefaultModelName;
-            var selectedModel = UseState<string>(DefaultModelName);
+
+            // Validate API key asynchronously
+            async Task ValidateApiKeyAsync(string? key)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    opperClient.Value?.Dispose();
+                    opperClient.Set(default(OpperClient?));
+                    return;
+                }
+
+                isValidating.Set(true);
+                try
+                {
+                    opperClient.Value?.Dispose();
+                    var testClient = new OpperClient(key);
+                    
+                    // Try to make a simple API call to validate the key
+                    await testClient.ListModelsAsync(limit: 1);
+                    
+                    // If successful, set the client and show success toast
+                    opperClient.Set(testClient);
+                    client.Toast("API key validated successfully!", "Success");
+                }
+                catch (Exception ex)
+                {
+                    // If validation fails, show error toast
+                    opperClient.Set(default(OpperClient?));
+                    var errorMessage = ex is OpperException opperEx 
+                        ? $"API key validation error: {opperEx.Message}"
+                        : $"API key validation error: {ex.Message}";
+                    client.Toast(errorMessage, "Error");
+                }
+                finally
+                {
+                    isValidating.Set(false);
+                }
+            }
 
             // Query models asynchronously from API
             async Task<Option<string>[]> QueryModels(string query)
@@ -263,7 +256,9 @@ namespace OpperaiExample.Apps
 
                     history.Add($"Assistant: {response.Message}");
                     conversationHistory.Set(history);
-                    messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, response.Message)));
+                    // Use Text.Markdown to render markdown and LaTeX expressions
+                    var messageContent = Text.Markdown(response.Message);
+                    messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, messageContent)));
                 }
                 catch (OpperException ex)
                 {
@@ -277,31 +272,33 @@ namespace OpperaiExample.Apps
                 }
             }
 
-            // Header card: Title (left) | Model Selection (center)
-            var headerCard =
-            Layout.Vertical()
+            // Header: Title (left) | Model Selection and buttons (right)
+            var header = Layout.Vertical()
                 | (Layout.Horizontal()
+                | (Layout.Horizontal().Align(Align.Left)
                 | (Layout.Vertical()
-                | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
+                    | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
+                | (Layout.Vertical()
+                    | new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fopperai%2Fdevcontainer.json&location=EuropeWest"))
+                    .Width(Size.Fraction(0.3f)))
                 | (Layout.Horizontal().Align(Align.Right)
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
-                        .Disabled(!hasApiKey)
-                    ).Width(Size.Fraction(0.4f))
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | new Button(
-                        "Configuration",
-                        onClick: _ => isInstructionsDialogOpen.Set(true)
-                    ).Secondary().Icon(Icons.FileText).Disabled(!hasApiKey)
-                    ).Width(Size.Fit())
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | new Button(
-                        "API Key",
-                        onClick: _ => isApiKeyDialogOpen.Set(true)
-                    ).Secondary().Icon(Icons.Key)
-                    ).Width(Size.Fit())
-                )
-                );
+                    | (Layout.Vertical().Margin(3, 3, 0, 0)
+                        | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
+                            .Disabled(!hasApiKey)
+                        ).Width(Size.Fraction(0.4f))
+                    | (Layout.Vertical().Margin(3, 3, 0, 0)
+                        | new Button(
+                            "Configuration",
+                            onClick: _ => isInstructionsDialogOpen.Set(true)
+                        ).Secondary().Icon(Icons.FileText).Disabled(!hasApiKey)
+                        ).Width(Size.Fit())
+                    | (Layout.Vertical().Margin(3, 3, 0, 0)
+                        | new Button(
+                            "API Key",
+                            onClick: _ => isApiKeyDialogOpen.Set(true)
+                        ).Secondary().Icon(Icons.Key)
+                        ).Width(Size.Fit())
+                    ));
 
             // Chat area - show instruction if no API key, otherwise show chat
             var chatCard = hasApiKey
@@ -321,11 +318,18 @@ namespace OpperaiExample.Apps
                         | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
                         ).Width(Size.Fit());
 
-            return Layout.Horizontal()
-                    | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
-                        | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Max(Size.Fraction(0.1f)))
-                        | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Full().Max(Size.Fraction(0.9f)))
+            // var body = Layout.Vertical().Gap(2).Align(Align.TopCenter)
+            //     | ;
+
+            return Layout.Vertical()
+                    | new HeaderLayout(
+                        header: header,
+
+                        content:
+                            Layout.Horizontal().Align(Align.TopCenter)
+                            | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Units(173).Max(Size.Full()))
                         )
+
                     | (isApiKeyDialogOpen.Value ? apiKeyForm.ToForm()
                         .Builder(e => e.ApiKey, e => e.ToPasswordInput(placeholder: "Enter your Opper.ai API key..."))
                         .Label(e => e.ApiKey, "Enter your Opper.ai API key:")

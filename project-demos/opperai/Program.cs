@@ -6,9 +6,5 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings()
-    .DefaultApp<OpperaiChatExample>()
-    .UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
 await server.RunAsync();
 
