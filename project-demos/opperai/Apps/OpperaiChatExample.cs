@@ -270,31 +270,29 @@ namespace OpperaiExample.Apps
                 }
             }
 
-            // Header card: Title (left) | Model Selection (center)
-            var headerCard =
-            Layout.Vertical()
+            // Header: Title (left) | Model Selection and buttons (right)
+            var header = Layout.Vertical()
                 | (Layout.Horizontal()
                 | (Layout.Vertical()
-                | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
+                    | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.2f))
                 | (Layout.Horizontal().Align(Align.Right)
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
-                        .Disabled(!hasApiKey)
-                    ).Width(Size.Fraction(0.4f))
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | new Button(
-                        "Configuration",
-                        onClick: _ => isInstructionsDialogOpen.Set(true)
-                    ).Secondary().Icon(Icons.FileText).Disabled(!hasApiKey)
-                    ).Width(Size.Fit())
-                | (Layout.Vertical().Margin(3, 3, 0, 0)
-                    | new Button(
-                        "API Key",
-                        onClick: _ => isApiKeyDialogOpen.Set(true)
-                    ).Secondary().Icon(Icons.Key)
-                    ).Width(Size.Fit())
-                )
-                );
+                    | (Layout.Vertical().Margin(3, 3, 0, 0)
+                        | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
+                            .Disabled(!hasApiKey)
+                        ).Width(Size.Fraction(0.4f))
+                    | (Layout.Vertical().Margin(3, 3, 0, 0)
+                        | new Button(
+                            "Configuration",
+                            onClick: _ => isInstructionsDialogOpen.Set(true)
+                        ).Secondary().Icon(Icons.FileText).Disabled(!hasApiKey)
+                        ).Width(Size.Fit())
+                    | (Layout.Vertical().Margin(3, 3, 0, 0)
+                        | new Button(
+                            "API Key",
+                            onClick: _ => isApiKeyDialogOpen.Set(true)
+                        ).Secondary().Icon(Icons.Key)
+                        ).Width(Size.Fit())
+                    ));
 
             // Chat area - show instruction if no API key, otherwise show chat
             var chatCard = hasApiKey
@@ -314,11 +312,20 @@ namespace OpperaiExample.Apps
                         | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
                         ).Width(Size.Fit());
 
+            // var body = Layout.Vertical().Gap(2).Align(Align.TopCenter)
+            //     | ;
+
             return Layout.Horizontal()
-                    | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
-                        | headerCard.Width(Size.Fraction(0.6f)).Height(Size.Fit().Max(Size.Fraction(0.1f)))
-                        | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Full().Max(Size.Fraction(0.9f)))
+                    | new HeaderLayout(
+                        header:
+                            Layout.Vertical()
+                            | header,
+
+                        content:
+                            Layout.Horizontal().Align(Align.TopCenter).Height(Size.Fraction(0.9f))
+                            | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Units(173).Max(Size.Full()))
                         )
+
                     | (isApiKeyDialogOpen.Value ? apiKeyForm.ToForm()
                         .Builder(e => e.ApiKey, e => e.ToPasswordInput(placeholder: "Enter your Opper.ai API key..."))
                         .Label(e => e.ApiKey, "Enter your Opper.ai API key:")
