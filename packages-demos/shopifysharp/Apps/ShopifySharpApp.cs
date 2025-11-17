@@ -14,6 +14,17 @@ public class ShopifySharpApp : ViewBase
         var sortDirection = this.UseState<string>(() => "ASC");
         var queryFilter = this.UseState<string>(() => "");
 
+        this.UseEffect(async () =>
+        {
+            var productsLoaded = products.Value is not null;
+            if (!productsLoaded || isLoading.Value)
+            {
+                return;
+            }
+
+            await LoadProducts();
+        }, sortKey, sortDirection, queryFilter);
+
         async Task LoadProducts()
         {
             if (string.IsNullOrWhiteSpace(shopDomain.Value) || string.IsNullOrWhiteSpace(accessToken.Value))
@@ -164,17 +175,6 @@ public class ShopifySharpApp : ViewBase
             }
         }
 
-        var productsLoaded = products.Value is not null;
-        this.UseEffect(async () =>
-        {
-            if (!productsLoaded || isLoading.Value)
-            {
-                return;
-            }
-
-            await LoadProducts();
-        }, sortKey, sortDirection, queryFilter);
-
         object productCard(Product p)
         {
             var imageUrl = p.Images?.FirstOrDefault()?.Src ?? "";
@@ -192,7 +192,7 @@ public class ShopifySharpApp : ViewBase
             );
         }
 
-        var searchControlsDisabled = !productsLoaded || isLoading.Value;
+        var searchControlsDisabled = products.Value is null || isLoading.Value;
 
         var header = Layout.Vertical().Gap(3)
             | Text.H3("Shopify Product Explorer")
