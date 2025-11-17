@@ -43,7 +43,19 @@ public class CronosApp : ViewBase
         // Formatting
         var dateFormat = includeSeconds.Value ? "dd.MM.yyyy HH:mm:ss zzz" : "dd.MM.yyyy HH:mm zzz";
         var dateString = nextOccurrence.Value?.ToString(dateFormat) ?? "—";
+        var scheduleOptions = typeof(CronScheduleType).ToOptions();
 
+        // Automatically apply selected schedule
+        UseEffect(() =>
+        {
+            if (selectedSchedule.Value.HasValue)
+            {
+                inputCronExpression.Value = GetCronExpression(selectedSchedule.Value.Value);
+                client.Toast($"Applied: {GetDescription(selectedSchedule.Value.Value)}");
+            }
+        }, selectedSchedule);
+
+        // Try parse cron
         void TryParseCron()
         {
             if (!string.IsNullOrWhiteSpace(inputCronExpression.Value))
@@ -90,18 +102,6 @@ public class CronosApp : ViewBase
                 _ => ""
             };
         }
-
-        var scheduleOptions = typeof(CronScheduleType).ToOptions();
-
-        // Automatically apply selected schedule
-        UseEffect(() =>
-        {
-            if (selectedSchedule.Value.HasValue)
-            {
-                inputCronExpression.Value = GetCronExpression(selectedSchedule.Value.Value);
-                client.Toast($"Applied: {GetDescription(selectedSchedule.Value.Value)}");
-            }
-        }, selectedSchedule);
 
         var userCard = new Card(
             Layout.Vertical(
