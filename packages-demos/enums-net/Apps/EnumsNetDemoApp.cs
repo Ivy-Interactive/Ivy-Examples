@@ -84,6 +84,9 @@ namespace EnumsNetApp.Apps
             var selectedEnumType = UseState<string>(() => "DaysOfWeek");
             var simpleEnumList = UseState<List<EnumMemberInfo>>(() => GetEnumMembers("DaysOfWeek"));
 
+            // Demo selection state
+            var selectedDemo = UseState<string>(() => "");
+
             // Helper function to get enum members
             List<EnumMemberInfo> GetEnumMembers(string enumTypeName)
             {
@@ -135,6 +138,38 @@ namespace EnumsNetApp.Apps
                     client.Error(ex);
                 }
             }, selectedFlagView);
+            
+            // Update demo when selectedDemo changes
+            UseEffect(() =>
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(selectedDemo.Value))
+                    {
+                        validationResult.Set(Text.Muted("Select a demo from the dropdown to see results"));
+                        return;
+                    }
+                    switch (selectedDemo.Value)
+                    {
+                        case "Enumeration":
+                            RunEnumerationDemo();
+                            break;
+                        case "StringFormatting":
+                            RunStringFormattingDemo();
+                            break;
+                        case "FlagOperations":
+                            RunFlagOperationsDemo();
+                            break;
+                        case "Parsing":
+                            RunParsingDemo();
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    client.Error(ex);
+                }
+            }, selectedDemo);
 
             // Helper functions for creating Markdown results
             object CreateHasAllFlagsMarkdown()
@@ -362,41 +397,6 @@ namespace EnumsNetApp.Apps
                         new[] { "HasAllFlags", "HasAnyFlags", "CombineFlags", "CommonFlags", "RemoveFlags", "GetFlags" }.ToOptions()
                     )
                     | flagResult.Value);
-
-            // Demo selection state
-            var selectedDemo = UseState<string>(() => "");
-
-            // Update demo when selectedDemo changes
-            UseEffect(() =>
-            {
-                try
-                {
-                    if (string.IsNullOrEmpty(selectedDemo.Value))
-                    {
-                        validationResult.Set(Text.Muted("Select a demo from the dropdown to see results"));
-                        return;
-                    }
-                    switch (selectedDemo.Value)
-                    {
-                        case "Enumeration":
-                            RunEnumerationDemo();
-                            break;
-                        case "StringFormatting":
-                            RunStringFormattingDemo();
-                            break;
-                        case "FlagOperations":
-                            RunFlagOperationsDemo();
-                            break;
-                        case "Parsing":
-                            RunParsingDemo();
-                            break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    client.Error(ex);
-                }
-            }, selectedDemo);
 
             var validationAndErrorHandling =
                 new Expandable(
