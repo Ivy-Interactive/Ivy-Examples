@@ -321,15 +321,11 @@ namespace OpperaiExample.Apps
             // var body = Layout.Vertical().Gap(2).Align(Align.TopCenter)
             //     | ;
 
-            return Layout.Vertical()
-                    | new HeaderLayout(
-                        header: header,
-
-                        content:
-                            Layout.Horizontal().Align(Align.TopCenter)
-                            | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Units(173).Max(Size.Full()))
+            return Layout.Horizontal()
+                    | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
+                        | header.Width(Size.Fraction(0.6f)).Height(Size.Fit().Max(Size.Fraction(0.1f)))
+                        | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Full().Max(Size.Fraction(0.9f)))
                         )
-
                     | (isApiKeyDialogOpen.Value ? apiKeyForm.ToForm()
                         .Builder(e => e.ApiKey, e => e.ToPasswordInput(placeholder: "Enter your Opper.ai API key..."))
                         .Label(e => e.ApiKey, "Enter your Opper.ai API key:")
