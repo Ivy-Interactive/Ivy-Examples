@@ -29,44 +29,11 @@ namespace OpperaiExample.Apps
             var customInstructions = UseState<string>("You are a helpful AI assistant. Respond to the user's message in a friendly and informative way. Keep your responses concise and relevant.");
             var isInstructionsDialogOpen = UseState(false);
             var instructionsForm = UseState(new InstructionsRequest { Instructions = customInstructions.Value });
-
-            // Validate API key asynchronously
-            async Task ValidateApiKeyAsync(string? key)
-            {
-                if (string.IsNullOrWhiteSpace(key))
-                {
-                    opperClient.Value?.Dispose();
-                    opperClient.Set(default(OpperClient?));
-                    return;
-                }
-
-                isValidating.Set(true);
-                try
-                {
-                    opperClient.Value?.Dispose();
-                    var testClient = new OpperClient(key);
-                    
-                    // Try to make a simple API call to validate the key
-                    await testClient.ListModelsAsync(limit: 1);
-                    
-                    // If successful, set the client and show success toast
-                    opperClient.Set(testClient);
-                    client.Toast("API key validated successfully!", "Success");
-                }
-                catch (Exception ex)
-                {
-                    // If validation fails, show error toast
-                    opperClient.Set(default(OpperClient?));
-                    var errorMessage = ex is OpperException opperEx 
-                        ? $"API key validation error: {opperEx.Message}"
-                        : $"API key validation error: {ex.Message}";
-                    client.Toast(errorMessage, "Error");
-                }
-                finally
-                {
-                    isValidating.Set(false);
-                }
-            }
+            var conversationHistory = UseState<List<string>>(new List<string>());
+            var messages = UseState(ImmutableArray.Create<Ivy.ChatMessage>(
+                new Ivy.ChatMessage(ChatSender.Assistant, "Hello! I'm an AI assistant powered by Opper.ai. How can I help you today?")
+            ));
+            var selectedModel = UseState<string>("aws/claude-3.5-sonnet-eu");
 
             // Create or recreate client when API key changes
             UseEffect(() =>
@@ -115,12 +82,6 @@ namespace OpperaiExample.Apps
                 }
             }, [isInstructionsDialogOpen]);
 
-            var conversationHistory = UseState<List<string>>(new List<string>());
-            
-            var messages = UseState(ImmutableArray.Create<Ivy.ChatMessage>(
-                new Ivy.ChatMessage(ChatSender.Assistant, "Hello! I'm an AI assistant powered by Opper.ai. How can I help you today?")
-            ));
-
             // Reset messages when API key is removed
             UseEffect(() =>
             {
@@ -129,17 +90,49 @@ namespace OpperaiExample.Apps
                     conversationHistory.Set(new List<string>());
                 }
             }, [opperClient]);
+
+            // Constants and computed values
             const string DefaultModel = "aws/claude-3.5-sonnet-eu";
             const string DefaultModelName = "aws/claude-3.5-sonnet-eu";
-            // Check if API key is set
             var hasApiKey = !string.IsNullOrWhiteSpace(apiKey.Value) && opperClient.Value != null;
-            
-            // Extract model name from environment variable or use default
-            var envModel = Environment.GetEnvironmentVariable("OPPER_MODEL");
-            var initialModel = !string.IsNullOrWhiteSpace(envModel) 
-                ? (envModel.Contains('/') ? envModel.Split('/').Last() : envModel)
-                : DefaultModelName;
-            var selectedModel = UseState<string>(DefaultModelName);
+
+            // Validate API key asynchronously
+            async Task ValidateApiKeyAsync(string? key)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    opperClient.Value?.Dispose();
+                    opperClient.Set(default(OpperClient?));
+                    return;
+                }
+
+                isValidating.Set(true);
+                try
+                {
+                    opperClient.Value?.Dispose();
+                    var testClient = new OpperClient(key);
+                    
+                    // Try to make a simple API call to validate the key
+                    await testClient.ListModelsAsync(limit: 1);
+                    
+                    // If successful, set the client and show success toast
+                    opperClient.Set(testClient);
+                    client.Toast("API key validated successfully!", "Success");
+                }
+                catch (Exception ex)
+                {
+                    // If validation fails, show error toast
+                    opperClient.Set(default(OpperClient?));
+                    var errorMessage = ex is OpperException opperEx 
+                        ? $"API key validation error: {opperEx.Message}"
+                        : $"API key validation error: {ex.Message}";
+                    client.Toast(errorMessage, "Error");
+                }
+                finally
+                {
+                    isValidating.Set(false);
+                }
+            }
 
             // Query models asynchronously from API
             async Task<Option<string>[]> QueryModels(string query)
