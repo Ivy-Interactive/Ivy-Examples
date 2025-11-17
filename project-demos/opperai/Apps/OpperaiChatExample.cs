@@ -46,8 +46,8 @@ namespace OpperaiExample.Apps
                 if (isSettingsDialogOpen.Value)
                 {
                     // Update form with current values when dialog opens
-                    settingsForm.Set(new SettingsRequest 
-                    { 
+                    settingsForm.Set(new SettingsRequest
+                    {
                         ApiKey = apiKey.Value ?? string.Empty,
                         Instructions = customInstructions.Value
                     });
@@ -286,6 +286,7 @@ namespace OpperaiExample.Apps
                         Layout.Vertical().Gap(3).Padding(4)
                         | Text.H4("Welcome to OpperAI Chat!")
                         | Text.Muted("To get started, you need an API key from Opper.ai:")
+                        
                         | (Layout.Vertical().Gap(1).Padding(2)
                             | Text.Markdown(@"1. Visit [https://platform.opper.ai](https://platform.opper.ai)
 2. Sign up or log in to your [account](https://platform.opper.ai/settings/details)
@@ -293,7 +294,9 @@ namespace OpperaiExample.Apps
 4. Create a new [API key](https://platform.opper.ai/settings/api-keys/create)
 5. Click the 'API Key' button above to enter your API key"))
                         | Text.Muted("Once you enter your API key, you'll be able to chat with AI models!")
-                        ).Width(Size.Fit());
+                        | new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fopperai%2Fdevcontainer.json&location=EuropeWest").Width(Size.Fraction(0.6f))
+
+                        ).Width(Size.Fraction(0.45f));
 
             // var body = Layout.Vertical().Gap(2).Align(Align.TopCenter)
             //     | ;
