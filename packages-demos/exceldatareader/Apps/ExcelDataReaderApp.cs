@@ -88,6 +88,16 @@ public class ExcelDataReaderApp : ViewBase
             }
         }, [uploadState]);
 
+        // Clear analysis when file is removed
+        UseEffect(() =>
+        {
+            if (filePath.Value == null)
+            {
+                fileAnalysis.Set((FileAnalysis?)null);
+                uploadState.Reset();
+            }
+        }, filePath);
+
         // Manual analysis trigger
         var startAnalysis = () =>
         {
@@ -114,16 +124,6 @@ public class ExcelDataReaderApp : ViewBase
                 });
             }
         };
-
-        // Clear analysis when file is removed
-        UseEffect(() =>
-        {
-            if (filePath.Value == null)
-            {
-                fileAnalysis.Set((FileAnalysis?)null);
-                uploadState.Reset();
-            }
-        }, filePath);
 
         return Layout.Horizontal(
             // Left Card - Functionality and File Input

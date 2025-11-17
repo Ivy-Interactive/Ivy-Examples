@@ -57,6 +57,10 @@ public class CsvHelperApp : ViewBase
             .Accept(".csv")
             .MaxFileSize(10 * 1024 * 1024);
 
+        // State for dialog open/close
+        var product = UseState(() => new ProductModel());
+        var isDialogOpen = UseState(false);
+        
         // When a file is uploaded, parse and import
         UseEffect(() =>
         {
@@ -85,21 +89,6 @@ public class CsvHelperApp : ViewBase
                 }
             }
         }, [uploadState]);
-
-        // Delete action
-        var deleteProduct = new Action<Guid>((id) =>
-        {
-            var product = products.Value.FirstOrDefault(p => p.Id == id);
-            if (product != null)
-            {
-                products.Value = products.Value.Where(p => p.Id != id).ToList();
-                client.Toast($"Product '{product.Name}' deleted");
-            }
-        });
-
-        // State for dialog open/close
-        var product = UseState(() => new ProductModel());
-        var isDialogOpen = UseState(false);
         
         // Handle product submission
         UseEffect(() =>
@@ -117,6 +106,17 @@ public class CsvHelperApp : ViewBase
                 isDialogOpen.Set(false);
             }
         }, [product]);
+
+        // Delete action
+        var deleteProduct = new Action<Guid>((id) =>
+        {
+            var product = products.Value.FirstOrDefault(p => p.Id == id);
+            if (product != null)
+            {
+                products.Value = products.Value.Where(p => p.Id != id).ToList();
+                client.Toast($"Product '{product.Name}' deleted");
+            }
+        });
         
         // Build the table with delete button
         var table = products.Value.Select(p => new

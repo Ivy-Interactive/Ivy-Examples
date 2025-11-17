@@ -18,8 +18,8 @@ public class SimMetricsNetApp : ViewBase
         // Using Bogus to generate a list of random names
         var nameList = UseState(CreateInitialNameList());
 
-        // Define the action to compute the metric calculation based on the input
-        Action computeMetricInput = () =>
+        // Hook to rerender when inputs change
+        UseEffect(() =>
         {
             if (string.IsNullOrWhiteSpace(inputString.Value) || inputMetric.Value is not SimMetricType metricType)
             {
@@ -38,10 +38,7 @@ public class SimMetricsNetApp : ViewBase
                 .ToList();
 
             nameList.Set(results);
-        };
-
-        // Hook to rerender when inputs change
-        UseEffect(computeMetricInput, inputString, inputMetric);
+        }, inputString, inputMetric);
 
         var hasInput = !string.IsNullOrWhiteSpace(inputString.Value);
         var hasMetric = inputMetric.Value is SimMetricType;
