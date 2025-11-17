@@ -2,10 +2,10 @@ using Ivy;
 using Ivy.Shared;      // for Colors.*
 using Cysharp.Text;
 
-namespace IvyExamples.ZStringDemo.Apps;
+namespace ZStringExample;
 
 [App(icon: Icons.PartyPopper, title: "ZString Demo")]
-public class HelloApp : ViewBase
+public class ZStringApp : ViewBase
 {
     public override object Build()
     {
