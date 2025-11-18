@@ -44,9 +44,21 @@ public class SlugApp : ViewBase
                 // Update state
                 slugState.Set(slug);
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
                 errorState.Set($"Error: {ex.Message}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                errorState.Set($"Error: {ex.Message}");
+            }
+            catch (Exception ex) when (
+                ex is not OutOfMemoryException &&
+                ex is not StackOverflowException &&
+                ex is not ThreadAbortException
+            )
+            {
+                errorState.Set($"Unexpected error: {ex.Message}");
             }
         };
 
