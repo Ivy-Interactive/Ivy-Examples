@@ -1,7 +1,7 @@
 # Slugify Slug Generator App
 
-<img width="1184" height="724" alt="Screenshot 2025-11-18 at 14 16 20" src="https://github.com/user-attachments/assets/211f9d9f-5159-42c6-ad08-c8e7c4acbe03" />
-<img width="1180" height="724" alt="Screenshot 2025-11-18 at 14 16 35" src="https://github.com/user-attachments/assets/af9e160b-6e9a-42d6-9d30-d42628bcf570" />
+<img width="1430" height="752" alt="Screenshot 2025-11-18 at 15 07 08" src="https://github.com/user-attachments/assets/40cba7dd-79d1-4259-922b-fa5c28575f85" />
+
 
 ## One-Click Development Environment
 
