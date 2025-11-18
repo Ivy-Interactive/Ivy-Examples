@@ -73,7 +73,7 @@ Deploy this example to Ivy's hosting platform:
    ```bash
    ivy deploy
    ```
-This will deploy your HTML parser application with a single command.
+This will deploy your Slug Generator application with a single command.
 
 ## Learn More
 
