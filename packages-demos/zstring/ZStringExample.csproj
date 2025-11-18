@@ -5,16 +5,19 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>IvyExamples.ZStringDemo</AssemblyName>
-    <RootNamespace>IvyExamples.ZStringDemo</RootNamespace>
+    <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
+    <RootNamespace>ZStringExample</RootNamespace>
   </PropertyGroup>
+  
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
+  
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.113" />
+    <PackageReference Include="Ivy" Version="1.*" />
     <PackageReference Include="ZString" Version="2.6.0" />
   </ItemGroup>
+  
   <ItemGroup>
     <Folder Include="Apps" />
     <Folder Include="Connections" />

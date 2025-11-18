@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["Zstring.csproj", "./"]
-RUN dotnet restore "Zstring.csproj"
+COPY ["ZStringExample.csproj", "./"]
+RUN dotnet restore "ZStringExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "Zstring.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "ZStringExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Zstring.csproj" -c $BUILD_CONFIGURATION -o /app/publish
+RUN dotnet publish "ZStringExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./Zstring.dll"]
+ENTRYPOINT ["dotnet","./ZStringExample.dll"]
