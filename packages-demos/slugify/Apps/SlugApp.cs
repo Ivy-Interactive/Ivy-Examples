@@ -32,7 +32,8 @@ public class SlugApp : ViewBase
                 {
                     ForceLowerCase = ToBool(lowerCaseState.Value),
                     TrimWhitespace = ToBool(trimWhitespaceState.Value),
-                    CollapseDashes = ToBool(collapseDashesState.Value)
+                    CollapseDashes = ToBool(collapseDashesState.Value),
+                    CollapseWhitespace = ToBool(collapseWhitespaceState.Value)
                 };
 
                 // Create SlugHelper instance with the configuration
