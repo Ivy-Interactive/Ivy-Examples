@@ -12,12 +12,19 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy project file and restore dependencies
+# Copy only the project file(s) first
 COPY ["Slugify.csproj", "./"]
-RUN dotnet restore "Slugify.csproj"
 
-# Copy everything else and build
+# ----------------------------
+# Pre-fetch NuGet packages
+# ----------------------------
+# This step downloads all packages used by the project and caches them in a layer
+RUN dotnet restore "Slugify.csproj" --disable-parallel --no-cache
+
+# Copy the rest of the source code
 COPY . .
+
+# Build the project
 RUN dotnet build "Slugify.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # ----------------------------

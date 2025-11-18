@@ -82,7 +82,7 @@ public class SlugApp : ViewBase
 
             // BOTTOM PANEL
             new Card(
-                Layout.Vertical().Gap(3)
+                Layout.Vertical().Gap(4)
                     | Text.H2("Result")
                     | (string.IsNullOrEmpty(slugState.Value)
                         ? Text.Muted("Slug will appear here…")
