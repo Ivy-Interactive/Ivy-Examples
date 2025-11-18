@@ -35,7 +35,7 @@ public class SlugApp : ViewBase
                     CollapseDashes = ToBool(collapseDashesState.Value)
                 };
 
-                // Create  SlugHelper instance with the configuration
+                // Create SlugHelper instance with the configuration
                 var slugifier = new SlugHelper(config);
                 
                 var slug = slugifier.GenerateSlug(inputState.Value ?? "");
