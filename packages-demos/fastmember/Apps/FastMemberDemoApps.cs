@@ -113,14 +113,17 @@ foreach (var product in products)
             }
         }, selectedDemo);
 
-        return Layout.Vertical().Gap(4)
+        return Layout.Vertical().Gap(4).Padding(4)
             | Text.H1("FastMember")
             | Text.Muted("FastMember is a library for fast access to .NET type fields and properties when member names are known only at runtime. It uses IL code generation for maximum performance.")
             | Layout.Tabs(
                 new Tab("Data", BuildDataTab()),
                 new Tab("Demonstrations", BuildDemosTab(selectedDemo, resultState)),
                 new Tab("Performance", BuildBenchmarkTab(results => benchmarkResult.Set(results), benchmarkResult, RunPerformanceBenchmark))
-            ).Variant(TabsVariant.Tabs);
+            ).Variant(TabsVariant.Tabs)
+            | Text.Small("This demo uses FastMember library for accessing properties of objects at runtime.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FastMember](https://github.com/mgravell/fast-member)")
+            ;
     }
 
     // ========== DEMONSTRATIONS ==========
