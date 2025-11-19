@@ -1,4 +1,4 @@
-namespace QuestPdfDemo.Models;
+namespace QuestPdfExample.Models;
 
 public class PdfSettings
 {

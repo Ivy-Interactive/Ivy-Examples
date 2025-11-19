@@ -1,4 +1,4 @@
-using QuestPdfDemo.Apps;
+using QuestPdfExample;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 // Set QuestPDF license for non-production/community usage

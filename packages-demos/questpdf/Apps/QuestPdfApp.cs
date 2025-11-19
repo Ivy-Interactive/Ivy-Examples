@@ -1,9 +1,6 @@
-using QuestPdfDemo.Models;
-using QuestPdfDemo.Services;
+namespace QuestPdfExample;
 
-namespace QuestPdfDemo.Apps;
-
-[App(icon: Icons.FileDown, title: "QuestPDF", path: ["Apps"])]
+[App(icon: Icons.FileDown, title: "QuestPDF")]
 public class QuestPdfApp : ViewBase
 {
   private readonly PdfGenerationService _pdfService;

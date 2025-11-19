@@ -1,8 +1,4 @@
-using QuestPdfDemo.Models;
-using QuestPDF.Fluent;
-using QuestPDF.Infrastructure;
-
-namespace QuestPdfDemo.Services;
+namespace QuestPdfExample.Services;
 
 public class PdfGenerationService
 {

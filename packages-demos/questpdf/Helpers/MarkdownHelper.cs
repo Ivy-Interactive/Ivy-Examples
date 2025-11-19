@@ -1,4 +1,4 @@
-namespace QuestPdfDemo.Helpers;
+namespace QuestPdfExample.Helpers;
 
 public static class MarkdownHelper
 {
