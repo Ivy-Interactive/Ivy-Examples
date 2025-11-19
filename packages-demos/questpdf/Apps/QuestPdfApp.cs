@@ -13,7 +13,7 @@ public class QuestPdfApp : ViewBase
   public override object? Build()
   {
     var title = UseState("Resume");
-    var body = UseState(LoadEmbedded("Assets.Resume.md"));
+    var body = UseState(() => LoadEmbedded("Assets.Resume.md"));
     var pageSize = UseState("A4");
     var landscape = UseState(false);
     var margins = UseState(30);
@@ -124,7 +124,7 @@ public class QuestPdfApp : ViewBase
   {
     try
     {
-      using var s = typeof(QuestPdfApp).Assembly.GetManifestResourceStream("QuestPdfDemo." + name);
+      using var s = typeof(QuestPdfApp).Assembly.GetManifestResourceStream("QuestPdfExample." + name);
       if (s == null) return string.Empty;
       using var sr = new StreamReader(s);
       return sr.ReadToEnd();
