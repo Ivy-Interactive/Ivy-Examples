@@ -46,19 +46,134 @@ public class FastMemberDemoApp : ViewBase
 
     public override object? Build()
     {
+        // All hooks must be called at the top level, in the same order every time
         var benchmarkResult = this.UseState<BenchmarkResults?>(() => null);
+        var selectedDemo = this.UseState<string?>(() => null);
+        var resultState = this.UseState<string?>(() => null);
 
         // Handler for benchmark
         void ShowBenchmark(BenchmarkResults? results) => benchmarkResult.Set(results);
 
+        // ========== DEMONSTRATIONS SETUP ==========
+        var demonstrations = new Dictionary<string, (string code, string description, Func<string> execute)>
+        {
+            ["TypeAccessor"] = (
+                @"var accessor = TypeAccessor.Create(typeof(ProductModel));
+var product = new ProductModel(""Laptop"", ""High-performance laptop"", 999.99m, ""Electronics"", 15);
+
+// Get property value by name
+var price = accessor[product, ""Price""];
+
+// Set property value by name
+accessor[product, ""Price""] = 899.99m;
+
+// Get all members
+var members = accessor.GetMembers();",
+                "TypeAccessor allows getting and setting property values by name (known only at runtime)",
+                DemoTypeAccessor
+            ),
+            ["ObjectAccessor"] = (
+                @"var product = new ProductModel(""Laptop"", ""High-performance laptop"", 999.99m, ""Electronics"", 15);
+var wrapped = ObjectAccessor.Create(product);
+
+// Get property value
+string propName = ""Price""; // known only at runtime
+var price = wrapped[propName];
+
+// Set property value
+wrapped[propName] = 899.99m;
+wrapped[""Stock""] = 20;",
+                "ObjectAccessor works with a specific object instance (can be static or DLR)",
+                DemoObjectAccessor
+            ),
+            ["ObjectReader"] = (
+                @"IEnumerable<ProductModel> data = SampleProducts;
+
+// Create ObjectReader with specific properties
+using(var reader = ObjectReader.Create(data, ""Name"", ""Price"", ""Category"", ""Stock""))
+{
+    // Use as IDataReader
+    while (reader.Read())
+    {
+        var name = reader[0];
+        var price = reader[1];
+        var category = reader[2];
+        var stock = reader[3];
+    }
+    
+    // Can be used with DataTable.Load() or SqlBulkCopy
+    // table.Load(reader);
+}",
+                "ObjectReader implements IDataReader for efficient reading of object sequences",
+                DemoObjectReader
+            ),
+            ["Dynamic Objects"] = (
+                @"var product = new ProductModel(""Laptop"", ""High-performance laptop"", 999.99m, ""Electronics"", 15);
+
+// Create dynamic object
+dynamic dynamicProduct = new ExpandoObject();
+var dynamicAccessor = ObjectAccessor.Create(dynamicProduct);
+var sourceAccessor = ObjectAccessor.Create(product);
+
+// Copy properties to dynamic object
+foreach (var propName in new[] { ""Name"", ""Price"", ""Category"" })
+{
+    dynamicAccessor[propName] = sourceAccessor[propName];
+}
+
+// Now you can use dynamicProduct.Name, dynamicProduct.Price, etc.",
+                "FastMember works with dynamic objects (ExpandoObject, DLR types)",
+                DemoDynamicObjects
+            ),
+            ["Bulk Operations"] = (
+                @"var products = SampleProducts;
+var accessor = TypeAccessor.Create(typeof(ProductModel));
+
+// Process multiple objects efficiently
+foreach (var product in products)
+{
+    var name = accessor[product, ""Name""];
+    var price = accessor[product, ""Price""];
+    var category = accessor[product, ""Category""];
+    var stock = accessor[product, ""Stock""];
+    
+    // Perform operations...
+}",
+                "Bulk operations on objects using TypeAccessor for high-performance processing",
+                DemoBulkOperations
+            )
+        };
+
+        // Effect hook must be called at top level
+        UseEffect(() =>
+        {
+            if (selectedDemo.Value != null && demonstrations.TryGetValue(selectedDemo.Value, out var demo))
+            {
+                try
+                {
+                    var result = demo.execute();
+                    resultState.Set(result);
+                }
+                catch (Exception ex)
+                {
+                    var error = JsonSerializer.Serialize(new { Error = ex.Message }, JsonOptions);
+                    resultState.Set(error);
+                }
+            }
+            else
+            {
+                resultState.Set((string?)null);
+            }
+        }, selectedDemo);
+
         // ========== UI ==========
 
-        var demosTabContent = BuildDemosTab();
+        var demosTabContent = BuildDemosTab(selectedDemo, resultState, demonstrations);
         var benchmarkTabContent = BuildBenchmarkTab(ShowBenchmark, benchmarkResult, RunPerformanceBenchmark);
         var dataTabContent = BuildDataTab();
 
         return Layout.Vertical().Gap(4)
-            | Text.H1("FastMember - Fast Access to .NET Members")
+            | Text.H1("FastMember")
             | Text.Muted("FastMember is a library for fast access to .NET type fields and properties when member names are known only at runtime. It uses IL code generation for maximum performance.")
             | Layout.Tabs(
                 new Tab("Data", dataTabContent),
@@ -393,126 +508,16 @@ public class FastMemberDemoApp : ViewBase
         );
     }
 
-    private object BuildDemosTab()
+    private static object BuildDemosTab(
+        IState<string?> selectedDemo,
+        IState<string?> resultState,
+        Dictionary<string, (string code, string description, Func<string> execute)> demonstrations)
     {
-        var selectedDemo = this.UseState<string?>(() => null);
-        var resultState = this.UseState<string?>(() => null);
-
-        var demonstrations = new Dictionary<string, (string code, string description, Func<string> execute)>
-        {
-            ["TypeAccessor"] = (
-                @"var accessor = TypeAccessor.Create(typeof(ProductModel));
-var product = new ProductModel(""Laptop"", ""High-performance laptop"", 999.99m, ""Electronics"", 15);
-
-// Get property value by name
-var price = accessor[product, ""Price""];
-
-// Set property value by name
-accessor[product, ""Price""] = 899.99m;
-
-// Get all members
-var members = accessor.GetMembers();",
-                "TypeAccessor allows getting and setting property values by name (known only at runtime)",
-                DemoTypeAccessor
-            ),
-            ["ObjectAccessor"] = (
-                @"var product = new ProductModel(""Laptop"", ""High-performance laptop"", 999.99m, ""Electronics"", 15);
-var wrapped = ObjectAccessor.Create(product);
-
-// Get property value
-string propName = ""Price""; // known only at runtime
-var price = wrapped[propName];
-
-// Set property value
-wrapped[propName] = 899.99m;
-wrapped[""Stock""] = 20;",
-                "ObjectAccessor works with a specific object instance (can be static or DLR)",
-                DemoObjectAccessor
-            ),
-            ["ObjectReader"] = (
-                @"IEnumerable<ProductModel> data = SampleProducts;
-
-// Create ObjectReader with specific properties
-using(var reader = ObjectReader.Create(data, ""Name"", ""Price"", ""Category"", ""Stock""))
-{
-    // Use as IDataReader
-    while (reader.Read())
-    {
-        var name = reader[0];
-        var price = reader[1];
-        var category = reader[2];
-        var stock = reader[3];
-    }
-    
-    // Can be used with DataTable.Load() or SqlBulkCopy
-    // table.Load(reader);
-}",
-                "ObjectReader implements IDataReader for efficient reading of object sequences",
-                DemoObjectReader
-            ),
-            ["Dynamic Objects"] = (
-                @"var product = new ProductModel(""Laptop"", ""High-performance laptop"", 999.99m, ""Electronics"", 15);
-
-// Create dynamic object
-dynamic dynamicProduct = new ExpandoObject();
-var dynamicAccessor = ObjectAccessor.Create(dynamicProduct);
-var sourceAccessor = ObjectAccessor.Create(product);
-
-// Copy properties to dynamic object
-foreach (var propName in new[] { ""Name"", ""Price"", ""Category"" })
-{
-    dynamicAccessor[propName] = sourceAccessor[propName];
-}
-
-// Now you can use dynamicProduct.Name, dynamicProduct.Price, etc.",
-                "FastMember works with dynamic objects (ExpandoObject, DLR types)",
-                DemoDynamicObjects
-            ),
-            ["Bulk Operations"] = (
-                @"var products = SampleProducts;
-var accessor = TypeAccessor.Create(typeof(ProductModel));
-
-// Process multiple objects efficiently
-foreach (var product in products)
-{
-    var name = accessor[product, ""Name""];
-    var price = accessor[product, ""Price""];
-    var category = accessor[product, ""Category""];
-    var stock = accessor[product, ""Stock""];
-    
-    // Perform operations...
-}",
-                "Bulk operations on objects using TypeAccessor for high-performance processing",
-                DemoBulkOperations
-            )
-        };
-
-        UseEffect(() =>
-        {
-            if (selectedDemo.Value != null && demonstrations.TryGetValue(selectedDemo.Value, out var demo))
-            {
-                try
-                {
-                    var result = demo.execute();
-                    resultState.Set(result);
-                }
-                catch (Exception ex)
-                {
-                    var error = JsonSerializer.Serialize(new { Error = ex.Message }, JsonOptions);
-                    resultState.Set(error);
-                }
-            }
-            else
-            {
-                resultState.Set((string?)null);
-            }
-        }, selectedDemo);
-
         var demoOptions = demonstrations.Keys
             .Select(key => new Option<string>(key, key))
             .ToArray();
 
-        var leftCard = new Card(
+        var selectionCard = new Card(
             Layout.Vertical().Gap(3)
                 | Text.H3("Select Demonstration")
                 | Text.Muted("Choose a FastMember feature to see example code and execution result")
@@ -522,31 +527,41 @@ foreach (var product in products)
                     .WithField()
                     .Label("Select Demonstration")
                 | (selectedDemo.Value != null && demonstrations.TryGetValue(selectedDemo.Value, out var demoInfo)
-                    ? Layout.Vertical().Gap(3)
-                        | Text.Muted(demoInfo.description)
-                        | Text.Label("Example Code")
-                        | new Code(demoInfo.code, Languages.Csharp)
-                            .ShowLineNumbers()
-                            .ShowCopyButton()
+                    ? Text.Muted(demoInfo.description)
                     : Text.Muted("Please select a demonstration from the dropdown above"))
+        );
+
+        if (selectedDemo.Value == null || !demonstrations.TryGetValue(selectedDemo.Value, out var selectedDemoData))
+        {
+            return selectionCard;
+        }
+
+        // After selection: two horizontal cards with code and result
+        var codeCard = new Card(
+            Layout.Vertical().Gap(3)
+                | Text.H3("Example Code")
+                | Text.Muted("View the example code for the selected demonstration")
+                | new Code(selectedDemoData.code, Languages.Csharp)
+                    .ShowLineNumbers()
+                    .ShowCopyButton()
         ).Width(Size.Fraction(0.5f));
 
-        var rightCard = new Card(
+        var resultCard = new Card(
             Layout.Vertical().Gap(3)
                 | Text.H3("Result")
                 | Text.Muted("View the execution result")
-                | (selectedDemo.Value != null && resultState.Value != null
+                | (resultState.Value != null
                     ? new Code(resultState.Value, Languages.Json)
                         .ShowLineNumbers()
                         .ShowCopyButton()
-                    : selectedDemo.Value != null
-                        ? Text.Muted("Computing...")
-                        : Text.Muted("Select a demonstration from the left to see the result here"))
+                    : Text.Muted("Computing..."))
         ).Width(Size.Fraction(0.5f));
 
-        return Layout.Horizontal().Gap(4)
-            | leftCard
-            | rightCard;
+        return Layout.Vertical().Gap(4)
+            | selectionCard
+            | (Layout.Horizontal().Gap(4)
+                | codeCard
+                | resultCard);
     }
 
     private static object BuildBenchmarkTab(Action<BenchmarkResults?> showBenchmark, IState<BenchmarkResults?> benchmarkResultState, Func<BenchmarkResults?> runBenchmark)
@@ -568,14 +583,14 @@ foreach (var product in products)
         var getPropertyCard = new Card(
             Layout.Vertical().Gap(3)
                 | Text.H3("Get Property")
-                | Text.Muted($"Performance comparison for reading property values ({results.Iterations:N0} iterations)")
+                | Text.Muted($"Performance comparison for reading property values")
                 | results.GetProperty.ToDetails()
         ).Width(Size.Fraction(0.5f));
 
         var setPropertyCard = new Card(
             Layout.Vertical().Gap(3)
                 | Text.H3("Set Property")
-                | Text.Muted($"Performance comparison for setting property values ({results.Iterations:N0} iterations)")
+                | Text.Muted($"Performance comparison for setting property values")
                 | results.SetProperty.ToDetails()
         ).Width(Size.Fraction(0.5f));
 
@@ -597,7 +612,7 @@ foreach (var product in products)
             | new Card(
                 Layout.Vertical().Gap(3)
                 | Text.H2("Test Data")
-                | Text.Muted("View the test data in a table")
+                | Text.Muted("Sample product data used in demonstrations and benchmarks. This data represents the ProductModel objects that FastMember operations are performed on.")
                 | BuildProductTable(SampleProducts)
                 | Text.Muted($"Total products: {SampleProducts.Count}"));
     }
