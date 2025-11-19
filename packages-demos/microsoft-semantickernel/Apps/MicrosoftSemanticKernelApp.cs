@@ -3,7 +3,6 @@
 using Ivy;
 using Ivy.Core.Hooks;
 using Microsoft.SemanticKernel;
-using System.Net;
 
 namespace MicrosoftSemanticKernelDemo.Apps;
 
@@ -13,10 +12,14 @@ public class MicrosoftSemanticKernelApp : ViewBase
 
     public override object? Build()
     {
-        //initialize Open Ai
-        //***  REPLACE API_KEY WITH YOUR OPENAI APIKEY  ***
+        // Get API key from environment variable
+        // Set it using: $env:APIKEY = "your-api-key-here" (PowerShell)
+        var apiKey = Environment.GetEnvironmentVariable("APIKEY")
+            ?? throw new InvalidOperationException("APIKEY environment variable is not configured. Please set $env:APIKEY with your OpenAI API key.");
+
+        // Initialize OpenAI kernel
         var kernel = Kernel.CreateBuilder()
-            .AddOpenAIChatCompletion("gpt-4o-mini", "API_KEY")
+            .AddOpenAIChatCompletion("gpt-4o-mini", apiKey)
             .Build();
 
         // Create the function for extracting an action list from meeting notes
@@ -48,5 +51,4 @@ public class MicrosoftSemanticKernelApp : ViewBase
                     | (isLoading.Value ? "Loading..." : tasks.Value)
             ).Title("Result").Width(1 / 2f);
     }
-
 }

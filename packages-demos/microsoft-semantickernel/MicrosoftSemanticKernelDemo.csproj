@@ -18,8 +18,8 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.0.113" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.65.0" />
+    <PackageReference Include="Ivy" Version="1.*" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.66.0" />
   </ItemGroup>
 
 </Project>
