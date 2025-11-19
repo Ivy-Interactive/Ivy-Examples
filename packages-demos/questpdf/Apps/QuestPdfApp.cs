@@ -80,20 +80,20 @@ public class QuestPdfApp : ViewBase
           | title.ToInput(placeholder: "Title")
             | (
               Layout.Horizontal().Gap(3)
-              | new Button($"Page: {pageSize.Value}").Outline().Width(30).Icon(Icons.ChevronDown).WithDropDown(
+              | new Button($"Page: {pageSize.Value}").Outline().Icon(Icons.ChevronDown).WithDropDown(
                     MenuItem.Default("A4").HandleSelect(() => pageSize.Value = "A4"),
                     MenuItem.Default("Letter").HandleSelect(() => pageSize.Value = "Letter")
                 )
-              | new Button(landscape.Value ? "Landscape" : "Portrait").Outline().Width(30).Icon(Icons.ChevronDown).WithDropDown(
+              | new Button(landscape.Value ? "Landscape" : "Portrait").Outline().Icon(Icons.ChevronDown).WithDropDown(
                     MenuItem.Default("Portrait").HandleSelect(() => landscape.Value = false),
                     MenuItem.Default("Landscape").HandleSelect(() => landscape.Value = true)
                 )
-              | new Button($"Margins: {margins.Value}").Outline().Width(35).Icon(Icons.ChevronDown).WithDropDown(
+              | new Button($"Margins: {margins.Value}").Outline().Icon(Icons.ChevronDown).WithDropDown(
                     MenuItem.Default("15").HandleSelect(() => margins.Value = 15),
                     MenuItem.Default("30").HandleSelect(() => margins.Value = 30),
                     MenuItem.Default("50").HandleSelect(() => margins.Value = 50)
                 )
-              | new Button($"Type: {insertType.Value}").Outline().Width(45).Icon(Icons.ChevronDown).WithDropDown(
+              | new Button($"Type: {insertType.Value}").Outline().Icon(Icons.ChevronDown).WithDropDown(
                     MenuItem.Default("Heading 1").HandleSelect(() => { insertType.Value = "Heading 1"; InsertSnippetByType("Heading 1"); }),
                     MenuItem.Default("Heading 2").HandleSelect(() => { insertType.Value = "Heading 2"; InsertSnippetByType("Heading 2"); }),
                     MenuItem.Default("Heading 3").HandleSelect(() => { insertType.Value = "Heading 3"; InsertSnippetByType("Heading 3"); }),
