@@ -1,13 +1,7 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
-using System.Dynamic;
-using System.Reflection;
-using System.Text.Json;
-
-namespace FastMemberDemo.Apps;
+﻿namespace FastMemberExample;
 
 [App(icon: Icons.Zap, title: "FastMember")]
-public class FastMemberDemoApp : ViewBase
+public class FastMemberApp : ViewBase
 {
     // Data model for demonstration
     public record ProductModel(string Name, string Description, decimal Price, string Category, int Stock);
