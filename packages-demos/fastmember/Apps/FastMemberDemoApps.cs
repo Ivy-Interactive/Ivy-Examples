@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
@@ -10,6 +11,16 @@ public class FastMemberDemoApp : ViewBase
 {
     // Data model for demonstration
     public record ProductModel(string Name, string Description, decimal Price, string Category, int Stock);
+
+    // Mutable class for benchmark Set operations
+    public class MutableProduct
+    {
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Category { get; set; } = "";
+        public int Stock { get; set; }
+    }
 
     // Cache TypeAccessor - it's thread-safe and can be reused
     private static readonly TypeAccessor ProductTypeAccessor = TypeAccessor.Create(typeof(ProductModel));
@@ -35,15 +46,15 @@ public class FastMemberDemoApp : ViewBase
 
     public override object? Build()
     {
-        var benchmarkResult = this.UseState<string>("");
+        var benchmarkResult = this.UseState<BenchmarkResults?>(() => null);
 
         // Handler for benchmark
-        void ShowBenchmark(string json) => benchmarkResult.Set(json);
+        void ShowBenchmark(BenchmarkResults? results) => benchmarkResult.Set(results);
 
         // ========== UI ==========
 
         var demosTabContent = BuildDemosTab();
-        var benchmarkTabContent = BuildBenchmarkTab(ShowBenchmark, (IState<string>)benchmarkResult, RunPerformanceBenchmark);
+        var benchmarkTabContent = BuildBenchmarkTab(ShowBenchmark, benchmarkResult, RunPerformanceBenchmark);
         var dataTabContent = BuildDataTab();
 
         return Layout.Vertical().Gap(4)
@@ -197,106 +208,189 @@ public class FastMemberDemoApp : ViewBase
 
     // ========== BENCHMARKS ==========
 
-    private string RunPerformanceBenchmark()
+    private record BenchmarkResults(
+        int Iterations,
+        GetPropertyResult GetProperty,
+        SetPropertyResult SetProperty
+    );
+
+    private record GetPropertyResult(
+        string FastMemberTypeAccessor,
+        string FastMemberObjectAccessor,
+        string DynamicCSharp,
+        string ReflectionPropertyInfo,
+        string PropertyDescriptor,
+        string FastMemberVsReflection,
+        string FastMemberVsPropertyDescriptor
+    );
+
+    private record SetPropertyResult(
+        string FastMemberTypeAccessor,
+        string FastMemberObjectAccessor,
+        string DynamicCSharp,
+        string ReflectionPropertyInfo,
+        string PropertyDescriptor,
+        string FastMemberVsReflection,
+        string FastMemberVsPropertyDescriptor
+    );
+
+    private BenchmarkResults? RunPerformanceBenchmark()
     {
         const int iterations = 100_000;
         var testProduct = SampleProducts[0];
+        var mutableProduct = new MutableProduct
+        {
+            Name = testProduct.Name,
+            Description = testProduct.Description,
+            Price = testProduct.Price,
+            Category = testProduct.Category,
+            Stock = testProduct.Stock
+        };
         var propertyName = "Price";
         var newValue = 799.99m;
 
-        // Benchmark 1: TypeAccessor vs Reflection (Get)
+        // ========== GET PROPERTY BENCHMARKS ==========
+
+        // 1. Static C# (baseline - fastest)
         var sw1 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            var value = testProduct.Price;
+        }
+        sw1.Stop();
+        var staticGetTime = sw1.ElapsedMilliseconds;
+
+        // 2. FastMember TypeAccessor
+        var sw2 = Stopwatch.StartNew();
         for (int i = 0; i < iterations; i++)
         {
             var value = ProductTypeAccessor[testProduct, propertyName];
         }
-        sw1.Stop();
-        var fastMemberGetTime = sw1.ElapsedMilliseconds;
+        sw2.Stop();
+        var fastMemberTypeAccessorGetTime = sw2.ElapsedMilliseconds;
 
-        var sw2 = Stopwatch.StartNew();
+        // 3. FastMember ObjectAccessor
+        var sw3 = Stopwatch.StartNew();
+        var objectAccessor = ObjectAccessor.Create(testProduct);
+        for (int i = 0; i < iterations; i++)
+        {
+            var value = objectAccessor[propertyName];
+        }
+        sw3.Stop();
+        var fastMemberObjectAccessorGetTime = sw3.ElapsedMilliseconds;
+
+        // 4. Dynamic C#
+        dynamic dynamicProduct = testProduct;
+        var sw4 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            var value = dynamicProduct.Price;
+        }
+        sw4.Stop();
+        var dynamicGetTime = sw4.ElapsedMilliseconds;
+
+        // 5. Reflection PropertyInfo
         var propInfo = typeof(ProductModel).GetProperty(propertyName)!;
+        var sw5 = Stopwatch.StartNew();
         for (int i = 0; i < iterations; i++)
         {
             var value = propInfo.GetValue(testProduct);
         }
-        sw2.Stop();
-        var reflectionGetTime = sw2.ElapsedMilliseconds;
-
-        // Benchmark 2: TypeAccessor vs Reflection (Set)
-        var sw3 = Stopwatch.StartNew();
-        for (int i = 0; i < iterations; i++)
-        {
-            ProductTypeAccessor[testProduct, propertyName] = newValue;
-        }
-        sw3.Stop();
-        var fastMemberSetTime = sw3.ElapsedMilliseconds;
-
-        var sw4 = Stopwatch.StartNew();
-        for (int i = 0; i < iterations; i++)
-        {
-            propInfo.SetValue(testProduct, newValue);
-        }
-        sw4.Stop();
-        var reflectionSetTime = sw4.ElapsedMilliseconds;
-
-        // Benchmark 3: ObjectReader vs Manual iteration
-        var sw5 = Stopwatch.StartNew();
-        for (int i = 0; i < 1000; i++)
-        {
-            using var reader = ObjectReader.Create(SampleProducts, ProductPropertyNames);
-            while (reader.Read())
-            {
-                var _ = reader[0];
-            }
-        }
         sw5.Stop();
-        var objectReaderTime = sw5.ElapsedMilliseconds;
+        var reflectionGetTime = sw5.ElapsedMilliseconds;
 
+        // 6. PropertyDescriptor (System.ComponentModel)
+        var propDescriptor = TypeDescriptor.GetProperties(testProduct)[propertyName]!;
         var sw6 = Stopwatch.StartNew();
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < iterations; i++)
         {
-            foreach (var product in SampleProducts)
-            {
-                var _ = product.Name;
-            }
+            var value = propDescriptor.GetValue(testProduct);
         }
         sw6.Stop();
-        var manualIterationTime = sw6.ElapsedMilliseconds;
+        var propertyDescriptorGetTime = sw6.ElapsedMilliseconds;
 
-        var benchmark = new
+        // ========== SET PROPERTY BENCHMARKS ==========
+
+        // 1. Static C# (baseline - fastest) - using mutable class
+        var sw7 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
         {
-            Description = $"Performance comparison: FastMember vs Reflection ({iterations:N0} iterations)",
-            Results = new
-            {
-                GetProperty = new
-                {
-                    FastMember = $"{fastMemberGetTime} ms",
-                    Reflection = $"{reflectionGetTime} ms",
-                    Speedup = $"{reflectionGetTime / (double)fastMemberGetTime:F2}x faster",
-                    FastMemberMs = fastMemberGetTime,
-                    ReflectionMs = reflectionGetTime
-                },
-                SetProperty = new
-                {
-                    FastMember = $"{fastMemberSetTime} ms",
-                    Reflection = $"{reflectionSetTime} ms",
-                    Speedup = $"{reflectionSetTime / (double)fastMemberSetTime:F2}x faster",
-                    FastMemberMs = fastMemberSetTime,
-                    ReflectionMs = reflectionSetTime
-                },
-                BulkRead = new
-                {
-                    ObjectReader = $"{objectReaderTime} ms",
-                    ManualIteration = $"{manualIterationTime} ms",
-                    Speedup = $"{manualIterationTime / (double)objectReaderTime:F2}x faster",
-                    ObjectReaderMs = objectReaderTime,
-                    ManualMs = manualIterationTime
-                }
-            },
-            Conclusion = "FastMember is significantly faster than standard Reflection, especially with repeated usage"
-        };
+            mutableProduct.Price = newValue;
+        }
+        sw7.Stop();
+        var staticSetTime = sw7.ElapsedMilliseconds;
 
-        return JsonSerializer.Serialize(benchmark, JsonOptions);
+        // 2. FastMember TypeAccessor
+        var mutableTypeAccessor = TypeAccessor.Create(typeof(MutableProduct));
+        var sw8 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            mutableTypeAccessor[mutableProduct, propertyName] = newValue;
+        }
+        sw8.Stop();
+        var fastMemberTypeAccessorSetTime = sw8.ElapsedMilliseconds;
+
+        // 3. FastMember ObjectAccessor
+        var mutableObjectAccessor = ObjectAccessor.Create(mutableProduct);
+        var sw9 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            mutableObjectAccessor[propertyName] = newValue;
+        }
+        sw9.Stop();
+        var fastMemberObjectAccessorSetTime = sw9.ElapsedMilliseconds;
+
+        // 4. Dynamic C#
+        dynamic dynamicMutableProduct = mutableProduct;
+        var sw10 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            dynamicMutableProduct.Price = newValue;
+        }
+        sw10.Stop();
+        var dynamicSetTime = sw10.ElapsedMilliseconds;
+
+        // 5. Reflection PropertyInfo
+        var mutablePropInfo = typeof(MutableProduct).GetProperty(propertyName)!;
+        var sw11 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            mutablePropInfo.SetValue(mutableProduct, newValue);
+        }
+        sw11.Stop();
+        var reflectionSetTime = sw11.ElapsedMilliseconds;
+
+        // 6. PropertyDescriptor
+        var mutablePropDescriptor = TypeDescriptor.GetProperties(mutableProduct)[propertyName]!;
+        var sw12 = Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            mutablePropDescriptor.SetValue(mutableProduct, newValue);
+        }
+        sw12.Stop();
+        var propertyDescriptorSetTime = sw12.ElapsedMilliseconds;
+
+        return new BenchmarkResults(
+            Iterations: iterations,
+            GetProperty: new GetPropertyResult(
+                FastMemberTypeAccessor: $"{fastMemberTypeAccessorGetTime} ms",
+                FastMemberObjectAccessor: $"{fastMemberObjectAccessorGetTime} ms",
+                DynamicCSharp: $"{dynamicGetTime} ms",
+                ReflectionPropertyInfo: $"{reflectionGetTime} ms",
+                PropertyDescriptor: $"{propertyDescriptorGetTime} ms",
+                FastMemberVsReflection: $"{reflectionGetTime / (double)fastMemberTypeAccessorGetTime:F2}x faster",
+                FastMemberVsPropertyDescriptor: $"{propertyDescriptorGetTime / (double)fastMemberTypeAccessorGetTime:F2}x faster"
+            ),
+            SetProperty: new SetPropertyResult(
+                FastMemberTypeAccessor: $"{fastMemberTypeAccessorSetTime} ms",
+                FastMemberObjectAccessor: $"{fastMemberObjectAccessorSetTime} ms",
+                DynamicCSharp: $"{dynamicSetTime} ms",
+                ReflectionPropertyInfo: $"{reflectionSetTime} ms",
+                PropertyDescriptor: $"{propertyDescriptorSetTime} ms",
+                FastMemberVsReflection: $"{reflectionSetTime / (double)fastMemberTypeAccessorSetTime:F2}x faster",
+                FastMemberVsPropertyDescriptor: $"{propertyDescriptorSetTime / (double)fastMemberTypeAccessorSetTime:F2}x faster"
+            )
+        );
     }
 
     private object BuildDemosTab()
@@ -455,30 +549,46 @@ foreach (var product in products)
             | rightCard;
     }
 
-    private static object BuildBenchmarkTab(Action<string> showBenchmark, IState<string> benchmarkResultState, Func<string> runBenchmark)
+    private static object BuildBenchmarkTab(Action<BenchmarkResults?> showBenchmark, IState<BenchmarkResults?> benchmarkResultState, Func<BenchmarkResults?> runBenchmark)
     {
-        var leftCard = new Card(
+        if (benchmarkResultState.Value == null)
+        {
+            // Initial state: single card with button
+            return new Card(
+                Layout.Vertical().Gap(3)
+                    | Text.H3("Performance Benchmark")
+                    | Text.Muted("Compare FastMember performance with standard .NET Reflection API, Dynamic C#, and PropertyDescriptor")
+                    | new Button("Run Benchmark").HandleClick(_ => showBenchmark(runBenchmark())).Icon(Icons.Zap).Primary()
+            );
+        }
+
+        // After benchmark: two horizontal cards with results
+        var results = benchmarkResultState.Value;
+        
+        var getPropertyCard = new Card(
             Layout.Vertical().Gap(3)
-                | Text.H3("Performance Benchmark")
-                | Text.Muted("Compare FastMember performance with standard .NET Reflection API")
-                | new Button("Run Benchmark").HandleClick(_ => showBenchmark(runBenchmark())).Icon(Icons.Zap).Primary()
+                | Text.H3("Get Property")
+                | Text.Muted($"Performance comparison for reading property values ({results.Iterations:N0} iterations)")
+                | results.GetProperty.ToDetails()
         ).Width(Size.Fraction(0.5f));
 
-        var rightCard = new Card(
+        var setPropertyCard = new Card(
             Layout.Vertical().Gap(3)
-                | Text.H3("Benchmark Results")
-                | Text.Muted("View performance comparison results")
-                | (string.IsNullOrEmpty(benchmarkResultState.Value)
-                    ? Text.Muted("Click 'Run Benchmark' to see performance comparison results")
-                    : new Code(benchmarkResultState.Value, Languages.Json)
-                        .ShowLineNumbers()
-                        .ShowCopyButton()
-                        .Height(Size.Fit()))
+                | Text.H3("Set Property")
+                | Text.Muted($"Performance comparison for setting property values ({results.Iterations:N0} iterations)")
+                | results.SetProperty.ToDetails()
         ).Width(Size.Fraction(0.5f));
 
-        return Layout.Horizontal().Gap(4)
-            | leftCard
-            | rightCard;
+        return Layout.Vertical().Gap(4)
+            | new Card(
+                Layout.Vertical().Gap(3)
+                    | Text.H3("Performance Benchmark")
+                    | Text.Muted("Compare FastMember performance with standard .NET Reflection API, Dynamic C#, and PropertyDescriptor")
+                    | new Button("Run Benchmark Again").HandleClick(_ => showBenchmark(runBenchmark())).Icon(Icons.Zap).Primary()
+            )
+            | (Layout.Horizontal().Gap(4)
+                | getPropertyCard
+                | setPropertyCard);
     }
 
     private static object BuildDataTab()
