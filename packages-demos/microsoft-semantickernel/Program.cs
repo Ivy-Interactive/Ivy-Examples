@@ -1,4 +1,4 @@
-using MicrosoftSemanticKernelDemo.Apps;
+using MicrosoftSemanticKernelExample;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
 #if DEBUG

@@ -1,12 +1,6 @@
+namespace MicrosoftSemanticKernelExample;
 
-
-using Ivy;
-using Ivy.Core.Hooks;
-using Microsoft.SemanticKernel;
-
-namespace MicrosoftSemanticKernelDemo.Apps;
-
-[App(icon: Icons.PartyPopper, title: "MicrosoftSemanticKernel Demo")]
+[App(icon: Icons.Microsoft, title: "Microsoft.SemanticKernel")]
 public class MicrosoftSemanticKernelApp : ViewBase
 {
 
