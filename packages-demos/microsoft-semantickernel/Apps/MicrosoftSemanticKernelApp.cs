@@ -71,6 +71,9 @@ Next steps: Everyone should update their progress in the project management tool
                     | Text.Muted("Enter or paste your text here. The AI will extract action items from it.")
                     | notesFromMeeting.ToTextAreaInput().Height(Size.Units(80))
                     | new Button("Update tasks").HandleClick(_ => triggerRefresh.Set(triggerRefresh.Value + 1))
+                    | new Spacer()
+                    | Text.Small("This demo uses the Microsoft.SemanticKernel for intelligent text matching.")
+                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Microsoft.SemanticKernel](https://github.com/microsoft/semantic-kernel)")
             ).Height(Size.Fit().Min(Size.Full()))
             | new Card(
                 Layout.Vertical()
