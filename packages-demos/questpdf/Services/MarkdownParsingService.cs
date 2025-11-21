@@ -1,8 +1,4 @@
-using QuestPdfDemo.Models;
-using QuestPdfDemo.Helpers;
-using QuestPDF.Fluent;
-
-namespace QuestPdfDemo.Services;
+namespace QuestPdfExample.Services;
 
 public class MarkdownParsingService
 {

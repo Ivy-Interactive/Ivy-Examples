@@ -25,8 +25,10 @@ global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
 
-// QuestPDF
 global using QuestPDF.Fluent;
 global using QuestPDF.Infrastructure;
+global using QuestPdfExample.Models;
+global using QuestPdfExample.Helpers;
+global using QuestPdfExample.Services;
 
-namespace QuestPdfDemo;
+namespace QuestPdfExample;
