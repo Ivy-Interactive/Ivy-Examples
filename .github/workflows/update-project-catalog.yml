@@ -1,0 +1,49 @@
+name: Update Project Catalog
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # daily at 2 AM UTC
+  workflow_dispatch:
+
+jobs:
+  update-catalog:
+    name: Update Project Catalog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Generate project catalog
+        id: generate-catalog
+        run: |
+          chmod +x .github/scripts/generate-project-catalog.sh
+          .github/scripts/generate-project-catalog.sh
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          git add Ivy-All-Project.json
+          if git diff --cached --quiet; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in Ivy-All-Project.json"
+            git reset Ivy-All-Project.json
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in Ivy-All-Project.json"
+            git diff --cached Ivy-All-Project.json || true
+          fi
+
+      - name: Commit and push changes
+        if: steps.check-changes.outputs.has-changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Ivy-All-Project.json
+          git commit -m "chore: update project catalog [skip ci]"
+          git push
+
