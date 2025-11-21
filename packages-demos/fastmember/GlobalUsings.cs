@@ -25,7 +25,11 @@ global using System.Collections.Immutable;
 global using System.ComponentModel.DataAnnotations;
 global using System.Globalization;
 global using System.Reactive.Linq;
-
+global using System.ComponentModel;
+global using System.Diagnostics;
+global using System.Dynamic;
+global using System.Reflection;
+global using System.Text.Json;
 global using FastMember;
 
-namespace FastMemberDemo;
+namespace FastMemberExample;

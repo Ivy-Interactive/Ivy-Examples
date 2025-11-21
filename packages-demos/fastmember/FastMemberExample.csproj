@@ -6,20 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>FastMemberDemo</RootNamespace>
+    <RootNamespace>FastMemberExample</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Connections\**" />
-    <EmbeddedResource Remove="Connections\**" />
-    <None Remove="Connections\**" />
-  </ItemGroup>
-
-  
   
   <ItemGroup>
     <PackageReference Include="FastMember" Version="1.5.0" />
