@@ -1,5 +1,9 @@
 # NodaTime
 
+## Description
+
+NodaTime is a web application for timezone conversion and time handling with support for all TZDB timezones, real-time conversion, and formatted time display.
+
 <img width="1915" height="911" alt="image" src="https://github.com/user-attachments/assets/a638d752-a591-4245-a1c5-da19eac3353c" />
 
 ## One-Click Development Environment
@@ -80,3 +84,7 @@ This will deploy your timezone conversion application with a single command.
 - NodaTime library overview: [github.com/nodatime/nodatime](https://github.com/nodatime/nodatime)
 - NodaTime documentation: [nodatime.org](https://nodatime.org)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Date/Time, Timezone, DateTime Handling, Time Conversion

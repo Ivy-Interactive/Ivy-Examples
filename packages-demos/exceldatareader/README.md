@@ -1,5 +1,9 @@
 # ExcelDataReader
 
+## Description
+
+ExcelDataReader is a web application for analyzing Excel and CSV files with worksheet browsing, data preview, and file information display.
+
 <img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/f1cd1de6-515a-41a6-832b-4b99231d5776" />
 
 ## One-Click Development Environment
@@ -80,3 +84,7 @@ This will deploy your Excel analysis application with a single command.
 
 - ExcelDataReader for .NET overview: [github.com/ExcelDataReader/ExcelDataReader](https://github.com/ExcelDataReader/ExcelDataReader)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Excel, Spreadsheet, Data Import, File Processing

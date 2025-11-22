@@ -1,5 +1,9 @@
 # Magick.NET-Q16-AnyCPU 
 
+## Description
+
+Magick.NET-Q16-AnyCPU is a web application for comprehensive image processing including format conversion, resizing, filtering, and advanced image manipulation operations.
+
 <img width="1913" height="908" alt="image" src="https://github.com/user-attachments/assets/7a62ffd8-d731-4cde-ad48-5ecc0d3ef1d8" />
 
 ## One-Click Development Environment
@@ -97,3 +101,7 @@ This will deploy your image processing studio with a single command.
 - Magick.NET overview: [github.com/dlemstra/Magick.NET](https://github.com/dlemstra/Magick.NET)
 - ImageMagick official site: [imagemagick.org](https://imagemagick.org)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Image Processing, Image Manipulation, Graphics, ImageMagick

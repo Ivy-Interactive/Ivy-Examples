@@ -1,5 +1,9 @@
 # OllamaSharp
 
+## Description
+
+OllamaSharp is a web application for interactive AI chat using locally running Ollama models with streaming responses, model selection, and real-time conversation interface.
+
 <img width="1918" height="916" alt="image" src="https://github.com/user-attachments/assets/cc07f9c5-3856-4310-a0d8-e89dc82d8cd2" />
 
 <img width="1918" height="913" alt="image" src="https://github.com/user-attachments/assets/2f46f3af-3bcf-4883-9883-3e467ebc0b4b" />
@@ -143,3 +147,7 @@ If you're unable to connect to Ollama:
 - Ollama overview: [ollama.com](https://ollama.com)
 - OllamaSharp library: [github.com/awaescher/OllamaSharp](https://github.com/awaescher/OllamaSharp)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+AI, Chat, LLM, Local AI, Conversational AI, Natural Language Processing

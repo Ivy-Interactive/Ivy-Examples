@@ -34,81 +34,76 @@ extract_description() {
         return
     fi
     
-    # Read README and find first meaningful paragraph after title
-    # Skip badges, images, code blocks, and empty lines
-    local in_code_block=false
-    local found_title=false
-    local description=""
-    
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Skip code blocks
-        if [[ "$line" =~ ^\`\`\` ]]; then
-            in_code_block=$([ "$in_code_block" = false ] && echo true || echo false)
-            continue
-        fi
-        [ "$in_code_block" = true ] && continue
-        
-        # Skip title
-        if [[ "$line" =~ ^# ]]; then
-            found_title=true
-            continue
-        fi
-        
-        # Skip images, badges, empty lines, and markdown links at start
-        if [[ "$line" =~ ^!\[.*\] ]] || \
-           [[ "$line" =~ ^\[!\[.*\] ]] || \
-           [[ "$line" =~ ^\<img ]] || \
-           [[ "$line" =~ ^\[Open\ in ]] || \
-           [[ -z "${line// }" ]] || \
-           [[ "$line" =~ ^Click\ the\ badge ]]; then
-            continue
-        fi
-        
-        # Skip "Created Using Ivy" section and similar boilerplate
-        if [[ "$line" =~ Created\ Using\ Ivy ]] || \
-           [[ "$line" =~ ^\*\*Ivy\*\* ]] || \
-           [[ "$line" =~ ^Ivy\ is\ a\ web\ framework ]]; then
-            continue
-        fi
-        
-        # If we found title and this is a meaningful line, use it
-        if [ "$found_title" = true ] && [ -n "$line" ]; then
-            # Remove markdown formatting but keep text
-            line=$(echo "$line" | sed 's/\[\([^]]*\)\]([^)]*)/\1/g' | sed 's/\*\*//g' | sed 's/\*//g')
-            # Stop at section headers or if we have enough content
-            if [[ "$line" =~ ^## ]]; then
-                break
-            fi
-            if [ ${#description} -gt 0 ]; then
-                description="$description $line"
-            else
-                description="$line"
-            fi
-            # If we have a good description (at least 50 chars), break
-            if [ ${#description} -ge 50 ]; then
-                break
-            fi
-        fi
-    done < "$readme_file"
-    
-    # Clean up description
-    description=$(echo "$description" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/[[:space:]]\+/ /g')
-    
-    # If description is too short, try to get first paragraph after "What This Application Does" or similar
-    if [ ${#description} -lt 30 ]; then
-        description=$(awk '/What This Application Does|This example demonstrates|This specific implementation/ {
-            getline
-            while (getline > 0 && !/^##|^#/) {
-                if (length($0) > 10 && !/^[[:space:]]*$/) {
-                    gsub(/\[([^\]]+)\]\([^)]+\)/, "\\1", $0)
-                    gsub(/\*\*/, "", $0)
-                    gsub(/\*/, "", $0)
-                    print $0
-                    if (length($0) > 50) break
+    # Use awk to extract description after "Description" heading until next heading or end of file
+    local description=$(awk '
+        BEGIN { 
+            in_description = 0
+            in_code_block = 0
+            found_description = 0
+        }
+        /^```/ { 
+            in_code_block = !in_code_block
+            if (in_description && !in_code_block) {
+                # Continue reading after code block
+            }
+            next
+        }
+        in_code_block { 
+            # Skip code block content
+            next
+        }
+        /^#+\s+[Dd]escription/ { 
+            in_description = 1
+            found_description = 1
+            next
+        }
+        in_description {
+            # Stop at next heading (any level, but not if it is still Description)
+            if (/^#+\s+/) {
+                # Check if this is another Description heading (different case)
+                if (!/^#+\s+[Dd]escription/) {
+                    exit
                 }
             }
-        }' "$readme_file" | head -n 3 | tr '\n' ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    fi
+            
+            # Skip empty lines, images, badges
+            if (/^[[:space:]]*$/) {
+                # Keep empty lines as space separators if we already have content
+                if (result != "") {
+                    result = result " "
+                }
+                next
+            }
+            if (/^!\[.*\]/) next
+            if (/^\[!\[.*\]/) next
+            if (/^<img/) next
+            if (/^\[Open in/) next
+            
+            # Remove markdown formatting but keep text
+            gsub(/\[([^\]]+)\]\([^)]+\)/, "\\1")
+            gsub(/\*\*/, "")
+            gsub(/\*/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            
+            if (length($0) > 0) {
+                if (result != "") {
+                    result = result " " $0
+                } else {
+                    result = $0
+                }
+            }
+        }
+        END {
+            if (found_description) {
+                # Clean up: remove extra spaces
+                gsub(/[[:space:]]+/, " ", result)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", result)
+                print result
+            } else {
+                print ""
+            }
+        }
+    ' "$readme_file")
     
     echo "$description"
 }
@@ -139,7 +134,86 @@ extract_packages() {
     fi
 }
 
-# Function to generate tags
+# Function to extract tags from README.md
+extract_tags() {
+    local readme_file="$1"
+    
+    if [ ! -f "$readme_file" ]; then
+        echo "[]"
+        return
+    fi
+    
+    # Use awk to extract tags after "Tags" heading - only the first non-empty line
+    local tags_content=$(awk '
+        BEGIN { 
+            in_tags = 0
+            in_code_block = 0
+            found_tags = 0
+            got_tags = 0
+        }
+        /^```/ { 
+            in_code_block = !in_code_block
+            next
+        }
+        in_code_block { 
+            next
+        }
+        /^#+\s+[Tt]ags/ { 
+            in_tags = 1
+            found_tags = 1
+            next
+        }
+        in_tags {
+            # Stop at next heading
+            if (/^#+\s+/) {
+                exit
+            }
+            
+            # If we already got tags, stop (we only want the first line with tags)
+            if (got_tags) {
+                exit
+            }
+            
+            # Skip empty lines
+            if (/^[[:space:]]*$/) {
+                next
+            }
+            
+            # Get the first non-empty line (remove leading/trailing whitespace)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            if (length($0) > 0) {
+                got_tags = 1
+                print $0
+                exit
+            }
+        }
+    ' "$readme_file")
+    
+    # If tags were found, parse them
+    if [ -n "$tags_content" ]; then
+        # Split by comma and clean up
+        local tags=()
+        # Replace commas with newlines, then process each tag
+        while IFS= read -r tag || [ -n "$tag" ]; do
+            # Trim whitespace
+            tag=$(echo "$tag" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            if [ -n "$tag" ]; then
+                tags+=("$tag")
+            fi
+        done < <(echo "$tags_content" | tr ',' '\n')
+        
+        # Convert to JSON array
+        if [ ${#tags[@]} -eq 0 ]; then
+            echo "[]"
+        else
+            printf '%s\n' "${tags[@]}" | jq -R . | jq -s .
+        fi
+    else
+        echo "[]"
+    fi
+}
+
+# Function to generate tags (fallback if tags not found in README)
 generate_tags() {
     local packages_json="$1"
     local project_name="$2"
@@ -208,7 +282,12 @@ process_project() {
     local project_name=$(extract_project_name "$readme_file" "$folder_name")
     local description=$(extract_description "$readme_file")
     local packages_json=$(extract_packages "$csproj_file")
-    local tags_json=$(generate_tags "$packages_json" "$project_name" "$folder_name")
+    
+    # Try to extract tags from README first, fallback to generated tags
+    local tags_json=$(extract_tags "$readme_file")
+    if [ "$tags_json" = "[]" ] || [ -z "$tags_json" ]; then
+        tags_json=$(generate_tags "$packages_json" "$project_name" "$folder_name")
+    fi
     
     # Generate links
     local github_link="$REPO_URL/tree/main/$folder_type/$folder_name"

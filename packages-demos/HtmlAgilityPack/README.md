@@ -1,5 +1,9 @@
 # HtmlAgilityPack
 
+## Description
+
+HtmlAgilityPack is a web application for parsing and analyzing HTML from websites with DOM structure extraction, content analysis, and XPath query support.
+
 <img width="1916" height="911" alt="image" src="https://github.com/user-attachments/assets/31b0fd27-3fcf-446b-aaec-4c8235bf29b0" />
 
 ## One-Click Development Environment
@@ -79,3 +83,7 @@ This will deploy your HTML parser application with a single command.
 
 - HtmlAgilityPack for .NET overview: [github.com/zzzprojects/html-agility-pack](https://github.com/zzzprojects/html-agility-pack)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+HTML Parsing, Web Scraping, DOM, XPath

@@ -1,5 +1,9 @@
 # FuzzySharp
 
+## Description
+
+FuzzySharp is a web application for intelligent fuzzy text search with support for typos, misspellings, and partial matches using multiple matching algorithms.
+
 <img width="1914" height="904" alt="image" src="https://github.com/user-attachments/assets/21b9a1ea-182d-40aa-af5e-89d2e008fe06" />
 
 ## One-Click Development Environment
@@ -78,3 +82,7 @@ This will deploy your fuzzy search application with a single command.
 
 - FuzzySharp for .NET overview: [github.com/JakeBond/FuzzySharp](https://github.com/JakeBond/FuzzySharp)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Fuzzy Search, String Matching, Search, Text Search

@@ -1,5 +1,9 @@
 # Bogus
 
+## Description
+
+Bogus is a web application for generating realistic fake data for testing and development with customizable fruit lists and randomized order generation.
+
 <img width="1918" height="910" alt="image" src="https://github.com/user-attachments/assets/f20ea249-3472-48e0-a8fd-b2f3790db84c" />
 
 ## One-Click Development Environment
@@ -74,3 +78,7 @@ This will deploy your fake data generator application with a single command.
 
 - Bogus library on GitHub: [github.com/bchavez/Bogus](https://github.com/bchavez/Bogus)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Fake Data, Testing, Data Generation, Mock Data

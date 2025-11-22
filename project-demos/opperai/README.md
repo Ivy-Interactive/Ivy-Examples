@@ -1,5 +1,9 @@
 # OpperAI Chat
 
+## Description
+
+OpperAI Chat is a web application for interactive AI-powered conversations using Opper.ai API with support for multiple AI models, conversation context, custom instructions, and mathematical expression rendering.
+
 <img width="1917" height="910" alt="image" src="https://github.com/user-attachments/assets/c552502c-87da-439c-ba6c-c0aa5575f44c" />
 
 <img width="1919" height="918" alt="image" src="https://github.com/user-attachments/assets/4ca84406-2a93-4f7d-b125-155586a4aede" />
@@ -146,3 +150,7 @@ var jsonPayload = response.JsonPayload;
 - Opper.ai Platform: [platform.opper.ai](https://platform.opper.ai)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
 - Ivy Framework: [github.com/Ivy-Interactive/Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework)
+
+## Tags
+
+AI, Chat, Conversational AI, LLM, Natural Language Processing, API Integration

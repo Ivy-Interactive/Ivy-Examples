@@ -2,6 +2,10 @@
 
 This Ivy application demonstrates the powerful DataTable widget capabilities, showcasing different features and use cases.
 
+## Description
+
+DataTables Demo is a comprehensive demonstration application showcasing the DataTable widget capabilities including sorting, filtering, pagination, and high-performance handling of large datasets using Apache Arrow.
+
 ## Features Demonstrated
 
 - **Basic DataTable**: Simple table with automatic column detection
@@ -45,3 +49,7 @@ The demo uses generated user data with:
 - [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework)
 - .NET 9.0
 - Apache Arrow (for high-performance data processing)
+
+## Tags
+
+DataTable, Data Visualization, Tables, Sorting, Filtering, Apache Arrow

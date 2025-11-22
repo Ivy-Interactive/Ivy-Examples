@@ -1,5 +1,9 @@
 # YamlDotNet
 
+## Description
+
+YamlDotNet is a web application for YAML serialization and deserialization with real-time conversion between C# objects and YAML format, including field validation and error handling.
+
 <img width="1919" height="910" alt="image" src="https://github.com/user-attachments/assets/090fbc31-1b9e-478e-86b7-4f2a8c80911b" />
 
 <img width="1608" height="915" alt="image" src="https://github.com/user-attachments/assets/5a19e4e4-45b7-4995-98a5-f4fdfcd6752f" />
@@ -76,3 +80,7 @@ Deploy this example to Ivy's hosting platform:
 
 - YamlDotNet documentation: [github.com/aaubry/YamlDotNet](https://github.com/aaubry/YamlDotNet)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+YAML, Serialization, Data Format, Configuration

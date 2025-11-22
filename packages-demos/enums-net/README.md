@@ -1,5 +1,9 @@
 # Enums.NET 
 
+## Description
+
+Enums.NET is a web application for exploring and manipulating enum types with advanced operations including flag manipulation, validation, parsing, and attribute handling.
+
 <img width="1912" height="909" alt="image" src="https://github.com/user-attachments/assets/ee23135f-8211-44e2-83cc-0efa99286c11" />
 
 ## One-Click Development Environment
@@ -88,3 +92,7 @@ This will deploy your enum exploration application with a single command.
 
 - Enums.NET GitHub repository: [github.com/TylerBrinkley/Enums.NET](https://github.com/TylerBrinkley/Enums.NET)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Enum, Type System, Reflection, Flags

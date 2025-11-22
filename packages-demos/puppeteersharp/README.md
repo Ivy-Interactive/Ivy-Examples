@@ -1,5 +1,9 @@
 # PuppeteerSharp
 
+## Description
+
+PuppeteerSharp is a web application for rendering websites, generating screenshots, and creating PDFs from web pages using headless Chrome browser automation.
+
 <img width="1919" height="911" alt="image" src="https://github.com/user-attachments/assets/f42c2a73-7a48-4271-8f2a-cd5932240683" />
 
 ## One-Click Development Environment
@@ -83,3 +87,7 @@ This will deploy your website renderer application with a single command.
 
 - PuppeteerSharp for .NET overview: [github.com/hardkoded/puppeteer-sharp](https://github.com/hardkoded/puppeteer-sharp)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Web Scraping, PDF Generation, Screenshot, Browser Automation, Headless Chrome

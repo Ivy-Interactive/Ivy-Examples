@@ -1,5 +1,9 @@
 # NAudio
 
+## Description
+
+NAudio is a web application for audio processing with support for audio file playback, format conversion, and audio manipulation capabilities.
+
 <img width="570" height="763" alt="image" src="https://github.com/user-attachments/assets/135ea2ed-b78d-4c1c-9821-88ea7bb02c2b" />
 
 <img width="573" height="763" alt="image" src="https://github.com/user-attachments/assets/61603bf4-57e3-47b9-9a10-fd57fb725244" />
@@ -82,3 +86,7 @@ This will deploy your audio processing application with a single command.
 
 - NAudio for .NET overview: [github.com/naudio/NAudio](https://github.com/naudio/NAudio)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Audio, Sound Processing, Media, Audio Playback

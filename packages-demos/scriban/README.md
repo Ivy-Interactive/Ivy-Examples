@@ -1,5 +1,9 @@
 # Scriban
 
+## Description
+
+Scriban is a web application for template rendering using Liquid-like syntax with JSON model support, real-time validation, and formatted output generation.
+
 <img width="1918" height="911" alt="image" src="https://github.com/user-attachments/assets/3b14301e-219e-4b16-8648-3a890f2e691e" />
 
 ## One-Click Development Environment
@@ -86,3 +90,7 @@ This will deploy your Scriban template engine application with a single command.
 - Scriban for .NET overview: [github.com/scriban/scriban](https://github.com/scriban/scriban)
 - Scriban Documentation: [github.com/scriban/scriban/wiki](https://github.com/scriban/scriban/wiki)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Templating, Template Engine, Text Generation, Liquid

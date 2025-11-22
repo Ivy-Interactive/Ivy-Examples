@@ -34,6 +34,12 @@ jobs:
           # Save the generated catalog file
           cp Ivy-All-Projects.json Ivy-All-Projects.json.tmp
           
+          # Stash any local changes to tracked files
+          git stash push -m "Temporary stash before branch switch" || true
+          
+          # Remove untracked files that might conflict
+          rm -f Ivy-All-Projects.json
+          
           # Create or checkout catalog-updates branch and merge main
           if git show-ref --verify --quiet refs/remotes/origin/"$BRANCH_NAME"; then
             git checkout -b "$BRANCH_NAME" origin/"$BRANCH_NAME" || git checkout "$BRANCH_NAME"
@@ -44,6 +50,9 @@ jobs:
           
           # Restore the generated catalog file
           mv Ivy-All-Projects.json.tmp Ivy-All-Projects.json
+          
+          # Restore stashed changes if any
+          git stash pop || true
 
       - name: Check for changes
         id: check-changes

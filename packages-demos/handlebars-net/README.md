@@ -1,5 +1,9 @@
 # Handlebars.Net
 
+## Description
+
+Handlebars.Net is a web application for HTML template generation using Handlebars syntax with data binding, helpers, and compiled template rendering.
+
 <img width="1918" height="906" alt="image" src="https://github.com/user-attachments/assets/c84895a5-4a11-423d-8035-97403f271407" />
 
 ## One-Click Development Environment
@@ -93,3 +97,7 @@ This will deploy your Handlebars template engine with a single command.
 - Handlebars.Net Documentation: [github.com/Handlebars-Net/Handlebars.Net](https://github.com/Handlebars-Net/Handlebars.Net)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
 - Handlebars.js Guide: [handlebarsjs.com/guide](https://handlebarsjs.com/guide)
+
+## Tags
+
+Templating, Template Engine, HTML Generation, Handlebars

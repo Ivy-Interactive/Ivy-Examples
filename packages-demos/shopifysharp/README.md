@@ -1,5 +1,9 @@
 # ShopifySharp
 
+## Description
+
+ShopifySharp is a web application for browsing Shopify store product catalogs with product listing, details, and integration with Shopify API.
+
 <img width="1919" height="910" alt="image" src="https://github.com/user-attachments/assets/42412b44-e073-4d55-9674-88966e6a84d6" />
 
 ### Environment example:
@@ -85,3 +89,7 @@ This command ships the ShopifySharp Product Explorer to Ivy’s managed hosting.
 - ShopifySharp documentation: [github.com/nozzlegear/ShopifySharp](https://github.com/nozzlegear/ShopifySharp)
 - Shopify Admin API: [shopify.dev/docs/api/admin-graphql](https://shopify.dev/docs/api/admin-graphql)
 - Ivy Framework docs: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+E-commerce, Shopify, API Integration, Product Management
