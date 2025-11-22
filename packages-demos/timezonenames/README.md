@@ -1,5 +1,9 @@
 # TimeZoneNames
 
+## Description
+
+TimeZoneNames is a web application for time zone conversion and lookup with support for IANA, Windows, and Rails time zone identifiers.
+
 <img width="1607" height="909" alt="image" src="https://github.com/user-attachments/assets/81738375-7197-49b7-a2e3-560088eaa1ab" />
 
 ## One-Click Development Environment

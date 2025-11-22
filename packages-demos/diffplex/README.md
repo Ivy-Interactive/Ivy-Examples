@@ -1,5 +1,9 @@
 # DiffPlex – Text Comparison Tool
 
+## Description
+
+DiffPlex is a web application for comparing two text blocks and visualizing differences with highlighted insertions, deletions, modifications, and unchanged content.
+
 An Ivy example demonstrating text comparison and diff visualization using the DiffPlex library.
 
 ## What It Does

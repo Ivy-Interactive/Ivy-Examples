@@ -1,5 +1,9 @@
 # DiffEngine 
 
+## Description
+
+DiffEngine is a web application for launching external diff tools to compare text files side-by-side with automatic tool detection and file comparison capabilities.
+
 <img width="1909" height="912" alt="image" src="https://github.com/user-attachments/assets/3c2e5cf2-7db3-4447-aa75-3e7d04f9cd4a" />
 
 ## One-Click Development Environment

@@ -1,5 +1,9 @@
 # SimMetrics.Net
 
+## Description
+
+SimMetrics.Net is a web application for measuring string similarity and distance using multiple algorithms including Levenshtein, Jaro-Winkler, Cosine, and Jaccard.
+
 <img width="1917" height="908" alt="image" src="https://github.com/user-attachments/assets/d1508c0d-59f9-4e2f-9b24-e8ebd970720b" />
 
 ## One-Click Development Environment

@@ -1,5 +1,9 @@
 # SmartFormat.NET
 
+## Description
+
+SmartFormat.NET is a web application for dynamic string formatting with rich templating, named placeholders, conditional sections, and pluralization support.
+
 <img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/a7308f0e-a579-4712-b25e-7b8fd2d6c5c0" />
 
 ## One-Click Development Environment

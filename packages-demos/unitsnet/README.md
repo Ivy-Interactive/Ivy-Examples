@@ -1,5 +1,9 @@
 # UnitsNet
 
+## Description
+
+UnitsNet is a web application for unit conversion with support for multiple quantity types including temperature, length, mass, volume, and comprehensive unit systems.
+
 <img width="1369" height="917" alt="image" src="https://github.com/user-attachments/assets/202d287d-10b0-4b9c-8026-f1640c12b3ca" />
 
 ## One-Click Development Environment

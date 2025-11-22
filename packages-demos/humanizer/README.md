@@ -1,5 +1,9 @@
 # Humanizer
 
+## Description
+
+Humanizer is a web application for text transformation with support for multiple formats including PascalCase, camelCase, kebab-case, underscore_case, and smart truncation.
+
 <img width="1915" height="908" alt="image" src="https://github.com/user-attachments/assets/52e53613-3419-4c99-b37c-53babfa41c98" />
 
 ## One-Click Development Environment

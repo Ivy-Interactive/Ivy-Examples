@@ -1,5 +1,9 @@
 # Stripe.net
 
+## Description
+
+Stripe.net is a web application for creating Stripe checkout sessions with configurable products, amounts, currencies, and payment processing integration.
+
 <img width="1910" height="911" alt="image" src="https://github.com/user-attachments/assets/43c33420-216d-4920-a3f2-a33ab1ab24a6" />
 
 <img width="1917" height="918" alt="image" src="https://github.com/user-attachments/assets/3495ecaa-a794-411f-8f7a-3894bedb5209" />

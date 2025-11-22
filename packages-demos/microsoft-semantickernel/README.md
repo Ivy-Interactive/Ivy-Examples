@@ -1,5 +1,9 @@
 # Microsoft.SemanticKernel
 
+## Description
+
+Microsoft.SemanticKernel is a web application for AI-powered action item extraction from text using GPT-4o-mini, with intelligent text analysis and formatted output display.
+
 <img width="1918" height="917" alt="image" src="https://github.com/user-attachments/assets/d3d5c7d5-8a34-4325-bb6d-e2ec655d0f46" />
 
 ## One-Click Development Environment

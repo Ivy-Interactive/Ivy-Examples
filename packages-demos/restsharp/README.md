@@ -1,5 +1,9 @@
 # RestSharp
 
+## Description
+
+RestSharp is a web application for testing REST APIs with support for multiple HTTP methods, JSON request/response handling, and interactive API client interface.
+
 <img width="1277" height="771" alt="image" src="https://github.com/user-attachments/assets/4a5301c0-3867-43ff-8ec2-49a455b49627" />
 
 <img width="1199" height="831" alt="image" src="https://github.com/user-attachments/assets/32880c79-311a-4bfd-9955-7238b6a5bcd7" />

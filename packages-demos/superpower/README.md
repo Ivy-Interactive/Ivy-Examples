@@ -1,5 +1,9 @@
 # Superpower
 
+## Description
+
+Superpower is a web application demonstrating parser-combinator capabilities with multiple parser examples including JSON, CSV, and custom format parsers.
+
 <img width="1350" height="920" alt="image" src="https://github.com/user-attachments/assets/0799430b-adfa-4f73-9256-31baf4246ed7" />
 
 <img width="1348" height="911" alt="image" src="https://github.com/user-attachments/assets/a4f8f78b-4bed-4600-81e6-3addf13ebf50" />

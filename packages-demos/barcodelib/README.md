@@ -1,5 +1,9 @@
 # BarcodeLib 
 
+## Description
+
+BarcodeLib is a web application for generating barcodes in multiple symbologies with customizable options, live preview, and downloadable PNG output.
+
 <img width="1913" height="905" alt="image" src="https://github.com/user-attachments/assets/84f10da6-c31b-4040-ad86-4ce72b769ee1" />
 
 ## One-Click Development Environment

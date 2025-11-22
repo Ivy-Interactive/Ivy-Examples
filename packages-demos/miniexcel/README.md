@@ -1,5 +1,9 @@
 # MiniExcel
 
+## Description
+
+MiniExcel is a web application for student management with Excel import and export capabilities, featuring CRUD operations, search, filtering, and real-time data synchronization.
+
 <img width="1917" height="911" alt="image" src="https://github.com/user-attachments/assets/a223a520-bb84-4ed0-933c-cc4d118c6bbd" />
 
 <img width="1916" height="911" alt="image" src="https://github.com/user-attachments/assets/2f4c60cf-203b-4f7b-8368-d49e63ca57f5" />

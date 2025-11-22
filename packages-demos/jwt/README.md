@@ -1,5 +1,9 @@
 # JWT Demo Application
 
+## Description
+
+JWT Demo Application is an interactive web application for generating and validating JSON Web Tokens with support for custom claims, expiration, and detailed token information display.
+
 This is an interactive Ivy demo application showcasing JWT (JSON Web Tokens) concepts and integration with the Ivy framework.
 
 ## Features

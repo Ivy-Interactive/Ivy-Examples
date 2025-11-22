@@ -1,5 +1,9 @@
 # XLParser
 
+## Description
+
+XLParser is a web application for parsing and analyzing Excel formulas with token visualization, parse tree display, and detailed formula structure analysis.
+
 <img width="1605" height="913" alt="image" src="https://github.com/user-attachments/assets/07510f2e-d5fc-4ce9-8182-d9cca43992ae" />
 
 ## One-Click Development Environment

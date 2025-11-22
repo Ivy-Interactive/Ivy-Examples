@@ -1,5 +1,9 @@
 # EPPlus
 
+## Description
+
+EPPlus is a web application for managing Excel workbooks with capabilities to create, read, write, and manipulate Excel files including adding books, viewing data, and downloading workbooks.
+
 <img width="1915" height="911" alt="image" src="https://github.com/user-attachments/assets/1f05a450-1d2b-4379-9875-01fc0204307c" />
 
 ## One-Click Development Environment

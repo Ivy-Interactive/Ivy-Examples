@@ -1,5 +1,9 @@
 # Newtonsoft.Json 
 
+## Description
+
+Newtonsoft.Json is a web application demonstrating JSON serialization and deserialization with two-way synchronization between JSON editor and form-based user interface.
+
 <img width="1364" height="636" alt="image" src="https://github.com/user-attachments/assets/1e57b532-4289-403c-bda3-48b7271f8c66" />
 
 ## One-Click Development Environment

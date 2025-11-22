@@ -1,5 +1,9 @@
 # FastMember
 
+## Description
+
+FastMember is a web application demonstrating high-performance runtime member access with performance benchmarks comparing FastMember against Reflection, PropertyDescriptor, and Dynamic C#.
+
 <img width="1411" height="915" alt="image" src="https://github.com/user-attachments/assets/151b25cc-5ae3-4707-8364-65611c8742fd" />
 
 <img width="1609" height="914" alt="image" src="https://github.com/user-attachments/assets/88d3c3ce-b79f-4fbe-af07-3ca1bac26f32" />

@@ -1,5 +1,9 @@
 # ULID
 
+## Description
+
+ULID is a web application for generating and parsing ULID identifiers with timestamp extraction, sortable unique IDs, and detailed ULID information display.
+
 <img width="1919" height="915" alt="image" src="https://github.com/user-attachments/assets/0e9900a4-49c2-42be-9392-82a590c9a00b" />
 
 <img width="1915" height="911" alt="image" src="https://github.com/user-attachments/assets/8e23fb99-f80e-43f3-821b-1eaf29e6a1f0" />

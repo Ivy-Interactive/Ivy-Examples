@@ -1,5 +1,9 @@
 # AWS Constructs
 
+## Description
+
+AWS Constructs is a web application for building composable configuration models with hierarchical construct structures, interactive tree navigation, and dynamic node management.
+
 <img width="1915" height="909" alt="image" src="https://github.com/user-attachments/assets/a057e99e-ba5e-416d-b2b0-514e4f280cbb" />
 
 ## One-Click Development Environment
