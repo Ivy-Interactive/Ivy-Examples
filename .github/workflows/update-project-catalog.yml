@@ -43,7 +43,9 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          BRANCH_NAME="catalog-updates"
+          git checkout -b "$BRANCH_NAME" || git checkout "$BRANCH_NAME"
           git add Ivy-All-Projects.json
           git commit -m "chore: update project catalog [skip ci]"
-          git push origin main --force
+          git push origin "$BRANCH_NAME" --force
 
