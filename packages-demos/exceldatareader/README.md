@@ -84,3 +84,7 @@ This will deploy your Excel analysis application with a single command.
 
 - ExcelDataReader for .NET overview: [github.com/ExcelDataReader/ExcelDataReader](https://github.com/ExcelDataReader/ExcelDataReader)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Excel, Spreadsheet, Data Import, File Processing

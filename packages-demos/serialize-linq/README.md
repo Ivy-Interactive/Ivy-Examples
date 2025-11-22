@@ -83,3 +83,7 @@ This will deploy your LINQ expression serialization application with a single co
 
 - Serialize.Linq for .NET overview: [github.com/esskar/Serialize.Linq](https://github.com/esskar/Serialize.Linq)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+LINQ, Serialization, Expression Trees, Query

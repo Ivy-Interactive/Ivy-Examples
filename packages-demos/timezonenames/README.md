@@ -83,3 +83,7 @@ This will deploy your time zone converter application with a single command.
 
 - TimeZoneConverter for .NET overview: [github.com/mj1856/TimeZoneConverter](https://github.com/mj1856/TimeZoneConverter)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Timezone, Date/Time, Time Conversion, IANA, Windows Timezone

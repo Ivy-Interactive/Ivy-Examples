@@ -18,3 +18,7 @@ dotnet watch
 ivy deploy
 ```
 
+## Tags
+
+Education, Course Management, Content Management, Template
+

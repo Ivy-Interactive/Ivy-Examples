@@ -78,3 +78,7 @@ This will deploy your AWS Constructs interactive demo with a single command.
 
 - AWS Constructs GitHub repository: [github.com/aws/constructs](https://github.com/aws/constructs)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+AWS, Infrastructure, Configuration, Cloud

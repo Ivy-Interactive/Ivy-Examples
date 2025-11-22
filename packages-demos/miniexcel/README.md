@@ -93,3 +93,7 @@ This will deploy your Excel management application with a single command.
 
 - MiniExcel for .NET overview: [github.com/mini-software/MiniExcel](https://github.com/mini-software/MiniExcel)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Excel, Spreadsheet, Data Management, CRUD, Import/Export

@@ -87,3 +87,7 @@ This will deploy your website renderer application with a single command.
 
 - PuppeteerSharp for .NET overview: [github.com/hardkoded/puppeteer-sharp](https://github.com/hardkoded/puppeteer-sharp)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Web Scraping, PDF Generation, Screenshot, Browser Automation, Headless Chrome

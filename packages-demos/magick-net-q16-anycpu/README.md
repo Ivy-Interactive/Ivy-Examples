@@ -101,3 +101,7 @@ This will deploy your image processing studio with a single command.
 - Magick.NET overview: [github.com/dlemstra/Magick.NET](https://github.com/dlemstra/Magick.NET)
 - ImageMagick official site: [imagemagick.org](https://imagemagick.org)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Image Processing, Image Manipulation, Graphics, ImageMagick

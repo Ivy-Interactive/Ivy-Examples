@@ -82,3 +82,7 @@ This will deploy your fuzzy search application with a single command.
 
 - FuzzySharp for .NET overview: [github.com/JakeBond/FuzzySharp](https://github.com/JakeBond/FuzzySharp)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Fuzzy Search, String Matching, Search, Text Search

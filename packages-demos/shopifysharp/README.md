@@ -89,3 +89,7 @@ This command ships the ShopifySharp Product Explorer to Ivy’s managed hosting.
 - ShopifySharp documentation: [github.com/nozzlegear/ShopifySharp](https://github.com/nozzlegear/ShopifySharp)
 - Shopify Admin API: [shopify.dev/docs/api/admin-graphql](https://shopify.dev/docs/api/admin-graphql)
 - Ivy Framework docs: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+E-commerce, Shopify, API Integration, Product Management

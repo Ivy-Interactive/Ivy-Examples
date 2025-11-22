@@ -4,7 +4,7 @@ Web application created using [Ivy](https://github.com/Ivy-Interactive/Ivy).
 
 ## Description
 
-Vc is a CRM system for venture capital firms to manage startups, deals, founders, partners, and industries with comprehensive tracking and analytics capabilities. 
+Vc is a CRM system for venture capital firms to manage startups, deals, founders, partners, and industries with comprehensive tracking and analytics capabilities.
 
 Ivy is a web framework for building interactive web applications using C# and .NET.
 
@@ -19,3 +19,7 @@ dotnet watch
 ```
 ivy deploy
 ```
+
+## Tags
+
+CRM, Venture Capital, Business Management, Analytics, Database

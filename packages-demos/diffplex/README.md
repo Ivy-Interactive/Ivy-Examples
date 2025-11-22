@@ -57,3 +57,7 @@ This example shows how to compare two text blocks and highlight their difference
 ## Notes
 
 This is a minimal implementation focusing on inline diff visualization. For more advanced features, explore DiffPlex's other builders like SideBySideDiffBuilder.
+
+## Tags
+
+Diff, Text Comparison, Version Control, Code Review

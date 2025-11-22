@@ -93,3 +93,7 @@ This will deploy your unit converter application with a single command.
 
 - UnitsNet library overview: [github.com/angularsen/UnitsNet](https://github.com/angularsen/UnitsNet)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Unit Conversion, Measurements, Physical Quantities, Units

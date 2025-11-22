@@ -110,3 +110,7 @@ This will deploy your FastMember demo application with a single command.
 
 - FastMember library overview: [github.com/mgravell/fast-member](https://github.com/mgravell/fast-member)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Performance, Reflection, Runtime, Member Access, Optimization

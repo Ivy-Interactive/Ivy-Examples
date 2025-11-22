@@ -78,3 +78,7 @@ This will deploy your fake data generator application with a single command.
 
 - Bogus library on GitHub: [github.com/bchavez/Bogus](https://github.com/bchavez/Bogus)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Fake Data, Testing, Data Generation, Mock Data

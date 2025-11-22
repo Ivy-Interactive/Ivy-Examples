@@ -116,3 +116,7 @@ dotnet watch
 - Microsoft Semantic Kernel: [github.com/microsoft/semantic-kernel](https://github.com/microsoft/semantic-kernel)
 - OpenAI API Documentation: [platform.openai.com/docs](https://platform.openai.com/docs)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+AI, Natural Language Processing, Text Analysis, OpenAI, Semantic Kernel

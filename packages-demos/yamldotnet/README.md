@@ -80,3 +80,7 @@ Deploy this example to Ivy's hosting platform:
 
 - YamlDotNet documentation: [github.com/aaubry/YamlDotNet](https://github.com/aaubry/YamlDotNet)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+YAML, Serialization, Data Format, Configuration

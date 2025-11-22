@@ -85,3 +85,7 @@ This will deploy your DateTime calculator application with a single command.
 
 - FluentDateTime for .NET overview: [github.com/FluentDateTime/FluentDateTime](https://github.com/FluentDateTime/FluentDateTime)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Date/Time, DateTime, Date Calculation, Time Manipulation

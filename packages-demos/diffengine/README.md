@@ -85,3 +85,7 @@ This will deploy your diff tool launcher application with a single command.
 
 - DiffEngine GitHub repository: [github.com/VerifyTests/DiffEngine](https://github.com/VerifyTests/DiffEngine)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Diff, Text Comparison, File Comparison, Version Control

@@ -100,3 +100,7 @@ This will deploy your IBAN validation application with a single command.
 
 - IbanNet for .NET overview: [github.com/skwasjer/IbanNet](https://github.com/skwasjer/IbanNet)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+IBAN, Banking, Validation, Financial

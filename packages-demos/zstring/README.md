@@ -95,3 +95,7 @@ This will deploy your ZString demo application with a single command.
 
 - ZString for .NET overview: [github.com/Cysharp/ZString](https://github.com/Cysharp/ZString)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Performance, String Formatting, Zero Allocation, Optimization

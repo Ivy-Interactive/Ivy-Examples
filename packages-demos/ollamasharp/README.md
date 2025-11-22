@@ -147,3 +147,7 @@ If you're unable to connect to Ollama:
 - Ollama overview: [ollama.com](https://ollama.com)
 - OllamaSharp library: [github.com/awaescher/OllamaSharp](https://github.com/awaescher/OllamaSharp)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+AI, Chat, LLM, Local AI, Conversational AI, Natural Language Processing

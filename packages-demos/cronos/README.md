@@ -83,3 +83,7 @@ This will deploy your cron expression parser application with a single command.
 
 - Cronos GitHub repository: [github.com/HangfireIO/Cronos](https://github.com/HangfireIO/Cronos)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Cron, Scheduling, Date/Time, Task Scheduling, Cron Expression

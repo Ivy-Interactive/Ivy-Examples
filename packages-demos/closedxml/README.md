@@ -107,3 +107,7 @@ This will deploy your Excel workbook management application with a single comman
 - ClosedXML GitHub repository: [github.com/ClosedXML/ClosedXML](https://github.com/ClosedXML/ClosedXML)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
 
+## Tags
+
+Excel, Spreadsheet, Data Management, Office Documents
+

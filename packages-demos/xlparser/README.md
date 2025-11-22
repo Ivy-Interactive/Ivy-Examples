@@ -81,3 +81,7 @@ Deploy this example to Ivy's hosting platform:
 
 - XLParser documentation: [github.com/spreadsheetlab/XLParser](https://github.com/spreadsheetlab/XLParser)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Excel, Formula Parsing, Spreadsheet, Formula Analysis

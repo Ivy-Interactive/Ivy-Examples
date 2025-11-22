@@ -77,3 +77,7 @@ Deploy this example to Ivy's hosting platform:
 This will deploy your QR code generation application with a single command.
 
 ## For more details, see the [Ivy Documentation](https://docs.ivy.app)
+
+## Tags
+
+QR Code, Image Generation, vCard, Contact Management

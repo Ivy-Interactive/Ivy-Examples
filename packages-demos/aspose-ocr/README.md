@@ -90,3 +90,7 @@ For more licensing options (metered, embedded resources, stream), see the [offic
 - Aspose.OCR for .NET overview: [products.aspose.com/ocr/net](https://products.aspose.com/ocr/net/)
 - Aspose.OCR Licensing: [docs.aspose.com/ocr/net/licensing](https://docs.aspose.com/ocr/net/licensing/)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+OCR, Image Processing, Text Recognition, Image-to-Text

@@ -97,3 +97,7 @@ This will deploy your Handlebars template engine with a single command.
 - Handlebars.Net Documentation: [github.com/Handlebars-Net/Handlebars.Net](https://github.com/Handlebars-Net/Handlebars.Net)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
 - Handlebars.js Guide: [handlebarsjs.com/guide](https://handlebarsjs.com/guide)
+
+## Tags
+
+Templating, Template Engine, HTML Generation, Handlebars

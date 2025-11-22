@@ -83,3 +83,7 @@ Deploy this example to Ivy's hosting platform:
 
 - Newtonsoft.Json: [github.com/JamesNK/Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+JSON, Serialization, Data Format, API

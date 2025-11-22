@@ -83,3 +83,7 @@ This will deploy your HTML parser application with a single command.
 
 - HtmlAgilityPack for .NET overview: [github.com/zzzprojects/html-agility-pack](https://github.com/zzzprojects/html-agility-pack)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+HTML Parsing, Web Scraping, DOM, XPath

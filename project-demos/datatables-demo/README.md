@@ -49,3 +49,7 @@ The demo uses generated user data with:
 - [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework)
 - .NET 9.0
 - Apache Arrow (for high-performance data processing)
+
+## Tags
+
+DataTable, Data Visualization, Tables, Sorting, Filtering, Apache Arrow

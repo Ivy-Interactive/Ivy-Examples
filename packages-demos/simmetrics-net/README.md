@@ -75,3 +75,7 @@ Deploy this example to Ivy hosting:
 
 - SimMetrics.Net GitHub repository: [github.com/StefH/SimMetrics.Net](https://github.com/StefH/SimMetrics.Net)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+String Similarity, Text Matching, Distance Metrics, Fuzzy Matching

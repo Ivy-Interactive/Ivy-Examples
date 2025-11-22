@@ -82,3 +82,7 @@ This will deploy your CSV management application with a single command.
 
 - CsvHelper for .NET overview: [github.com/JoshClose/CsvHelper](https://github.com/JoshClose/CsvHelper)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+CSV, Data Import, Data Export, File Processing

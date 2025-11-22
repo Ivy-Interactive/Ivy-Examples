@@ -83,3 +83,7 @@ This will deploy your mapping demonstration application with a single command.
 
 - Mapster for .NET overview: [github.com/rubberduck-sharp/Mapster](https://github.com/rubberduck-sharp/Mapster)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Object Mapping, Data Transformation, DTO, Mapping

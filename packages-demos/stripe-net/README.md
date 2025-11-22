@@ -112,3 +112,7 @@ dotnet watch
 - Stripe Checkout documentation: [stripe.com/docs/payments/checkout](https://stripe.com/docs/payments/checkout)
 - Stripe.net SDK: [github.com/stripe/stripe-dotnet](https://github.com/stripe/stripe-dotnet)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Payment Processing, Stripe, E-commerce, API Integration, Checkout

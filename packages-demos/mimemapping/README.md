@@ -88,3 +88,7 @@ This will deploy your MIME type discovery application with a single command.
 
 - MimeMapping library overview: [github.com/zone117x/MimeMapping](https://github.com/zone117x/MimeMapping)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+MIME Type, File Types, Content Type, HTTP

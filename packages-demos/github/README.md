@@ -107,3 +107,7 @@ This will deploy your GitHub stats application with a single command.
 - GitHub REST API Documentation: [docs.github.com/en/rest](https://docs.github.com/en/rest)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
 - GitHub API Rate Limiting: [docs.github.com/en/rest/overview/rate-limits](https://docs.github.com/en/rest/overview/rate-limits)
+
+## Tags
+
+GitHub, API Integration, Developer Tools, Statistics, Analytics

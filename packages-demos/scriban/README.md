@@ -90,3 +90,7 @@ This will deploy your Scriban template engine application with a single command.
 - Scriban for .NET overview: [github.com/scriban/scriban](https://github.com/scriban/scriban)
 - Scriban Documentation: [github.com/scriban/scriban/wiki](https://github.com/scriban/scriban/wiki)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Templating, Template Engine, Text Generation, Liquid

@@ -92,3 +92,7 @@ This will deploy your enum exploration application with a single command.
 
 - Enums.NET GitHub repository: [github.com/TylerBrinkley/Enums.NET](https://github.com/TylerBrinkley/Enums.NET)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Enum, Type System, Reflection, Flags

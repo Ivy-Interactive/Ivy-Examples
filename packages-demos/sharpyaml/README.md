@@ -63,3 +63,7 @@ This example demonstrates how to convert JSON payloads into YAML using the [Shar
 ## Learn More
 - SharpYaml library: <https://github.com/xoofx/SharpYaml>
 - Ivy documentation: <https://docs.ivy.app>
+
+## Tags
+
+YAML, JSON Conversion, Data Format, Serialization

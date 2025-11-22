@@ -92,3 +92,7 @@ This will deploy your PDF generator application with a single command.
 
 - QuestPDF library overview: [github.com/QuestPDF/QuestPDF](https://github.com/QuestPDF/QuestPDF)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+PDF, Document Generation, Markdown, Report Generation

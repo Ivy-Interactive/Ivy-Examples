@@ -90,3 +90,7 @@ ExcelPackage.License.SetNonCommercialOrganization("Ivy");
 
 - EPPlus GitHub repository: [github.com/EPPlusSoftware/EPPlus](https://github.com/EPPlusSoftware/EPPlus)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Excel, Spreadsheet, Data Management, Office Documents

@@ -130,3 +130,7 @@ This is part of the Ivy Examples collection. To contribute:
 ## License
 
 This project is part of the Ivy Examples collection and follows the same licensing terms.
+
+## Tags
+
+JWT, Security, Authentication, Token Management, API Security

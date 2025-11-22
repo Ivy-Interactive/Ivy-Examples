@@ -81,3 +81,7 @@ This will deploy your barcode generation application with a single command.
 
 - BarcodeLib GitHub repository: [github.com/barnhill/barcodelib](https://github.com/barnhill/barcodelib)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Barcode, Image Generation, QR Code, Data Encoding

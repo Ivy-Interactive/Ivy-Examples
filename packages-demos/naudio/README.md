@@ -86,3 +86,7 @@ This will deploy your audio processing application with a single command.
 
 - NAudio for .NET overview: [github.com/naudio/NAudio](https://github.com/naudio/NAudio)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Audio, Sound Processing, Media, Audio Playback

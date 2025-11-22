@@ -98,3 +98,7 @@ Each Ivy view (`JsonParserView`, `IntegerCalculatorView`, `DateTimeParserView`) 
 
 - Superpower parser-combinator library: [github.com/datalust/superpower](https://github.com/datalust/superpower)
 - Ivy Framework documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Parsing, Parser Combinator, Text Processing, Language Processing

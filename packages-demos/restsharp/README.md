@@ -100,3 +100,7 @@ This will deploy your REST API testing application with a single command.
 - RestSharp for .NET overview: [github.com/restsharp/RestSharp](https://github.com/restsharp/RestSharp)
 - RestSharp Migration Guide: [restsharp.dev/migration](https://restsharp.dev/migration/)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+REST API, HTTP, API Testing, Web Services, Integration

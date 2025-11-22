@@ -76,3 +76,7 @@ Deploy this example to Ivy's hosting platform:
 
 - SmartFormat.NET documentation: [github.com/axuno/SmartFormat](https://github.com/axuno/SmartFormat)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+String Formatting, Templating, Text Generation, Formatting

@@ -92,3 +92,7 @@ This will deploy your text humanizer application with a single command.
 
 - Humanizer for .NET overview: [github.com/Humanizr/Humanizer](https://github.com/Humanizr/Humanizer)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Text Transformation, String Formatting, Humanization, Text Processing

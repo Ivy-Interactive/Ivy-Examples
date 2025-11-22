@@ -76,3 +76,7 @@ This will deploy your QR code generation application with a single command.
 
 - Aspose.BarCode for .NET overview: [products.aspose.com/barcode/net](https://products.aspose.com/barcode/net/)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Barcode, Image Generation, QR Code, Data Encoding

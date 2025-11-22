@@ -84,3 +84,7 @@ This will deploy your DNS lookup application with a single command.
 - DnsClient.NET GitHub repository: [github.com/MichaCo/DnsClient.NET](https://github.com/MichaCo/DnsClient.NET)
 - DnsClient.NET Documentation: [dnsclient.michaco.net](https://dnsclient.michaco.net)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+DNS, Network, Domain Name System, Network Tools
