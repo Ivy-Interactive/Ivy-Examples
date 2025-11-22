@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Script to generate Ivy-All-Project.json with information about all projects and demos
+# Script to generate Ivy-All-Projects.json with information about all projects and demos
 
 set -e
 
 REPO_URL="https://github.com/Ivy-Interactive/Ivy-Examples"
-OUTPUT_FILE="Ivy-All-Project.json"
+OUTPUT_FILE="Ivy-All-Projects.json"
 
 # Function to extract project name from README.md
 extract_project_name() {

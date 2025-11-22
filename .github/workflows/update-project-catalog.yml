@@ -27,13 +27,15 @@ jobs:
       - name: Check for changes
         id: check-changes
         run: |
-          if git diff --quiet Ivy-All-Project.json; then
+          git add Ivy-All-Projects.json
+          if git diff --cached --quiet; then
             echo "has-changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected in Ivy-All-Project.json"
+            echo "No changes detected in Ivy-All-Projects.json"
+            git reset Ivy-All-Projects.json
           else
             echo "has-changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected in Ivy-All-Project.json"
-            git diff Ivy-All-Project.json || true
+            echo "Changes detected in Ivy-All-Projects.json"
+            git diff --cached Ivy-All-Projects.json || true
           fi
 
       - name: Commit and push changes
@@ -41,7 +43,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add Ivy-All-Project.json
+          git add Ivy-All-Projects.json
           git commit -m "chore: update project catalog [skip ci]"
           git push origin main --force
 
