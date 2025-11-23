@@ -1,5 +1,9 @@
 # Humanizer
 
+## Description
+
+Humanizer is a web application for text transformation with support for multiple formats including PascalCase, camelCase, kebab-case, underscore_case, and smart truncation.
+
 <img width="1915" height="908" alt="image" src="https://github.com/user-attachments/assets/52e53613-3419-4c99-b37c-53babfa41c98" />
 
 ## One-Click Development Environment
@@ -88,3 +92,7 @@ This will deploy your text humanizer application with a single command.
 
 - Humanizer for .NET overview: [github.com/Humanizr/Humanizer](https://github.com/Humanizr/Humanizer)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Text Transformation, String Formatting, Humanization, Text Processing

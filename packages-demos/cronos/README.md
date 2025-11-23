@@ -1,5 +1,9 @@
 # Cronos 
 
+## Description
+
+Cronos is a web application for parsing and validating cron expressions with timezone support, next occurrence calculation, and predefined template patterns.
+
 <img width="1919" height="759" alt="image" src="https://github.com/user-attachments/assets/40d090f4-be98-4a49-bfab-f7b885666263" />
 
 ## One-Click Development Environment
@@ -79,3 +83,7 @@ This will deploy your cron expression parser application with a single command.
 
 - Cronos GitHub repository: [github.com/HangfireIO/Cronos](https://github.com/HangfireIO/Cronos)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Cron, Scheduling, Date/Time, Task Scheduling, Cron Expression

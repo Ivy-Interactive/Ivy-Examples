@@ -1,5 +1,9 @@
 # Aspose.OCR Image-to-Text
 
+## Description
+
+Aspose.OCR Image-to-Text is a web application for extracting text from images using OCR technology with image upload, text recognition, and formatted output display.
+
 <img width="1908" height="899" alt="image" src="https://github.com/user-attachments/assets/29aa2aef-513a-4f7c-81f1-8e5597503b77" />
 
 ## One-Click Development Environment
@@ -86,3 +90,7 @@ For more licensing options (metered, embedded resources, stream), see the [offic
 - Aspose.OCR for .NET overview: [products.aspose.com/ocr/net](https://products.aspose.com/ocr/net/)
 - Aspose.OCR Licensing: [docs.aspose.com/ocr/net/licensing](https://docs.aspose.com/ocr/net/licensing/)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+OCR, Image Processing, Text Recognition, Image-to-Text

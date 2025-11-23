@@ -1,5 +1,9 @@
 # BarcodeLib 
 
+## Description
+
+BarcodeLib is a web application for generating barcodes in multiple symbologies with customizable options, live preview, and downloadable PNG output.
+
 <img width="1913" height="905" alt="image" src="https://github.com/user-attachments/assets/84f10da6-c31b-4040-ad86-4ce72b769ee1" />
 
 ## One-Click Development Environment
@@ -77,3 +81,7 @@ This will deploy your barcode generation application with a single command.
 
 - BarcodeLib GitHub repository: [github.com/barnhill/barcodelib](https://github.com/barnhill/barcodelib)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Barcode, Image Generation, QR Code, Data Encoding

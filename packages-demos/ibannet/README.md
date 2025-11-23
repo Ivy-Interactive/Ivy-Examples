@@ -1,5 +1,9 @@
 # IbanNet 
 
+## Description
+
+IbanNet is a web application for IBAN validation and generation with support for international bank account numbers, country-specific formats, and detailed validation results.
+
 <img width="1914" height="908" alt="image" src="https://github.com/user-attachments/assets/66a63eda-d58e-4d89-8ce5-243c77fa4a69" />
 
 <img width="1911" height="908" alt="image" src="https://github.com/user-attachments/assets/b2c5179a-8613-4124-b8fd-6891edd9de7d" />
@@ -96,3 +100,7 @@ This will deploy your IBAN validation application with a single command.
 
 - IbanNet for .NET overview: [github.com/skwasjer/IbanNet](https://github.com/skwasjer/IbanNet)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+IBAN, Banking, Validation, Financial

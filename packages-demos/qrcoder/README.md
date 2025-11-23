@@ -1,5 +1,9 @@
 # QR Code Generator
 
+## Description
+
+QR Code Generator is a web application for creating QR codes with vCard contact information, allowing users to generate scannable contact cards for easy sharing.
+
 <img width="1914" height="913" alt="image" src="https://github.com/user-attachments/assets/1df75bc9-a5e0-438b-b785-5abc2388b191" />
 
 ## One-Click Development Environment
@@ -73,3 +77,7 @@ Deploy this example to Ivy's hosting platform:
 This will deploy your QR code generation application with a single command.
 
 ## For more details, see the [Ivy Documentation](https://docs.ivy.app)
+
+## Tags
+
+QR Code, Image Generation, vCard, Contact Management
