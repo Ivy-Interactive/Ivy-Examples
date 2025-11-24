@@ -21,10 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.*" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="C:\git\Squirrel\Squirrel\Squirrel\Squirrel.csproj" />
+    <PackageReference Include="TableAPI" Version="1.0.4.1" />
   </ItemGroup>
   
   <ItemGroup>
