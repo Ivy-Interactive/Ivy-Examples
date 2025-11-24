@@ -1,5 +1,9 @@
 # Serialize.Linq
 
+## Description
+
+Serialize.Linq is a web application for serializing and deserializing LINQ expressions to JSON, enabling expression storage, transmission, and dynamic evaluation.
+
 <img width="976" height="831" alt="image" src="https://github.com/user-attachments/assets/2e6760c0-58cd-4d1c-8721-dff85c56bfab" />
 
 ## One-Click Development Environment
@@ -79,3 +83,7 @@ This will deploy your LINQ expression serialization application with a single co
 
 - Serialize.Linq for .NET overview: [github.com/esskar/Serialize.Linq](https://github.com/esskar/Serialize.Linq)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+LINQ, Serialization, Expression Trees, Query

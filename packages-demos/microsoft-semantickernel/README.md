@@ -1,5 +1,9 @@
 # Microsoft.SemanticKernel
 
+## Description
+
+Microsoft.SemanticKernel is a web application for AI-powered action item extraction from text using GPT-4o-mini, with intelligent text analysis and formatted output display.
+
 <img width="1918" height="917" alt="image" src="https://github.com/user-attachments/assets/d3d5c7d5-8a34-4325-bb6d-e2ec655d0f46" />
 
 ## One-Click Development Environment
@@ -112,3 +116,7 @@ dotnet watch
 - Microsoft Semantic Kernel: [github.com/microsoft/semantic-kernel](https://github.com/microsoft/semantic-kernel)
 - OpenAI API Documentation: [platform.openai.com/docs](https://platform.openai.com/docs)
 - Ivy documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+AI, Natural Language Processing, Text Analysis, OpenAI, Semantic Kernel

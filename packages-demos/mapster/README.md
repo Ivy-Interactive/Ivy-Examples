@@ -1,5 +1,9 @@
 ﻿# Mapster
 
+## Description
+
+Mapster is a web application demonstrating bidirectional object-to-object mapping between Person and PersonDto classes with automatic field combination and validation.
+
 <img width="1918" height="912" alt="image" src="https://github.com/user-attachments/assets/6f200388-6a4a-46ac-a345-6a74732f572a" />
 
 ## One-Click Development Environment
@@ -79,3 +83,7 @@ This will deploy your mapping demonstration application with a single command.
 
 - Mapster for .NET overview: [github.com/rubberduck-sharp/Mapster](https://github.com/rubberduck-sharp/Mapster)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Object Mapping, Data Transformation, DTO, Mapping

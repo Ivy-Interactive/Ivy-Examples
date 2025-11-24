@@ -1,5 +1,9 @@
 # FluentDateTime
 
+## Description
+
+FluentDateTime is a web application for date and time calculations with fluent syntax, supporting date arithmetic, relative time expressions, and formatted output.
+
 <img width="1906" height="911" alt="image" src="https://github.com/user-attachments/assets/a16b8f54-3142-4472-9ebc-380f260d805a" />
 
 ## One-Click Development Environment
@@ -81,3 +85,7 @@ This will deploy your DateTime calculator application with a single command.
 
 - FluentDateTime for .NET overview: [github.com/FluentDateTime/FluentDateTime](https://github.com/FluentDateTime/FluentDateTime)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+Date/Time, DateTime, Date Calculation, Time Manipulation

@@ -1,5 +1,9 @@
 ﻿# DNS Client
 
+## Description
+
+DNS Client is a web application for performing DNS lookups with support for multiple record types, reverse DNS queries, and detailed DNS information display.
+
 <img width="1911" height="909" alt="image" src="https://github.com/user-attachments/assets/ee9cb562-6c65-4686-8299-eacc94b79689" />
 
 ## One-Click Development Environment
@@ -80,3 +84,7 @@ This will deploy your DNS lookup application with a single command.
 - DnsClient.NET GitHub repository: [github.com/MichaCo/DnsClient.NET](https://github.com/MichaCo/DnsClient.NET)
 - DnsClient.NET Documentation: [dnsclient.michaco.net](https://dnsclient.michaco.net)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+DNS, Network, Domain Name System, Network Tools

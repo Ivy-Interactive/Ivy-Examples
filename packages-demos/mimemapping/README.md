@@ -1,5 +1,9 @@
 ﻿# MimeMapping
 
+## Description
+
+MimeMapping is a web application for MIME type detection and file extension mapping with comprehensive file type information and extension lookup capabilities.
+
 <img width="1918" height="912" alt="image" src="https://github.com/user-attachments/assets/6ad697c5-b36f-41f6-9bc6-a18b7d13bbea" />
 
 <img width="1563" height="909" alt="image" src="https://github.com/user-attachments/assets/469ac1e2-b09a-4611-954c-ec8cdf0dbe0c" />
@@ -84,3 +88,7 @@ This will deploy your MIME type discovery application with a single command.
 
 - MimeMapping library overview: [github.com/zone117x/MimeMapping](https://github.com/zone117x/MimeMapping)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+MIME Type, File Types, Content Type, HTTP

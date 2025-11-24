@@ -1,5 +1,9 @@
 # QuestPDF
 
+## Description
+
+QuestPDF is a demonstration application for generating PDF documents from markdown content with real-time preview, customizable page settings, and interactive editing capabilities.
+
 <img width="1914" height="922" alt="image" src="https://github.com/user-attachments/assets/dbcdae9c-b012-4f33-8cb9-4439eb6c8321" />
 
 ## One-Click Development Environment
@@ -88,3 +92,7 @@ This will deploy your PDF generator application with a single command.
 
 - QuestPDF library overview: [github.com/QuestPDF/QuestPDF](https://github.com/QuestPDF/QuestPDF)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+PDF, Document Generation, Markdown, Report Generation
