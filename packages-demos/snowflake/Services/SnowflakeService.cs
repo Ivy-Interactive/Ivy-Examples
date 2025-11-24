@@ -170,7 +170,7 @@ public class SnowflakeService
     /// <summary>
     /// Get preview data from a table (first N rows)
     /// </summary>
-    public async Task<System.Data.DataTable> GetTablePreviewAsync(string database, string schema, string table, int limit = 100)
+    public async Task<System.Data.DataTable> GetTablePreviewAsync(string database, string schema, string table, int limit = 1000)
     {
         var fullTableName = $"{database}.{schema}.{table}";
         var sql = $"SELECT * FROM {fullTableName} LIMIT {limit}";

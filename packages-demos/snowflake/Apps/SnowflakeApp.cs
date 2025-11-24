@@ -218,7 +218,7 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             errorMessage.Value = null;
             var info = await TryAsync(() => snowflakeService.GetTableInfoAsync(database, schema, table), "Error loading table info");
             if (info != null) tableInfo.Value = info;
-            var preview = await TryAsync(() => snowflakeService.GetTablePreviewAsync(database, schema, table), "Error loading table preview");
+            var preview = await TryAsync(() => snowflakeService.GetTablePreviewAsync(database, schema, table, 1000), "Error loading table preview");
             if (preview != null) tablePreview.Value = preview;
             isLoadingTableData.Value = false;
         }
