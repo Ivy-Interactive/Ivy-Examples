@@ -7,7 +7,7 @@ namespace SnowflakeExample.Apps;
 /// Snowflake Demo App - Interactive interface for querying SNOWFLAKE_SAMPLE_DATA
 /// </summary>
 [App(icon: Icons.Database, title: "Snowflake Sample Data Explorer")]
-public class SnowflakeApp : ViewBase
+public class SnowflakeApp : ViewBase, IHaveSecrets
 {
     public override object? Build()
     {
@@ -204,6 +204,16 @@ public class SnowflakeApp : ViewBase
         }
         
         return tableView;
+    }
+    
+    public Secret[] GetSecrets()
+    {
+        return
+        [
+            new Secret("Snowflake:Account"),
+            new Secret("Snowflake:User"),
+            new Secret("Snowflake:Password")
+        ];
     }
 }
 
