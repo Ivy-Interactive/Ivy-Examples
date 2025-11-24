@@ -294,13 +294,13 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                         ? BuildSkeletons(3) : new Spacer())
 
         ).Width(Size.Fraction(0.7f));
-        
+
         return Layout.Vertical().Gap(4).Padding(4)
             | (Layout.Vertical().Gap(4).Align(Align.TopCenter)
             | Text.H1("Snowflake Database Explorer")
             | Text.Muted("Explore your Snowflake databases, schemas, and tables"))
             | statsCards
-            | (errorMessage.Value != null 
+            | (errorMessage.Value != null
                 ? new Card(
                     Layout.Vertical().Gap(2).Padding(2)
                         | Text.Small($"Error: {errorMessage.Value}")
@@ -308,7 +308,11 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                 : new Spacer())
             | (Layout.Horizontal().Gap(4)
                 | leftSection
-                | rightSection);
+                | rightSection)
+            | (Layout.Vertical().Gap(4).Align(Align.TopCenter)
+            | Text.Small("This demo uses Snowflake to explore databases, schemas, and tables.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Snowflake](https://www.snowflake.com/)"))
+            ;
     }
     
     private object BuildStatCard(string label, int value, bool isLoading)
