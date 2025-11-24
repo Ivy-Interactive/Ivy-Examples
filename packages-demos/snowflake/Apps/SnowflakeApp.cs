@@ -24,7 +24,7 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var tableInfo = this.UseState<TableInfo?>(() => null);
         var tablePreview = this.UseState<System.Data.DataTable?>(() => null);
         var currentPage = this.UseState(1);
-        var pageSize = 30;
+        const int pageSize = 30;
         
         var isLoadingStats = this.UseState(false);
         var isLoadingSchemas = this.UseState(false);
@@ -32,59 +32,121 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var isLoadingTableData = this.UseState(false);
         var errorMessage = this.UseState<string?>(() => null);
         
-        // Statistics
         var totalDatabases = this.UseState(0);
         var totalSchemas = this.UseState(0);
         var totalTables = this.UseState(0);
-        
-        // Load databases on mount
-        async Task LoadDatabases()
+    
+        // UseEffect hooks - must be at the top
+        this.UseEffect(async () =>
         {
-            isLoadingStats.Value = true;
-            errorMessage.Value = null;
-            refreshToken.Refresh();
-            
+            await LoadDatabases();
+            if (databases.Value.Count > 0) await LoadStatistics(null);
+        }, []);
+        
+        this.UseEffect(async () =>
+        {
+            if (string.IsNullOrEmpty(selectedDatabase.Value))
+            {
+                schemas.Value = new List<string>();
+                ClearSelection();
+                if (databases.Value.Count > 0) await LoadStatistics(null);
+            }
+            else
+            {
+                await LoadSchemas(selectedDatabase.Value);
+                await LoadStatistics(selectedDatabase.Value);
+            }
+        }, selectedDatabase);
+        
+        this.UseEffect(async () =>
+        {
+            if (!string.IsNullOrEmpty(selectedDatabase.Value) && !string.IsNullOrEmpty(selectedSchema.Value))
+            {
+                await LoadTables(selectedDatabase.Value, selectedSchema.Value);
+            }
+            else
+            {
+                tables.Value = new List<string>();
+                selectedTable.Value = null;
+                tableInfo.Value = null;
+                tablePreview.Value = null;
+            }
+        }, selectedSchema);
+        
+        this.UseEffect(async () =>
+        {
+            if (!string.IsNullOrEmpty(selectedDatabase.Value) 
+                && !string.IsNullOrEmpty(selectedSchema.Value)
+                && !string.IsNullOrEmpty(selectedTable.Value))
+            {
+                await LoadTablePreview(selectedDatabase.Value, selectedSchema.Value, selectedTable.Value);
+            }
+            else
+            {
+                tableInfo.Value = null;
+                tablePreview.Value = null;
+            }
+        }, selectedTable);
+
+        // Helper functions
+        async Task<T?> TryAsync<T>(Func<Task<T>> action, string errorPrefix)
+        {
             try
             {
-                var dbList = await snowflakeService.GetDatabasesAsync();
-                databases.Value = dbList;
-                totalDatabases.Value = dbList.Count;
+                refreshToken.Refresh();
+                return await action();
             }
             catch (Exception ex)
             {
-                errorMessage.Value = $"Error loading databases: {ex.Message}";
+                errorMessage.Value = $"{errorPrefix}: {ex.Message}";
+                return default;
             }
             finally
             {
-                isLoadingStats.Value = false;
                 refreshToken.Refresh();
             }
         }
         
-        // Load statistics - for all databases or selected database
+        void ClearSelection()
+        {
+            selectedSchema.Value = null;
+            tables.Value = new List<string>();
+            selectedTable.Value = null;
+            tableInfo.Value = null;
+            tablePreview.Value = null;
+        }
+        
+        // Load functions
+        async Task LoadDatabases()
+        {
+            isLoadingStats.Value = true;
+            errorMessage.Value = null;
+            var dbList = await TryAsync(() => snowflakeService.GetDatabasesAsync(), "Error loading databases");
+            if (dbList != null)
+            {
+                databases.Value = dbList;
+                totalDatabases.Value = dbList.Count;
+            }
+            isLoadingStats.Value = false;
+        }
+        
         async Task LoadStatistics(string? database = null)
         {
             isLoadingStats.Value = true;
             errorMessage.Value = null;
-            refreshToken.Refresh();
-            
             try
             {
+                refreshToken.Refresh();
                 if (database == null)
                 {
-                    // Calculate statistics for all databases
                     int totalSchemasCount = 0;
                     int totalTablesCount = 0;
-                    
-                    // Count all schemas and tables across all databases
                     foreach (var db in databases.Value)
                     {
                         try
                         {
                             var schemaList = await snowflakeService.GetSchemasAsync(db);
                             totalSchemasCount += schemaList.Count;
-                            
-                            // Count tables in all schemas
                             foreach (var schema in schemaList)
                             {
                                 try
@@ -92,27 +154,18 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                                     var tableList = await snowflakeService.GetTablesAsync(db, schema);
                                     totalTablesCount += tableList.Count;
                                 }
-                                catch
-                                {
-                                    // Skip if can't access tables
-                                }
+                                catch { }
                             }
                         }
-                        catch
-                        {
-                            // Skip if can't access schemas
-                        }
+                        catch { }
                     }
-                    
                     totalSchemas.Value = totalSchemasCount;
                     totalTables.Value = totalTablesCount;
                 }
                 else
                 {
-                    // Calculate statistics for selected database only
                     var schemaList = await snowflakeService.GetSchemasAsync(database);
                     totalSchemas.Value = schemaList.Count;
-                    
                     int totalTablesCount = 0;
                     foreach (var schema in schemaList)
                     {
@@ -121,12 +174,8 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                             var tableList = await snowflakeService.GetTablesAsync(database, schema);
                             totalTablesCount += tableList.Count;
                         }
-                        catch
-                        {
-                            // Skip if can't access tables
-                        }
+                        catch { }
                     }
-                    
                     totalTables.Value = totalTablesCount;
                 }
             }
@@ -141,55 +190,16 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             }
         }
         
-        // Load databases on mount
-        this.UseEffect(async () =>
-        {
-            await LoadDatabases();
-            // Load statistics after databases are loaded
-            if (databases.Value.Count > 0)
-            {
-                await LoadStatistics(null);
-            }
-        }, []);
-        
-        // Load statistics when database changes
-        this.UseEffect(async () =>
-        {
-            if (databases.Value.Count > 0)
-            {
-                await LoadStatistics(selectedDatabase.Value);
-            }
-        }, selectedDatabase);
-        
-        // Load schemas when database is selected
         async Task LoadSchemas(string database)
         {
             isLoadingSchemas.Value = true;
             errorMessage.Value = null;
-            selectedSchema.Value = null;
-            tables.Value = new List<string>();
-            selectedTable.Value = null;
-            tableInfo.Value = null;
-            tablePreview.Value = null;
-            refreshToken.Refresh();
-            
-            try
-            {
-                var schemaList = await snowflakeService.GetSchemasAsync(database);
-                schemas.Value = schemaList;
-            }
-            catch (Exception ex)
-            {
-                errorMessage.Value = $"Error loading schemas: {ex.Message}";
-            }
-            finally
-            {
-                isLoadingSchemas.Value = false;
-                refreshToken.Refresh();
-            }
+            ClearSelection();
+            var schemaList = await TryAsync(() => snowflakeService.GetSchemasAsync(database), "Error loading schemas");
+            if (schemaList != null) schemas.Value = schemaList;
+            isLoadingSchemas.Value = false;
         }
         
-        // Load tables when schema is selected
         async Task LoadTables(string database, string schema)
         {
             isLoadingTables.Value = true;
@@ -197,177 +207,66 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             selectedTable.Value = null;
             tableInfo.Value = null;
             tablePreview.Value = null;
-            refreshToken.Refresh();
-            
-            try
-            {
-                var tableList = await snowflakeService.GetTablesAsync(database, schema);
-                tables.Value = tableList;
-            }
-            catch (Exception ex)
-            {
-                errorMessage.Value = $"Error loading tables: {ex.Message}";
-            }
-            finally
-            {
-                isLoadingTables.Value = false;
-                refreshToken.Refresh();
-            }
+            var tableList = await TryAsync(() => snowflakeService.GetTablesAsync(database, schema), "Error loading tables");
+            if (tableList != null) tables.Value = tableList;
+            isLoadingTables.Value = false;
         }
         
-        // Load table preview when table is selected
         async Task LoadTablePreview(string database, string schema, string table)
         {
             isLoadingTableData.Value = true;
             errorMessage.Value = null;
-            refreshToken.Refresh();
-            
-            try
-            {
-                var info = await snowflakeService.GetTableInfoAsync(database, schema, table);
-                tableInfo.Value = info;
-                
-                var preview = await snowflakeService.GetTablePreviewAsync(database, schema, table);
-                tablePreview.Value = preview;
-            }
-            catch (Exception ex)
-            {
-                errorMessage.Value = $"Error loading table data: {ex.Message}";
-            }
-            finally
-            {
-                isLoadingTableData.Value = false;
-                refreshToken.Refresh();
-            }
+            var info = await TryAsync(() => snowflakeService.GetTableInfoAsync(database, schema, table), "Error loading table info");
+            if (info != null) tableInfo.Value = info;
+            var preview = await TryAsync(() => snowflakeService.GetTablePreviewAsync(database, schema, table), "Error loading table preview");
+            if (preview != null) tablePreview.Value = preview;
+            isLoadingTableData.Value = false;
         }
         
-        // Handle database selection
-        this.UseEffect(async () =>
-        {
-            if (selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value))
-            {
-                await LoadSchemas(selectedDatabase.Value);
-                await LoadStatistics(selectedDatabase.Value);
-            }
-            else
-            {
-                schemas.Value = new List<string>();
-                selectedSchema.Value = null;
-                tables.Value = new List<string>();
-                selectedTable.Value = null;
-                tableInfo.Value = null;
-                tablePreview.Value = null;
-                await LoadStatistics(null);
-            }
-        }, selectedDatabase);
         
-        // Handle schema selection
-        this.UseEffect(async () =>
-        {
-            if (selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value) 
-                && selectedSchema.Value != null && !string.IsNullOrEmpty(selectedSchema.Value))
-            {
-                await LoadTables(selectedDatabase.Value, selectedSchema.Value);
-            }
-            else
-            {
-                tables.Value = new List<string>();
-                selectedTable.Value = null;
-                tableInfo.Value = null;
-                tablePreview.Value = null;
-            }
-        }, selectedSchema);
+        // Helper variables for UI
+        var hasDatabase = !string.IsNullOrEmpty(selectedDatabase.Value);
+        var hasSchema = hasDatabase && !string.IsNullOrEmpty(selectedSchema.Value);
+        var hasTable = hasSchema && !string.IsNullOrEmpty(selectedTable.Value);
+        var isLoadingData = isLoadingStats.Value || databases.Value.Count == 0;
         
-        // Handle table selection
-        this.UseEffect(async () =>
-        {
-            if (selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value)
-                && selectedSchema.Value != null && !string.IsNullOrEmpty(selectedSchema.Value)
-                && selectedTable.Value != null && !string.IsNullOrEmpty(selectedTable.Value))
-            {
-                await LoadTablePreview(selectedDatabase.Value, selectedSchema.Value, selectedTable.Value);
-            }
-            else
-            {
-                tableInfo.Value = null;
-                tablePreview.Value = null;
-            }
-        }, selectedTable);
-        
-        // Dashboard Statistics Cards
+        // Statistics Cards
         var statsCards = Layout.Horizontal().Gap(4).Align(Align.TopCenter)
-            | new Card(
-                Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-                | (isLoadingStats.Value 
-                    ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
-                    : Text.H2(totalDatabases.Value.ToString()))
-                | Text.Muted("Databases")
-            ).Width(Size.Fraction(0.3f))
-            | new Card(
-                Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-                | (isLoadingStats.Value 
-                    ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
-                    : Text.H2(totalSchemas.Value.ToString()))
-                | Text.Muted(selectedDatabase.Value != null ? $"Schemas in {selectedDatabase.Value}" : "Schemas")
-            ).Width(Size.Fraction(0.3f))
-            | new Card(
-                Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-                | (isLoadingStats.Value 
-                    ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
-                    : Text.H2(totalTables.Value.ToString()))
-                | Text.Muted(selectedDatabase.Value != null ? $"Tables in {selectedDatabase.Value}" : "Tables")
-            ).Width(Size.Fraction(0.3f));
+            | BuildStatCard("Databases", totalDatabases.Value, isLoadingStats.Value)
+            | BuildStatCard(hasDatabase ? $"Schemas in {selectedDatabase.Value}" : "Schemas", totalSchemas.Value, isLoadingStats.Value)
+            | BuildStatCard(hasDatabase ? $"Tables in {selectedDatabase.Value}" : "Tables", totalTables.Value, isLoadingStats.Value);
         
-        // Database Selection Options
+        // Selection Options
         var databaseOptions = databases.Value
             .Select(db => new Option<string>(db, db))
             .Prepend(new Option<string>("-- Select Database --", ""))
             .ToArray();
         
-        // Schema Selection Options
         var schemaOptions = schemas.Value
             .Select(schema => new Option<string>(schema, schema))
             .Prepend(new Option<string>("-- Select Schema --", ""))
             .ToArray();
         
-        // Table Selection Options
         var tableOptions = tables.Value
             .Select(table => new Option<string>(table, table))
             .Prepend(new Option<string>("-- Select Table --", ""))
             .ToArray();
         
-        // Left Section - Database Selection and Column Information
+        // Left Section
         var leftSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
             | Text.H3("Database Explorer")
             | Text.Muted("Select database, schema, and table")
-            | (isLoadingStats.Value || databases.Value.Count == 0
-                ? Layout.Vertical().Gap(2)
-                    | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                    | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                    | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+            | (isLoadingData
+                ? BuildSkeletons(3)
                 : Layout.Vertical().Gap(3)
-                    | selectedDatabase
-                        .ToSelectInput(databaseOptions)
-                        .Placeholder("Select a database...")
-                        .WithField()
-                        .Label("Database")
-                    | (isLoadingSchemas.Value && selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value)
+                    | selectedDatabase.ToSelectInput(databaseOptions).Placeholder("Select a database...").WithField().Label("Database")
+                    | (isLoadingSchemas.Value && hasDatabase
                         ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                        : selectedSchema
-                            .ToSelectInput(schemaOptions)
-                            .Placeholder("Select a schema...")
-                            .Disabled(selectedDatabase.Value == null || string.IsNullOrEmpty(selectedDatabase.Value) || schemas.Value.Count == 0)
-                            .WithField()
-                            .Label("Schema"))
-                    | (isLoadingTables.Value && selectedSchema.Value != null && !string.IsNullOrEmpty(selectedSchema.Value) && selectedDatabase.Value != null
+                        : selectedSchema.ToSelectInput(schemaOptions).Placeholder("Select a schema...").Disabled(!hasDatabase || schemas.Value.Count == 0).WithField().Label("Schema"))
+                    | (isLoadingTables.Value && hasSchema
                         ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                        : selectedTable
-                            .ToSelectInput(tableOptions)
-                            .Placeholder("Select a table...")
-                            .Disabled(selectedSchema.Value == null || string.IsNullOrEmpty(selectedSchema.Value) || selectedDatabase.Value == null || tables.Value.Count == 0)
-                            .WithField()
-                            .Label("Table")))
+                        : selectedTable.ToSelectInput(tableOptions).Placeholder("Select a table...").Disabled(!hasSchema || tables.Value.Count == 0).WithField().Label("Table")))
             | (tableInfo.Value != null
                 ? Layout.Vertical().Gap(3)
                     | Text.H4("Table Structure")
@@ -376,8 +275,8 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                 : new Spacer())
         ).Width(Size.Fraction(0.3f));
         
-        // Right Section - Data Preview
-        var rightSection = selectedTable.Value != null && selectedDatabase.Value != null && selectedSchema.Value != null
+        // Right Section
+        var rightSection = hasTable
             ? new Card(
                 Layout.Vertical().Gap(4).Padding(3)
                 | Layout.Horizontal().Gap(4).Align(Align.Center)
@@ -390,13 +289,8 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                         : new Spacer())
                 | Text.Muted("Data Preview:")
                 | (isLoadingTableData.Value 
-                    ? Layout.Vertical().Gap(2)
-                        | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
-                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
-                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
-                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
-                    : (tablePreview.Value != null && tablePreview.Value.Rows.Count > 0
+                    ? BuildSkeletons(5)
+                    : (tablePreview.Value?.Rows.Count > 0
                         ? BuildDataTableWithPagination(tablePreview.Value, currentPage.Value, pageSize, currentPage)
                         : Text.Muted("No data available")))
             ).Width(Size.Fraction(0.7f))
@@ -419,6 +313,27 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             | (Layout.Horizontal().Gap(4).Align(Align.TopCenter)
                 | leftSection
                 | rightSection);
+    }
+    
+    private object BuildStatCard(string label, int value, bool isLoading)
+    {
+        return new Card(
+            Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
+            | (isLoading 
+                ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
+                : Text.H2(value.ToString()))
+            | Text.Muted(label)
+        ).Width(Size.Fraction(0.3f));
+    }
+    
+    private object BuildSkeletons(int count)
+    {
+        var layout = Layout.Vertical().Gap(2);
+        foreach (var _ in Enumerable.Range(0, count))
+        {
+            layout = layout | new Skeleton().Height(Size.Units(24)).Width(Size.Full());
+        }
+        return layout;
     }
     
     private object BuildColumnsTable(List<ColumnInfo> columns)
