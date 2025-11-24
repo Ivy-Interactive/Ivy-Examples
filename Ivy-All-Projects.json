@@ -1,622 +1,732 @@
 {
   "project-demos": [
     {
-      "name": "Hello",
-      "description": "Web application created using Ivy.",
+      "name": "Cold Call Tracker",
+      "description": "Cold Call Tracker is a web application for managing and tracking cold call leads with integration to Exa.ai websets API for company data and contact information. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/cold-call-tracker",
       "deploymentLink": "ivy-projectdemos-cold-call-tracker.sliplane.app",
       "tags": [
-        "demo"
+        "CRM",
+        "Lead Management",
+        "Sales",
+        "API Integration",
+        "Data Tracking"
       ]
     },
     {
       "name": "Course-template",
-      "description": "",
+      "description": "Course Template is a web application template for creating and managing structured educational courses with modules, themes, sections, and interactive content.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/course-template",
       "deploymentLink": "ivy-projectdemos-course-template.sliplane.app",
       "tags": [
-        "demo"
+        "Education",
+        "Course Management",
+        "Content Management",
+        "Template"
       ]
     },
     {
       "name": "Vc",
-      "description": "Web application created using Ivy.",
+      "description": "Vc is a CRM system for venture capital firms to manage startups, deals, founders, partners, and industries with comprehensive tracking and analytics capabilities. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/crm-vc",
       "deploymentLink": "ivy-projectdemos-crm-vc.sliplane.app",
       "tags": [
-        "Microsoft.EntityFrameworkCore",
-        "Microsoft.EntityFrameworkCore.Sqlite",
-        "Microsoft.EntityFrameworkCore.Sqlite.Design",
-        "Microsoft.EntityFrameworkCore.Tools",
-        "demo"
+        "CRM",
+        "Venture Capital",
+        "Business Management",
+        "Analytics",
+        "Database"
       ]
     },
     {
       "name": "DataTables Demo",
-      "description": "This Ivy application demonstrates the powerful DataTable widget capabilities, showcasing different features and use cases.",
+      "description": "DataTables Demo is a comprehensive demonstration application showcasing the DataTable widget capabilities including sorting, filtering, pagination, and high-performance handling of large datasets using Apache Arrow.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/datatables-demo",
       "deploymentLink": "ivy-projectdemos-datatables-demo.sliplane.app",
       "tags": [
-        "demo"
+        "DataTable",
+        "Data Visualization",
+        "Tables",
+        "Sorting",
+        "Filtering",
+        "Apache Arrow"
       ]
     },
     {
       "name": "Hello",
-      "description": "Web application created using Ivy.",
+      "description": "Hello is a simple starter application demonstrating the basic structure and setup of an Ivy web application. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/helloworld",
       "deploymentLink": "ivy-projectdemos-helloworld.sliplane.app",
       "tags": [
-        "demo"
+        "Starter",
+        "Template",
+        "Getting Started",
+        "Demo"
       ]
     },
     {
       "name": "OpperAI Chat",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "OpperAI Chat is a web application for interactive AI-powered conversations using Opper.ai API with support for multiple AI models, conversation context, custom instructions, and mathematical expression rendering.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/opperai",
       "deploymentLink": "ivy-projectdemos-opperai.sliplane.app",
       "tags": [
         "AI",
-        "demo"
+        "Chat",
+        "Conversational AI",
+        "LLM",
+        "Natural Language Processing",
+        "API Integration"
       ]
     },
     {
       "name": "RentalBackOffice",
-      "description": "Web application created using Ivy.",
+      "description": "RentalBackOffice is a web application for managing rental properties, tenants, leases, and related administrative tasks for property management businesses. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/rental-back-office",
       "deploymentLink": "ivy-projectdemos-rental-back-office.sliplane.app",
       "tags": [
-        "demo"
+        "Property Management",
+        "Rental",
+        "Business Management",
+        "Database"
       ]
     }
   ],
   "package-demos": [
     {
       "name": "HtmlAgilityPack",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "HtmlAgilityPack is a web application for parsing and analyzing HTML from websites with DOM structure extraction, content analysis, and XPath query support.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/HtmlAgilityPack",
       "deploymentLink": "ivy-packagedemos-HtmlAgilityPack.sliplane.app",
       "tags": [
-        "HtmlAgilityPack",
-        "demo"
+        "HTML Parsing",
+        "Web Scraping",
+        "DOM",
+        "XPath"
       ]
     },
     {
       "name": "Aspose.BarCode Generator",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Aspose.BarCode Generator is a web application for generating barcodes in multiple symbologies with adjustable sizes, live preview, and downloadable output.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/aspose-barcode",
       "deploymentLink": "ivy-packagedemos-aspose-barcode.sliplane.app",
       "tags": [
-        "Aspose.BarCode",
-        "Image Processing",
-        "demo"
+        "Barcode",
+        "Image Generation",
+        "QR Code",
+        "Data Encoding"
       ]
     },
     {
       "name": "Aspose.OCR Image-to-Text",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Aspose.OCR Image-to-Text is a web application for extracting text from images using OCR technology with image upload, text recognition, and formatted output display.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/aspose-ocr",
       "deploymentLink": "ivy-packagedemos-aspose-ocr.sliplane.app",
       "tags": [
-        "Aspose.OCR",
+        "OCR",
         "Image Processing",
-        "demo"
+        "Text Recognition",
+        "Image-to-Text"
       ]
     },
     {
       "name": "Aspose.Words",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Aspose.Words is a web application for generating professional Word documents with template support, dynamic content insertion, and document manipulation capabilities.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/aspose-words",
       "deploymentLink": "ivy-packagedemos-aspose-words.sliplane.app",
       "tags": [
-        "Aspose.Words",
-        "demo"
+        "Word Documents",
+        "Document Generation",
+        "Office Documents",
+        "Report Generation"
       ]
     },
     {
       "name": "BarcodeLib",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "BarcodeLib is a web application for generating barcodes in multiple symbologies with customizable options, live preview, and downloadable PNG output.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/barcodelib",
       "deploymentLink": "ivy-packagedemos-barcodelib.sliplane.app",
       "tags": [
-        "BarcodeLib",
-        "Image Processing",
-        "demo"
+        "Barcode",
+        "Image Generation",
+        "QR Code",
+        "Data Encoding"
       ]
     },
     {
       "name": "Bogus",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Bogus is a web application for generating realistic fake data for testing and development with customizable fruit lists and randomized order generation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/bogus",
       "deploymentLink": "ivy-packagedemos-bogus.sliplane.app",
       "tags": [
-        "Bogus",
-        "demo"
+        "Fake Data",
+        "Testing",
+        "Data Generation",
+        "Mock Data"
       ]
     },
     {
       "name": "ClosedXML",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "ClosedXML is a demonstration application for managing Excel workbooks with capabilities to create, edit, view, and manipulate Excel files including columns, rows, and data validation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/closedxml",
       "deploymentLink": "ivy-packagedemos-closedxml.sliplane.app",
       "tags": [
-        "ClosedXML",
         "Excel",
-        "demo"
+        "Spreadsheet",
+        "Data Management",
+        "Office Documents"
       ]
     },
     {
       "name": "AWS Constructs",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "AWS Constructs is a web application for building composable configuration models with hierarchical construct structures, interactive tree navigation, and dynamic node management.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/constructs",
       "deploymentLink": "ivy-packagedemos-constructs.sliplane.app",
       "tags": [
-        "Constructs",
-        "demo"
+        "AWS",
+        "Infrastructure",
+        "Configuration",
+        "Cloud"
       ]
     },
     {
       "name": "Cronos",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Cronos is a web application for parsing and validating cron expressions with timezone support, next occurrence calculation, and predefined template patterns.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/cronos",
       "deploymentLink": "ivy-packagedemos-cronos.sliplane.app",
       "tags": [
-        "Cronos",
+        "Cron",
+        "Scheduling",
         "Date/Time",
-        "demo"
+        "Task Scheduling",
+        "Cron Expression"
       ]
     },
     {
       "name": "CSV Helper",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "CSV Helper is a web application for managing product data with CSV import and export capabilities, allowing users to create, view, and bulk import products from CSV files.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/csvhelper",
       "deploymentLink": "ivy-packagedemos-csvhelper.sliplane.app",
       "tags": [
-        "CsvHelper",
         "CSV",
-        "demo"
+        "Data Import",
+        "Data Export",
+        "File Processing"
       ]
     },
     {
       "name": "DiffEngine",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "DiffEngine is a web application for launching external diff tools to compare text files side-by-side with automatic tool detection and file comparison capabilities.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/diffengine",
       "deploymentLink": "ivy-packagedemos-diffengine.sliplane.app",
       "tags": [
-        "DiffEngine",
-        "Newtonsoft.Json",
-        "demo"
+        "Diff",
+        "Text Comparison",
+        "File Comparison",
+        "Version Control"
       ]
     },
     {
       "name": "DiffPlex – Text Comparison Tool",
-      "description": "An Ivy example demonstrating text comparison and diff visualization using the DiffPlex library.",
+      "description": "DiffPlex is a web application for comparing two text blocks and visualizing differences with highlighted insertions, deletions, modifications, and unchanged content. An Ivy example demonstrating text comparison and diff visualization using the DiffPlex library.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/diffplex",
       "deploymentLink": "ivy-packagedemos-diffplex.sliplane.app",
       "tags": [
-        "DiffPlex",
-        "demo"
+        "Diff",
+        "Text Comparison",
+        "Version Control",
+        "Code Review"
       ]
     },
     {
       "name": "Dnsclient",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "DNS Client is a web application for performing DNS lookups with support for multiple record types, reverse DNS queries, and detailed DNS information display.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/dnsclient",
       "deploymentLink": "ivy-packagedemos-dnsclient.sliplane.app",
       "tags": [
-        "DnsClient",
-        "Newtonsoft.Json",
-        "System.Net.Http",
-        "System.Text.Json",
-        "System.Text.RegularExpressions",
-        "demo"
+        "DNS",
+        "Network",
+        "Domain Name System",
+        "Network Tools"
       ]
     },
     {
       "name": "Enums.NET",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Enums.NET is a web application for exploring and manipulating enum types with advanced operations including flag manipulation, validation, parsing, and attribute handling.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/enums-net",
       "deploymentLink": "ivy-packagedemos-enums-net.sliplane.app",
       "tags": [
-        "Enums.NET",
-        "demo"
+        "Enum",
+        "Type System",
+        "Reflection",
+        "Flags"
       ]
     },
     {
       "name": "EPPlus",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "EPPlus is a web application for managing Excel workbooks with capabilities to create, read, write, and manipulate Excel files including adding books, viewing data, and downloading workbooks.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/epplus",
       "deploymentLink": "ivy-packagedemos-epplus.sliplane.app",
       "tags": [
-        "EPPlus",
         "Excel",
-        "demo"
+        "Spreadsheet",
+        "Data Management",
+        "Office Documents"
       ]
     },
     {
       "name": "ExcelDataReader",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "ExcelDataReader is a web application for analyzing Excel and CSV files with worksheet browsing, data preview, and file information display.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/exceldatareader",
       "deploymentLink": "ivy-packagedemos-exceldatareader.sliplane.app",
       "tags": [
-        "ExcelDataReader",
-        "ExcelDataReader.DataSet",
-        "System.Text.Encoding.CodePages",
         "Excel",
-        "demo"
+        "Spreadsheet",
+        "Data Import",
+        "File Processing"
       ]
     },
     {
       "name": "FastMember",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "FastMember is a web application demonstrating high-performance runtime member access with performance benchmarks comparing FastMember against Reflection, PropertyDescriptor, and Dynamic C#.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/fastmember",
       "deploymentLink": "ivy-packagedemos-fastmember.sliplane.app",
       "tags": [
-        "FastMember",
-        "demo"
+        "Performance",
+        "Reflection",
+        "Runtime",
+        "Member Access",
+        "Optimization"
       ]
     },
     {
       "name": "FluentDateTime",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "FluentDateTime is a web application for date and time calculations with fluent syntax, supporting date arithmetic, relative time expressions, and formatted output.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/fluentdatetime",
       "deploymentLink": "ivy-packagedemos-fluentdatetime.sliplane.app",
       "tags": [
-        "FluentDateTime",
         "Date/Time",
-        "demo"
+        "DateTime",
+        "Date Calculation",
+        "Time Manipulation"
       ]
     },
     {
       "name": "FuzzySharp",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "FuzzySharp is a web application for intelligent fuzzy text search with support for typos, misspellings, and partial matches using multiple matching algorithms.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/fuzzysharp",
       "deploymentLink": "ivy-packagedemos-fuzzysharp.sliplane.app",
       "tags": [
-        "FuzzySharp",
-        "demo"
+        "Fuzzy Search",
+        "String Matching",
+        "Search",
+        "Text Search"
       ]
     },
     {
       "name": "GitHub",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "GitHub is a web application for retrieving and displaying GitHub user statistics including profile information, repository data, commits, pull requests, and contribution metrics.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/github",
       "deploymentLink": "ivy-packagedemos-github.sliplane.app",
       "tags": [
         "GitHub",
-        "demo"
+        "API Integration",
+        "Developer Tools",
+        "Statistics",
+        "Analytics"
       ]
     },
     {
       "name": "Handlebars.Net",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Handlebars.Net is a web application for HTML template generation using Handlebars syntax with data binding, helpers, and compiled template rendering.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/handlebars-net",
       "deploymentLink": "ivy-packagedemos-handlebars-net.sliplane.app",
       "tags": [
-        "Handlebars.Net",
-        "Handlebars.Net.Helpers",
-        "demo"
+        "Templating",
+        "Template Engine",
+        "HTML Generation",
+        "Handlebars"
       ]
     },
     {
       "name": "Humanizer",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Humanizer is a web application for text transformation with support for multiple formats including PascalCase, camelCase, kebab-case, underscore_case, and smart truncation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/humanizer",
       "deploymentLink": "ivy-packagedemos-humanizer.sliplane.app",
       "tags": [
-        "Humanizer",
-        "demo"
+        "Text Transformation",
+        "String Formatting",
+        "Humanization",
+        "Text Processing"
       ]
     },
     {
       "name": "IbanNet",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "IbanNet is a web application for IBAN validation and generation with support for international bank account numbers, country-specific formats, and detailed validation results.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/ibannet",
       "deploymentLink": "ivy-packagedemos-ibannet.sliplane.app",
       "tags": [
-        "IbanNet",
-        "demo"
+        "IBAN",
+        "Banking",
+        "Validation",
+        "Financial"
       ]
     },
     {
       "name": "JWT Demo Application",
-      "description": "This is an interactive Ivy demo application showcasing JWT (JSON Web Tokens) concepts and integration with the Ivy framework.",
+      "description": "JWT Demo Application is an interactive web application for generating and validating JSON Web Tokens with support for custom claims, expiration, and detailed token information display. This is an interactive Ivy demo application showcasing JWT (JSON Web Tokens) concepts and integration with the Ivy framework.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/jwt",
       "deploymentLink": "ivy-packagedemos-jwt.sliplane.app",
       "tags": [
+        "JWT",
         "Security",
-        "demo"
+        "Authentication",
+        "Token Management",
+        "API Security"
       ]
     },
     {
       "name": "Magick.NET-Q16-AnyCPU",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Magick.NET-Q16-AnyCPU is a web application for comprehensive image processing including format conversion, resizing, filtering, and advanced image manipulation operations.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/magick-net-q16-anycpu",
       "deploymentLink": "ivy-packagedemos-magick-net-q16-anycpu.sliplane.app",
       "tags": [
-        "Magick.NET-Q16-AnyCPU",
         "Image Processing",
-        "demo"
+        "Image Manipulation",
+        "Graphics",
+        "ImageMagick"
       ]
     },
     {
       "name": "Mapster",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Mapster is a web application demonstrating bidirectional object-to-object mapping between Person and PersonDto classes with automatic field combination and validation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/mapster",
       "deploymentLink": "ivy-packagedemos-mapster.sliplane.app",
       "tags": [
-        "Mapster",
-        "demo"
+        "Object Mapping",
+        "Data Transformation",
+        "DTO",
+        "Mapping"
       ]
     },
     {
       "name": "Microsoft.SemanticKernel",
-      "description": "Launch a ready-to-code workspace with: - .NET 9.0 SDK pre-installed",
+      "description": "Microsoft.SemanticKernel is a web application for AI-powered action item extraction from text using GPT-4o-mini, with intelligent text analysis and formatted output display.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/microsoft-semantickernel",
       "deploymentLink": "ivy-packagedemos-microsoft-semantickernel.sliplane.app",
       "tags": [
-        "Microsoft.SemanticKernel",
         "AI",
-        "demo"
+        "Natural Language Processing",
+        "Text Analysis",
+        "OpenAI",
+        "Semantic Kernel"
       ]
     },
     {
       "name": "Mimemapping",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "MimeMapping is a web application for MIME type detection and file extension mapping with comprehensive file type information and extension lookup capabilities.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/mimemapping",
       "deploymentLink": "ivy-packagedemos-mimemapping.sliplane.app",
       "tags": [
-        "MimeMapping",
-        "demo"
+        "MIME Type",
+        "File Types",
+        "Content Type",
+        "HTTP"
       ]
     },
     {
       "name": "MiniExcel",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "MiniExcel is a web application for student management with Excel import and export capabilities, featuring CRUD operations, search, filtering, and real-time data synchronization.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/miniexcel",
       "deploymentLink": "ivy-packagedemos-miniexcel.sliplane.app",
       "tags": [
-        "MiniExcel",
         "Excel",
-        "demo"
+        "Spreadsheet",
+        "Data Management",
+        "CRUD",
+        "Import/Export"
       ]
     },
     {
       "name": "NAudio",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "NAudio is a web application for audio processing with support for audio file playback, format conversion, and audio manipulation capabilities.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/naudio",
       "deploymentLink": "ivy-packagedemos-naudio.sliplane.app",
       "tags": [
-        "NAudio",
-        "demo"
+        "Audio",
+        "Sound Processing",
+        "Media",
+        "Audio Playback"
       ]
     },
     {
       "name": "Newtonsoft.Json",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Newtonsoft.Json is a web application demonstrating JSON serialization and deserialization with two-way synchronization between JSON editor and form-based user interface.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/newtonsoft-json",
       "deploymentLink": "ivy-packagedemos-newtonsoft-json.sliplane.app",
       "tags": [
-        "Newtonsoft.Json",
         "JSON",
-        "demo"
+        "Serialization",
+        "Data Format",
+        "API"
       ]
     },
     {
       "name": "NodaTime",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "NodaTime is a web application for timezone conversion and time handling with support for all TZDB timezones, real-time conversion, and formatted time display.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/nodatime",
       "deploymentLink": "ivy-packagedemos-nodatime.sliplane.app",
       "tags": [
-        "NodaTime",
         "Date/Time",
-        "demo"
+        "Timezone",
+        "DateTime Handling",
+        "Time Conversion"
       ]
     },
     {
       "name": "OllamaSharp",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "OllamaSharp is a web application for interactive AI chat using locally running Ollama models with streaming responses, model selection, and real-time conversation interface.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/ollamasharp",
       "deploymentLink": "ivy-packagedemos-ollamasharp.sliplane.app",
       "tags": [
-        "OllamaSharp",
         "AI",
-        "demo"
+        "Chat",
+        "LLM",
+        "Local AI",
+        "Conversational AI",
+        "Natural Language Processing"
       ]
     },
     {
       "name": "OpenAIExample",
-      "description": "Web application created using Ivy.",
+      "description": "OpenAIExample demonstrates integration with OpenAI API for AI-powered features including chat, text generation, and natural language processing capabilities. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/openai",
       "deploymentLink": "ivy-packagedemos-openai.sliplane.app",
       "tags": [
-        "OpenAI",
         "AI",
-        "demo"
+        "OpenAI",
+        "Natural Language Processing",
+        "API Integration",
+        "Chat"
       ]
     },
     {
       "name": "PuppeteerSharp",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "PuppeteerSharp is a web application for rendering websites, generating screenshots, and creating PDFs from web pages using headless Chrome browser automation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/puppeteersharp",
       "deploymentLink": "ivy-packagedemos-puppeteersharp.sliplane.app",
       "tags": [
-        "PuppeteerSharp",
-        "demo"
+        "Web Scraping",
+        "PDF Generation",
+        "Screenshot",
+        "Browser Automation",
+        "Headless Chrome"
       ]
     },
     {
       "name": "QR Code Generator",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "QR Code Generator is a web application for creating QR codes with vCard contact information, allowing users to generate scannable contact cards for easy sharing.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/qrcoder",
       "deploymentLink": "ivy-packagedemos-qrcoder.sliplane.app",
       "tags": [
-        "QRCoder",
         "QR Code",
-        "demo"
+        "Image Generation",
+        "vCard",
+        "Contact Management"
       ]
     },
     {
       "name": "QuestPDF",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "QuestPDF is a demonstration application for generating PDF documents from markdown content with real-time preview, customizable page settings, and interactive editing capabilities.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/questpdf",
       "deploymentLink": "ivy-packagedemos-questpdf.sliplane.app",
       "tags": [
-        "QuestPDF",
         "PDF",
-        "demo"
+        "Document Generation",
+        "Markdown",
+        "Report Generation"
       ]
     },
     {
       "name": "RestSharp",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "RestSharp is a web application for testing REST APIs with support for multiple HTTP methods, JSON request/response handling, and interactive API client interface.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/restsharp",
       "deploymentLink": "ivy-packagedemos-restsharp.sliplane.app",
       "tags": [
-        "RestSharp",
-        "demo"
+        "REST API",
+        "HTTP",
+        "API Testing",
+        "Web Services",
+        "Integration"
       ]
     },
     {
       "name": "Scriban",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Scriban is a web application for template rendering using Liquid-like syntax with JSON model support, real-time validation, and formatted output generation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/scriban",
       "deploymentLink": "ivy-packagedemos-scriban.sliplane.app",
       "tags": [
-        "Scriban",
-        "demo"
+        "Templating",
+        "Template Engine",
+        "Text Generation",
+        "Liquid"
       ]
     },
     {
       "name": "Serialize.Linq",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "Serialize.Linq is a web application for serializing and deserializing LINQ expressions to JSON, enabling expression storage, transmission, and dynamic evaluation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/serialize-linq",
       "deploymentLink": "ivy-packagedemos-serialize-linq.sliplane.app",
       "tags": [
-        "Serialize.Linq",
-        "demo"
+        "LINQ",
+        "Serialization",
+        "Expression Trees",
+        "Query"
       ]
     },
     {
       "name": "SharpYaml",
-      "description": "Open the project instantly in GitHub Codespaces with:",
+      "description": "SharpYaml is a web application for converting JSON to YAML format with syntax-highlighted editing, instant conversion, and error handling.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/sharpyaml",
       "deploymentLink": "ivy-packagedemos-sharpyaml.sliplane.app",
       "tags": [
-        "SharpYaml",
-        "demo"
+        "YAML",
+        "JSON Conversion",
+        "Data Format",
+        "Serialization"
       ]
     },
     {
       "name": "ShopifySharp",
-      "description": "Launch the repository in GitHub Codespaces with: - .NET 9.0 SDK pre-installed",
+      "description": "ShopifySharp is a web application for browsing Shopify store product catalogs with product listing, details, and integration with Shopify API.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/shopifysharp",
       "deploymentLink": "ivy-packagedemos-shopifysharp.sliplane.app",
       "tags": [
-        "ShopifySharp",
-        "demo"
+        "E-commerce",
+        "Shopify",
+        "API Integration",
+        "Product Management"
       ]
     },
     {
       "name": "SimMetrics.Net",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run Ivy environment",
+      "description": "SimMetrics.Net is a web application for measuring string similarity and distance using multiple algorithms including Levenshtein, Jaro-Winkler, Cosine, and Jaccard.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/simmetrics-net",
       "deploymentLink": "ivy-packagedemos-simmetrics-net.sliplane.app",
       "tags": [
-        "Bogus",
-        "SimMetrics.Net",
-        "demo"
+        "String Similarity",
+        "Text Matching",
+        "Distance Metrics",
+        "Fuzzy Matching"
       ]
     },
     {
       "name": "SmartFormat.NET",
-      "description": "- .NET 9.0 SDK pre-installed - SmartFormat.NET tooling ready to go",
+      "description": "SmartFormat.NET is a web application for dynamic string formatting with rich templating, named placeholders, conditional sections, and pluralization support.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/smartformat-net",
       "deploymentLink": "ivy-packagedemos-smartformat-net.sliplane.app",
       "tags": [
-        "SmartFormat.NET",
-        "demo"
+        "String Formatting",
+        "Templating",
+        "Text Generation",
+        "Formatting"
       ]
     },
     {
       "name": "Stripe.net",
-      "description": "Launch a ready-to-code workspace with: - .NET 9.0 SDK pre-installed",
+      "description": "Stripe.net is a web application for creating Stripe checkout sessions with configurable products, amounts, currencies, and payment processing integration.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/stripe-net",
       "deploymentLink": "ivy-packagedemos-stripe-net.sliplane.app",
       "tags": [
-        "Stripe.net",
-        "Security",
-        "demo"
+        "Payment Processing",
+        "Stripe",
+        "E-commerce",
+        "API Integration",
+        "Checkout"
       ]
     },
     {
       "name": "Superpower",
-      "description": "Launch the repository in GitHub Codespaces pre-configured with:",
+      "description": "Superpower is a web application demonstrating parser-combinator capabilities with multiple parser examples including JSON, CSV, and custom format parsers.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/superpower",
       "deploymentLink": "ivy-packagedemos-superpower.sliplane.app",
       "tags": [
-        "Superpower",
-        "demo"
+        "Parsing",
+        "Parser Combinator",
+        "Text Processing",
+        "Language Processing"
       ]
     },
     {
       "name": "TimeZoneNames",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "TimeZoneNames is a web application for time zone conversion and lookup with support for IANA, Windows, and Rails time zone identifiers.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/timezonenames",
       "deploymentLink": "ivy-packagedemos-timezonenames.sliplane.app",
       "tags": [
-        "TimeZoneConverter",
+        "Timezone",
         "Date/Time",
-        "demo"
+        "Time Conversion",
+        "IANA",
+        "Windows Timezone"
       ]
     },
     {
       "name": "ULID",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "ULID is a web application for generating and parsing ULID identifiers with timestamp extraction, sortable unique IDs, and detailed ULID information display.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/ulid",
       "deploymentLink": "ivy-packagedemos-ulid.sliplane.app",
       "tags": [
-        "Ulid",
-        "demo"
+        "ULID",
+        "Unique Identifier",
+        "ID Generation",
+        "Sortable ID"
       ]
     },
     {
       "name": "UnitsNet",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "UnitsNet is a web application for unit conversion with support for multiple quantity types including temperature, length, mass, volume, and comprehensive unit systems.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/unitsnet",
       "deploymentLink": "ivy-packagedemos-unitsnet.sliplane.app",
       "tags": [
-        "UnitsNet",
-        "demo"
+        "Unit Conversion",
+        "Measurements",
+        "Physical Quantities",
+        "Units"
       ]
     },
     {
       "name": "XLParser",
-      "description": "- .NET 9.0 SDK pre-installed - XLParser tooling ready to go",
+      "description": "XLParser is a web application for parsing and analyzing Excel formulas with token visualization, parse tree display, and detailed formula structure analysis.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/xlparser",
       "deploymentLink": "ivy-packagedemos-xlparser.sliplane.app",
       "tags": [
-        "XLParser",
-        "demo"
+        "Excel",
+        "Formula Parsing",
+        "Spreadsheet",
+        "Formula Analysis"
       ]
     },
     {
       "name": "YamlDotNet",
-      "description": "- .NET 9.0 SDK pre-installed - YamlDotNet tooling ready to go",
+      "description": "YamlDotNet is a web application for YAML serialization and deserialization with real-time conversion between C# objects and YAML format, including field validation and error handling.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/yamldotnet",
       "deploymentLink": "ivy-packagedemos-yamldotnet.sliplane.app",
       "tags": [
-        "YamlDotNet",
-        "demo"
+        "YAML",
+        "Serialization",
+        "Data Format",
+        "Configuration"
       ]
     },
     {
       "name": "ZString",
-      "description": "- .NET 9.0 SDK pre-installed - Ready-to-run development environment",
+      "description": "ZString is a web application demonstrating high-performance string operations with zero-allocation string formatting and memory-efficient string manipulation.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/packages-demos/zstring",
       "deploymentLink": "ivy-packagedemos-zstring.sliplane.app",
       "tags": [
-        "ZString",
-        "demo"
+        "Performance",
+        "String Formatting",
+        "Zero Allocation",
+        "Optimization"
       ]
     }
   ]
