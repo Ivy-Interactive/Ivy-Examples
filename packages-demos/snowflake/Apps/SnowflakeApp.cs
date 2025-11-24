@@ -23,6 +23,8 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var selectedTable = this.UseState<string?>(() => null);
         var tableInfo = this.UseState<TableInfo?>(() => null);
         var tablePreview = this.UseState<System.Data.DataTable?>(() => null);
+        var currentPage = this.UseState(1);
+        var pageSize = 30;
         
         var isLoadingStats = this.UseState(false);
         var isLoadingSchemas = this.UseState(false);
@@ -35,8 +37,8 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var totalSchemas = this.UseState(0);
         var totalTables = this.UseState(0);
         
-        // Load databases and statistics on mount
-        async Task LoadStatistics()
+        // Load databases on mount
+        async Task LoadDatabases()
         {
             isLoadingStats.Value = true;
             errorMessage.Value = null;
@@ -47,39 +49,86 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                 var dbList = await snowflakeService.GetDatabasesAsync();
                 databases.Value = dbList;
                 totalDatabases.Value = dbList.Count;
-                
-                // Calculate total schemas and tables across all databases
-                int totalSchemasCount = 0;
-                int totalTablesCount = 0;
-                
-                foreach (var db in dbList.Take(10)) // Limit to first 10 for performance
+            }
+            catch (Exception ex)
+            {
+                errorMessage.Value = $"Error loading databases: {ex.Message}";
+            }
+            finally
+            {
+                isLoadingStats.Value = false;
+                refreshToken.Refresh();
+            }
+        }
+        
+        // Load statistics - for all databases or selected database
+        async Task LoadStatistics(string? database = null)
+        {
+            isLoadingStats.Value = true;
+            errorMessage.Value = null;
+            refreshToken.Refresh();
+            
+            try
+            {
+                if (database == null)
                 {
-                    try
+                    // Calculate statistics for all databases
+                    int totalSchemasCount = 0;
+                    int totalTablesCount = 0;
+                    
+                    // Count all schemas and tables across all databases
+                    foreach (var db in databases.Value)
                     {
-                        var schemaList = await snowflakeService.GetSchemasAsync(db);
-                        totalSchemasCount += schemaList.Count;
-                        
-                        foreach (var schema in schemaList.Take(5)) // Limit schemas per DB
+                        try
                         {
-                            try
+                            var schemaList = await snowflakeService.GetSchemasAsync(db);
+                            totalSchemasCount += schemaList.Count;
+                            
+                            // Count tables in all schemas
+                            foreach (var schema in schemaList)
                             {
-                                var tableList = await snowflakeService.GetTablesAsync(db, schema);
-                                totalTablesCount += tableList.Count;
-                            }
-                            catch
-                            {
-                                // Skip if can't access tables
+                                try
+                                {
+                                    var tableList = await snowflakeService.GetTablesAsync(db, schema);
+                                    totalTablesCount += tableList.Count;
+                                }
+                                catch
+                                {
+                                    // Skip if can't access tables
+                                }
                             }
                         }
+                        catch
+                        {
+                            // Skip if can't access schemas
+                        }
                     }
-                    catch
-                    {
-                        // Skip if can't access schemas
-                    }
+                    
+                    totalSchemas.Value = totalSchemasCount;
+                    totalTables.Value = totalTablesCount;
                 }
-                
-                totalSchemas.Value = totalSchemasCount;
-                totalTables.Value = totalTablesCount;
+                else
+                {
+                    // Calculate statistics for selected database only
+                    var schemaList = await snowflakeService.GetSchemasAsync(database);
+                    totalSchemas.Value = schemaList.Count;
+                    
+                    int totalTablesCount = 0;
+                    foreach (var schema in schemaList)
+                    {
+                        try
+                        {
+                            var tableList = await snowflakeService.GetTablesAsync(database, schema);
+                            totalTablesCount += tableList.Count;
+                        }
+                        catch
+                        {
+                            // Skip if can't access tables
+                        }
+                    }
+                    
+                    totalTables.Value = totalTablesCount;
+                }
             }
             catch (Exception ex)
             {
@@ -92,10 +141,25 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             }
         }
         
+        // Load databases on mount
         this.UseEffect(async () =>
         {
-            await LoadStatistics();
+            await LoadDatabases();
+            // Load statistics after databases are loaded
+            if (databases.Value.Count > 0)
+            {
+                await LoadStatistics(null);
+            }
         }, []);
+        
+        // Load statistics when database changes
+        this.UseEffect(async () =>
+        {
+            if (databases.Value.Count > 0)
+            {
+                await LoadStatistics(selectedDatabase.Value);
+            }
+        }, selectedDatabase);
         
         // Load schemas when database is selected
         async Task LoadSchemas(string database)
@@ -163,7 +227,7 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                 var info = await snowflakeService.GetTableInfoAsync(database, schema, table);
                 tableInfo.Value = info;
                 
-                var preview = await snowflakeService.GetTablePreviewAsync(database, schema, table, 100);
+                var preview = await snowflakeService.GetTablePreviewAsync(database, schema, table);
                 tablePreview.Value = preview;
             }
             catch (Exception ex)
@@ -177,146 +241,168 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             }
         }
         
+        // Handle database selection
+        this.UseEffect(async () =>
+        {
+            if (selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value))
+            {
+                await LoadSchemas(selectedDatabase.Value);
+                await LoadStatistics(selectedDatabase.Value);
+            }
+            else
+            {
+                schemas.Value = new List<string>();
+                selectedSchema.Value = null;
+                tables.Value = new List<string>();
+                selectedTable.Value = null;
+                tableInfo.Value = null;
+                tablePreview.Value = null;
+                await LoadStatistics(null);
+            }
+        }, selectedDatabase);
+        
+        // Handle schema selection
+        this.UseEffect(async () =>
+        {
+            if (selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value) 
+                && selectedSchema.Value != null && !string.IsNullOrEmpty(selectedSchema.Value))
+            {
+                await LoadTables(selectedDatabase.Value, selectedSchema.Value);
+            }
+            else
+            {
+                tables.Value = new List<string>();
+                selectedTable.Value = null;
+                tableInfo.Value = null;
+                tablePreview.Value = null;
+            }
+        }, selectedSchema);
+        
+        // Handle table selection
+        this.UseEffect(async () =>
+        {
+            if (selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value)
+                && selectedSchema.Value != null && !string.IsNullOrEmpty(selectedSchema.Value)
+                && selectedTable.Value != null && !string.IsNullOrEmpty(selectedTable.Value))
+            {
+                await LoadTablePreview(selectedDatabase.Value, selectedSchema.Value, selectedTable.Value);
+            }
+            else
+            {
+                tableInfo.Value = null;
+                tablePreview.Value = null;
+            }
+        }, selectedTable);
+        
         // Dashboard Statistics Cards
-        var statsCards = Layout.Horizontal().Gap(4).Wrap()
+        var statsCards = Layout.Horizontal().Gap(4).Align(Align.TopCenter)
             | new Card(
                 Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-                | Text.H2(totalDatabases.Value.ToString())
+                | (isLoadingStats.Value 
+                    ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
+                    : Text.H2(totalDatabases.Value.ToString()))
                 | Text.Muted("Databases")
-                | (isLoadingStats.Value ? Text.Small("Loading...") : new Spacer())
             ).Width(Size.Fraction(0.3f))
             | new Card(
                 Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-                | Text.H2(totalSchemas.Value.ToString())
-                | Text.Muted("Schemas")
-                | (isLoadingStats.Value ? Text.Small("Loading...") : new Spacer())
+                | (isLoadingStats.Value 
+                    ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
+                    : Text.H2(totalSchemas.Value.ToString()))
+                | Text.Muted(selectedDatabase.Value != null ? $"Schemas in {selectedDatabase.Value}" : "Schemas")
             ).Width(Size.Fraction(0.3f))
             | new Card(
                 Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-                | Text.H2(totalTables.Value.ToString())
-                | Text.Muted("Tables")
-                | (isLoadingStats.Value ? Text.Small("Loading...") : new Spacer())
+                | (isLoadingStats.Value 
+                    ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
+                    : Text.H2(totalTables.Value.ToString()))
+                | Text.Muted(selectedDatabase.Value != null ? $"Tables in {selectedDatabase.Value}" : "Tables")
             ).Width(Size.Fraction(0.3f));
         
-        // Database Selection
-        var databaseSection = new Card(
-            Layout.Vertical().Gap(3).Padding(2)
-            | Text.H3("Databases")
-            | Text.Muted("Select a database to explore")
-            | (databases.Value.Count > 0
+        // Database Selection Options
+        var databaseOptions = databases.Value
+            .Select(db => new Option<string>(db, db))
+            .Prepend(new Option<string>("-- Select Database --", ""))
+            .ToArray();
+        
+        // Schema Selection Options
+        var schemaOptions = schemas.Value
+            .Select(schema => new Option<string>(schema, schema))
+            .Prepend(new Option<string>("-- Select Schema --", ""))
+            .ToArray();
+        
+        // Table Selection Options
+        var tableOptions = tables.Value
+            .Select(table => new Option<string>(table, table))
+            .Prepend(new Option<string>("-- Select Table --", ""))
+            .ToArray();
+        
+        // Left Section - Database Selection and Column Information
+        var leftSection = new Card(
+            Layout.Vertical().Gap(4).Padding(3)
+            | Text.H3("Database Explorer")
+            | Text.Muted("Select database, schema, and table")
+            | (isLoadingStats.Value || databases.Value.Count == 0
                 ? Layout.Vertical().Gap(2)
-                    | databases.Value.Select(db => 
-                        (selectedDatabase.Value == db
-                            ? new Button(db, onClick: async _ =>
-                            {
-                                selectedDatabase.Value = db;
-                                await LoadSchemas(db);
-                            })
-                                .Primary()
-                                .Icon(Icons.Database)
-                            : new Button(db, onClick: async _ =>
-                            {
-                                selectedDatabase.Value = db;
-                                await LoadSchemas(db);
-                            })
-                                .Secondary()
-                                .Icon(Icons.Database))
-                    ).ToArray()
-                : (isLoadingStats.Value 
-                    ? Text.Small("Loading databases...") 
-                    : Text.Small("No databases found")))
-        ).Width(Size.Fraction(0.25f));
+                    | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+                    | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+                    | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+                : Layout.Vertical().Gap(3)
+                    | selectedDatabase
+                        .ToSelectInput(databaseOptions)
+                        .Placeholder("Select a database...")
+                        .WithField()
+                        .Label("Database")
+                    | (isLoadingSchemas.Value && selectedDatabase.Value != null && !string.IsNullOrEmpty(selectedDatabase.Value)
+                        ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+                        : selectedSchema
+                            .ToSelectInput(schemaOptions)
+                            .Placeholder("Select a schema...")
+                            .Disabled(selectedDatabase.Value == null || string.IsNullOrEmpty(selectedDatabase.Value) || schemas.Value.Count == 0)
+                            .WithField()
+                            .Label("Schema"))
+                    | (isLoadingTables.Value && selectedSchema.Value != null && !string.IsNullOrEmpty(selectedSchema.Value) && selectedDatabase.Value != null
+                        ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+                        : selectedTable
+                            .ToSelectInput(tableOptions)
+                            .Placeholder("Select a table...")
+                            .Disabled(selectedSchema.Value == null || string.IsNullOrEmpty(selectedSchema.Value) || selectedDatabase.Value == null || tables.Value.Count == 0)
+                            .WithField()
+                            .Label("Table")))
+            | (tableInfo.Value != null
+                ? Layout.Vertical().Gap(3)
+                    | Text.H4("Table Structure")
+                    | Text.Muted($"{tableInfo.Value.ColumnCount} columns, {tableInfo.Value.RowCount:N0} rows")
+                    | BuildColumnsTable(tableInfo.Value.Columns)
+                : new Spacer())
+        ).Width(Size.Fraction(0.3f));
         
-        // Schema Selection
-        var schemaSection = selectedDatabase.Value != null
+        // Right Section - Data Preview
+        var rightSection = selectedTable.Value != null && selectedDatabase.Value != null && selectedSchema.Value != null
             ? new Card(
-                Layout.Vertical().Gap(3).Padding(2)
-                | Text.H3("Schemas")
-                | Text.Muted($"In {selectedDatabase.Value}")
-                | (schemas.Value.Count > 0
-                    ? Layout.Vertical().Gap(2)
-                        | schemas.Value.Select(schema => 
-                            (selectedSchema.Value == schema
-                                ? new Button(schema, onClick: async _ =>
-                                {
-                                    selectedSchema.Value = schema;
-                                    await LoadTables(selectedDatabase.Value!, schema);
-                                })
-                                    .Primary()
-                                    .Icon(Icons.Folder)
-                                : new Button(schema, onClick: async _ =>
-                                {
-                                    selectedSchema.Value = schema;
-                                    await LoadTables(selectedDatabase.Value!, schema);
-                                })
-                                    .Secondary()
-                                    .Icon(Icons.Folder))
-                        ).ToArray()
-                    : (isLoadingSchemas.Value 
-                        ? Text.Small("Loading schemas...") 
-                        : Text.Small("No schemas found")))
-            ).Width(Size.Fraction(0.25f))
-            : new Card(
-                Layout.Vertical().Gap(3).Padding(2)
-                | Text.H3("Schemas")
-                | Text.Muted("Select a database first")
-            ).Width(Size.Fraction(0.25f));
-        
-        // Table Selection
-        var tableSection = selectedSchema.Value != null && selectedDatabase.Value != null
-            ? new Card(
-                Layout.Vertical().Gap(3).Padding(2)
-                | Text.H3("Tables")
-                | Text.Muted($"In {selectedDatabase.Value}.{selectedSchema.Value}")
-                | (tables.Value.Count > 0
-                    ? Layout.Vertical().Gap(2)
-                        | tables.Value.Select(table => 
-                            (selectedTable.Value == table
-                                ? new Button(table, onClick: async _ =>
-                                {
-                                    selectedTable.Value = table;
-                                    await LoadTablePreview(selectedDatabase.Value!, selectedSchema.Value!, table);
-                                })
-                                    .Primary()
-                                    .Icon(Icons.Table)
-                                : new Button(table, onClick: async _ =>
-                                {
-                                    selectedTable.Value = table;
-                                    await LoadTablePreview(selectedDatabase.Value!, selectedSchema.Value!, table);
-                                })
-                                    .Secondary()
-                                    .Icon(Icons.Table))
-                        ).ToArray()
-                    : (isLoadingTables.Value 
-                        ? Text.Small("Loading tables...") 
-                        : Text.Small("No tables found")))
-            ).Width(Size.Fraction(0.25f))
-            : new Card(
-                Layout.Vertical().Gap(3).Padding(2)
-                | Text.H3("Tables")
-                | Text.Muted("Select a schema first")
-            ).Width(Size.Fraction(0.25f));
-        
-        // Table Preview Section
-        var previewSection = tableInfo.Value != null && tablePreview.Value != null
-            ? new Card(
-                Layout.Vertical().Gap(4).Padding(2)
+                Layout.Vertical().Gap(4).Padding(3)
                 | Layout.Horizontal().Gap(4).Align(Align.Center)
                     | Text.H3($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
                     | new Spacer()
-                    | Layout.Horizontal().Gap(3)
-                        | Text.Small($"Rows: {tableInfo.Value.RowCount:N0}")
-                        | Text.Small($"Columns: {tableInfo.Value.ColumnCount}")
-                | Text.Muted("Table Structure:")
-                | BuildColumnsTable(tableInfo.Value.Columns)
-                | Text.Muted("Preview (first 100 rows):")
+                    | (tableInfo.Value != null
+                        ? Layout.Horizontal().Gap(3)
+                            | Text.Small($"Rows: {tableInfo.Value.RowCount:N0}")
+                            | Text.Small($"Columns: {tableInfo.Value.ColumnCount}")
+                        : new Spacer())
+                | Text.Muted("Data Preview:")
                 | (isLoadingTableData.Value 
-                    ? Text.Small("Loading data...") 
-                    : BuildDataTable(tablePreview.Value))
+                    ? Layout.Vertical().Gap(2)
+                        | new Skeleton().Height(Size.Units(24)).Width(Size.Full())
+                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
+                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
+                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
+                        | new Skeleton().Height(Size.Units(16)).Width(Size.Full())
+                    : (tablePreview.Value != null && tablePreview.Value.Rows.Count > 0
+                        ? BuildDataTableWithPagination(tablePreview.Value, currentPage.Value, pageSize, currentPage)
+                        : Text.Muted("No data available")))
             ).Width(Size.Fraction(0.7f))
             : new Card(
-                Layout.Vertical().Gap(3).Padding(2)
-                | Text.H3("Table Preview")
+                Layout.Vertical().Gap(3).Padding(3)
+                | Text.H3("Data Preview")
                 | Text.Muted("Select a table to view its data")
             ).Width(Size.Fraction(0.7f));
         
@@ -330,12 +416,9 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                         | Text.Small($"Error: {errorMessage.Value}")
                 )
                 : new Spacer())
-            | Layout.Horizontal().Gap(4).Align(Align.TopCenter)
-                | databaseSection
-                | schemaSection
-                | tableSection
-            | Layout.Horizontal().Gap(4).Align(Align.TopCenter)
-                | previewSection;
+            | (Layout.Horizontal().Gap(4).Align(Align.TopCenter)
+                | leftSection
+                | rightSection);
     }
     
     private object BuildColumnsTable(List<ColumnInfo> columns)
@@ -362,39 +445,74 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         return new Table([.. rows]);
     }
     
-    private object BuildDataTable(System.Data.DataTable table)
+    private object BuildDataTableWithPagination(System.Data.DataTable dataTable, int currentPageValue, int pageSize, IState<int> currentPageState)
     {
-        var rows = table.AsEnumerable().ToList();
-        var tableColumns = table.Columns.Cast<DataColumn>().ToList();
-        var listOfTableRows = new List<TableRow>();
+        if (dataTable == null || dataTable.Rows.Count == 0)
+        {
+            return Text.Muted("No data available");
+        }
+        
+        var columns = dataTable.Columns.Cast<DataColumn>().ToList();
+        var allRows = dataTable.Rows.Cast<DataRow>().ToList();
+        
+        // Calculate pagination
+        var totalRows = allRows.Count;
+        var totalPages = (int)Math.Ceiling(totalRows / (double)pageSize);
+        
+        // Ensure current page is valid
+        var validPage = currentPageValue < 1 ? 1 : (currentPageValue > totalPages && totalPages > 0 ? totalPages : currentPageValue);
+        if (validPage != currentPageValue)
+        {
+            currentPageState.Value = validPage;
+        }
+        
+        // Get rows for current page
+        var startIndex = (validPage - 1) * pageSize;
+        var pageRows = allRows.Skip(startIndex).Take(pageSize).ToList();
+        
+        // Build Table with pagination
+        var tableRows = new List<TableRow>();
         
         // Header row
-        var headerCells = tableColumns.Select(col => 
+        var headerCells = columns.Select(col => 
             new TableCell(col.ColumnName).IsHeader()
         ).ToList();
-        listOfTableRows.Add(new TableRow([.. headerCells]));
+        tableRows.Add(new TableRow([.. headerCells]));
         
-        // Data rows - limit to first 100 rows for performance
-        var displayRows = rows.Take(100).ToList();
-        foreach (var row in displayRows)
+        // Data rows for current page
+        foreach (DataRow row in pageRows)
         {
-            var dataCells = row.ItemArray.Select(value => 
-                new TableCell(value?.ToString() ?? "")
-            ).ToList();
-            listOfTableRows.Add(new TableRow([.. dataCells]));
+            var dataCells = columns.Select(col =>
+            {
+                var value = row[col];
+                var displayValue = value == DBNull.Value ? "" : value?.ToString() ?? "";
+                // Truncate very long values for better display
+                if (displayValue.Length > 100)
+                {
+                    displayValue = displayValue.Substring(0, 97) + "...";
+                }
+                return new TableCell(displayValue);
+            }).ToList();
+            tableRows.Add(new TableRow([.. dataCells]));
         }
         
-        var tableView = new Table([.. listOfTableRows]);
+        var tableView = new Table([.. tableRows]);
         
-        // Show message if there are more rows
-        if (rows.Count > 100)
-        {
-            return Layout.Vertical().Gap(2)
-                | tableView
-                | Text.Small($"Showing first 100 of {rows.Count} rows");
-        }
+        // Build pagination
+        var pagination = totalPages > 1
+            ? new Pagination(
+                validPage,
+                totalPages,
+                newPage => currentPageState.Value = newPage.Value)
+            : null;
         
-        return tableView;
+        return Layout.Vertical().Gap(3)
+            | tableView
+            | (pagination != null
+                ? Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | pagination
+                    | Text.Muted($"Showing {startIndex + 1}-{Math.Min(startIndex + pageSize, totalRows)} of {totalRows} rows")
+                : Text.Small($"Showing {totalRows} row(s)"));
     }
     
     public Secret[] GetSecrets()
