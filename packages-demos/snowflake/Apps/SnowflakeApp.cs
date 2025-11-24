@@ -255,7 +255,7 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         // Left Section
         var leftSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
-            | Text.H3("Database Explorer")
+            | Text.H2("Database Explorer")
             | Text.Muted("Select database, schema, and table")
             | (isLoadingData
                 ? BuildSkeletons(3)
@@ -269,40 +269,36 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                         : selectedTable.ToSelectInput(tableOptions).Placeholder("Select a table...").Disabled(!hasSchema || tables.Value.Count == 0).WithField().Label("Table")))
             | (tableInfo.Value != null
                 ? Layout.Vertical().Gap(3)
-                    | Text.H4("Table Structure")
+                    | Text.H3("Table Structure")
                     | Text.Muted($"{tableInfo.Value.ColumnCount} columns, {tableInfo.Value.RowCount:N0} rows")
                     | BuildColumnsTable(tableInfo.Value.Columns)
                 : new Spacer())
         ).Width(Size.Fraction(0.3f));
         
         // Right Section
-        var rightSection = hasTable
-            ? new Card(
-                Layout.Vertical().Gap(4).Padding(3)
-                | Layout.Horizontal().Gap(4).Align(Align.Center)
-                    | Text.H3($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
-                    | new Spacer()
-                    | (tableInfo.Value != null
-                        ? Layout.Horizontal().Gap(3)
-                            | Text.Small($"Rows: {tableInfo.Value.RowCount:N0}")
-                            | Text.Small($"Columns: {tableInfo.Value.ColumnCount}")
-                        : new Spacer())
-                | Text.Muted("Data Preview:")
-                | (isLoadingTableData.Value 
-                    ? BuildSkeletons(5)
-                    : (tablePreview.Value?.Rows.Count > 0
-                        ? BuildDataTableWithPagination(tablePreview.Value, currentPage.Value, pageSize, currentPage)
-                        : Text.Muted("No data available")))
-            ).Width(Size.Fraction(0.7f))
-            : new Card(
-                Layout.Vertical().Gap(3).Padding(3)
-                | Text.H3("Data Preview")
-                | Text.Muted("Select a table to view its data")
-            ).Width(Size.Fraction(0.7f));
+        var rightSection = new Card(
+            Layout.Vertical().Gap(4).Padding(3)
+            | (hasTable
+                ? Layout.Vertical().Gap(3)
+                    | Text.H2($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
+                    | Text.Muted("Data Preview:")
+                    | (isLoadingTableData.Value 
+                        ? BuildSkeletons(3)
+                        : (tablePreview.Value?.Rows.Count > 0
+                            ? BuildDataTableWithPagination(tablePreview.Value, currentPage.Value, pageSize, currentPage)
+                            : Text.Muted("No data available")))
+                : Layout.Vertical().Gap(4)
+                    | Text.H2("Table Preview")
+                    | Text.Muted("Select a table to preview data"))
+                    | (isLoadingData
+                        ? BuildSkeletons(3) : new Spacer())
+
+        ).Width(Size.Fraction(0.7f));
         
-        return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
-            | Text.H2("Snowflake Database Explorer")
-            | Text.Muted("Explore your Snowflake databases, schemas, and tables")
+        return Layout.Vertical().Gap(4).Padding(4)
+            | (Layout.Vertical().Gap(4).Align(Align.TopCenter)
+            | Text.H1("Snowflake Database Explorer")
+            | Text.Muted("Explore your Snowflake databases, schemas, and tables"))
             | statsCards
             | (errorMessage.Value != null 
                 ? new Card(
@@ -310,7 +306,7 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                         | Text.Small($"Error: {errorMessage.Value}")
                 )
                 : new Spacer())
-            | (Layout.Horizontal().Gap(4).Align(Align.TopCenter)
+            | (Layout.Horizontal().Gap(4)
                 | leftSection
                 | rightSection);
     }
@@ -364,7 +360,7 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
     {
         if (dataTable == null || dataTable.Rows.Count == 0)
         {
-            return Text.Muted("No data available");
+            return Text.Muted("No data available").Muted();
         }
         
         var columns = dataTable.Columns.Cast<DataColumn>().ToList();
@@ -420,14 +416,14 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                 totalPages,
                 newPage => currentPageState.Value = newPage.Value)
             : null;
-        
+
         return Layout.Vertical().Gap(3)
             | tableView
             | (pagination != null
                 ? Layout.Horizontal().Gap(2).Align(Align.Center)
                     | pagination
-                    | Text.Muted($"Showing {startIndex + 1}-{Math.Min(startIndex + pageSize, totalRows)} of {totalRows} rows")
-                : Text.Small($"Showing {totalRows} row(s)"));
+                    | Text.Muted($"Showing {startIndex + 1}-{Math.Min(startIndex + pageSize, totalRows)} of {totalRows} rows").Muted()
+                : Text.Muted($"Showing {totalRows} row(s)"));
     }
     
     public Secret[] GetSecrets()
