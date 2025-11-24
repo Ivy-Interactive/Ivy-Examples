@@ -4,9 +4,9 @@ using SnowflakeExample.Services;
 namespace SnowflakeExample.Apps;
 
 /// <summary>
-/// Snowflake Demo App - Interactive interface for querying SNOWFLAKE_SAMPLE_DATA
+/// Snowflake Demo App - Interactive dashboard for exploring Snowflake databases
 /// </summary>
-[App(icon: Icons.Database, title: "Snowflake Sample Data Explorer")]
+[App(icon: Icons.Database, title: "Snowflake")]
 public class SnowflakeApp : ViewBase, IHaveSecrets
 {
     public override object? Build()
@@ -15,160 +15,351 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var refreshToken = this.UseRefreshToken();
         
         // State management
-        var selectedSchema = this.UseState("TPCH_SF1");
+        var databases = this.UseState<List<string>>(() => new List<string>());
+        var selectedDatabase = this.UseState<string?>(() => null);
+        var schemas = this.UseState<List<string>>(() => new List<string>());
+        var selectedSchema = this.UseState<string?>(() => null);
+        var tables = this.UseState<List<string>>(() => new List<string>());
         var selectedTable = this.UseState<string?>(() => null);
-        var customQuery = this.UseState("");
-        var queryResult = this.UseState<System.Data.DataTable?>(() => null);
+        var tableInfo = this.UseState<TableInfo?>(() => null);
+        var tablePreview = this.UseState<System.Data.DataTable?>(() => null);
+        
+        var isLoadingStats = this.UseState(false);
+        var isLoadingSchemas = this.UseState(false);
+        var isLoadingTables = this.UseState(false);
+        var isLoadingTableData = this.UseState(false);
         var errorMessage = this.UseState<string?>(() => null);
-        var isLoading = this.UseState(false);
         
-        // Predefined sample queries for SNOWFLAKE_SAMPLE_DATA
-        var sampleQueries = new[]
+        // Statistics
+        var totalDatabases = this.UseState(0);
+        var totalSchemas = this.UseState(0);
+        var totalTables = this.UseState(0);
+        
+        // Load databases and statistics on mount
+        async Task LoadStatistics()
         {
-            ("Top 10 Customers by Revenue", 
-             "SELECT C_NAME, C_ACCTBAL, C_PHONE, C_MKTSEGMENT " +
-             "FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER " +
-             "ORDER BY C_ACCTBAL DESC " +
-             "LIMIT 10"),
-            
-            ("Orders Summary", 
-             "SELECT O_ORDERSTATUS, COUNT(*) as ORDER_COUNT, SUM(O_TOTALPRICE) as TOTAL_REVENUE " +
-             "FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.ORDERS " +
-             "GROUP BY O_ORDERSTATUS " +
-             "ORDER BY TOTAL_REVENUE DESC"),
-            
-            ("Top Products by Quantity", 
-             "SELECT L_PARTKEY, SUM(L_QUANTITY) as TOTAL_QUANTITY, SUM(L_EXTENDEDPRICE) as TOTAL_PRICE " +
-             "FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM " +
-             "GROUP BY L_PARTKEY " +
-             "ORDER BY TOTAL_QUANTITY DESC " +
-             "LIMIT 20"),
-            
-            ("Customer Orders Count", 
-             "SELECT C.C_NAME, COUNT(O.O_ORDERKEY) as ORDER_COUNT " +
-             "FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER C " +
-             "LEFT JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.ORDERS O ON C.C_CUSTKEY = O.O_CUSTKEY " +
-             "GROUP BY C.C_NAME " +
-             "ORDER BY ORDER_COUNT DESC " +
-             "LIMIT 15"),
-            
-            ("Nation Statistics", 
-             "SELECT N_NAME, COUNT(DISTINCT C_CUSTKEY) as CUSTOMER_COUNT " +
-             "FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.NATION N " +
-             "JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER C ON N.N_NATIONKEY = C.C_NATIONKEY " +
-             "GROUP BY N_NAME " +
-             "ORDER BY CUSTOMER_COUNT DESC")
-        };
-        
-        var selectedSampleQuery = this.UseState(0);
-        
-        // Execute query handler
-        async Task ExecuteQuery(string sql)
-        {
-            if (string.IsNullOrWhiteSpace(sql))
-            {
-                errorMessage.Value = "Please enter a SQL query";
-                return;
-            }
-            
-            isLoading.Value = true;
+            isLoadingStats.Value = true;
             errorMessage.Value = null;
-            queryResult.Value = null;
             refreshToken.Refresh();
             
             try
             {
-                var result = await snowflakeService.ExecuteQueryAsync(sql);
-                queryResult.Value = result;
+                var dbList = await snowflakeService.GetDatabasesAsync();
+                databases.Value = dbList;
+                totalDatabases.Value = dbList.Count;
+                
+                // Calculate total schemas and tables across all databases
+                int totalSchemasCount = 0;
+                int totalTablesCount = 0;
+                
+                foreach (var db in dbList.Take(10)) // Limit to first 10 for performance
+                {
+                    try
+                    {
+                        var schemaList = await snowflakeService.GetSchemasAsync(db);
+                        totalSchemasCount += schemaList.Count;
+                        
+                        foreach (var schema in schemaList.Take(5)) // Limit schemas per DB
+                        {
+                            try
+                            {
+                                var tableList = await snowflakeService.GetTablesAsync(db, schema);
+                                totalTablesCount += tableList.Count;
+                            }
+                            catch
+                            {
+                                // Skip if can't access tables
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Skip if can't access schemas
+                    }
+                }
+                
+                totalSchemas.Value = totalSchemasCount;
+                totalTables.Value = totalTablesCount;
             }
             catch (Exception ex)
             {
-                errorMessage.Value = $"Error executing query: {ex.Message}";
+                errorMessage.Value = $"Error loading statistics: {ex.Message}";
             }
             finally
             {
-                isLoading.Value = false;
+                isLoadingStats.Value = false;
                 refreshToken.Refresh();
             }
         }
         
-        // Sample schemas available in SNOWFLAKE_SAMPLE_DATA
-        var availableSchemas = new[] { "TPCH_SF1", "TPCH_SF10", "TPCH_SF100", "TPCDS_SF10TCL", "WEATHER" };
-        
-        // Left Panel - Query Builder
-        var schemaDropdown = new Button(selectedSchema.Value)
-            .Primary()
-            .Icon(Icons.Database)
-            .WithDropDown(availableSchemas.Select(schema => 
-                MenuItem.Default(schema).HandleSelect(() => 
-                {
-                    selectedSchema.Value = schema;
-                    selectedTable.Value = null;
-                    queryResult.Value = null;
-                    refreshToken.Refresh();
-                })
-            ).ToArray());
-        
-        var sampleQueryDropdown = new Button("Sample Queries")
-            .Secondary()
-            .Icon(Icons.FileText)
-            .WithDropDown(sampleQueries.Select((query, idx) =>
-                MenuItem.Default(query.Item1).HandleSelect(() =>
-                {
-                    selectedSampleQuery.Value = idx;
-                    customQuery.Value = query.Item2;
-                    refreshToken.Refresh();
-                })
-            ).ToArray());
-        
-        var executeButton = new Button("Execute Query")
+        this.UseEffect(async () =>
         {
-            OnClick = async (evt) =>
+            await LoadStatistics();
+        }, []);
+        
+        // Load schemas when database is selected
+        async Task LoadSchemas(string database)
+        {
+            isLoadingSchemas.Value = true;
+            errorMessage.Value = null;
+            selectedSchema.Value = null;
+            tables.Value = new List<string>();
+            selectedTable.Value = null;
+            tableInfo.Value = null;
+            tablePreview.Value = null;
+            refreshToken.Refresh();
+            
+            try
             {
-                await ExecuteQuery(customQuery.Value);
-                await ValueTask.CompletedTask;
+                var schemaList = await snowflakeService.GetSchemasAsync(database);
+                schemas.Value = schemaList;
+            }
+            catch (Exception ex)
+            {
+                errorMessage.Value = $"Error loading schemas: {ex.Message}";
+            }
+            finally
+            {
+                isLoadingSchemas.Value = false;
+                refreshToken.Refresh();
             }
         }
-            .Primary()
-            .Icon(Icons.Play);
         
-        var queryTextArea = customQuery.ToTextAreaInput()
-            .Placeholder("Enter your SQL query here...\nExample: SELECT * FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER LIMIT 10")
-            .Height(Size.Units(120));
+        // Load tables when schema is selected
+        async Task LoadTables(string database, string schema)
+        {
+            isLoadingTables.Value = true;
+            errorMessage.Value = null;
+            selectedTable.Value = null;
+            tableInfo.Value = null;
+            tablePreview.Value = null;
+            refreshToken.Refresh();
+            
+            try
+            {
+                var tableList = await snowflakeService.GetTablesAsync(database, schema);
+                tables.Value = tableList;
+            }
+            catch (Exception ex)
+            {
+                errorMessage.Value = $"Error loading tables: {ex.Message}";
+            }
+            finally
+            {
+                isLoadingTables.Value = false;
+                refreshToken.Refresh();
+            }
+        }
         
-        var leftPanel = new Card(
-            Layout.Vertical().Gap(4).Padding(2)
-            | Text.H2("Query Builder")
-            | Text.Muted("Query SNOWFLAKE_SAMPLE_DATA database")
-            | Layout.Horizontal().Gap(2)
-                | schemaDropdown
-                | sampleQueryDropdown
-            | queryTextArea
-            | Layout.Horizontal().Gap(2)
-                | executeButton
-                | (isLoading.Value ? Text.Small("Executing...") : new Spacer())
+        // Load table preview when table is selected
+        async Task LoadTablePreview(string database, string schema, string table)
+        {
+            isLoadingTableData.Value = true;
+            errorMessage.Value = null;
+            refreshToken.Refresh();
+            
+            try
+            {
+                var info = await snowflakeService.GetTableInfoAsync(database, schema, table);
+                tableInfo.Value = info;
+                
+                var preview = await snowflakeService.GetTablePreviewAsync(database, schema, table, 100);
+                tablePreview.Value = preview;
+            }
+            catch (Exception ex)
+            {
+                errorMessage.Value = $"Error loading table data: {ex.Message}";
+            }
+            finally
+            {
+                isLoadingTableData.Value = false;
+                refreshToken.Refresh();
+            }
+        }
+        
+        // Dashboard Statistics Cards
+        var statsCards = Layout.Horizontal().Gap(4).Wrap()
+            | new Card(
+                Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
+                | Text.H2(totalDatabases.Value.ToString())
+                | Text.Muted("Databases")
+                | (isLoadingStats.Value ? Text.Small("Loading...") : new Spacer())
+            ).Width(Size.Fraction(0.3f))
+            | new Card(
+                Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
+                | Text.H2(totalSchemas.Value.ToString())
+                | Text.Muted("Schemas")
+                | (isLoadingStats.Value ? Text.Small("Loading...") : new Spacer())
+            ).Width(Size.Fraction(0.3f))
+            | new Card(
+                Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
+                | Text.H2(totalTables.Value.ToString())
+                | Text.Muted("Tables")
+                | (isLoadingStats.Value ? Text.Small("Loading...") : new Spacer())
+            ).Width(Size.Fraction(0.3f));
+        
+        // Database Selection
+        var databaseSection = new Card(
+            Layout.Vertical().Gap(3).Padding(2)
+            | Text.H3("Databases")
+            | Text.Muted("Select a database to explore")
+            | (databases.Value.Count > 0
+                ? Layout.Vertical().Gap(2)
+                    | databases.Value.Select(db => 
+                        (selectedDatabase.Value == db
+                            ? new Button(db, onClick: async _ =>
+                            {
+                                selectedDatabase.Value = db;
+                                await LoadSchemas(db);
+                            })
+                                .Primary()
+                                .Icon(Icons.Database)
+                            : new Button(db, onClick: async _ =>
+                            {
+                                selectedDatabase.Value = db;
+                                await LoadSchemas(db);
+                            })
+                                .Secondary()
+                                .Icon(Icons.Database))
+                    ).ToArray()
+                : (isLoadingStats.Value 
+                    ? Text.Small("Loading databases...") 
+                    : Text.Small("No databases found")))
+        ).Width(Size.Fraction(0.25f));
+        
+        // Schema Selection
+        var schemaSection = selectedDatabase.Value != null
+            ? new Card(
+                Layout.Vertical().Gap(3).Padding(2)
+                | Text.H3("Schemas")
+                | Text.Muted($"In {selectedDatabase.Value}")
+                | (schemas.Value.Count > 0
+                    ? Layout.Vertical().Gap(2)
+                        | schemas.Value.Select(schema => 
+                            (selectedSchema.Value == schema
+                                ? new Button(schema, onClick: async _ =>
+                                {
+                                    selectedSchema.Value = schema;
+                                    await LoadTables(selectedDatabase.Value!, schema);
+                                })
+                                    .Primary()
+                                    .Icon(Icons.Folder)
+                                : new Button(schema, onClick: async _ =>
+                                {
+                                    selectedSchema.Value = schema;
+                                    await LoadTables(selectedDatabase.Value!, schema);
+                                })
+                                    .Secondary()
+                                    .Icon(Icons.Folder))
+                        ).ToArray()
+                    : (isLoadingSchemas.Value 
+                        ? Text.Small("Loading schemas...") 
+                        : Text.Small("No schemas found")))
+            ).Width(Size.Fraction(0.25f))
+            : new Card(
+                Layout.Vertical().Gap(3).Padding(2)
+                | Text.H3("Schemas")
+                | Text.Muted("Select a database first")
+            ).Width(Size.Fraction(0.25f));
+        
+        // Table Selection
+        var tableSection = selectedSchema.Value != null && selectedDatabase.Value != null
+            ? new Card(
+                Layout.Vertical().Gap(3).Padding(2)
+                | Text.H3("Tables")
+                | Text.Muted($"In {selectedDatabase.Value}.{selectedSchema.Value}")
+                | (tables.Value.Count > 0
+                    ? Layout.Vertical().Gap(2)
+                        | tables.Value.Select(table => 
+                            (selectedTable.Value == table
+                                ? new Button(table, onClick: async _ =>
+                                {
+                                    selectedTable.Value = table;
+                                    await LoadTablePreview(selectedDatabase.Value!, selectedSchema.Value!, table);
+                                })
+                                    .Primary()
+                                    .Icon(Icons.Table)
+                                : new Button(table, onClick: async _ =>
+                                {
+                                    selectedTable.Value = table;
+                                    await LoadTablePreview(selectedDatabase.Value!, selectedSchema.Value!, table);
+                                })
+                                    .Secondary()
+                                    .Icon(Icons.Table))
+                        ).ToArray()
+                    : (isLoadingTables.Value 
+                        ? Text.Small("Loading tables...") 
+                        : Text.Small("No tables found")))
+            ).Width(Size.Fraction(0.25f))
+            : new Card(
+                Layout.Vertical().Gap(3).Padding(2)
+                | Text.H3("Tables")
+                | Text.Muted("Select a schema first")
+            ).Width(Size.Fraction(0.25f));
+        
+        // Table Preview Section
+        var previewSection = tableInfo.Value != null && tablePreview.Value != null
+            ? new Card(
+                Layout.Vertical().Gap(4).Padding(2)
+                | Layout.Horizontal().Gap(4).Align(Align.Center)
+                    | Text.H3($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
+                    | new Spacer()
+                    | Layout.Horizontal().Gap(3)
+                        | Text.Small($"Rows: {tableInfo.Value.RowCount:N0}")
+                        | Text.Small($"Columns: {tableInfo.Value.ColumnCount}")
+                | Text.Muted("Table Structure:")
+                | BuildColumnsTable(tableInfo.Value.Columns)
+                | Text.Muted("Preview (first 100 rows):")
+                | (isLoadingTableData.Value 
+                    ? Text.Small("Loading data...") 
+                    : BuildDataTable(tablePreview.Value))
+            ).Width(Size.Fraction(0.7f))
+            : new Card(
+                Layout.Vertical().Gap(3).Padding(2)
+                | Text.H3("Table Preview")
+                | Text.Muted("Select a table to view its data")
+            ).Width(Size.Fraction(0.7f));
+        
+        return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
+            | Text.H2("Snowflake Database Explorer")
+            | Text.Muted("Explore your Snowflake databases, schemas, and tables")
+            | statsCards
             | (errorMessage.Value != null 
-                ? Text.Small(errorMessage.Value) 
+                ? new Card(
+                    Layout.Vertical().Gap(2).Padding(2)
+                        | Text.Small($"Error: {errorMessage.Value}")
+                )
                 : new Spacer())
-        ).Width(Size.Fraction(0.45f));
+            | Layout.Horizontal().Gap(4).Align(Align.TopCenter)
+                | databaseSection
+                | schemaSection
+                | tableSection
+            | Layout.Horizontal().Gap(4).Align(Align.TopCenter)
+                | previewSection;
+    }
+    
+    private object BuildColumnsTable(List<ColumnInfo> columns)
+    {
+        var rows = new List<TableRow>();
         
-        // Right Panel - Results
-        var resultsContent = queryResult.Value != null && queryResult.Value.Columns.Count > 0
-            ? BuildDataTable(queryResult.Value)
-            : Text.Muted("No results. Execute a query to see data.");
+        // Header
+        rows.Add(new TableRow([
+            new TableCell("Column Name").IsHeader(),
+            new TableCell("Type").IsHeader(),
+            new TableCell("Nullable").IsHeader()
+        ]));
         
-        var rightPanel = new Card(
-            Layout.Vertical().Gap(4).Padding(2)
-            | Text.H2("Query Results")
-            | Text.Muted(queryResult.Value != null 
-                ? $"Showing {queryResult.Value.Rows.Count} rows" 
-                : "Results will appear here")
-            | resultsContent
-        ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(400));
+        // Data rows
+        foreach (var col in columns)
+        {
+            rows.Add(new TableRow([
+                new TableCell(col.Name),
+                new TableCell(col.Type),
+                new TableCell(col.Nullable ? "Yes" : "No")
+            ]));
+        }
         
-        return Layout.Horizontal().Gap(6).Align(Align.Center)
-            | leftPanel
-            | rightPanel;
+        return new Table([.. rows]);
     }
     
     private object BuildDataTable(System.Data.DataTable table)
@@ -216,4 +407,3 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         ];
     }
 }
-
