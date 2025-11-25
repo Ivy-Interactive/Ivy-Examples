@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>EnumsNetExample</RootNamespace>
+    <UserSecretsId>3e6d8462-e35b-4dc9-8adb-c57cf3cc4c90</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
