@@ -9,7 +9,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["IvyLeadGenerator.csproj", "./"]
+COPY ["ColdCallTracker.csproj", "./"]
 RUN dotnet restore "ColdCallTracker.csproj"
 
 # Copy everything and build
