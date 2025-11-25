@@ -78,18 +78,6 @@
         "API Integration"
       ]
     },
-    {
-      "name": "RentalBackOffice",
-      "description": "RentalBackOffice is a web application for managing rental properties, tenants, leases, and related administrative tasks for property management businesses. Ivy is a web framework for building interactive web applications using C# and .NET.",
-      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/rental-back-office",
-      "deploymentLink": "ivy-projectdemos-rental-back-office.sliplane.app",
-      "tags": [
-        "Property Management",
-        "Rental",
-        "Business Management",
-        "Database"
-      ]
-    }
   ],
   "package-demos": [
     {
