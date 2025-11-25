@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>ExcelDataReaderExample</RootNamespace>
+    <UserSecretsId>229d9c43-02a1-4f57-9e32-d452847f4ef2</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
