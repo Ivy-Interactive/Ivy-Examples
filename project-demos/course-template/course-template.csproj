@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,6 +9,7 @@
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS8669;CS9113;NETSDK1187</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <UserSecretsId>ef89b9dc-dd58-459c-a75b-c798d050b526</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
