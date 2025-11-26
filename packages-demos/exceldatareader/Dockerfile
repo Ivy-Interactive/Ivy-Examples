@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["ColdCallTracker.csproj", "./"]
-RUN dotnet restore "ColdCallTracker.csproj"
+COPY ["ExcelDataReaderExample.csproj", "./"]
+RUN dotnet restore "ExcelDataReaderExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "ColdCallTracker.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "ExcelDataReaderExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ColdCallTracker.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "ExcelDataReaderExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./ColdCallTracker.dll"]
+ENTRYPOINT ["dotnet","./ExcelDataReaderExample.dll"]

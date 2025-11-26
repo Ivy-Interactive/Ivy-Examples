@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["ColdCallTracker.csproj", "./"]
-RUN dotnet restore "ColdCallTracker.csproj"
+COPY ["EnumsNetExample.csproj", "./"]
+RUN dotnet restore "EnumsNetExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "ColdCallTracker.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "EnumsNetExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ColdCallTracker.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "EnumsNetExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./ColdCallTracker.dll"]
+ENTRYPOINT ["dotnet","./EnumsNetExample.dll"]
