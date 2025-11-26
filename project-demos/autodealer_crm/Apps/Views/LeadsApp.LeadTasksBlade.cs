@@ -39,7 +39,7 @@ public class LeadTasksBlade(int leadId) : ViewBase
                 Title = t.Title,
                 Description = t.Description,
                 DueDate = t.DueDate?.ToString("d") ?? "N/A",
-                Completed = t.Completed == 1 ? "Yes" : "No",
+                Completed = t.Completed == true ? "Yes" : "No",
                 Manager = t.Manager.Name,
                 _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis

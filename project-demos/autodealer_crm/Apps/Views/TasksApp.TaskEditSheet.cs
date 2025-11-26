@@ -21,7 +21,7 @@ public class TaskEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int t
             .Builder(e => e.Title, e => e.ToTextInput())
             .Builder(e => e.Description, e => e.ToTextAreaInput())
             .Builder(e => e.DueDate, e => e.ToDateInput())
-            .Builder(e => e.Completed, e => e.ToNumberInput())
+            .Builder(e => e.Completed, e => e.ToSwitchInput())
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(QueryLeads(factory), LookupLead(factory), placeholder: "Select Lead"))
             .Builder(e => e.ManagerId, e => e.ToAsyncSelectInput(QueryManagers(factory), LookupManager(factory), placeholder: "Select Manager"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)

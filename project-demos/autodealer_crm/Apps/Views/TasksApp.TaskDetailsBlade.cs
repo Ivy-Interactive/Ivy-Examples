@@ -58,7 +58,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
                 Lead = taskValue.Lead?.Customer?.FirstName + " " + taskValue.Lead?.Customer?.LastName,
                 Manager = taskValue.Manager.Name,
                 DueDate = taskValue.DueDate?.ToString("d") ?? "N/A",
-                Completed = taskValue.Completed == 1 ? "Yes" : "No"
+                Completed = taskValue.Completed == true ? "Yes" : "No"
             }
             .ToDetails()
             .MultiLine(e => e.Description)

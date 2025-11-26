@@ -26,7 +26,7 @@ public class TaskCompletionRateLineChartView(DateTime startDate, DateTime endDat
                     {
                         DateKey = g.Key,
                         CompletionRate = g.Count() > 0 
-                            ? (g.Count(t => t.Completed == 1) * 100.0 / g.Count())
+                            ? (g.Count(t => t.Completed == true) * 100.0 / g.Count())
                             : 0.0
                     })
                     .ToListAsync();
