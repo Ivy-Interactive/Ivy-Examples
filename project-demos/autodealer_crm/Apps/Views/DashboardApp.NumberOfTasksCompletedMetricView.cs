@@ -16,11 +16,11 @@ public class NumberOfTasksCompletedMetricView(DateTime fromDate, DateTime toDate
             
             // Count completed tasks where UpdatedAt is in the date range (UpdatedAt is when task was marked completed)
             var currentPeriodTasksCompleted = await db.Tasks
-                .Where(t => t.Completed == 1 && t.DueDate >= fromDate && t.DueDate <= toDate)
+                .Where(t => t.Completed && t.DueDate >= fromDate && t.DueDate <= toDate)
                 .CountAsync();;
             
             var previousPeriodTasksCompleted = await db.Tasks
-                .Where(t => t.Completed == 1 || t.Completed != 1 && t.DueDate >= fromDate && t.DueDate <= toDate)
+                .Where(t => t.DueDate >= fromDate && t.DueDate <= toDate)
                 .CountAsync();
 
             if (previousPeriodTasksCompleted == 0)

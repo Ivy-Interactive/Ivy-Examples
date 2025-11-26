@@ -14,7 +14,7 @@ public class UserTasksCreateDialog(IState<bool> isOpen, RefreshToken refreshToke
         public DateTime? DueDate { get; init; }
 
         [Required]
-        public int Completed { get; init; } = 0;
+        public bool Completed { get; init; } = false;
     }
 
     public override object? Build()

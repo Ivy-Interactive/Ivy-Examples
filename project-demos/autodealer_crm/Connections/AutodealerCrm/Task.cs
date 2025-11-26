@@ -24,7 +24,7 @@ public partial class Task
 
     public DateTime? DueDate { get; set; }
 
-    public int Completed { get; set; }
+    public bool Completed { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

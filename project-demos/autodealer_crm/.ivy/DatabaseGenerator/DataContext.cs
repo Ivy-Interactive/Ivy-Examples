@@ -185,7 +185,7 @@ public class Task
     public string Title { get; set; } = null!;
     public string? Description { get; set; }
     public DateTime? DueDate { get; set; }
-    public int Completed { get; set; }
+    public bool Completed { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

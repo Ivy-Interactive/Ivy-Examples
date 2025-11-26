@@ -175,7 +175,7 @@ public class DataSeeder : IDataSeeder
                 .RuleFor(t => t.Title, f => f.Lorem.Sentence(3, 5))
                 .RuleFor(t => t.Description, f => f.Random.Bool() ? f.Lorem.Paragraph() : null)
                 .RuleFor(t => t.DueDate, f => f.Date.Past(1))
-                .RuleFor(t => t.Completed, (f, t) => f.Random.Bool() ? 1 : 0)
+                .RuleFor(t => t.Completed, f => f.Random.Bool())
                 .RuleFor(t => t.CreatedAt, f => f.Date.Past(1))
                 .RuleFor(t => t.UpdatedAt, (f, t) => f.Date.Between(t.CreatedAt, DateTime.UtcNow));
 

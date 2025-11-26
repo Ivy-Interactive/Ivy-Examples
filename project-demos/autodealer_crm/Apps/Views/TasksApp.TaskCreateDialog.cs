@@ -20,7 +20,7 @@ public class TaskCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
         public DateTime? DueDate { get; init; }
 
         [Required]
-        public int Completed { get; init; }
+        public bool Completed { get; init; }
     }
 
     public override object? Build()
