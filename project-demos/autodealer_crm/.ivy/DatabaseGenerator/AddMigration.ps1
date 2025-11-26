@@ -1,0 +1,1 @@
+dotnet ef migrations add InitialCreate -- --connection-string "Data Source=db.sqlite"

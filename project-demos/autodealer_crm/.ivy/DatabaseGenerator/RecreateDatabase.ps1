@@ -1,0 +1,1 @@
+dotnet run -- --data-provider Sqlite --connection-string "Data Source=db.sqlite" --seed-database --yes-to-all

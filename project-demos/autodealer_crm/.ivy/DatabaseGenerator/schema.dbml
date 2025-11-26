@@ -1,0 +1,191 @@
+Enum user_role {
+  manager
+  supervisor
+  admin
+  analyst
+}
+
+Enum lead_stage {
+  new
+  contacted
+  qualified
+  in_negotiation
+  prepayment
+  sold
+  lost
+}
+
+Enum source_channel {
+  viber
+  whatsapp
+  telegram
+  call
+  email
+}
+
+Enum lead_intent {
+  buy
+  sell
+  service_inquiry
+  other
+}
+
+Enum vehicle_status {
+  available
+  reserved
+  sold
+  archived
+}
+
+Enum message_channel {
+  viber
+  whatsapp
+  telegram
+  email
+}
+
+Enum message_direction {
+  incoming
+  outgoing
+}
+
+Enum message_type {
+  text
+  photo
+  file
+  voice_note
+}
+
+Enum call_direction {
+  inbound
+  outbound
+}
+
+Table user {
+  id int [pk, increment]
+  name varchar [not null]
+  email varchar [not null]
+  role user_role [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table customer {
+  id int [pk, increment]
+  first_name varchar [not null]
+  last_name varchar [not null]
+  email varchar
+  viber_id varchar
+  whatsapp_id varchar
+  telegram_id varchar
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table vehicle {
+  id int [pk, increment]
+  make varchar [not null]
+  model varchar [not null]
+  year int [not null]
+  vin varchar [not null, unique]
+  price decimal [not null]
+  status vehicle_status [not null]
+  manager_id int
+  erp_sync_id varchar
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table lead {
+  id int [pk, increment]
+  customer_id int [not null]
+  manager_id int
+  source_channel source_channel [not null]
+  intent lead_intent [not null]
+  stage lead_stage [not null]
+  priority int
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table lead_vehicle {
+  lead_id int [not null]
+  vehicle_id int [not null]
+  indexes {
+    (lead_id, vehicle_id) [pk]
+  }
+}
+
+Table media {
+  id int [pk, increment]
+  file_path varchar [not null]
+  file_type varchar [not null]
+  uploaded_at timestamp [not null]
+  vehicle_id int
+  lead_id int
+  customer_id int
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table message {
+  id int [pk, increment]
+  lead_id int
+  customer_id int [not null]
+  manager_id int
+  channel message_channel [not null]
+  direction message_direction [not null]
+  type message_type [not null]
+  content text
+  media_id int
+  sent_at timestamp [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table call_record {
+  id int [pk, increment]
+  lead_id int
+  customer_id int [not null]
+  manager_id int
+  direction call_direction [not null]
+  start_time timestamp [not null]
+  end_time timestamp [not null]
+  duration int
+  recording_url varchar
+  script_score decimal
+  sentiment decimal
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table task {
+  id int [pk, increment]
+  lead_id int [not null]
+  manager_id int [not null]
+  title varchar [not null]
+  description text
+  due_date date
+  completed boolean [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Ref: vehicle.manager_id > user.id
+Ref: lead.customer_id > customer.id
+Ref: lead.manager_id > user.id
+Ref: lead_vehicle.lead_id > lead.id
+Ref: lead_vehicle.vehicle_id > vehicle.id
+Ref: media.vehicle_id > vehicle.id
+Ref: media.lead_id > lead.id
+Ref: media.customer_id > customer.id
+Ref: message.lead_id > lead.id
+Ref: message.customer_id > customer.id
+Ref: message.manager_id > user.id
+Ref: message.media_id > media.id
+Ref: call_record.lead_id > lead.id
+Ref: call_record.customer_id > customer.id
+Ref: call_record.manager_id > user.id
+Ref: task.lead_id > lead.id
+Ref: task.manager_id > user.id
