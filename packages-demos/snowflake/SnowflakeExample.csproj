@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>SnowflakeExample</RootNamespace>
+    <UserSecretsId>7b2ae6b7-d3b1-47c2-9263-c961cc5b0ddf</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
