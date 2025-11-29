@@ -7,7 +7,7 @@ namespace SnowflakeExample.Apps;
 /// Snowflake Demo App - Interactive dashboard for exploring Snowflake databases
 /// </summary>
 [App(icon: Icons.Database, title: "Snowflake")]
-public class SnowflakeApp : ViewBase, IHaveSecrets
+public class SnowflakeApp : ViewBase
 {
     public override object? Build()
     {
@@ -35,6 +35,8 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var totalDatabases = this.UseState(0);
         var totalSchemas = this.UseState(0);
         var totalTables = this.UseState(0);
+        var totalSchemasAll = this.UseState(0);
+        var totalTablesAll = this.UseState(0);
     
         // UseEffect hooks - must be at the top
         this.UseEffect(async () =>
@@ -119,15 +121,13 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         // Load functions
         async Task LoadDatabases()
         {
-            isLoadingStats.Value = true;
             errorMessage.Value = null;
             var dbList = await TryAsync(() => snowflakeService.GetDatabasesAsync(), "Error loading databases");
             if (dbList != null)
             {
                 databases.Value = dbList;
-                totalDatabases.Value = dbList.Count;
+                // Don't update totalDatabases here - it will be updated in LoadStatistics along with other metrics
             }
-            isLoadingStats.Value = false;
         }
         
         async Task LoadStatistics(string? database = null)
@@ -137,46 +137,65 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             try
             {
                 refreshToken.Refresh();
+                int databasesCount = 0;
+                int schemasCount = 0;
+                int tablesCount = 0;
+                int schemasAllCount = 0;
+                int tablesAllCount = 0;
+                
                 if (database == null)
                 {
-                    int totalSchemasCount = 0;
-                    int totalTablesCount = 0;
+                    databasesCount = databases.Value.Count;
+                    
                     foreach (var db in databases.Value)
                     {
                         try
                         {
                             var schemaList = await snowflakeService.GetSchemasAsync(db);
-                            totalSchemasCount += schemaList.Count;
+                            schemasAllCount += schemaList.Count;
                             foreach (var schema in schemaList)
                             {
                                 try
                                 {
                                     var tableList = await snowflakeService.GetTablesAsync(db, schema);
-                                    totalTablesCount += tableList.Count;
+                                    tablesAllCount += tableList.Count;
                                 }
                                 catch { }
                             }
                         }
                         catch { }
                     }
-                    totalSchemas.Value = totalSchemasCount;
-                    totalTables.Value = totalTablesCount;
+                    schemasCount = schemasAllCount;
+                    tablesCount = tablesAllCount;
                 }
                 else
                 {
+                    databasesCount = databases.Value.Count;
                     var schemaList = await snowflakeService.GetSchemasAsync(database);
-                    totalSchemas.Value = schemaList.Count;
-                    int totalTablesCount = 0;
+                    schemasCount = schemaList.Count;
                     foreach (var schema in schemaList)
                     {
                         try
                         {
                             var tableList = await snowflakeService.GetTablesAsync(database, schema);
-                            totalTablesCount += tableList.Count;
+                            tablesCount += tableList.Count;
                         }
                         catch { }
                     }
-                    totalTables.Value = totalTablesCount;
+                    // Keep all values for progress calculation
+                    schemasAllCount = totalSchemasAll.Value;
+                    tablesAllCount = totalTablesAll.Value;
+                }
+                
+                // Update all values simultaneously after a small delay to ensure UI updates together
+                await Task.Yield();
+                totalDatabases.Value = databasesCount;
+                totalSchemas.Value = schemasCount;
+                totalTables.Value = tablesCount;
+                if (database == null)
+                {
+                    totalSchemasAll.Value = schemasAllCount;
+                    totalTablesAll.Value = tablesAllCount;
                 }
             }
             catch (Exception ex)
@@ -230,11 +249,68 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
         var hasTable = hasSchema && !string.IsNullOrEmpty(selectedTable.Value);
         var isLoadingData = isLoadingStats.Value || databases.Value.Count == 0;
         
-        // Statistics Cards
+        // Statistics Cards - show total counts when no database selected, specific counts when database is selected
+        var currentSelectedDb = selectedDatabase.Value;
+        var currentHasDatabase = !string.IsNullOrEmpty(currentSelectedDb);
+        
+        // Create metric functions that will be called synchronously
+        // All functions read values at the same time to ensure consistent rendering
+        Func<Task<MetricRecord>> databasesMetric = async () =>
+        {
+            // Small delay to ensure all metrics are evaluated together
+            await Task.Yield();
+            var total = totalDatabases.Value;
+            var selected = currentHasDatabase ? 1 : 0;
+            var displayValue = currentHasDatabase ? selected : total;
+            return new MetricRecord(
+                displayValue.ToString("N0"),
+                null,
+                total > 0 && currentHasDatabase ? (double)selected / total : (total > 0 ? 1.0 : null),
+                currentHasDatabase ? $"{selected} of {total:N0} selected" : $"Total: {total:N0}"
+            );
+        };
+        
+        Func<Task<MetricRecord>> schemasMetric = async () =>
+        {
+            // Small delay to ensure all metrics are evaluated together
+            await Task.Yield();
+            var current = totalSchemas.Value;
+            var total = totalSchemasAll.Value;
+            return new MetricRecord(
+                current.ToString("N0"),
+                null,
+                total > 0 ? (double)current / total : null,
+                total > 0 ? $"{current:N0} of {total:N0} total" : null
+            );
+        };
+        
+        Func<Task<MetricRecord>> tablesMetric = async () =>
+        {
+            // Small delay to ensure all metrics are evaluated together
+            await Task.Yield();
+            var current = totalTables.Value;
+            var total = totalTablesAll.Value;
+            return new MetricRecord(
+                current.ToString("N0"),
+                null,
+                total > 0 ? (double)current / total : null,
+                total > 0 ? $"{current:N0} of {total:N0} total" : null
+            );
+        };
+        
         var statsCards = Layout.Horizontal().Gap(4).Align(Align.TopCenter)
-            | BuildStatCard("Databases", totalDatabases.Value, isLoadingStats.Value)
-            | BuildStatCard(hasDatabase ? $"Schemas in {selectedDatabase.Value}" : "Schemas", totalSchemas.Value, isLoadingStats.Value)
-            | BuildStatCard(hasDatabase ? $"Tables in {selectedDatabase.Value}" : "Tables", totalTables.Value, isLoadingStats.Value);
+            | new MetricView(
+                currentHasDatabase ? $"Databases: {currentSelectedDb}" : "Databases",
+                Icons.Database,
+                databasesMetric).Key($"databases-{totalDatabases.Value}-{currentSelectedDb ?? "none"}")
+            | new MetricView(
+                currentHasDatabase ? $"Schemas in {currentSelectedDb}" : "Schemas",
+                Icons.Layers,
+                schemasMetric).Key($"schemas-{totalSchemas.Value}-{totalSchemasAll.Value}-{currentSelectedDb ?? "all"}")
+            | new MetricView(
+                currentHasDatabase ? $"Tables in {currentSelectedDb}" : "Tables",
+                Icons.Table,
+                tablesMetric).Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}");
         
         // Selection Options
         var databaseOptions = databases.Value
@@ -315,16 +391,6 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
             ;
     }
     
-    private object BuildStatCard(string label, int value, bool isLoading)
-    {
-        return new Card(
-            Layout.Vertical().Gap(2).Align(Align.Center).Padding(3)
-            | (isLoading 
-                ? new Skeleton().Height(Size.Units(32)).Width(Size.Units(60))
-                : Text.H2(value.ToString()))
-            | Text.Muted(label)
-        ).Width(Size.Fraction(0.3f));
-    }
     
     private object BuildSkeletons(int count)
     {
@@ -428,15 +494,5 @@ public class SnowflakeApp : ViewBase, IHaveSecrets
                     | pagination
                     | Text.Muted($"Showing {startIndex + 1}-{Math.Min(startIndex + pageSize, totalRows)} of {totalRows} rows").Muted()
                 : Text.Muted($"Showing {totalRows} row(s)"));
-    }
-    
-    public Secret[] GetSecrets()
-    {
-        return
-        [
-            new Secret("Snowflake:Account"),
-            new Secret("Snowflake:User"),
-            new Secret("Snowflake:Password")
-        ];
     }
 }
