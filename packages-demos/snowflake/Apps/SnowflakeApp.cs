@@ -353,8 +353,10 @@ public class SnowflakeApp : ViewBase
         }
         
         // Build stats cards with skeleton during loading
+        // Show skeleton if loading stats OR if no data loaded yet (initial state)
+        var shouldShowSkeleton = isLoadingStats.Value || databases.Value.Count == 0;
         object statsCards;
-        if (isLoadingStats.Value)
+        if (shouldShowSkeleton)
         {
             statsCards = BuildStatsSkeletons();
         }
