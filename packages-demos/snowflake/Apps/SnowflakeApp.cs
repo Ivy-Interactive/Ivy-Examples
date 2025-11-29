@@ -37,6 +37,7 @@ public class SnowflakeApp : ViewBase
         var totalTables = this.UseState(0);
         var totalSchemasAll = this.UseState(0);
         var totalTablesAll = this.UseState(0);
+        var totalTablesInSchema = this.UseState(0); // Tables in selected schema
     
         // UseEffect hooks - must be at the top
         this.UseEffect(async () =>
@@ -72,6 +73,7 @@ public class SnowflakeApp : ViewBase
                 selectedTable.Value = null;
                 tableInfo.Value = null;
                 tablePreview.Value = null;
+                totalTablesInSchema.Value = 0;
             }
         }, selectedSchema);
         
@@ -227,7 +229,15 @@ public class SnowflakeApp : ViewBase
             tableInfo.Value = null;
             tablePreview.Value = null;
             var tableList = await TryAsync(() => snowflakeService.GetTablesAsync(database, schema), "Error loading tables");
-            if (tableList != null) tables.Value = tableList;
+            if (tableList != null)
+            {
+                tables.Value = tableList;
+                totalTablesInSchema.Value = tableList.Count;
+            }
+            else
+            {
+                totalTablesInSchema.Value = 0;
+            }
             isLoadingTables.Value = false;
         }
         
@@ -251,7 +261,9 @@ public class SnowflakeApp : ViewBase
         
         // Statistics Cards - show total counts when no database selected, specific counts when database is selected
         var currentSelectedDb = selectedDatabase.Value;
+        var currentSelectedSchema = selectedSchema.Value;
         var currentHasDatabase = !string.IsNullOrEmpty(currentSelectedDb);
+        var currentHasSchema = currentHasDatabase && !string.IsNullOrEmpty(currentSelectedSchema);
         
         // Create metric functions that will be called synchronously
         // All functions read values at the same time to ensure consistent rendering
@@ -298,19 +310,53 @@ public class SnowflakeApp : ViewBase
             );
         };
         
-        var statsCards = Layout.Horizontal().Gap(4).Align(Align.TopCenter)
-            | new MetricView(
+        Func<Task<MetricRecord>> tablesInSchemaMetric = async () =>
+        {
+            // Small delay to ensure all metrics are evaluated together
+            await Task.Yield();
+            var current = totalTablesInSchema.Value;
+            var total = totalTables.Value; // Total tables in database
+            return new MetricRecord(
+                current.ToString("N0"),
+                null,
+                total > 0 ? (double)current / total : null,
+                total > 0 ? $"{current:N0} of {total:N0} in {currentSelectedDb}" : null
+            );
+        };
+        
+        // Build metrics list - add schema tables metric only when schema is selected
+        var metricsList = new List<object>
+        {
+            new MetricView(
                 currentHasDatabase ? $"Databases: {currentSelectedDb}" : "Databases",
                 Icons.Database,
-                databasesMetric).Key($"databases-{totalDatabases.Value}-{currentSelectedDb ?? "none"}")
-            | new MetricView(
+                databasesMetric).Key($"databases-{totalDatabases.Value}-{currentSelectedDb ?? "none"}"),
+            new MetricView(
                 currentHasDatabase ? $"Schemas in {currentSelectedDb}" : "Schemas",
                 Icons.Layers,
-                schemasMetric).Key($"schemas-{totalSchemas.Value}-{totalSchemasAll.Value}-{currentSelectedDb ?? "all"}")
-            | new MetricView(
+                schemasMetric).Key($"schemas-{totalSchemas.Value}-{totalSchemasAll.Value}-{currentSelectedDb ?? "all"}"),
+            new MetricView(
                 currentHasDatabase ? $"Tables in {currentSelectedDb}" : "Tables",
                 Icons.Table,
-                tablesMetric).Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}");
+                tablesMetric).Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}")
+        };
+        
+        // Add schema tables metric when schema is selected
+        if (currentHasSchema)
+        {
+            metricsList.Add(
+                new MetricView(
+                    $"Tables in {currentSelectedSchema}",
+                    Icons.Table,
+                    tablesInSchemaMetric).Key($"tables-in-schema-{totalTablesInSchema.Value}-{currentSelectedSchema}")
+            );
+        }
+        
+        var statsCards = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
+        foreach (var metric in metricsList)
+        {
+            statsCards = statsCards | metric;
+        }
         
         // Selection Options
         var databaseOptions = databases.Value
