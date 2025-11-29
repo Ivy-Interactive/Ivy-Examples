@@ -27,16 +27,12 @@ public class BrandDashboardApp : ViewBase
         var totalAvgSize = this.UseState<double>(() => 0); // Average size for all items
         var isLoading = this.UseState(false);
         var errorMessage = this.UseState<string?>(() => null);
-        var sortBy = this.UseState<string>("ItemCount"); // ItemCount, AvgPrice, Brand
-        var minItems = this.UseState<int>(0);
+        var sortBy = this.UseState<string>("ItemCount"); // ItemCount, AvgPrice, MinPrice, MaxPrice, TotalSize, AvgSize, Brand
+        var sortOrder = this.UseState<string>("DESC"); // ASC, DESC
+        var limit = this.UseState<int>(7); // Number of brands to load
 
         // Load data on mount
         this.UseEffect(async () =>
-        {
-            await LoadBrandData();
-        }, []);
-
-        async Task LoadBrandData()
         {
             isLoading.Value = true;
             errorMessage.Value = null;
@@ -92,8 +88,22 @@ public class BrandDashboardApp : ViewBase
                     ? totalItemsCount.Value / (double)totalBrandsCount.Value
                     : 0;
 
-                // Query to get top brands by count with metrics
-                var sql = @"
+                // Build ORDER BY clause based on sortBy and sortOrder
+                var orderByColumn = sortBy.Value switch
+                {
+                    "AvgPrice" => "AVG(P_RETAILPRICE)",
+                    "MinPrice" => "MIN(P_RETAILPRICE)",
+                    "MaxPrice" => "MAX(P_RETAILPRICE)",
+                    "TotalSize" => "SUM(P_SIZE)",
+                    "AvgSize" => "AVG(P_SIZE)",
+                    "Brand" => "P_BRAND",
+                    _ => "COUNT(*)" // Default to ItemCount
+                };
+                
+                var orderDirection = sortOrder.Value == "ASC" ? "ASC" : "DESC";
+                
+                // Query to get top brands with metrics, using dynamic ORDER BY and LIMIT
+                var sql = $@"
                     SELECT 
                         P_BRAND as Brand,
                         COUNT(*) as ItemCount,
@@ -105,8 +115,8 @@ public class BrandDashboardApp : ViewBase
                     FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF001.PART
                     WHERE P_BRAND IS NOT NULL
                     GROUP BY P_BRAND
-                    ORDER BY ItemCount DESC
-                    LIMIT 7";
+                    ORDER BY {orderByColumn} {orderDirection}
+                    LIMIT {limit.Value}";
 
                 var dataTable = await snowflakeService.ExecuteQueryAsync(sql);
 
@@ -126,6 +136,7 @@ public class BrandDashboardApp : ViewBase
                 }
 
                 brandData.Value = brands;
+                refreshToken.Refresh();
             }
             catch (Exception ex)
             {
@@ -134,35 +145,141 @@ public class BrandDashboardApp : ViewBase
             finally
             {
                 isLoading.Value = false;
+            }
+        }, []);
+        
+        // Reload data when parameters change
+        this.UseEffect(async () =>
+        {
+            if (brandData.Value.Count == 0) return; // Skip if initial load hasn't happened yet
+            
+            isLoading.Value = true;
+            errorMessage.Value = null;
+
+            try
+            {
+                refreshToken.Refresh();
+
+                // Build ORDER BY clause based on sortBy and sortOrder
+                var orderByColumn = sortBy.Value switch
+                {
+                    "AvgPrice" => "AVG(P_RETAILPRICE)",
+                    "MinPrice" => "MIN(P_RETAILPRICE)",
+                    "MaxPrice" => "MAX(P_RETAILPRICE)",
+                    "TotalSize" => "SUM(P_SIZE)",
+                    "AvgSize" => "AVG(P_SIZE)",
+                    "Brand" => "P_BRAND",
+                    _ => "COUNT(*)" // Default to ItemCount
+                };
+                
+                var orderDirection = sortOrder.Value == "ASC" ? "ASC" : "DESC";
+                
+                // Query to get top brands with metrics, using dynamic ORDER BY and LIMIT
+                var sql = $@"
+                    SELECT 
+                        P_BRAND as Brand,
+                        COUNT(*) as ItemCount,
+                        AVG(P_RETAILPRICE) as AvgPrice,
+                        MIN(P_RETAILPRICE) as MinPrice,
+                        MAX(P_RETAILPRICE) as MaxPrice,
+                        SUM(P_SIZE) as TotalSize,
+                        AVG(P_SIZE) as AvgSize
+                    FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF001.PART
+                    WHERE P_BRAND IS NOT NULL
+                    GROUP BY P_BRAND
+                    ORDER BY {orderByColumn} {orderDirection}
+                    LIMIT {limit.Value}";
+
+                var dataTable = await snowflakeService.ExecuteQueryAsync(sql);
+
+                var brands = new List<BrandStats>();
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    brands.Add(new BrandStats
+                    {
+                        Brand = row["Brand"]?.ToString() ?? "Unknown",
+                        ItemCount = Convert.ToInt64(row["ItemCount"] ?? 0),
+                        AvgPrice = Convert.ToDouble(row["AvgPrice"] ?? 0),
+                        MinPrice = Convert.ToDouble(row["MinPrice"] ?? 0),
+                        MaxPrice = Convert.ToDouble(row["MaxPrice"] ?? 0),
+                        TotalSize = Convert.ToInt64(row["TotalSize"] ?? 0),
+                        AvgSize = Convert.ToDouble(row["AvgSize"] ?? 0)
+                    });
+                }
+
+                brandData.Value = brands;
                 refreshToken.Refresh();
             }
-        }
+            catch (Exception ex)
+            {
+                errorMessage.Value = $"Error loading brand data: {ex.Message}";
+            }
+            finally
+            {
+                isLoading.Value = false;
+            }
+        }, sortBy, sortOrder, limit);
 
-        // Build UI with interactive controls
-        var header = Layout.Vertical().Gap(3)
+        // Build UI with interactive controls - this will be the header
+        var controlsHeader = Layout.Vertical().Align(Align.TopCenter)
+            |(Layout.Vertical().Gap(3).Padding(3).Width(Size.Fraction(0.8f))
+                | (Layout.Horizontal().Align(Align.TopCenter)
+                        | sortBy.ToSelectInput(new[] { "ItemCount", "AvgPrice", "MinPrice", "MaxPrice", "TotalSize", "AvgSize", "Brand" }.ToOptions())
+                            .WithField()
+                            .Label("Sort by:")
+                            .Width(Size.Full())
+                        | sortOrder.ToSelectInput(new[] { "DESC", "ASC" }.ToOptions())
+                            .WithField()
+                            .Label("Sort order:")
+                            .Width(Size.Full())
+                        | new NumberInput<int>(limit).Min(1).Max(100)
+                            .WithField()
+                            .Label("Limit (number of brands):")
+                            .Width(Size.Full())))
+        ;
+
+        var pageHeader = Layout.Vertical().Gap(3)
             | Layout.Horizontal().Gap(3).Width(Size.Full())
                 | Layout.Vertical().Gap(1)
-                    | Text.H1("Brand Analytics Dashboard")
-                    | Text.Muted("Top 7 Most Popular Brands from PART Table");
+                    | Text.H3("Brand Analytics Dashboard")
+                    | Text.Muted($"Top {limit.Value} Brands (sorted by {sortBy.Value} {sortOrder.Value})");
 
         if (errorMessage.Value != null)
         {
-            return Layout.Vertical().Gap(4).Padding(4)
-                | header
-                | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
-                        | Text.Small($"Error: {errorMessage.Value}")
-                );
+            return new HeaderLayout(
+                header: controlsHeader,
+                content: Layout.Vertical().Gap(4).Padding(4)
+                    | pageHeader
+                    | new Card(
+                        Layout.Vertical().Gap(2).Padding(3)
+                            | Text.Small($"Error: {errorMessage.Value}")
+                    )
+            );
         }
 
         if (isLoading.Value || brandData.Value.Count == 0)
         {
-            return Layout.Vertical().Gap(4).Padding(4)
-                | header
-                | Layout.Grid().Columns(3)
-                    | new Skeleton().Height(Size.Units(200))
-                    | new Skeleton().Height(Size.Units(200))
-                    | new Skeleton().Height(Size.Units(200));
+            return new HeaderLayout(
+                header: controlsHeader,
+                content: Layout.Vertical().Gap(3).Padding(4).Align(Align.TopCenter)
+                    | pageHeader.Width(Size.Fraction(0.8f))
+                    | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.8f))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        )
+                    | (Layout.Vertical().Gap(3).Width(Size.Fraction(0.8f))
+                        | new Skeleton().Height(Size.Units(80)))
+                    | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.8f))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        )
+            );
         }
 
         var totalItems = brandData.Value.Sum(b => b.ItemCount);
@@ -184,25 +301,8 @@ public class BrandDashboardApp : ViewBase
             ? brandData.Value.OrderBy(b => b.AvgPrice).Skip(brandData.Value.Count / 2).First().AvgPrice
             : 0;
 
-        // Filter and sort brands
-        var filteredBrands = sortBy.Value switch
-        {
-            "AvgPrice" => brandData.Value
-                .Where(b => b.ItemCount >= minItems.Value)
-                .OrderByDescending(b => b.AvgPrice)
-                .ThenByDescending(b => b.ItemCount)
-                .ToList(),
-            "Brand" => brandData.Value
-                .Where(b => b.ItemCount >= minItems.Value)
-                .OrderBy(b => b.Brand)
-                .ThenByDescending(b => b.ItemCount)
-                .ToList(),
-            _ => brandData.Value
-                .Where(b => b.ItemCount >= minItems.Value)
-                .OrderByDescending(b => b.ItemCount)
-                .ThenBy(b => b.Brand)
-                .ToList()
-        };
+        // Data is already sorted and filtered by SQL query, so use it directly
+        var filteredBrands = brandData.Value;
 
         // Calculate trends (comparing loaded data with overall averages)
         // Helper function to calculate trend percentage
@@ -354,23 +454,18 @@ public class BrandDashboardApp : ViewBase
         ).Title("Max Price by Brand");
 
 
-        return Layout.Horizontal().Align(Align.TopCenter)
-            | (Layout.Vertical().Gap(4).Padding(4).Width(Size.Fraction(0.8f))
-            | header
-            | overallMetrics
-            | barChartCard
-            | (Layout.Grid().Columns(2).Gap(3)
-
+        var content = Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
+            | pageHeader.Width(Size.Fraction(0.8f))
+            | overallMetrics.Width(Size.Fraction(0.8f))
+            | barChartCard.Width(Size.Fraction(0.8f))
+            | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.8f))
                 | minPriceChartCard
-                | maxPriceChartCard)
-            | (filteredBrands.Count != brandData.Value.Count
-                ? new Card(
-                    Layout.Horizontal().Gap(2).Padding(2).Align(Align.Center)
-                        | Text.Small($"Showing {filteredBrands.Count} of {brandData.Value.Count} brands")
-                        | new Badge($"Filter: Min {minItems.Value} items")
-                )
-                : new Spacer())
-                );
+                | maxPriceChartCard);
+
+        return new HeaderLayout(
+            header: controlsHeader,
+            content: content
+        );
     }
 
 
