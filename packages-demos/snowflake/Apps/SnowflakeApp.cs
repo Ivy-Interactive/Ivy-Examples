@@ -352,10 +352,20 @@ public class SnowflakeApp : ViewBase
             );
         }
         
-        var statsCards = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
-        foreach (var metric in metricsList)
+        // Build stats cards with skeleton during loading
+        object statsCards;
+        if (isLoadingStats.Value)
         {
-            statsCards = statsCards | metric;
+            statsCards = BuildStatsSkeletons();
+        }
+        else
+        {
+            var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
+            foreach (var metric in metricsList)
+            {
+                layout = layout | metric;
+            }
+            statsCards = layout;
         }
         
         // Selection Options
@@ -444,6 +454,18 @@ public class SnowflakeApp : ViewBase
         foreach (var _ in Enumerable.Range(0, count))
         {
             layout = layout | new Skeleton().Height(Size.Units(24)).Width(Size.Full());
+        }
+        return layout;
+    }
+    
+    private object BuildStatsSkeletons()
+    {
+        // Create skeletons for metrics (usually 3-4 metrics)
+        // Use 4 skeletons to cover all possible metrics
+        var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
+        foreach (var _ in Enumerable.Range(0, 3))
+        {
+            layout = layout | new Skeleton().Height(Size.Units(50));
         }
         return layout;
     }
