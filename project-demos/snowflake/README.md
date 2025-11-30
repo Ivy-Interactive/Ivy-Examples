@@ -37,17 +37,11 @@ This demo showcases how to build an interactive database explorer using the offi
 
 ### Configuration
 
-The app reads settings from `appsettings.json` (overridable via environment variables):
-- `Snowflake:Account` – Your Snowflake account identifier
-- `Snowflake:User` – Your Snowflake username
-- `Snowflake:Password` – Your Snowflake password
-- `Snowflake:Warehouse` – Snowflake warehouse name (default: `COMPUTE_WH`)
-- `Snowflake:Database` – Database name (default: `SNOWFLAKE_SAMPLE_DATA`)
-- `Snowflake:Schema` – Schema name (default: `TPCH_SF1`)
+See the "Setting Up Credentials" section below for instructions on configuring these values using `dotnet user secrets`.
 
 ## Setting Up Credentials
 
-Before running the application, you need to configure your Snowflake credentials. There are two ways to set them up:
+Before running the application, you need to configure your Snowflake credentials using `dotnet user secrets`.
 
 ### Step 1: Get Your Snowflake Credentials
 
@@ -60,58 +54,49 @@ Before running the application, you need to configure your Snowflake credentials
 
 ### Step 2: Configure the Credentials
 
-For better security, especially in production, use environment variables instead of storing credentials in a file.
+Use `dotnet user secrets` to securely store your Snowflake credentials:
 
-**Windows PowerShell:**
-```powershell
-$env:Snowflake__Account = "your_account_identifier"
-$env:Snowflake__User = "your_username"
-$env:Snowflake__Password = "your_password"
-```
-
-**Windows Command Prompt:**
-```cmd
-set Snowflake__Account=your_account_identifier
-set Snowflake__User=your_username
-set Snowflake__Password=your_password
-```
-
-**Linux/macOS:**
 ```bash
-export Snowflake__Account="your_account_identifier"
-export Snowflake__User="your_username"
-export Snowflake__Password="your_password"
+cd project-demos/snowflake
+dotnet user secrets set "Snowflake:Account" "your_account_identifier"
+dotnet user secrets set "Snowflake:User" "your_username"
+dotnet user secrets set "Snowflake:Password" "your_password"
+dotnet user secrets set "Snowflake:Warehouse" "COMPUTE_WH"
+dotnet user secrets set "Snowflake:Database" "SNOWFLAKE_SAMPLE_DATA"
+dotnet user secrets set "Snowflake:Schema" "TPCH_SF1"
 ```
 
-> **Note:** The double underscore `__` in the environment variable corresponds to the colon `:` in configuration (i.e., `Snowflake__Account` → `Snowflake:Account`)
-
-After setting the environment variables, run the app in the same console:
-```bash
-dotnet watch
-```
+The required secrets are:
+- `Snowflake:Account` – Your Snowflake account identifier
+- `Snowflake:User` – Your Snowflake username
+- `Snowflake:Password` – Your Snowflake password
+- `Snowflake:Warehouse` – Snowflake warehouse name (optional, default: `COMPUTE_WH`)
+- `Snowflake:Database` – Database name (optional, default: `SNOWFLAKE_SAMPLE_DATA`)
+- `Snowflake:Schema` – Schema name (optional, default: `TPCH_SF1`)
 
 ## How to Run Locally
 
 1. **Prerequisites:** .NET 9.0 SDK and Snowflake account credentials
 2. **Navigate to the project:**
    ```bash
-   cd packages-demos/snowflake
+   cd project-demos/snowflake
    ```
-3. **Restore dependencies:**
+3. **Set up your Snowflake credentials** using `dotnet user secrets` (see "Setting Up Credentials" section above)
+4. **Restore dependencies:**
    ```bash
    dotnet restore
    ```
-4. **Start the app:**
+5. **Start the app:**
    ```bash
    dotnet watch
    ```
-5. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+6. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
 
 ## Deploy to Ivy Hosting
 
-1. **Install Ivy CLI** if not already installed:
+1. **Navigate to the project:**
    ```bash
-   cd packages-demos/snowflake
+   cd project-demos/snowflake
    ```
 2. **Deploy:**
    ```bash
