@@ -18,6 +18,7 @@ public class ColumnInfo
     public string Name { get; set; } = "";
     public string Type { get; set; } = "";
     public bool Nullable { get; set; }
+    public string NullableText => Nullable ? "Yes" : "No";
 }
 
 /// <summary>

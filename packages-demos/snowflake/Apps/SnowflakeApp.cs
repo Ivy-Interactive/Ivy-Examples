@@ -23,8 +23,6 @@ public class SnowflakeApp : ViewBase
         var selectedTable = this.UseState<string?>(() => null);
         var tableInfo = this.UseState<TableInfo?>(() => null);
         var tablePreview = this.UseState<System.Data.DataTable?>(() => null);
-        var currentPage = this.UseState(1);
-        const int pageSize = 30;
         
         var isLoadingStats = this.UseState(false);
         var isLoadingSchemas = this.UseState(false);
@@ -419,7 +417,7 @@ public class SnowflakeApp : ViewBase
                     | (isLoadingTableData.Value 
                         ? BuildSkeletons(3)
                         : (tablePreview.Value?.Rows.Count > 0
-                            ? BuildDataTableWithPagination(tablePreview.Value, currentPage.Value, pageSize, currentPage)
+                            ? ConvertDataTableToDataTable(tablePreview.Value)
                             : Text.Muted("No data available")))
                 : Layout.Vertical().Gap(4)
                     | Text.H2("Table Preview")
@@ -474,95 +472,30 @@ public class SnowflakeApp : ViewBase
     
     private object BuildColumnsTable(List<ColumnInfo> columns)
     {
-        var rows = new List<TableRow>();
-        
-        // Header
-        rows.Add(new TableRow([
-            new TableCell("Column Name").IsHeader(),
-            new TableCell("Type").IsHeader(),
-            new TableCell("Nullable").IsHeader()
-        ]));
-        
-        // Data rows
-        foreach (var col in columns)
-        {
-            rows.Add(new TableRow([
-                new TableCell(col.Name),
-                new TableCell(col.Type),
-                new TableCell(col.Nullable ? "Yes" : "No")
-            ]));
-        }
-        
-        return new Table([.. rows]);
+        return columns.AsQueryable()
+            .ToDataTable()
+            .Header(c => c.Name, "Column Name")
+            .Header(c => c.Type, "Type")
+            .Header(c => c.NullableText, "Nullable")
+            .Height(Size.Units(50));
     }
     
-    private object BuildDataTableWithPagination(System.Data.DataTable dataTable, int currentPageValue, int pageSize, IState<int> currentPageState)
+    private object ConvertDataTableToDataTable(System.Data.DataTable dataTable)
     {
         if (dataTable == null || dataTable.Rows.Count == 0)
         {
-            return Text.Muted("No data available").Muted();
+            return Text.Muted("No data available");
         }
         
-        var columns = dataTable.Columns.Cast<DataColumn>().ToList();
-        var allRows = dataTable.Rows.Cast<DataRow>().ToList();
-        
-        // Calculate pagination
-        var totalRows = allRows.Count;
-        var totalPages = (int)Math.Ceiling(totalRows / (double)pageSize);
-        
-        // Ensure current page is valid
-        var validPage = currentPageValue < 1 ? 1 : (currentPageValue > totalPages && totalPages > 0 ? totalPages : currentPageValue);
-        if (validPage != currentPageValue)
-        {
-            currentPageState.Value = validPage;
-        }
-        
-        // Get rows for current page
-        var startIndex = (validPage - 1) * pageSize;
-        var pageRows = allRows.Skip(startIndex).Take(pageSize).ToList();
-        
-        // Build Table with pagination
-        var tableRows = new List<TableRow>();
-        
-        // Header row
-        var headerCells = columns.Select(col => 
-            new TableCell(col.ColumnName).IsHeader()
-        ).ToList();
-        tableRows.Add(new TableRow([.. headerCells]));
-        
-        // Data rows for current page
-        foreach (DataRow row in pageRows)
-        {
-            var dataCells = columns.Select(col =>
+        return dataTable.Rows.Cast<DataRow>()
+            .AsQueryable()
+            .ToDataTable()
+            .Config(c =>
             {
-                var value = row[col];
-                var displayValue = value == DBNull.Value ? "" : value?.ToString() ?? "";
-                // Truncate very long values for better display
-                if (displayValue.Length > 100)
-                {
-                    displayValue = displayValue.Substring(0, 97) + "...";
-                }
-                return new TableCell(displayValue);
-            }).ToList();
-            tableRows.Add(new TableRow([.. dataCells]));
-        }
-        
-        var tableView = new Table([.. tableRows]);
-        
-        // Build pagination
-        var pagination = totalPages > 1
-            ? new Pagination(
-                validPage,
-                totalPages,
-                newPage => currentPageState.Value = newPage.Value)
-            : null;
-
-        return Layout.Vertical().Gap(3)
-            | tableView
-            | (pagination != null
-                ? Layout.Horizontal().Gap(2).Align(Align.Center)
-                    | pagination
-                    | Text.Muted($"Showing {startIndex + 1}-{Math.Min(startIndex + pageSize, totalRows)} of {totalRows} rows").Muted()
-                : Text.Muted($"Showing {totalRows} row(s)"));
+                c.AllowSorting = true;
+                c.AllowFiltering = true;
+                c.ShowSearch = true;
+            })
+            .Height(Size.Units(100));
     }
 }
