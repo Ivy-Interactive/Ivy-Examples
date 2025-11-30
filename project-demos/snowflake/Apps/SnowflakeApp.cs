@@ -472,12 +472,16 @@ public class SnowflakeApp : ViewBase
     
     private object BuildColumnsTable(List<ColumnInfo> columns)
     {
+        // Use Key() to force re-render when columns change
+        var key = $"columns-{columns.Count}-{string.Join("-", columns.Select(c => c.Name))}";
         return columns.AsQueryable()
             .ToDataTable()
             .Header(c => c.Name, "Column Name")
             .Header(c => c.Type, "Type")
-            .Header(c => c.NullableText, "Nullable")
-            .Height(Size.Units(50));
+            .Header(c => c.NullableText, "Nullable Text")
+            .Width(c => c.Nullable, Size.Px(65))
+            .Height(Size.Units(100))
+            .Key(key);
     }
     
     private object ConvertDataTableToDataTable(System.Data.DataTable dataTable)
