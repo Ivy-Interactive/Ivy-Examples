@@ -415,7 +415,7 @@ public class SnowflakeApp : ViewBase
                     | Text.H2($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
                     | Text.Muted("Data Preview:")
                     | (isLoadingTableData.Value 
-                        ? BuildSkeletons(3)
+                        ? BuildSkeletons(7)
                         : (tablePreview.Value?.Rows.Count > 0
                             ? ConvertDataTableToDataTable(tablePreview.Value)
                             : Text.Muted("No data available")))
