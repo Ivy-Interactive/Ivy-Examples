@@ -491,15 +491,80 @@ public class SnowflakeApp : ViewBase
             return Text.Muted("No data available");
         }
         
-        return dataTable.Rows.Cast<DataRow>()
-            .AsQueryable()
-            .ToDataTable()
+        var columns = dataTable.Columns.Cast<DataColumn>().ToList();
+        var columnCount = Math.Min(columns.Count, 10); // Support up to 10 columns
+        
+        // Convert DataTable rows to typed DynamicRow records
+        var rows = dataTable.Rows.Cast<DataRow>().Select(row =>
+        {
+            var values = new string[10];
+            for (int i = 0; i < columnCount; i++)
+            {
+                var value = row[columns[i]];
+                values[i] = value == DBNull.Value ? "" : value?.ToString() ?? "";
+            }
+            return new DynamicRow(
+                values[0], values[1], values[2], values[3], values[4],
+                values[5], values[6], values[7], values[8], values[9]
+            );
+        }).ToList();
+        
+        // Build DataTable with dynamic headers
+        var builder = rows.AsQueryable().ToDataTable();
+        
+        // Set headers from actual column names
+        for (int i = 0; i < columnCount; i++)
+        {
+            var colIndex = i;
+            builder = i switch
+            {
+                0 => builder.Header(r => r.C0, columns[0].ColumnName),
+                1 => builder.Header(r => r.C1, columns[1].ColumnName),
+                2 => builder.Header(r => r.C2, columns[2].ColumnName),
+                3 => builder.Header(r => r.C3, columns[3].ColumnName),
+                4 => builder.Header(r => r.C4, columns[4].ColumnName),
+                5 => builder.Header(r => r.C5, columns[5].ColumnName),
+                6 => builder.Header(r => r.C6, columns[6].ColumnName),
+                7 => builder.Header(r => r.C7, columns[7].ColumnName),
+                8 => builder.Header(r => r.C8, columns[8].ColumnName),
+                9 => builder.Header(r => r.C9, columns[9].ColumnName),
+                _ => builder
+            };
+        }
+        
+        // Hide unused columns
+        for (int i = columnCount; i < 10; i++)
+        {
+            builder = i switch
+            {
+                9 => builder.Hidden(r => r.C9),
+                8 => builder.Hidden(r => r.C8),
+                7 => builder.Hidden(r => r.C7),
+                6 => builder.Hidden(r => r.C6),
+                5 => builder.Hidden(r => r.C5),
+                4 => builder.Hidden(r => r.C4),
+                3 => builder.Hidden(r => r.C3),
+                2 => builder.Hidden(r => r.C2),
+                1 => builder.Hidden(r => r.C1),
+                0 => builder.Hidden(r => r.C0),
+                _ => builder
+            };
+        }
+        
+        return builder
             .Config(c =>
             {
                 c.AllowSorting = true;
                 c.AllowFiltering = true;
                 c.ShowSearch = true;
             })
-            .Height(Size.Units(100));
+            .Height(Size.Units(190))
+            .Key($"datatable-{dataTable.TableName}-{columns.Count}-{dataTable.Rows.Count}");
     }
 }
+
+// Typed record for DataTable widget (supports up to 10 columns)
+public record DynamicRow(
+    string C0, string C1, string C2, string C3, string C4,
+    string C5, string C6, string C7, string C8, string C9
+);
