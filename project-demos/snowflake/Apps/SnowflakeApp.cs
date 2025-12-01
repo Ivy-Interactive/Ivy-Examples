@@ -1,4 +1,6 @@
 using System.Data;
+using System.Linq.Expressions;
+using System.Reflection;
 using SnowflakeExample.Services;
 
 namespace SnowflakeExample.Apps;
@@ -492,12 +494,12 @@ public class SnowflakeApp : ViewBase
         }
         
         var columns = dataTable.Columns.Cast<DataColumn>().ToList();
-        var columnCount = Math.Min(columns.Count, 10); // Support up to 10 columns
+        var columnCount = Math.Min(columns.Count, 20); // Support up to 20 columns
         
         // Convert DataTable rows to typed DynamicRow records
         var rows = dataTable.Rows.Cast<DataRow>().Select(row =>
         {
-            var values = new string[10];
+            var values = new string[20];
             for (int i = 0; i < columnCount; i++)
             {
                 var value = row[columns[i]];
@@ -505,50 +507,25 @@ public class SnowflakeApp : ViewBase
             }
             return new DynamicRow(
                 values[0], values[1], values[2], values[3], values[4],
-                values[5], values[6], values[7], values[8], values[9]
+                values[5], values[6], values[7], values[8], values[9],
+                values[10], values[11], values[12], values[13], values[14],
+                values[15], values[16], values[17], values[18], values[19]
             );
         }).ToList();
         
-        // Build DataTable with dynamic headers
+        // Build DataTable with dynamic headers using reflection
         var builder = rows.AsQueryable().ToDataTable();
         
         // Set headers from actual column names
         for (int i = 0; i < columnCount; i++)
         {
-            var colIndex = i;
-            builder = i switch
-            {
-                0 => builder.Header(r => r.C0, columns[0].ColumnName),
-                1 => builder.Header(r => r.C1, columns[1].ColumnName),
-                2 => builder.Header(r => r.C2, columns[2].ColumnName),
-                3 => builder.Header(r => r.C3, columns[3].ColumnName),
-                4 => builder.Header(r => r.C4, columns[4].ColumnName),
-                5 => builder.Header(r => r.C5, columns[5].ColumnName),
-                6 => builder.Header(r => r.C6, columns[6].ColumnName),
-                7 => builder.Header(r => r.C7, columns[7].ColumnName),
-                8 => builder.Header(r => r.C8, columns[8].ColumnName),
-                9 => builder.Header(r => r.C9, columns[9].ColumnName),
-                _ => builder
-            };
+            builder = builder.Header(CreatePropertyExpression<DynamicRow, object>($"C{i}"), columns[i].ColumnName);
         }
         
         // Hide unused columns
-        for (int i = columnCount; i < 10; i++)
+        for (int i = columnCount; i < 20; i++)
         {
-            builder = i switch
-            {
-                9 => builder.Hidden(r => r.C9),
-                8 => builder.Hidden(r => r.C8),
-                7 => builder.Hidden(r => r.C7),
-                6 => builder.Hidden(r => r.C6),
-                5 => builder.Hidden(r => r.C5),
-                4 => builder.Hidden(r => r.C4),
-                3 => builder.Hidden(r => r.C3),
-                2 => builder.Hidden(r => r.C2),
-                1 => builder.Hidden(r => r.C1),
-                0 => builder.Hidden(r => r.C0),
-                _ => builder
-            };
+            builder = builder.Hidden(CreatePropertyExpression<DynamicRow, object>($"C{i}"));
         }
         
         return builder
@@ -561,10 +538,24 @@ public class SnowflakeApp : ViewBase
             .Height(Size.Units(190))
             .Key($"datatable-{dataTable.TableName}-{columns.Count}-{dataTable.Rows.Count}");
     }
+    
+    // Helper method to create property access expression dynamically
+    private static Expression<Func<T, TResult>> CreatePropertyExpression<T, TResult>(string propertyName)
+    {
+        var parameter = Expression.Parameter(typeof(T), "r");
+        var property = Expression.Property(parameter, propertyName);
+        // Convert to object if TResult is object (for string properties)
+        var converted = typeof(TResult) == typeof(object) && property.Type != typeof(object)
+            ? Expression.Convert(property, typeof(object))
+            : (Expression)property;
+        return Expression.Lambda<Func<T, TResult>>(converted, parameter);
+    }
 }
 
-// Typed record for DataTable widget (supports up to 10 columns)
+// Typed record for DataTable widget (supports up to 20 columns)
 public record DynamicRow(
     string C0, string C1, string C2, string C3, string C4,
-    string C5, string C6, string C7, string C8, string C9
+    string C5, string C6, string C7, string C8, string C9,
+    string C10, string C11, string C12, string C13, string C14,
+    string C15, string C16, string C17, string C18, string C19
 );
