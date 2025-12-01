@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["OllamaSharpDemo.csproj", "./"]
-RUN dotnet restore "OllamaSharpDemo.csproj"
+COPY ["OllamaSharpExample.csproj", "./"]
+RUN dotnet restore "OllamaSharpExample.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "OllamaSharpDemo.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "OllamaSharpExample.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "OllamaSharpDemo.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "OllamaSharpExample.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./OllamaSharpDemo.dll"]
+ENTRYPOINT ["dotnet","./OllamaSharpExample.dll"]
