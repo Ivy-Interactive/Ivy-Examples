@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>QuestPdfExample</RootNamespace>
+    <UserSecretsId>891845d7-4383-4429-b49d-547f1ed47f9e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
