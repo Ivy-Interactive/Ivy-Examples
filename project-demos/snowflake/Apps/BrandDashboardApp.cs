@@ -339,8 +339,36 @@ public class BrandDashboardApp : ViewBase
                 () => Task.FromResult(new MetricRecord(
                     totalItems.ToString("N0"),
                     totalItemsTrend,
-                    totalItemsCount.Value > 0 ? (double)totalItems / totalItemsCount.Value : null, // Progress: loaded vs total
-                    $"{totalItems:N0} loaded of {totalItemsCount.Value:N0} total"
+                    null,
+                    null
+                )))
+            | new MetricView("Min Price", Icons.ArrowDown,
+                () => Task.FromResult(new MetricRecord(
+                    minPrice.ToString("C2"),
+                    minPriceTrend,
+                    null,
+                    null
+                )))
+            | new MetricView("Max Price", Icons.ArrowUp,
+                () => Task.FromResult(new MetricRecord(
+                    maxPrice.ToString("C2"),
+                    maxPriceTrend,
+                    null,
+                    null
+                )))
+            | new MetricView("Total Inventory Value", Icons.DollarSign,
+                () => Task.FromResult(new MetricRecord(
+                    totalValue.ToString("C0"),
+                    totalValueTrend,
+                    null,
+                    null
+                )))
+            | new MetricView("Avg Price", Icons.CreditCard,
+                () => Task.FromResult(new MetricRecord(
+                    avgPrice.ToString("C2"),
+                    avgPriceTrend,
+                    totalAvgPrice.Value > 0 ? avgPrice / (totalAvgPrice.Value + totalAvgPrice.Value/2) : null,
+                    $"{avgPrice:C2} loaded"
                 )))
             | new MetricView("Brands Analyzed", Icons.Tag,
                 () => Task.FromResult(new MetricRecord(
@@ -354,42 +382,14 @@ public class BrandDashboardApp : ViewBase
                     avgItemsPerBrand.ToString("N0"),
                     avgItemsPerBrandTrend,
                     totalAvgItemsPerBrand.Value > 0 ? (double)avgItemsPerBrand / totalAvgItemsPerBrand.Value : null,
-                    $"{avgItemsPerBrand:N0} loaded, {totalAvgItemsPerBrand.Value:N0} avg total"
-                )))
-            | new MetricView("Total Inventory Value", Icons.DollarSign,
-                () => Task.FromResult(new MetricRecord(
-                    totalValue.ToString("C0"),
-                    totalValueTrend,
-                    totalInventoryValue.Value > 0 ? totalValue / totalInventoryValue.Value : null,
-                    $"{totalValue:C0} loaded of {totalInventoryValue.Value:C0} total"
-                )))
-            | new MetricView("Avg Price", Icons.CreditCard,
-                () => Task.FromResult(new MetricRecord(
-                    avgPrice.ToString("C2"),
-                    avgPriceTrend,
-                    totalAvgPrice.Value > 0 ? avgPrice / totalAvgPrice.Value : null,
-                    $"{avgPrice:C2} loaded, {totalAvgPrice.Value:C2} avg total"
-                )))
-            | new MetricView("Min Price", Icons.ArrowDown,
-                () => Task.FromResult(new MetricRecord(
-                    minPrice.ToString("C2"),
-                    minPriceTrend,
-                    totalMinPrice.Value > 0 ? minPrice / totalMinPrice.Value : null,
-                    $"{minPrice:C2} loaded, {totalMinPrice.Value:C2} min total"
-                )))
-            | new MetricView("Max Price", Icons.ArrowUp,
-                () => Task.FromResult(new MetricRecord(
-                    maxPrice.ToString("C2"),
-                    maxPriceTrend,
-                    totalMaxPrice.Value > 0 ? maxPrice / totalMaxPrice.Value : null,
-                    $"{maxPrice:C2} loaded, {totalMaxPrice.Value:C2} max total"
+                    $"{avgItemsPerBrand:N0} loaded"
                 )))
             | new MetricView("Total Size", Icons.Box,
                 () => Task.FromResult(new MetricRecord(
                     totalSize.ToString("N0"),
                     totalSizeTrend,
                     totalTotalSize.Value > 0 ? (double)totalSize / totalTotalSize.Value : null,
-                    $"{totalSize:N0} loaded of {totalTotalSize.Value:N0} total"
+                    $"{totalSize:N0} loaded"
                 )));
 
         // Brand Distribution Pie Chart
@@ -409,11 +409,10 @@ public class BrandDashboardApp : ViewBase
         var barChartData = filteredBrands
             .Select(b => new { Brand = b.Brand, Count = (double)b.ItemCount })
             .ToList();
-        
+
         var barChart = barChartData.ToLineChart()
             .Dimension("Brand", e => e.Brand)
-            .Measure("Count", e => e.Sum(f => f.Count))
-            .Toolbox();
+            .Measure("Count", e => e.Sum(f => f.Count));
 
         var barChartCard = new Card(
             Layout.Horizontal().Gap(3).Padding(3)
@@ -430,8 +429,7 @@ public class BrandDashboardApp : ViewBase
 
         var minPriceChart = minPriceChartData.ToBarChart()
             .Dimension("Brand", e => e.Brand)
-            .Measure("Price", e => e.Sum(f => f.Price))
-            .Toolbox();
+            .Measure("Price", e => e.Sum(f => f.Price));
         
         var minPriceChartCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
@@ -445,8 +443,7 @@ public class BrandDashboardApp : ViewBase
         
         var maxPriceChart = maxPriceChartData.ToBarChart()
             .Dimension("Brand", e => e.Brand)
-            .Measure("Price", e => e.Sum(f => f.Price))
-            .Toolbox();
+            .Measure("Price", e => e.Sum(f => f.Price));
 
         var maxPriceChartCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
