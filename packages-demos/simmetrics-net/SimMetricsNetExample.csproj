@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -7,19 +7,20 @@
         <Nullable>enable</Nullable>
         <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
         <RootNamespace>SimMetricsNetExample</RootNamespace>
-    </PropertyGroup>
+      <UserSecretsId>dc58ad21-fcfd-496e-93ee-dcb39f3e643c</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Bogus" Version="35.*"/>
-        <PackageReference Include="Ivy" Version="1.*"/>
-        <PackageReference Include="SimMetrics.Net" Version="1.*"/>
+        <PackageReference Include="Bogus" Version="35.*" />
+        <PackageReference Include="Ivy" Version="1.*" />
+        <PackageReference Include="SimMetrics.Net" Version="1.*" />
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="Apps"/>
+        <Folder Include="Apps" />
     </ItemGroup>
     <ItemGroup>
-        <EmbeddedResource Include="Assets/**/*"/>
+        <EmbeddedResource Include="Assets/**/*" />
     </ItemGroup>
 
 </Project>
