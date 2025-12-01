@@ -267,90 +267,45 @@ public class SnowflakeApp : ViewBase
         var currentHasDatabase = !string.IsNullOrEmpty(currentSelectedDb);
         var currentHasSchema = currentHasDatabase && !string.IsNullOrEmpty(currentSelectedSchema);
         
-        // Create metric functions that will be called synchronously
-        // All functions read values at the same time to ensure consistent rendering
-        Func<Task<MetricRecord>> databasesMetric = async () =>
-        {
-            // Small delay to ensure all metrics are evaluated together
-            await Task.Yield();
-            var total = totalDatabases.Value;
-            var selected = currentHasDatabase ? 1 : 0;
-            var displayValue = currentHasDatabase ? selected : total;
-            return new MetricRecord(
-                displayValue.ToString("N0"),
-                null,
-                null,
-                null
-            );
-        };
-        
-        Func<Task<MetricRecord>> schemasMetric = async () =>
-        {
-            // Small delay to ensure all metrics are evaluated together
-            await Task.Yield();
-            var current = totalSchemas.Value;
-            var total = totalSchemasAll.Value;
-            return new MetricRecord(
-                current.ToString("N0"),
-                null,
-                null,
-                null
-            );
-        };
-        
-        Func<Task<MetricRecord>> tablesMetric = async () =>
-        {
-            // Small delay to ensure all metrics are evaluated together
-            await Task.Yield();
-            var current = totalTables.Value;
-            var total = totalTablesAll.Value;
-            return new MetricRecord(
-                current.ToString("N0"),
-                null,
-                null,
-                null
-            );
-        };
-        
-        Func<Task<MetricRecord>> tablesInSchemaMetric = async () =>
-        {
-            // Small delay to ensure all metrics are evaluated together
-            await Task.Yield();
-            var current = totalTablesInSchema.Value;
-            var total = totalTables.Value; // Total tables in database
-            return new MetricRecord(
-                current.ToString("N0"),
-                null,
-                null,
-                null
-            );
-        };
+        // Calculate values for cards
+        var databasesDisplayValue = currentHasDatabase ? 1 : totalDatabases.Value;
+        var schemasDisplayValue = totalSchemas.Value;
+        var tablesDisplayValue = totalTables.Value;
+        var tablesInSchemaDisplayValue = totalTablesInSchema.Value;
         
         // Build metrics list - add schema tables metric only when schema is selected
         var metricsList = new List<object>
         {
-            new MetricView(
-                currentHasDatabase ? $"Databases: {currentSelectedDb}" : "Databases",
-                Icons.Database,
-                databasesMetric).Key($"databases-{totalDatabases.Value}-{currentSelectedDb ?? "none"}"),
-            new MetricView(
-                currentHasDatabase ? $"Schemas in {currentSelectedDb}" : "Schemas",
-                Icons.Layers,
-                schemasMetric).Key($"schemas-{totalSchemas.Value}-{totalSchemasAll.Value}-{currentSelectedDb ?? "all"}"),
-            new MetricView(
-                currentHasDatabase ? $"Tables in {currentSelectedDb}" : "Tables",
-                Icons.Table,
-                tablesMetric).Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}")
+            new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(databasesDisplayValue.ToString("N0"))
+            ).Title(currentHasDatabase ? $"Databases: {currentSelectedDb}" : "Databases").Icon(Icons.Database)
+                .Key($"databases-{totalDatabases.Value}-{currentSelectedDb ?? "none"}"),
+            new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(schemasDisplayValue.ToString("N0"))
+            ).Title(currentHasDatabase ? $"Schemas in {currentSelectedDb}" : "Schemas").Icon(Icons.Layers)
+                .Key($"schemas-{totalSchemas.Value}-{totalSchemasAll.Value}-{currentSelectedDb ?? "all"}"),
+            new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(tablesDisplayValue.ToString("N0"))
+            ).Title(currentHasDatabase ? $"Tables in {currentSelectedDb}" : "Tables").Icon(Icons.Table)
+                .Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}")
         };
         
         // Add schema tables metric when schema is selected
         if (currentHasSchema)
         {
             metricsList.Add(
-                new MetricView(
-                    $"Tables in {currentSelectedSchema}",
-                    Icons.Table,
-                    tablesInSchemaMetric).Key($"tables-in-schema-{totalTablesInSchema.Value}-{currentSelectedSchema}")
+                new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Layout.Horizontal().Gap(2).Align(Align.Center)
+                            | Text.H3(tablesInSchemaDisplayValue.ToString("N0"))
+                ).Title($"Tables in {currentSelectedSchema}").Icon(Icons.Table)
+                    .Key($"tables-in-schema-{totalTablesInSchema.Value}-{currentSelectedSchema}")
             );
         }
         
