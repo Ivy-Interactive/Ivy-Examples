@@ -264,10 +264,10 @@ public class BrandDashboardApp : ViewBase
                 content: Layout.Vertical().Gap(3).Padding(4).Align(Align.TopCenter)
                     | pageHeader.Width(Size.Fraction(0.8f))
                     | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.8f))
-                        | new Skeleton().Height(Size.Units(80))
-                        | new Skeleton().Height(Size.Units(80))
-                        | new Skeleton().Height(Size.Units(80))
-                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(60))
                         | new Skeleton().Height(Size.Units(80))
                         | new Skeleton().Height(Size.Units(80))
                         | new Skeleton().Height(Size.Units(80))
@@ -335,34 +335,26 @@ public class BrandDashboardApp : ViewBase
 
         // Top Row - Key Metrics (10 cards with 2 new ones)
         var overallMetrics = Layout.Grid().Columns(4).Gap(3)
-            | new MetricView("Total Items", Icons.Database,
-                () => Task.FromResult(new MetricRecord(
-                    totalItems.ToString("N0"),
-                    totalItemsTrend,
-                    null,
-                    null
-                )))
-            | new MetricView("Min Price", Icons.ArrowDown,
-                () => Task.FromResult(new MetricRecord(
-                    minPrice.ToString("C2"),
-                    minPriceTrend,
-                    null,
-                    null
-                )))
-            | new MetricView("Max Price", Icons.ArrowUp,
-                () => Task.FromResult(new MetricRecord(
-                    maxPrice.ToString("C2"),
-                    maxPriceTrend,
-                    null,
-                    null
-                )))
-            | new MetricView("Total Inventory Value", Icons.DollarSign,
-                () => Task.FromResult(new MetricRecord(
-                    totalValue.ToString("C0"),
-                    totalValueTrend,
-                    null,
-                    null
-                )))
+            | new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(totalItems.ToString("N0"))
+            ).Title("Total Items").Icon(Icons.Database)
+            | new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(minPrice.ToString("C2"))
+            ).Title("Min Price").Icon(Icons.ArrowDown)
+            | new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(maxPrice.ToString("C2"))
+            ).Title("Max Price").Icon(Icons.ArrowUp)
+            | new Card(
+                Layout.Vertical().Gap(2).Padding(3)
+                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Text.H3(totalValue.ToString("C0"))
+            ).Title("Total Inventory Value").Icon(Icons.DollarSign)
             | new MetricView("Avg Price", Icons.CreditCard,
                 () => Task.FromResult(new MetricRecord(
                     avgPrice.ToString("C2"),
