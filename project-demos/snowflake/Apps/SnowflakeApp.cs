@@ -25,6 +25,7 @@ public class SnowflakeApp : ViewBase
         var selectedTable = this.UseState<string?>(() => null);
         var tableInfo = this.UseState<TableInfo?>(() => null);
         var tablePreview = this.UseState<System.Data.DataTable?>(() => null);
+        var activeTab = this.UseState(0); // 0 = Data, 1 = Structure
         
         var isLoadingStats = this.UseState(false);
         var isLoadingSchemas = this.UseState(false);
@@ -83,6 +84,7 @@ public class SnowflakeApp : ViewBase
                 && !string.IsNullOrEmpty(selectedSchema.Value)
                 && !string.IsNullOrEmpty(selectedTable.Value))
             {
+                activeTab.Value = 0; // Reset to Data tab when table changes
                 await LoadTablePreview(selectedDatabase.Value, selectedSchema.Value, selectedTable.Value);
             }
             else
@@ -277,8 +279,8 @@ public class SnowflakeApp : ViewBase
             return new MetricRecord(
                 displayValue.ToString("N0"),
                 null,
-                total > 0 && currentHasDatabase ? (double)selected / total : (total > 0 ? 1.0 : null),
-                currentHasDatabase ? $"{selected} of {total:N0} selected" : $"Total: {total:N0}"
+                null,
+                null
             );
         };
         
@@ -291,8 +293,8 @@ public class SnowflakeApp : ViewBase
             return new MetricRecord(
                 current.ToString("N0"),
                 null,
-                total > 0 ? (double)current / total : null,
-                total > 0 ? $"{current:N0} of {total:N0} total" : null
+                null,
+                null
             );
         };
         
@@ -305,8 +307,8 @@ public class SnowflakeApp : ViewBase
             return new MetricRecord(
                 current.ToString("N0"),
                 null,
-                total > 0 ? (double)current / total : null,
-                total > 0 ? $"{current:N0} of {total:N0} total" : null
+                null,
+                null
             );
         };
         
@@ -319,8 +321,8 @@ public class SnowflakeApp : ViewBase
             return new MetricRecord(
                 current.ToString("N0"),
                 null,
-                total > 0 ? (double)current / total : null,
-                total > 0 ? $"{current:N0} of {total:N0} in {currentSelectedDb}" : null
+                null,
+                null
             );
         };
         
@@ -401,26 +403,26 @@ public class SnowflakeApp : ViewBase
                     | (isLoadingTables.Value && hasSchema
                         ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
                         : selectedTable.ToSelectInput(tableOptions).Placeholder("Select a table...").Disabled(!hasSchema || tables.Value.Count == 0).WithField().Label("Table")))
-            | (tableInfo.Value != null
-                ? Layout.Vertical().Gap(3)
-                    | Text.H3("Table Structure")
-                    | Text.Muted($"{tableInfo.Value.ColumnCount} columns, {tableInfo.Value.RowCount:N0} rows")
-                    | BuildColumnsTable(tableInfo.Value.Columns)
-                : new Spacer())
         ).Width(Size.Fraction(0.3f));
         
-        // Right Section
+        // Right Section with Tabs
         var rightSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
             | (hasTable
                 ? Layout.Vertical().Gap(3)
                     | Text.H2($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
-                    | Text.Muted("Data Preview:")
+                    | BuildTabs(activeTab, tableInfo.Value)
                     | (isLoadingTableData.Value 
                         ? BuildSkeletons(7)
-                        : (tablePreview.Value?.Rows.Count > 0
-                            ? ConvertDataTableToDataTable(tablePreview.Value)
-                            : Text.Muted("No data available")))
+                        : activeTab.Value == 0
+                            ? (tablePreview.Value?.Rows.Count > 0
+                                ? ConvertDataTableToDataTable(tablePreview.Value)
+                                : Text.Muted("No data available"))
+                            : (tableInfo.Value != null
+                                ? Layout.Vertical().Gap(3)
+                                    | Text.Muted($"{tableInfo.Value.ColumnCount} columns, {tableInfo.Value.RowCount:N0} rows")
+                                    | BuildColumnsTable(tableInfo.Value.Columns)
+                                : Text.Muted("No structure information available")))
                 : Layout.Vertical().Gap(4)
                     | Text.H2("Table Preview")
                     | Text.Muted("Select a table to preview data"))
@@ -470,6 +472,24 @@ public class SnowflakeApp : ViewBase
             layout = layout | new Skeleton().Height(Size.Units(50));
         }
         return layout;
+    }
+    
+    private object BuildTabs(IState<int> activeTab, TableInfo? tableInfo)
+    {
+        var dataTab = new Button("Data")
+            .Icon(Icons.Table)
+            .Variant(activeTab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Outline)
+            .HandleClick(() => activeTab.Value = 0);
+        
+        var structureTab = new Button("Structure")
+            .Icon(Icons.Layers)
+            .Variant(activeTab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Outline)
+            .HandleClick(() => activeTab.Value = 1)
+            .Disabled(tableInfo == null);
+        
+        return Layout.Horizontal().Gap(2)
+            | dataTab
+            | structureTab;
     }
     
     private object BuildColumnsTable(List<ColumnInfo> columns)

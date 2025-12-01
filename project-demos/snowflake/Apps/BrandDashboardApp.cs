@@ -440,7 +440,7 @@ public class BrandDashboardApp : ViewBase
         var maxPriceChartData = filteredBrands
             .Select(b => new { Brand = b.Brand, Price = b.MaxPrice })
             .ToList();
-        
+            
         var maxPriceChart = maxPriceChartData.ToBarChart()
             .Dimension("Brand", e => e.Brand)
             .Measure("Price", e => e.Sum(f => f.Price));
