@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>HandlebarsNetExample</RootNamespace>
+    <UserSecretsId>c540edeb-b05f-4277-89ce-ebb68bf65eb9</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
