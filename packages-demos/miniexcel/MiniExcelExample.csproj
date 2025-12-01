@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>MiniExcelExample</RootNamespace>
+    <UserSecretsId>7c7272cc-d282-47a5-b34c-5792e882a2c7</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>HumanizerExample</RootNamespace>
+    <UserSecretsId>28668625-1d26-4091-9c0a-b7bef1696c76</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

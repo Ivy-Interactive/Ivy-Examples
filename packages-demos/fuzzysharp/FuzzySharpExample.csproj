@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>FuzzySharpExample</RootNamespace>
+    <UserSecretsId>a9add7c6-7285-4ed7-9836-45fa26669103</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

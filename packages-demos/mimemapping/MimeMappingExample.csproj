@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>MimeMappingExample</RootNamespace>
+    <UserSecretsId>eb410f4a-856d-441d-859e-ee109490ab72</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
