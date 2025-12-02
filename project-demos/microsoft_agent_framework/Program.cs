@@ -6,5 +6,9 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
+var chromeSettings = new ChromeSettings()
+    .DefaultApp<AgentWorkspaceExample>()
+    .UseTabs(preventDuplicates: true);
+server.UseChrome(chromeSettings);
 await server.RunAsync();
 

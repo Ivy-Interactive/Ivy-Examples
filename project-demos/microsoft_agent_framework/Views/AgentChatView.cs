@@ -45,14 +45,6 @@ public class AgentChatView : ViewBase
             agentManager.Set(manager);
         }, []);
 
-        void ClearChat()
-        {
-            agentManager.Value?.ClearHistory();
-            messages.Set(ImmutableArray.Create<Ivy.ChatMessage>(
-                new Ivy.ChatMessage(ChatSender.Assistant, Text.Markdown($"Chat cleared. I'm **{_agent.Name}**. How can I help you?"))
-            ));
-        }
-
         async void HandleMessageAsync(Event<Chat, string> @event)
         {
             if (agentManager.Value == null)
@@ -101,13 +93,7 @@ public class AgentChatView : ViewBase
             }
         }
 
-        // Header with agent info and clear button
-        var header = Layout.Horizontal().Gap(2).Align(Align.Center)
-            | new Spacer()
-            | new Button("Clear", onClick: _ => ClearChat(), variant: ButtonVariant.Outline, icon: Icons.RefreshCw);
-
         return Layout.Vertical().Gap(2)
-            | header.Padding(2)
             | new Chat(messages.Value.ToArray(), HandleMessageAsync);
     }
 }
