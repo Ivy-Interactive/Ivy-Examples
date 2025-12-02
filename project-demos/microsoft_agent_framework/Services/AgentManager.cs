@@ -69,6 +69,19 @@ public class AgentManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends a message to the agent and returns streaming updates
+    /// </summary>
+    public IAsyncEnumerable<AgentRunResponseUpdate> RunStreamingAsync(string userMessage)
+    {
+        if (_agent == null || _currentConfig == null)
+        {
+            throw new InvalidOperationException("Agent not configured. Call ConfigureAgent first.");
+        }
+
+        return _agent.RunStreamingAsync(userMessage);
+    }
+
 
     /// <summary>
     /// Clears the chat history (recreates agent with same configuration)

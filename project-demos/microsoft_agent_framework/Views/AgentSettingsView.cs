@@ -26,15 +26,15 @@ public class AgentSettingsView : ViewBase
 
         var form = UseState(AgentFormModel.FromConfiguration(_agent));
         var hasChanges = UseState(false);
-        
+
         var nameState = UseState(form.Value.Name);
         var descState = UseState(form.Value.Description);
         var instState = UseState(form.Value.Instructions);
 
         UseEffect(() =>
         {
-            form.Set(form.Value with 
-            { 
+            form.Set(form.Value with
+            {
                 Name = nameState.Value,
                 Description = descState.Value,
                 Instructions = instState.Value
@@ -75,8 +75,15 @@ public class AgentSettingsView : ViewBase
 
         // Build form content
         var isReadOnly = _agent.IsPreset && !_isNew;
+        // Action buttons
+        var actions = isReadOnly
+            ? Layout.Horizontal().Gap(1)
+                | new Button("Close", onClick: _ => CancelEdit(), variant: ButtonVariant.Outline)
+            : Layout.Horizontal().Gap(1)
+                | new Button("Cancel", onClick: _ => CancelEdit(), variant: ButtonVariant.Outline)
+                | new Button(_isNew ? "Create" : "Save", onClick: _ => SaveAgent());
 
-        var formContent = Layout.Vertical().Gap(3).Padding(2)
+        var formContent = new Card(Layout.Vertical().Gap(3).Padding(2)
             | (Layout.Vertical().Gap(1)
                 | Text.Small("Name").Bold()
                 | nameState.ToTextInput(placeholder: "Agent name...")
@@ -88,16 +95,11 @@ public class AgentSettingsView : ViewBase
             | (Layout.Vertical().Gap(1)
                 | Text.Small("Instructions (System Prompt)").Bold()
                 | instState.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
-                    .Height(Size.Units(150))
-                    .Disabled(isReadOnly));
+                    .Height(Size.Units(50))
+                    .Disabled(isReadOnly))
+            | (Layout.Vertical().Gap(1)
+               | actions));
 
-        // Action buttons
-        var actions = isReadOnly
-            ? Layout.Horizontal().Gap(1)
-                | new Button("Close", onClick: _ => CancelEdit(), variant: ButtonVariant.Outline)
-            : Layout.Horizontal().Gap(1)
-                | new Button("Cancel", onClick: _ => CancelEdit(), variant: ButtonVariant.Outline)
-                | new Button(_isNew ? "Create" : "Save", onClick: _ => SaveAgent());
 
         // Header info for preset agents
         var presetInfo = _agent.IsPreset && !_isNew
@@ -109,8 +111,7 @@ public class AgentSettingsView : ViewBase
 
         return Layout.Vertical().Gap(3).Padding(2)
             | presetInfo
-            | formContent
-            | actions;
+            | formContent;
     }
 }
 

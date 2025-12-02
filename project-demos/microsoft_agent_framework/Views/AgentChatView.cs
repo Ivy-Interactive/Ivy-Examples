@@ -64,20 +64,40 @@ public class AgentChatView : ViewBase
             // Add user message
             messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
 
-            // Show thinking indicator
-            var currentMessages = messages.Value;
-            messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, new ChatStatus("Thinking..."))));
+            // Create initial empty assistant message for streaming
+            var assistantMessageIndex = messages.Value.Length;
+            var streamingText = new System.Text.StringBuilder();
+            messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, Text.Markdown(""))));
 
             try
             {
-                var response = await agentManager.Value.SendMessageAsync(@event.Value);
-
-                // Add assistant response
-                messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, Text.Markdown(response))));
+                // Stream response word by word
+                await foreach (var update in agentManager.Value.RunStreamingAsync(@event.Value))
+                {
+                    var textUpdate = update.Text ?? update.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(textUpdate))
+                    {
+                        streamingText.Append(textUpdate);
+                        
+                        // Update the assistant message with accumulated text
+                        var currentMessagesList = messages.Value.ToList();
+                        currentMessagesList[assistantMessageIndex] = new Ivy.ChatMessage(
+                            ChatSender.Assistant, 
+                            Text.Markdown(streamingText.ToString())
+                        );
+                        messages.Set(currentMessagesList.ToImmutableArray());
+                    }
+                }
             }
             catch (Exception ex)
             {
-                messages.Set(currentMessages.Add(new Ivy.ChatMessage(ChatSender.Assistant, $"Error: {ex.Message}")));
+                // Replace streaming message with error
+                var currentMessagesList = messages.Value.ToList();
+                currentMessagesList[assistantMessageIndex] = new Ivy.ChatMessage(
+                    ChatSender.Assistant, 
+                    $"Error: {ex.Message}"
+                );
+                messages.Set(currentMessagesList.ToImmutableArray());
             }
         }
 

@@ -103,7 +103,7 @@ public class AgentListView : ViewBase
         var createBtn = Icons.Plus.ToButton(_ =>
         {
             var newAgent = new AgentConfiguration();
-            blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true), "New Agent");
+            blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true), "New Agent", width: Size.Units(150));
         }).Ghost().Tooltip("Create Agent");
 
         // Settings dialog
