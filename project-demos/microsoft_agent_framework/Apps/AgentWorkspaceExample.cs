@@ -1,5 +1,6 @@
 using MicrosoftAgentFramework.Models;
 using MicrosoftAgentFramework.Views;
+using OllamaSharp;
 
 namespace MicrosoftAgentFramework.Apps;
 
@@ -16,20 +17,35 @@ public class AgentWorkspaceExample : ViewBase
         var ollamaModel = UseState<string?>(Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "llama2");
         var bingApiKey = UseState<string?>(Environment.GetEnvironmentVariable("BING_API_KEY"));
 
-        // Available Ollama models
-        var availableModels = new[] { "llama2", "llama3", "mistral", "phi3", "gemma", "codellama", "qwen" };
+        // Available Ollama models - loaded dynamically
+        var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
         var selectedModel = UseState(ollamaModel.Value ?? "llama2");
+        
+        // Load models from Ollama API
+        async Task LoadModels()
+        {
+            try
+            {
+                using var client = new OllamaApiClient(new Uri(ollamaUrl.Value ?? "http://localhost:11434"));
+                availableModels.Set((await client.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
+            }
+            catch { availableModels.Set(ImmutableArray<string>.Empty); }
+        }
+        
+        UseEffect(async () => await LoadModels(), EffectTrigger.AfterInit());
+        UseEffect(async () => await LoadModels(), [ollamaUrl]);
         
         // Query function for AsyncSelectInput
         Task<Option<string>[]> QueryModels(string query)
         {
-            if (string.IsNullOrEmpty(query))
-                return Task.FromResult(availableModels.Take(5).Select(m => new Option<string>(m)).ToArray());
-
-            return Task.FromResult(availableModels
-                .Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Select(m => new Option<string>(m))
-                .ToArray());
+            var models = availableModels.Value;
+            if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
+            
+            var filtered = string.IsNullOrEmpty(query) 
+                ? models.Take(5) 
+                : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
+            
+            return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
         }
 
         // Lookup function for AsyncSelectInput
