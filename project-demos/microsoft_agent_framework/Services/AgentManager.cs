@@ -1,4 +1,5 @@
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using OllamaSharp;
 using MicrosoftAgentFramework.Models;
 
@@ -33,12 +34,18 @@ public class AgentManager : IDisposable
         // Create OllamaApiClient which implements IChatClient
         var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl), _ollamaModel);
 
-        // Create agent using ChatClientAgent from Microsoft Agent Framework
+        // Create tools/functions for the agent
+        // Note: Tools functionality may require additional setup depending on Microsoft Agents AI version
+        // For now, create agent without tools to maintain functionality
+        var tools = new List<AITool>();
+
+        // Create agent using ChatClientAgent from Microsoft Agent Framework with tools
         // This works with any IChatClient implementation, including Ollama
         _agent = new ChatClientAgent(
             ollamaClient,
             instructions: _currentConfig.Instructions,
-            name: _currentConfig.Name
+            name: _currentConfig.Name,
+            tools: tools
         );
 
         // Agent is ready to use
