@@ -64,7 +64,7 @@ public class AgentListView : ViewBase
                 isSettingsOpen.Set(true);
                 return;
             }
-            blades.Push(this, new AgentChatView(agent, _ollamaUrl.Value!, _ollamaModel.Value!, _bingApiKey.Value), agent.Name);
+            blades.Push(this, new AgentChatView(agent, _agents, _ollamaUrl.Value!, _ollamaModel.Value!, _bingApiKey.Value), agent.Name, Size.Units(220));
         }
 
         var onItemClicked = new Action<Event<ListItem>>(e =>
