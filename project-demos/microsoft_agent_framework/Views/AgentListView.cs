@@ -56,17 +56,6 @@ public class AgentListView : ViewBase
             }
         }, [isSettingsOpen]);
 
-        void CreateNewAgent()
-        {
-            var newAgent = new AgentConfiguration();
-            blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true), "New Agent");
-        }
-
-        void EditAgent(AgentConfiguration agent)
-        {
-            blades.Push(this, new AgentSettingsView(agent, _agents, isNew: false), agent.Name);
-        }
-
         void StartChat(AgentConfiguration agent)
         {
             if (!hasOllamaConfig)
@@ -78,84 +67,44 @@ public class AgentListView : ViewBase
             blades.Push(this, new AgentChatView(agent, _ollamaUrl.Value!, _ollamaModel.Value!, _bingApiKey.Value), agent.Name);
         }
 
-        void DeleteAgent(AgentConfiguration agent)
+        var onItemClicked = new Action<Event<ListItem>>(e =>
         {
-            if (agent.IsPreset)
+            var agent = (AgentConfiguration)e.Sender.Tag!;
+            StartChat(agent);
+        });
+
+        ListItem CreateItem(AgentConfiguration agent) =>
+            new(
+                title: agent.Name,
+                subtitle: string.IsNullOrEmpty(agent.Description) ? (agent.IsPreset ? "Preset agent" : "Custom agent") : agent.Description,
+                onClick: onItemClicked,
+                tag: agent
+            );
+
+        async Task<AgentConfiguration[]> FetchAgents(string filter)
+        {
+            await Task.CompletedTask; // Make it async for FilteredListView
+            
+            var allAgents = _agents.Value?.ToList() ?? new List<AgentConfiguration>();
+            
+            if (!string.IsNullOrWhiteSpace(filter))
             {
-                client.Toast("Cannot delete preset agents", "Warning");
-                return;
+                filter = filter.Trim();
+                allAgents = allAgents
+                    .Where(a => a != null && 
+                               (a.Name?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                               (a.Description?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false))
+                    .ToList();
             }
-            var list = _agents.Value.ToList();
-            list.Remove(agent);
-            _agents.Set(list);
+
+            return allAgents.ToArray();
         }
 
-        void DuplicateAgent(AgentConfiguration agent)
+        var createBtn = Icons.Plus.ToButton(_ =>
         {
-            var clone = agent.Clone();
-            var list = _agents.Value.ToList();
-            list.Add(clone);
-            _agents.Set(list);
-        }
-
-        // Build list items
-        var presetAgents = _agents.Value.Where(a => a.IsPreset).ToList();
-        var customAgents = _agents.Value.Where(a => !a.IsPreset).ToList();
-
-
-        var presetItems = presetAgents.Select(agent =>
-        {
-            var actions = Layout.Horizontal().Gap(1)
-                | new Button(icon: Icons.MessageCircle, onClick: _ => StartChat(agent), variant: ButtonVariant.Outline).Tooltip("Chat")
-                | new Button(icon: Icons.Copy, onClick: _ => DuplicateAgent(agent), variant: ButtonVariant.Outline).Tooltip("Duplicate")
-                | new Button(icon: Icons.Eye, onClick: _ => EditAgent(agent), variant: ButtonVariant.Outline).Tooltip("View");
-
-            return new Card(
-                Layout.Horizontal().Gap(2).Padding(2)
-                    | (Layout.Vertical().Gap(0)
-                        | Text.Block(agent.Name).Bold()
-                        | Text.Small(agent.Description).Color(Colors.Gray))
-                    | new Spacer()
-                    | actions
-            );
-        }).ToList();
-
-        var customItems = customAgents.Select(agent =>
-        {
-            var actions = Layout.Horizontal().Gap(1)
-                | new Button(icon: Icons.MessageCircle, onClick: _ => StartChat(agent), variant: ButtonVariant.Outline).Tooltip("Chat")
-                | new Button(icon: Icons.Pencil, onClick: _ => EditAgent(agent), variant: ButtonVariant.Outline).Tooltip("Edit")
-                | new Button(icon: Icons.Copy, onClick: _ => DuplicateAgent(agent), variant: ButtonVariant.Outline).Tooltip("Duplicate")
-                | new Button(icon: Icons.Trash, onClick: _ => DeleteAgent(agent), variant: ButtonVariant.Outline).Tooltip("Delete");
-
-            return new Card(
-                Layout.Horizontal().Gap(2).Padding(2)
-                    | (Layout.Vertical().Gap(0)
-                        | Text.Block(agent.Name).Bold()
-                        | Text.Small(string.IsNullOrEmpty(agent.Description) ? "Custom agent" : agent.Description).Color(Colors.Gray))
-                    | new Spacer()
-                    | actions
-            );
-        }).ToList();
-
-        // Header with create button
-        var header = Layout.Horizontal().Gap(1)
-            | new Button(icon: Icons.Plus, onClick: _ => CreateNewAgent(), variant: ButtonVariant.Outline)
-            | new Button(icon: Icons.Settings, onClick: _ => 
-            {
-                settingsForm.Set(new ApiSettingsModel
-                {
-                    OllamaUrl = _ollamaUrl.Value ?? "http://localhost:11434",
-                    OllamaModel = _ollamaModel.Value ?? "llama2",
-                    BingApiKey = _bingApiKey.Value ?? string.Empty
-                });
-                isSettingsOpen.Set(true);
-            }, variant: ButtonVariant.Outline);
-
-        // Status indicator
-        var statusBadge = hasOllamaConfig 
-            ? new Badge($"Ollama: {_ollamaModel.Value}", BadgeVariant.Success)
-            : new Badge("Ollama Config Required", BadgeVariant.Destructive);
+            var newAgent = new AgentConfiguration();
+            blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true), "New Agent");
+        }).Ghost().Tooltip("Create Agent");
 
         // Settings dialog
         var settingsDialog = isSettingsOpen.Value
@@ -172,25 +121,24 @@ public class AgentListView : ViewBase
                     width: Size.Fraction(0.5f))
             : null;
 
-        // Main content
-        var content = Layout.Vertical().Gap(2)
-            | statusBadge
-            | (presetItems.Any() 
-                ? (Layout.Vertical().Gap(1)
-                    | Text.Small("Preset Agents").Bold().Color(Colors.Gray)
-                    | (Layout.Vertical().Gap(1) | presetItems))
-                : null)
-            | (customItems.Any() 
-                ? (Layout.Vertical().Gap(1)
-                    | Text.Small("Custom Agents").Bold().Color(Colors.Gray)
-                    | (Layout.Vertical().Gap(1) | customItems))
-                : null)
-            | (!customItems.Any() && !hasOllamaConfig
-                ? Text.Muted("Configure Ollama URL and model, then create agents to get started")
-                : null);
+        // Settings button - add it separately since FilteredListView only accepts one toolButton
+        var settingsBtn = Icons.Settings.ToButton(_ =>
+        {
+            settingsForm.Set(new ApiSettingsModel
+            {
+                OllamaUrl = _ollamaUrl.Value ?? "http://localhost:11434",
+                OllamaModel = _ollamaModel.Value ?? "llama2",
+                BingApiKey = _bingApiKey.Value ?? string.Empty
+            });
+            isSettingsOpen.Set(true);
+        }).Ghost().Tooltip("Settings");
 
         return new Fragment()
-            | BladeHelper.WithHeader(header, content)
+            | new FilteredListView<AgentConfiguration>(
+                fetchRecords: FetchAgents,
+                createItem: CreateItem,
+                toolButtons: createBtn
+            )
             | settingsDialog;
     }
 }
