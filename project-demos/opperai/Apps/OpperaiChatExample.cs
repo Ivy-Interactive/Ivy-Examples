@@ -315,7 +315,7 @@ namespace OpperaiExample.Apps
                             .ToDialog(isSettingsDialogOpen,
                                 title: "API key/Settings",
                                 submitTitle: "Save",
-                                width: Size.Units(600)
+                                width: Size.Units(150)
                             ) : null);
         }
     }
