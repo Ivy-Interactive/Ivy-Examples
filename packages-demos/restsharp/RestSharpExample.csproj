@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -7,7 +7,8 @@
 		<Nullable>enable</Nullable>
 		<NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
 		<RootNamespace>RestSharpExample</RootNamespace>
-	</PropertyGroup>
+	  <UserSecretsId>876a667d-cf0d-4ed3-a195-380bc365ad51</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="Assets/**/*" />
