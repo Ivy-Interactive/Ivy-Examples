@@ -4,6 +4,10 @@
 
 DNS Client is a web application for performing DNS lookups with support for multiple record types, reverse DNS queries, and detailed DNS information display.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-DNS%20Client-blue?style=for-the-badge)](https://ivy-packagedemos-dnsclient.sliplane.app)
+
 <img width="1911" height="909" alt="image" src="https://github.com/user-attachments/assets/ee9cb562-6c65-4686-8299-eacc94b79689" />
 
 ## One-Click Development Environment

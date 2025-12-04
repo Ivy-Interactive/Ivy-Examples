@@ -6,6 +6,10 @@ JWT Demo Application is an interactive web application for generating and valida
 
 This is an interactive Ivy demo application showcasing JWT (JSON Web Tokens) concepts and integration with the Ivy framework.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-JWT%20Demo%20Application-blue?style=for-the-badge)](https://ivy-packagedemos-jwt.sliplane.app)
+
 ## Features
 
 This demo application demonstrates the core features of JWT token management:

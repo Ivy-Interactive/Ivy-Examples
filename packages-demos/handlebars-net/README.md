@@ -4,6 +4,10 @@
 
 Handlebars.Net is a web application for HTML template generation using Handlebars syntax with data binding, helpers, and compiled template rendering.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Handlebars.Net-blue?style=for-the-badge)](https://ivy-packagedemos-handlebars-net.sliplane.app)
+
 <img width="1918" height="906" alt="image" src="https://github.com/user-attachments/assets/c84895a5-4a11-423d-8035-97403f271407" />
 
 ## One-Click Development Environment

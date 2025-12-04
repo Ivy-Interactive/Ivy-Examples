@@ -4,6 +4,10 @@
 
 GitHub is a web application for retrieving and displaying GitHub user statistics including profile information, repository data, commits, pull requests, and contribution metrics.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub-blue?style=for-the-badge)](https://ivy-packagedemos-github.sliplane.app)
+
 <img width="1917" height="909" alt="image" src="https://github.com/user-attachments/assets/c93323e1-3625-45ac-a185-4c98dce3239e" />
 
 ## One-Click Development Environment

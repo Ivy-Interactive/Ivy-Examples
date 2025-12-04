@@ -4,6 +4,10 @@
 
 Aspose.OCR Image-to-Text is a web application for extracting text from images using OCR technology with image upload, text recognition, and formatted output display.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Aspose.OCR%20Image--to--Text-blue?style=for-the-badge)](https://ivy-packagedemos-aspose-ocr.sliplane.app)
+
 <img width="1908" height="899" alt="image" src="https://github.com/user-attachments/assets/29aa2aef-513a-4f7c-81f1-8e5597503b77" />
 
 ## One-Click Development Environment

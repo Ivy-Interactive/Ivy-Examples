@@ -4,6 +4,10 @@
 
 ClosedXML is a demonstration application for managing Excel workbooks with capabilities to create, edit, view, and manipulate Excel files including columns, rows, and data validation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ClosedXML-blue?style=for-the-badge)](https://ivy-packagedemos-closedxml.sliplane.app)
+
 <img width="1911" height="909" alt="image" src="https://github.com/user-attachments/assets/1404dda9-a66c-4f80-8f40-85fa0e9a2bbe" />
 
 <img width="1916" height="914" alt="image" src="https://github.com/user-attachments/assets/cebe4ce4-b28a-4c1a-8f7d-5eeccc89a6b8" />

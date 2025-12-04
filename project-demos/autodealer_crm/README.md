@@ -4,6 +4,10 @@
 
 Autodealer CRM is a comprehensive customer relationship management system designed specifically for automotive dealerships. Built with Ivy Framework, it provides a complete solution for managing customers, leads, vehicles, tasks, communications, and sales analytics.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Autodealer%20CRM-blue?style=for-the-badge)](https://ivy-projectdemos-autodealer_crm.sliplane.app)
+
 ## One-Click Development Environment
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fautodealer_crm%2Fdevcontainer.json&location=EuropeWest)

@@ -4,6 +4,10 @@
 
 Magick.NET-Q16-AnyCPU is a web application for comprehensive image processing including format conversion, resizing, filtering, and advanced image manipulation operations.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Magick.NET--Q16--AnyCPU-blue?style=for-the-badge)](https://ivy-packagedemos-magick-net-q16-anycpu.sliplane.app)
+
 <img width="1913" height="908" alt="image" src="https://github.com/user-attachments/assets/7a62ffd8-d731-4cde-ad48-5ecc0d3ef1d8" />
 
 ## One-Click Development Environment
