@@ -90,6 +90,19 @@
         "Natural Language Processing",
         "API Integration"
       ]
+    },
+    {
+      "name": "Snowflake",
+      "description": "Snowflake Database Explorer is a web application for exploring Snowflake databases with interactive navigation through databases, schemas, and tables, real-time statistics, table structure inspection, and paginated data preview. https://github.com/user-attachments/assets/bc069ffb-d36f-4eb8-a4da-f279db05d959 https://github.com/user-attachments/assets/7fec362b-3fd5-4050-aaf5-4147c229b6eb",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/snowflake",
+      "deploymentLink": "ivy-projectdemos-snowflake.sliplane.app",
+      "tags": [
+        "Snowflake",
+        "Database Explorer",
+        "Data Visualization",
+        "SQL",
+        "Data Warehouse"
+      ]
     }
   ],
   "package-demos": [
