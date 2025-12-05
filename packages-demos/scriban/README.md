@@ -4,6 +4,10 @@
 
 Scriban is a web application for template rendering using Liquid-like syntax with JSON model support, real-time validation, and formatted output generation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Scriban-blue?style=for-the-badge)](https://ivy-packagedemos-scriban.sliplane.app)
+
 <img width="1918" height="911" alt="image" src="https://github.com/user-attachments/assets/3b14301e-219e-4b16-8648-3a890f2e691e" />
 
 ## One-Click Development Environment

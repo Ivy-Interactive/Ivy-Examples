@@ -4,6 +4,10 @@
 
 Bogus is a web application for generating realistic fake data for testing and development with customizable fruit lists and randomized order generation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Bogus-blue?style=for-the-badge)](https://ivy-packagedemos-bogus.sliplane.app)
+
 <img width="1918" height="910" alt="image" src="https://github.com/user-attachments/assets/f20ea249-3472-48e0-a8fd-b2f3790db84c" />
 
 ## One-Click Development Environment

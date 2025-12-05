@@ -3,6 +3,10 @@
 ## Description 
 Snowflake Database Explorer is a web application for exploring Snowflake databases with interactive navigation through databases, schemas, and tables, real-time statistics, table structure inspection, and paginated data preview.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Snowflake-blue?style=for-the-badge)](https://ivy-projectdemos-snowflake.sliplane.app)
+
 https://github.com/user-attachments/assets/bc069ffb-d36f-4eb8-a4da-f279db05d959
 
 

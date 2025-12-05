@@ -4,6 +4,10 @@
 
 ZString is a web application demonstrating high-performance string operations with zero-allocation string formatting and memory-efficient string manipulation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ZString-blue?style=for-the-badge)](https://ivy-packagedemos-zstring.sliplane.app)
+
 <img width="1919" height="908" alt="image" src="https://github.com/user-attachments/assets/0c892226-8f1b-4f59-bd54-17514d36c08f" />
 
 ## One-Click Development Environment

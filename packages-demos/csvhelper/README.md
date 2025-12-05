@@ -4,6 +4,10 @@
 
 CSV Helper is a web application for managing product data with CSV import and export capabilities, allowing users to create, view, and bulk import products from CSV files.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-CSV%20Helper-blue?style=for-the-badge)](https://ivy-packagedemos-csvhelper.sliplane.app)
+
 <img width="1913" height="904" alt="image" src="https://github.com/user-attachments/assets/2b471250-20a2-4318-8f64-30a3a87dd151" />
 
 ## One-Click Development Environment

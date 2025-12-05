@@ -4,6 +4,10 @@
 
 FuzzySharp is a web application for intelligent fuzzy text search with support for typos, misspellings, and partial matches using multiple matching algorithms.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-FuzzySharp-blue?style=for-the-badge)](https://ivy-packagedemos-fuzzysharp.sliplane.app)
+
 <img width="1914" height="904" alt="image" src="https://github.com/user-attachments/assets/21b9a1ea-182d-40aa-af5e-89d2e008fe06" />
 
 ## One-Click Development Environment

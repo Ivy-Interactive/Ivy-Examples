@@ -4,6 +4,10 @@
 
 PuppeteerSharp is a web application for rendering websites, generating screenshots, and creating PDFs from web pages using headless Chrome browser automation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-PuppeteerSharp-blue?style=for-the-badge)](https://ivy-packagedemos-puppeteersharp.sliplane.app)
+
 <img width="1919" height="911" alt="image" src="https://github.com/user-attachments/assets/f42c2a73-7a48-4271-8f2a-cd5932240683" />
 
 ## One-Click Development Environment

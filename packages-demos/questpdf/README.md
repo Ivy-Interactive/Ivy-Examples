@@ -4,6 +4,10 @@
 
 QuestPDF is a demonstration application for generating PDF documents from markdown content with real-time preview, customizable page settings, and interactive editing capabilities.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-QuestPDF-blue?style=for-the-badge)](https://ivy-packagedemos-questpdf.sliplane.app)
+
 <img width="1914" height="922" alt="image" src="https://github.com/user-attachments/assets/dbcdae9c-b012-4f33-8cb9-4439eb6c8321" />
 
 ## One-Click Development Environment
