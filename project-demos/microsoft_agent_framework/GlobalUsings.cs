@@ -31,6 +31,7 @@ global using System.Text.Json.Serialization;
 global using MicrosoftAgentFramework.Models;
 global using MicrosoftAgentFramework.Views;
 global using MicrosoftAgentFramework.Services;
+global using OllamaSharp;
 
 namespace MicrosoftAgentFramework;
 

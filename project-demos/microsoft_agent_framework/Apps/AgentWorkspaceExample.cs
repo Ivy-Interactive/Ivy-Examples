@@ -4,7 +4,7 @@ using OllamaSharp;
 
 namespace MicrosoftAgentFramework.Apps;
 
-[App(icon: Icons.Bot, title: "AI Agent Workspace")]
+[App(icon: Icons.Bot, title: "Microsoft Agent Framework")]
 public class AgentWorkspaceExample : ViewBase
 {
     public override object? Build()
@@ -17,96 +17,6 @@ public class AgentWorkspaceExample : ViewBase
         var ollamaModel = UseState<string?>(Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "llama2");
         var bingApiKey = UseState<string?>(Environment.GetEnvironmentVariable("BING_API_KEY"));
 
-        // Available Ollama models - loaded dynamically
-        var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
-        var selectedModel = UseState(ollamaModel.Value ?? "llama2");
-        
-        // Load models from Ollama API
-        async Task LoadModels()
-        {
-            try
-            {
-                using var client = new OllamaApiClient(new Uri(ollamaUrl.Value ?? "http://localhost:11434"));
-                availableModels.Set((await client.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
-            }
-            catch { availableModels.Set(ImmutableArray<string>.Empty); }
-        }
-        
-        UseEffect(async () => await LoadModels(), EffectTrigger.AfterInit());
-        UseEffect(async () => await LoadModels(), [ollamaUrl]);
-        
-        // Query function for AsyncSelectInput
-        Task<Option<string>[]> QueryModels(string query)
-        {
-            var models = availableModels.Value;
-            if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
-            
-            var filtered = string.IsNullOrEmpty(query) 
-                ? models.Take(5) 
-                : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
-            
-            return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
-        }
-
-        // Lookup function for AsyncSelectInput
-        Task<Option<string>?> LookupModel(string? model)
-        {
-            if (string.IsNullOrEmpty(model)) return Task.FromResult<Option<string>?>(null);
-            return Task.FromResult<Option<string>?>(new Option<string>(model));
-        }
-        
-        // Update model when selected
-        UseEffect(() =>
-        {
-            if (selectedModel.Value != ollamaModel.Value)
-            {
-                ollamaModel.Set(selectedModel.Value);
-            }
-        }, [selectedModel]);
-
-        // Settings state
-        var isSettingsOpen = UseState(false);
-        var settingsForm = UseState(new ApiSettingsModel
-        {
-            OllamaUrl = ollamaUrl.Value ?? "http://localhost:11434",
-            OllamaModel = ollamaModel.Value ?? "llama2",
-            BingApiKey = bingApiKey.Value ?? string.Empty
-        });
-
-        // Handle settings save
-        UseEffect(() =>
-        {
-            if (!isSettingsOpen.Value)
-            {
-                if (!string.IsNullOrWhiteSpace(settingsForm.Value.OllamaUrl) && settingsForm.Value.OllamaUrl != ollamaUrl.Value)
-                {
-                    ollamaUrl.Set(settingsForm.Value.OllamaUrl);
-                }
-                if (!string.IsNullOrWhiteSpace(settingsForm.Value.OllamaModel) && settingsForm.Value.OllamaModel != ollamaModel.Value)
-                {
-                    ollamaModel.Set(settingsForm.Value.OllamaModel);
-                    selectedModel.Set(settingsForm.Value.OllamaModel);
-                }
-                if (settingsForm.Value.BingApiKey != bingApiKey.Value)
-                {
-                    bingApiKey.Set(settingsForm.Value.BingApiKey);
-                }
-            }
-        }, [isSettingsOpen]);
-
-        // Model selector using AsyncSelectInput
-        var modelSelector = selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search models...");
-
-        // Header with title, model selector, and settings - full width at top
-        var header = Layout.Vertical()
-            | (Layout.Horizontal()
-                | (Layout.Vertical().Align(Align.Left).Margin(10, 0, 0, 0)
-                    | Text.H4("Microsoft Agent Framework"))
-                | (Layout.Vertical().Align(Align.Center)
-                    | (Layout.Vertical()
-                        | modelSelector)).Width(Size.Fraction(0.3f)).Margin(2, 0, 10, 0)
-            );
-
         // Content with blades
         var content = this.UseBlades(
             () => new AgentListView(agents, ollamaUrl, ollamaModel, bingApiKey),
@@ -114,8 +24,6 @@ public class AgentWorkspaceExample : ViewBase
         );
 
         return new Fragment()
-            | header
-            | new Separator()
             | content;
     }
 
