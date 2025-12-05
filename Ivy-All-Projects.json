@@ -52,20 +52,6 @@
       ]
     },
     {
-      "name": "DataTables Demo",
-      "description": "DataTables Demo is a comprehensive demonstration application showcasing the DataTable widget capabilities including sorting, filtering, pagination, and high-performance handling of large datasets using Apache Arrow.",
-      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/datatables-demo",
-      "deploymentLink": "ivy-projectdemos-datatables-demo.sliplane.app",
-      "tags": [
-        "DataTable",
-        "Data Visualization",
-        "Tables",
-        "Sorting",
-        "Filtering",
-        "Apache Arrow"
-      ]
-    },
-    {
       "name": "Hello",
       "description": "Hello is a simple starter application demonstrating the basic structure and setup of an Ivy web application. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/helloworld",
