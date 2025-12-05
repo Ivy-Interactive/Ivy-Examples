@@ -106,40 +106,12 @@ public class AgentListView : ViewBase
             blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true), "New Agent", width: Size.Units(150));
         }).Ghost().Tooltip("Create Agent");
 
-        // Settings dialog
-        var settingsDialog = isSettingsOpen.Value
-            ? settingsForm.ToForm()
-                .Builder(e => e.OllamaUrl, e => e.ToTextInput(placeholder: "http://localhost:11434"))
-                .Label(e => e.OllamaUrl, "Ollama URL")
-                .Builder(e => e.OllamaModel, e => e.ToTextInput(placeholder: "llama2"))
-                .Label(e => e.OllamaModel, "Ollama Model")
-                .Builder(e => e.BingApiKey, e => e.ToPasswordInput(placeholder: "Optional - for web search"))
-                .Label(e => e.BingApiKey, "Bing Search API Key")
-                .ToDialog(isSettingsOpen,
-                    title: "Ollama Settings",
-                    submitTitle: "Save",
-                    width: Size.Fraction(0.5f))
-            : null;
-
-        // Settings button - add it separately since FilteredListView only accepts one toolButton
-        var settingsBtn = Icons.Settings.ToButton(_ =>
-        {
-            settingsForm.Set(new ApiSettingsModel
-            {
-                OllamaUrl = _ollamaUrl.Value ?? "http://localhost:11434",
-                OllamaModel = _ollamaModel.Value ?? "llama2",
-                BingApiKey = _bingApiKey.Value ?? string.Empty
-            });
-            isSettingsOpen.Set(true);
-        }).Ghost().Tooltip("Settings");
-
         return new Fragment()
             | new FilteredListView<AgentConfiguration>(
                 fetchRecords: FetchAgents,
                 createItem: CreateItem,
                 toolButtons: createBtn
-            )
-            | settingsDialog;
+            );
     }
 }
 

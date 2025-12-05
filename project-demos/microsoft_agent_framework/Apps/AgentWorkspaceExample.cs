@@ -94,18 +94,6 @@ public class AgentWorkspaceExample : ViewBase
             }
         }, [isSettingsOpen]);
 
-        // Settings button
-        var settingsBtn = Icons.Settings.ToButton(_ =>
-        {
-            settingsForm.Set(new ApiSettingsModel
-            {
-                OllamaUrl = ollamaUrl.Value ?? "http://localhost:11434",
-                OllamaModel = ollamaModel.Value ?? "llama2",
-                BingApiKey = bingApiKey.Value ?? string.Empty
-            });
-            isSettingsOpen.Set(true);
-        }).Ghost().Tooltip("Settings");
-
         // Model selector using AsyncSelectInput
         var modelSelector = selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search models...");
 
@@ -116,25 +104,8 @@ public class AgentWorkspaceExample : ViewBase
                     | Text.H4("Microsoft Agent Framework"))
                 | (Layout.Vertical().Align(Align.Center)
                     | (Layout.Vertical()
-                        | modelSelector)).Width(Size.Fraction(0.3f))
-                | (Layout.Vertical().Align(Align.Right)
-                    | settingsBtn).Width(Size.Units(5)).Margin(2, 0, 10, 0)
+                        | modelSelector)).Width(Size.Fraction(0.3f)).Margin(2, 0, 10, 0)
             );
-
-        // Settings dialog
-        var settingsDialog = isSettingsOpen.Value
-            ? settingsForm.ToForm()
-                .Builder(e => e.OllamaUrl, e => e.ToTextInput(placeholder: "http://localhost:11434"))
-                .Label(e => e.OllamaUrl, "Ollama URL")
-                .Builder(e => e.OllamaModel, e => e.ToTextInput(placeholder: "llama2"))
-                .Label(e => e.OllamaModel, "Ollama Model")
-                .Builder(e => e.BingApiKey, e => e.ToPasswordInput(placeholder: "Optional - for web search"))
-                .Label(e => e.BingApiKey, "Bing Search API Key")
-                .ToDialog(isSettingsOpen,
-                    title: "Ollama Settings",
-                    submitTitle: "Save",
-                    width: Size.Fraction(0.5f))
-            : null;
 
         // Content with blades
         var content = this.UseBlades(
@@ -145,8 +116,7 @@ public class AgentWorkspaceExample : ViewBase
         return new Fragment()
             | header
             | new Separator()
-            | content
-            | settingsDialog;
+            | content;
     }
 
     /// <summary>
