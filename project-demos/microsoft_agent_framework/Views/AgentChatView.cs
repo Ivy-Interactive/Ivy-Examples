@@ -90,10 +90,11 @@ public class AgentChatView : ViewBase
             // Add user message
             messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
 
-            // Create initial empty assistant message for streaming
+            // Create initial assistant message with waiting status
             var assistantMessageIndex = messages.Value.Length;
             var streamingText = new System.Text.StringBuilder();
-            messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, Text.Markdown(""))));
+            var isWaitingForFirstWord = true;
+            messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, new ChatStatus("Thinking..."))));
 
             try
             {
@@ -104,6 +105,12 @@ public class AgentChatView : ViewBase
                     if (!string.IsNullOrEmpty(textUpdate))
                     {
                         streamingText.Append(textUpdate);
+                        
+                        // If this is the first word, replace waiting status with actual text
+                        if (isWaitingForFirstWord)
+                        {
+                            isWaitingForFirstWord = false;
+                        }
                         
                         // Update the assistant message with accumulated text
                         var currentMessagesList = messages.Value.ToList();
