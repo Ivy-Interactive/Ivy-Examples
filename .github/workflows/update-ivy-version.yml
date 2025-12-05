@@ -18,23 +18,38 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      - name: Clear NuGet cache and lock files
+      - name: Get latest Ivy version from NuGet
+        id: get-ivy-version
         run: |
-          echo "Clearing NuGet cache and package lock files..."
-          # Clear NuGet cache to force fresh package resolution
-          dotnet nuget locals all --clear || true
+          echo "Fetching latest Ivy version from NuGet API..."
+          # Get the latest version from NuGet API
+          IVY_VERSION=$(curl -s "https://api.nuget.org/v3-flatcontainer/ivy/index.json" | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tail -1 | tr -d '"' || echo "")
+          if [ -z "$IVY_VERSION" ]; then
+            echo "Could not fetch version from API, will use dotnet add without version"
+            echo "ivy_version=" >> $GITHUB_OUTPUT
+          else
+            echo "Latest Ivy version: $IVY_VERSION"
+            echo "ivy_version=$IVY_VERSION" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Find all csproj and update Ivy
+      - name: Find all csproj and update Ivy to latest version
         run: |
           echo "Searching for .csproj files..."
+          IVY_VERSION="${{ steps.get-ivy-version.outputs.ivy_version }}"
+          
+          if [ -z "$IVY_VERSION" ]; then
+            echo "Error: Could not determine Ivy version"
+            exit 1
+          fi
+          
+          echo "Updating all Ivy references to version $IVY_VERSION..."
+          # Update all .csproj files directly using sed (much faster than dotnet add/remove)
           for csproj in $(find . -name "*.csproj"); do
-            echo "Updating Ivy in: $csproj"
             if grep -q 'PackageReference Include="Ivy"' "$csproj"; then
-              echo "Ivy found in $csproj, ensuring latest 1.* version..."
-              # Update to latest 1.* version (will fetch newest if cache cleared)
-              dotnet add "$csproj" package Ivy --version "1.*" || true
-            else
-              echo "Ivy NOT found in $csproj, skipping"
+              echo "Updating Ivy in: $csproj"
+              # Update version directly in .csproj file using sed
+              # Matches: <PackageReference Include="Ivy" Version="..." />
+              sed -i 's|<PackageReference Include="Ivy" Version="[^"]*"|<PackageReference Include="Ivy" Version="'$IVY_VERSION'"|g' "$csproj" || true
             fi
           done
 
@@ -46,15 +61,12 @@ jobs:
             dotnet restore "$sln" || true
           done
 
-      - name: Commit and push changes if needed
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           
           git add .
-          if ! git diff --cached --quiet; then
-            git commit -m "Daily Ivy package update for all projects"
-            git push
-          else
-            echo "No Ivy updates found"
-          fi
+          # Always commit, even if no changes (using --allow-empty)
+          git commit -m "Daily Ivy package update for all projects" --allow-empty
+          git push
