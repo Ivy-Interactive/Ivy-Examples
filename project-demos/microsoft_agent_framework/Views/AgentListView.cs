@@ -58,13 +58,19 @@ public class AgentListView : ViewBase
 
         void StartChat(AgentConfiguration agent)
         {
-            if (!hasOllamaConfig)
+            if (string.IsNullOrWhiteSpace(_ollamaUrl.Value))
             {
-                client.Toast("Please configure Ollama URL and model first", "Warning");
+                client.Toast("Please configure Ollama URL first", "Warning");
                 isSettingsOpen.Set(true);
                 return;
             }
-            blades.Push(this, new AgentChatView(agent, _agents, _ollamaUrl.Value!, _ollamaModel.Value!, _bingApiKey.Value), agent.Name, Size.Units(220));
+            
+            // Use agent's model if set, otherwise fall back to global model
+            var modelToUse = !string.IsNullOrWhiteSpace(agent.OllamaModel) 
+                ? agent.OllamaModel 
+                : (_ollamaModel.Value ?? "llama2");
+            
+            blades.Push(this, new AgentChatView(agent, _agents, _ollamaUrl.Value!, modelToUse, _bingApiKey.Value), agent.Name, Size.Units(220));
         }
 
         var onItemClicked = new Action<Event<ListItem>>(e =>
@@ -103,7 +109,7 @@ public class AgentListView : ViewBase
         var createBtn = Icons.Plus.ToButton(_ =>
         {
             var newAgent = new AgentConfiguration();
-            blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true), "New Agent", width: Size.Units(150));
+            blades.Push(this, new AgentSettingsView(newAgent, _agents, isNew: true, _ollamaUrl.Value), "New Agent", width: Size.Units(150));
         }).Ghost().Tooltip("Create Agent");
 
         return new Fragment()

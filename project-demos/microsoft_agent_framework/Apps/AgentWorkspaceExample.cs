@@ -131,6 +131,7 @@ public class AgentWorkspaceExample : ViewBase
                 Id = "preset-writer",
                 Name = "Story Writer with Research",
                 Description = "Creative writer with web research and time awareness",
+                OllamaModel = "llama2",
                 Instructions = @"You are a Creative Writer AI assistant with access to research tools. Your expertise includes:
 - Crafting engaging stories, poems, and creative content
 - Researching historical facts and current events to enhance your writing
@@ -150,6 +151,7 @@ Use vivid language, metaphors, and creative expression. Always verify facts thro
                 Id = "preset-analyst",
                 Name = "Mathematical Calculator & Analyst",
                 Description = "Expert calculator with web data access",
+                OllamaModel = "llama2",
                 Instructions = @"You are a Data Analyst AI assistant with powerful calculation and research capabilities. Your expertise includes:
 - Performing complex mathematical calculations and statistical analysis
 - Analyzing data patterns and trends
@@ -172,6 +174,7 @@ Be precise, analytical, and data-driven. Always show your work and explain your 
                 Id = "preset-coder",
                 Name = "Developer Assistant with Tools",
                 Description = "Code expert with calculation and documentation search",
+                OllamaModel = "llama2",
                 Instructions = @"You are a Code Assistant AI with access to calculation and research tools. Your expertise includes:
 - Writing clean, efficient code in multiple languages
 - Debugging and troubleshooting code issues
@@ -192,6 +195,7 @@ Always format code using proper Markdown code blocks with language syntax highli
                 Id = "preset-researcher",
                 Name = "Web Research Assistant",
                 Description = "Expert researcher with web search and calculation tools",
+                OllamaModel = "llama2",
                 Instructions = @"You are a Research Assistant AI with direct access to web search capabilities. Your expertise includes:
 - Searching the web for current information, facts, and verified data
 - Fact-checking and verification using web sources

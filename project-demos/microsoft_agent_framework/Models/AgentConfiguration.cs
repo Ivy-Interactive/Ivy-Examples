@@ -9,6 +9,7 @@ public class AgentConfiguration
     public string Name { get; set; } = "New Agent";
     public string Description { get; set; } = string.Empty;
     public string Instructions { get; set; } = "You are a helpful AI assistant.";
+    public string OllamaModel { get; set; } = "llama2";
     public bool IsPreset { get; set; } = false;
     
     public AgentConfiguration Clone()
@@ -19,6 +20,7 @@ public class AgentConfiguration
             Name = Name + " (Copy)",
             Description = Description,
             Instructions = Instructions,
+            OllamaModel = OllamaModel,
             IsPreset = false
         };
     }
@@ -37,6 +39,9 @@ public record AgentFormModel
     public string Description { get; set; } = string.Empty;
     
     [Required]
+    public string OllamaModel { get; set; } = "llama2";
+    
+    [Required]
     public string Instructions { get; set; } = "You are a helpful AI assistant.";
     
     public static AgentFormModel FromConfiguration(AgentConfiguration config)
@@ -45,6 +50,7 @@ public record AgentFormModel
         {
             Name = config.Name,
             Description = config.Description,
+            OllamaModel = config.OllamaModel,
             Instructions = config.Instructions
         };
     }
@@ -56,6 +62,7 @@ public record AgentFormModel
             Id = existingId ?? Guid.NewGuid().ToString(),
             Name = Name,
             Description = Description,
+            OllamaModel = OllamaModel,
             Instructions = Instructions,
             IsPreset = false
         };
@@ -65,6 +72,7 @@ public record AgentFormModel
     {
         config.Name = Name;
         config.Description = Description;
+        config.OllamaModel = OllamaModel;
         config.Instructions = Instructions;
     }
 }

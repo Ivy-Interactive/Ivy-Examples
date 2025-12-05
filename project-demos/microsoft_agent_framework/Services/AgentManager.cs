@@ -31,8 +31,13 @@ public class AgentManager : IDisposable
     {
         _currentConfig = config;
         
+        // Use model from agent configuration, fallback to constructor model if not set
+        var modelToUse = !string.IsNullOrWhiteSpace(config.OllamaModel) 
+            ? config.OllamaModel 
+            : _ollamaModel;
+        
         // Create OllamaApiClient which implements IChatClient
-        var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl), _ollamaModel);
+        var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl), modelToUse);
 
         // Create tools/functions for the agent
         // Note: Tools functionality may require additional setup depending on Microsoft Agents AI version
