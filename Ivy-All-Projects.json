@@ -1,16 +1,19 @@
 {
   "project-demos": [
     {
-      "name": "AutodealerCrm",
-      "description": "",
+      "name": "Autodealer CRM",
+      "description": "Autodealer CRM is a comprehensive customer relationship management system designed specifically for automotive dealerships. Built with Ivy Framework, it provides a complete solution for managing customers, leads, vehicles, tasks, communications, and sales analytics.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/autodealer_crm",
       "deploymentLink": "ivy-projectdemos-autodealer_crm.sliplane.app",
       "tags": [
-        "Microsoft.EntityFrameworkCore",
-        "Microsoft.EntityFrameworkCore.Design",
-        "Microsoft.EntityFrameworkCore.Sqlite",
-        "Microsoft.EntityFrameworkCore.Tools",
-        "demo"
+        "CRM",
+        "Automotive",
+        "Dealership",
+        "Customer Management",
+        "Lead Tracking",
+        "Inventory Management",
+        "Sales Analytics",
+        "Business Application"
       ]
     },
     {
@@ -79,7 +82,7 @@
     },
     {
       "name": "Snowflake",
-      "description": "Snowflake Database Explorer is a web application for exploring Snowflake databases with interactive navigation through databases, schemas, and tables, real-time statistics, table structure inspection, and paginated data preview. https://github.com/user-attachments/assets/bc069ffb-d36f-4eb8-a4da-f279db05d959 https://github.com/user-attachments/assets/7fec362b-3fd5-4050-aaf5-4147c229b6eb",
+      "description": "Snowflake Database Explorer is a web application for exploring Snowflake databases with interactive navigation through databases, schemas, and tables, real-time statistics, table structure inspection, and paginated data preview.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/snowflake",
       "deploymentLink": "ivy-projectdemos-snowflake.sliplane.app",
       "tags": [
