@@ -100,16 +100,26 @@ public class SnowflakeIntroductionApp : ViewBase
                        | Text.Markdown("**4. Note your Username and Password**")
                        | Text.Markdown("**5. Enter your credentials below**")
 
-                   // Button to open dialog
-                   | new Button("Enter Credentials")
-                       .Icon(Icons.Key)
-                       .Variant(ButtonVariant.Primary)
-                       .Disabled(isVerifying.Value)
-                       .HandleClick(_ =>
-                       {
-                           isDialogOpen.Value = true;
-                           verificationStatus.Value = null;
-                       })
+                   // Button to open dialog or clear credentials based on verification status
+                   | (VerifiedCredentials.IsVerified
+                       ? new Button("Clear Credentials")
+                           .Icon(Icons.LogOut)
+                           .Variant(ButtonVariant.Secondary)
+                           .HandleClick(_ =>
+                           {
+                               VerifiedCredentials.Clear();
+                               verificationStatus.Value = null;
+                               refreshToken.Refresh();
+                           })
+                       : new Button("Enter Credentials")
+                           .Icon(Icons.Key)
+                           .Variant(ButtonVariant.Primary)
+                           .Disabled(isVerifying.Value)
+                           .HandleClick(_ =>
+                           {
+                               isDialogOpen.Value = true;
+                               verificationStatus.Value = null;
+                           }))
 
                    | new Spacer()
                    // Show verification status if attempted, otherwise show important notice
