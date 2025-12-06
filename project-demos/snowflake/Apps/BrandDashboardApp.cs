@@ -19,12 +19,12 @@ public class BrandDashboardApp : ViewBase
                     Layout.Vertical().Gap(4).Padding(4)
                     | Text.H3("Authentication Required")
                     | Text.Muted("Please enter your Snowflake credentials to access this application.")
-                    | Layout.Vertical().Gap(3)
-                        | Text.Markdown("**To get started:**")
-                        | Text.Markdown("**1.** Navigate to **Snowflake Introduction** app")
+                    | Text.Markdown("**To get started:**")
+                    | (Layout.Vertical().Gap(3).Padding(4)
+                        | Text.Markdown("**1.** Navigate to **Snowflake Settings** app")
                         | Text.Markdown("**2.** Click **Enter Credentials** button")
                         | Text.Markdown("**3.** Enter your Snowflake account credentials")
-                        | Text.Markdown("**4.** After successful verification, you'll be able to use this app")
+                        | Text.Markdown("**4.** After successful verification, reload this page"))
                     | Text.Small("Your credentials are securely stored and verified before accessing Snowflake databases.")
                 ).Width(Size.Fraction(0.5f));
         }
@@ -52,6 +52,12 @@ public class BrandDashboardApp : ViewBase
         // Load data on mount
         this.UseEffect(async () =>
         {
+            // Only load data if credentials are verified
+            if (!VerifiedCredentials.IsVerified)
+            {
+                return;
+            }
+            
             isLoading.Value = true;
             errorMessage.Value = null;
 
