@@ -10,6 +10,11 @@ public static class VerifiedCredentials
     public static string? Password { get; set; }
     public static bool IsVerified { get; set; }
     
+    /// <summary>
+    /// Event that fires when verification status changes
+    /// </summary>
+    public static event Action? VerificationStatusChanged;
+    
     public static bool HasCredentials => !string.IsNullOrWhiteSpace(Account) 
         && !string.IsNullOrWhiteSpace(User) 
         && !string.IsNullOrWhiteSpace(Password);
@@ -20,6 +25,7 @@ public static class VerifiedCredentials
         User = user;
         Password = password;
         IsVerified = true;
+        VerificationStatusChanged?.Invoke();
     }
     
     public static void Clear()
@@ -28,5 +34,6 @@ public static class VerifiedCredentials
         User = null;
         Password = null;
         IsVerified = false;
+        VerificationStatusChanged?.Invoke();
     }
 }

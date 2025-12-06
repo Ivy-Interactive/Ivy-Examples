@@ -11,8 +11,28 @@ public class BrandDashboardApp : ViewBase
 {
     public override object? Build()
     {
+        var refreshToken = this.UseRefreshToken();
+        
+        // Use state to track verification status - this allows the UI to reactively update
+        var isVerified = this.UseState(() => VerifiedCredentials.IsVerified);
+        
+        // Subscribe to verification status changes and update state + trigger refresh
+         this.UseEffect(() =>
+        {
+            void OnVerificationStatusChanged()
+            {
+                isVerified.Value = VerifiedCredentials.IsVerified;
+                refreshToken.Refresh();
+            }
+            
+            VerifiedCredentials.VerificationStatusChanged += OnVerificationStatusChanged;
+            
+            // Also sync on mount
+            isVerified.Value = VerifiedCredentials.IsVerified;
+        }, [EffectTrigger.AfterInit()]);
+        
         // Check if credentials are verified - show instruction card if not verified
-        if (!VerifiedCredentials.IsVerified)
+        if (!isVerified.Value)
         {
             return Layout.Center()
                 | new Card(
@@ -24,13 +44,12 @@ public class BrandDashboardApp : ViewBase
                         | Text.Markdown("**1.** Navigate to **Snowflake Settings** app")
                         | Text.Markdown("**2.** Click **Enter Credentials** button")
                         | Text.Markdown("**3.** Enter your Snowflake account credentials")
-                        | Text.Markdown("**4.** After successful verification, reload this page"))
+                        | Text.Markdown("**4.** After successful verification, the dashboard will appear automatically"))
                     | Text.Small("Your credentials are securely stored and verified before accessing Snowflake databases.")
                 ).Width(Size.Fraction(0.5f));
         }
         
         var snowflakeService = this.UseService<SnowflakeService>();
-        var refreshToken = this.UseRefreshToken();
 
         // State management
         var brandData = this.UseState<List<BrandStats>>(() => new List<BrandStats>());
@@ -53,7 +72,7 @@ public class BrandDashboardApp : ViewBase
         this.UseEffect(async () =>
         {
             // Only load data if credentials are verified
-            if (!VerifiedCredentials.IsVerified)
+            if (!isVerified.Value)
             {
                 return;
             }
