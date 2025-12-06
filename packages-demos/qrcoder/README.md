@@ -4,6 +4,10 @@
 
 QR Code Generator is a web application for creating QR codes with vCard contact information, allowing users to generate scannable contact cards for easy sharing.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-QR%20Code%20Generator-blue?style=for-the-badge)](https://ivy-packagedemos-qrcoder.sliplane.app)
+
 <img width="1914" height="913" alt="image" src="https://github.com/user-attachments/assets/1df75bc9-a5e0-438b-b785-5abc2388b191" />
 
 ## One-Click Development Environment

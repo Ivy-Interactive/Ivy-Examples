@@ -8,6 +8,10 @@ Cold Call Tracker is a web application for managing and tracking cold call leads
 
 Ivy is a web framework for building interactive web applications using C# and .NET.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Cold%20Call%20Tracker-blue?style=for-the-badge)](https://ivy-projectdemos-cold-call-tracker.sliplane.app)
+
 ## Run
 
 ```

@@ -4,6 +4,10 @@
 
 NAudio is a web application for audio processing with support for audio file playback, format conversion, and audio manipulation capabilities.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-NAudio-blue?style=for-the-badge)](https://ivy-packagedemos-naudio.sliplane.app)
+
 <img width="570" height="763" alt="image" src="https://github.com/user-attachments/assets/135ea2ed-b78d-4c1c-9821-88ea7bb02c2b" />
 
 <img width="573" height="763" alt="image" src="https://github.com/user-attachments/assets/61603bf4-57e3-47b9-9a10-fd57fb725244" />

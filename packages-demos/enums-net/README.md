@@ -4,6 +4,10 @@
 
 Enums.NET is a web application for exploring and manipulating enum types with advanced operations including flag manipulation, validation, parsing, and attribute handling.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Enums.NET-blue?style=for-the-badge)](https://ivy-packagedemos-enums-net.sliplane.app)
+
 <img width="1912" height="909" alt="image" src="https://github.com/user-attachments/assets/ee23135f-8211-44e2-83cc-0efa99286c11" />
 
 ## One-Click Development Environment

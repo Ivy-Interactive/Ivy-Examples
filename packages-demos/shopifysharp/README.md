@@ -4,6 +4,10 @@
 
 ShopifySharp is a web application for browsing Shopify store product catalogs with product listing, details, and integration with Shopify API.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ShopifySharp-blue?style=for-the-badge)](https://ivy-packagedemos-shopifysharp.sliplane.app)
+
 <img width="1919" height="910" alt="image" src="https://github.com/user-attachments/assets/42412b44-e073-4d55-9674-88966e6a84d6" />
 
 ### Environment example:

@@ -4,6 +4,10 @@
 
 Aspose.BarCode Generator is a web application for generating barcodes in multiple symbologies with adjustable sizes, live preview, and downloadable output.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Aspose.BarCode%20Generator-blue?style=for-the-badge)](https://ivy-packagedemos-aspose-barcode.sliplane.app)
+
 <img width="1913" height="907" alt="image" src="https://github.com/user-attachments/assets/a96685ee-bedd-4e35-b37c-8528a3260d19" />
 
 ## One-Click Development Environment

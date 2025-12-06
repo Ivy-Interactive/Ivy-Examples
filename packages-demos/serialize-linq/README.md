@@ -4,6 +4,10 @@
 
 Serialize.Linq is a web application for serializing and deserializing LINQ expressions to JSON, enabling expression storage, transmission, and dynamic evaluation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Serialize.Linq-blue?style=for-the-badge)](https://ivy-packagedemos-serialize-linq.sliplane.app)
+
 <img width="976" height="831" alt="image" src="https://github.com/user-attachments/assets/2e6760c0-58cd-4d1c-8721-dff85c56bfab" />
 
 ## One-Click Development Environment

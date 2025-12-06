@@ -4,6 +4,10 @@
 
 HtmlAgilityPack is a web application for parsing and analyzing HTML from websites with DOM structure extraction, content analysis, and XPath query support.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-HtmlAgilityPack-blue?style=for-the-badge)](https://ivy-packagedemos-htmlagilitypack.sliplane.app)
+
 <img width="1916" height="911" alt="image" src="https://github.com/user-attachments/assets/31b0fd27-3fcf-446b-aaec-4c8235bf29b0" />
 
 ## One-Click Development Environment

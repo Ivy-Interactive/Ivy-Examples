@@ -4,6 +4,10 @@
 
 SharpYaml is a web application for converting JSON to YAML format with syntax-highlighted editing, instant conversion, and error handling.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-SharpYaml-blue?style=for-the-badge)](https://ivy-packagedemos-sharpyaml.sliplane.app)
+
 <img width="1569" height="916" alt="image" src="https://github.com/user-attachments/assets/ff57a2eb-22db-4c2d-b42e-72dbdf83d3af" />
 
 ## One-Click Development Environment

@@ -4,6 +4,10 @@
 
 Mapster is a web application demonstrating bidirectional object-to-object mapping between Person and PersonDto classes with automatic field combination and validation.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Mapster-blue?style=for-the-badge)](https://ivy-packagedemos-mapster.sliplane.app)
+
 <img width="1918" height="912" alt="image" src="https://github.com/user-attachments/assets/6f200388-6a4a-46ac-a345-6a74732f572a" />
 
 ## One-Click Development Environment

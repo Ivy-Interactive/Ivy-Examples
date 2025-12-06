@@ -6,6 +6,10 @@ DiffPlex is a web application for comparing two text blocks and visualizing diff
 
 An Ivy example demonstrating text comparison and diff visualization using the DiffPlex library.
 
+## Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-DiffPlex%20–%20Text%20Comparison%20Tool-blue?style=for-the-badge)](https://ivy-packagedemos-diffplex.sliplane.app)
+
 ## What It Does
 
 This example shows how to compare two text blocks and highlight their differences. It displays:
