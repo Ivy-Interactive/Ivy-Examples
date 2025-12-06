@@ -13,6 +13,24 @@ public class SnowflakeApp : ViewBase
 {
     public override object? Build()
     {
+        // Check if credentials are verified - show instruction card if not verified
+        if (!VerifiedCredentials.IsVerified)
+        {
+            return Layout.Center()
+                | new Card(
+                    Layout.Vertical().Gap(4).Padding(4)
+                    | Text.H3("Authentication Required")
+                    | Text.Muted("Please enter your Snowflake credentials to access this application.")
+                    | Layout.Vertical().Gap(3)
+                        | Text.Markdown("**To get started:**")
+                        | Text.Markdown("**1.** Navigate to **Snowflake Introduction** app")
+                        | Text.Markdown("**2.** Click **Enter Credentials** button")
+                        | Text.Markdown("**3.** Enter your Snowflake account credentials")
+                        | Text.Markdown("**4.** After successful verification, you'll be able to use this app")
+                    | Text.Small("Your credentials are securely stored and verified before accessing Snowflake databases.")
+                ).Width(Size.Fraction(0.5f));
+        }
+        
         var snowflakeService = this.UseService<SnowflakeService>();
         var refreshToken = this.UseRefreshToken();
         

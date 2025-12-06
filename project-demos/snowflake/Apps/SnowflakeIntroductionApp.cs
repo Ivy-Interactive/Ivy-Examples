@@ -1,10 +1,11 @@
 using Snowflake.Data.Client;
 using SnowflakeExample.Services;
+using SnowflakeExample.Connections;
 using System.ComponentModel.DataAnnotations;
 
 namespace SnowflakeExample.Apps;
 
-[App(icon: Icons.Info, title: "Snowflake Introduction", isVisible: false)]
+[App(icon: Icons.Info, title: "Snowflake Introduction")]
 public class SnowflakeIntroductionApp : ViewBase
 {
     private record SnowflakeCredentialsRequest
@@ -23,6 +24,63 @@ public class SnowflakeIntroductionApp : ViewBase
     {
         var isDialogOpen = this.UseState(false);
         var credentialsForm = this.UseState(() => new SnowflakeCredentialsRequest());
+        var verificationStatus = this.UseState<string?>(() => null);
+        var isVerifying = this.UseState(false);
+        var configuration = this.UseService<IConfiguration>();
+        var refreshToken = this.UseRefreshToken();
+        
+        // Handle credential verification when form is submitted
+        this.UseEffect(async () =>
+        {
+            var credentials = credentialsForm.Value;
+            // Check if form was submitted (Account is not empty and dialog was just closed)
+            if (!string.IsNullOrWhiteSpace(credentials.Account) && !isDialogOpen.Value && !isVerifying.Value && verificationStatus.Value == null)
+            {
+                isVerifying.Value = true;
+                
+                try
+                {
+                    var warehouse = configuration["Snowflake:Warehouse"] ?? "";
+                    var database = configuration["Snowflake:Database"] ?? "SNOWFLAKE_SAMPLE_DATA";
+                    var schema = configuration["Snowflake:Schema"] ?? "TPCH_SF1";
+                    
+                    var connectionString = $"account={credentials.Account};user={credentials.User};password={credentials.Password};warehouse={warehouse};db={database};schema={schema};";
+                    var snowflakeService = new SnowflakeService(connectionString);
+                    
+                    var isValid = await snowflakeService.TestConnectionAsync();
+                    
+                    if (isValid)
+                    {
+                        // Save verified credentials to VerifiedCredentials service
+                        VerifiedCredentials.SetCredentials(credentials.Account, credentials.User, credentials.Password);
+                        
+                        // Also save to environment variables for next startup
+                        Environment.SetEnvironmentVariable("Snowflake__Account", credentials.Account, EnvironmentVariableTarget.User);
+                        Environment.SetEnvironmentVariable("Snowflake__User", credentials.User, EnvironmentVariableTarget.User);
+                        Environment.SetEnvironmentVariable("Snowflake__Password", credentials.Password, EnvironmentVariableTarget.User);
+                        
+                        verificationStatus.Value = "success";
+                        isVerifying.Value = false;
+                        
+                        // Refresh page to enable all features
+                        refreshToken.Refresh();
+                    }
+                    else
+                    {
+                        verificationStatus.Value = "error";
+                        isVerifying.Value = false;
+                    }
+                }
+                catch
+                {
+                    verificationStatus.Value = "error";
+                    isVerifying.Value = false;
+                }
+            }
+        }, [credentialsForm, isDialogOpen]);
+        
+        // Show success message if already verified
+        var showSuccessMessage = VerifiedCredentials.IsVerified && verificationStatus.Value == null;
         
         return Layout.Center()
                | new Card(
@@ -38,11 +96,27 @@ public class SnowflakeIntroductionApp : ViewBase
                        | Text.Markdown("**4. Note your Username and Password**")
                        | Text.Markdown("**5. Enter your credentials below**")
 
+                   // Verification status message
+                   | (showSuccessMessage
+                       ? Layout.Vertical().Gap(2)
+                           | Text.Small("✓ Connection verified successfully! All Snowflake apps are now available.")
+                       : verificationStatus.Value == "success"
+                       ? Layout.Vertical().Gap(2)
+                           | Text.Small("✓ Connection successful! All Snowflake apps are now available.")
+                       : verificationStatus.Value == "error"
+                       ? Layout.Vertical().Gap(2)
+                           | Text.Small("✗ Connection failed. Please check your credentials and try again.")
+                       : null)
+
                    // Button to open dialog
                    | new Button("Enter Credentials")
                        .Icon(Icons.Key)
                        .Variant(ButtonVariant.Primary)
-                       .HandleClick(_ => isDialogOpen.Set(true))
+                       .Disabled(isVerifying.Value)
+                       .HandleClick(_ => {
+                           isDialogOpen.Value = true;
+                           verificationStatus.Value = null;
+                       })
                    
                    | new Spacer()
                    | Text.Small("Important: Never publish credentials in public repositories or share them with unauthorized parties.")
@@ -58,7 +132,7 @@ public class SnowflakeIntroductionApp : ViewBase
                        .Label(e => e.Password, "Password")
                        .ToDialog(isDialogOpen,
                            title: "Enter Snowflake Credentials",
-                           submitTitle: "Save",
+                           submitTitle: isVerifying.Value ? "Verifying..." : "Save",
                            width: Size.Fraction(0.3f)
                        )
                    : null);
