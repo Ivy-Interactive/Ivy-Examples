@@ -29,6 +29,12 @@ public class SnowflakeIntroductionApp : ViewBase
         var configuration = this.UseService<IConfiguration>();
         var refreshToken = this.UseRefreshToken();
 
+        // Load credentials from configuration (appsettings.json, environment variables, or dotnet secrets) on mount
+        this.UseEffect(() =>
+        {
+            VerifiedCredentials.LoadFromConfiguration(configuration);
+        }, [EffectTrigger.AfterInit()]);
+
         // Handle credential verification when form is submitted
         this.UseEffect(async () =>
         {
