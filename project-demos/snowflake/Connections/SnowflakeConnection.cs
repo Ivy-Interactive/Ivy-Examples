@@ -1,7 +1,3 @@
-using Ivy.Connections;
-using Snowflake.Data.Client;
-using SnowflakeExample.Services;
-
 namespace SnowflakeExample.Connections;
 
 /// <summary>

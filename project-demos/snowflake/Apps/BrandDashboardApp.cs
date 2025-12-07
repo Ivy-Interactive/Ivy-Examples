@@ -1,6 +1,3 @@
-using System.Data;
-using SnowflakeExample.Services;
-
 namespace SnowflakeExample;
 
 /// <summary>

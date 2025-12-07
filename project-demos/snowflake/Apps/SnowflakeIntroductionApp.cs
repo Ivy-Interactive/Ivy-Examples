@@ -1,8 +1,3 @@
-using Snowflake.Data.Client;
-using SnowflakeExample.Services;
-using SnowflakeExample.Connections;
-using System.ComponentModel.DataAnnotations;
-
 namespace SnowflakeExample;
 
 [App(icon: Icons.Info, title: "Snowflake Settings", isVisible: false)]

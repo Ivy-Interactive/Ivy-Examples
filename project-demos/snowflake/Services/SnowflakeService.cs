@@ -1,6 +1,3 @@
-using System.Data;
-using Snowflake.Data.Client;
-
 namespace SnowflakeExample.Services;
 
 public class TableInfo
