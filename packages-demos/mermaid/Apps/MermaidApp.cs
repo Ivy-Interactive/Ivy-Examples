@@ -25,6 +25,18 @@ public class MermaidApp : ViewBase
         var newLinkType = UseState("Normal");
         var newLinkArrow = UseState("Normal");
 
+        // Generate on first render
+        UseEffect(() =>
+        {
+            GenerateMermaidCode();
+        }, []);
+
+        // Automatic generation on data change
+        UseEffect(() =>
+        {
+            GenerateMermaidCode();
+        }, [nodes.ToTrigger(), links.ToTrigger(), direction.ToTrigger()]);
+
         // Generate Mermaid code
         void GenerateMermaidCode()
         {
@@ -38,18 +50,6 @@ public class MermaidApp : ViewBase
                 client.Error(ex);
             }
         }
-
-        // Generate on first render
-        UseEffect(() =>
-        {
-            GenerateMermaidCode();
-        }, []);
-
-        // Automatic generation on data change
-        UseEffect(() =>
-        {
-            GenerateMermaidCode();
-        }, [nodes.ToTrigger(), links.ToTrigger(), direction.ToTrigger()]);
 
         // Node management functions
         void AddNode()
@@ -117,29 +117,67 @@ public class MermaidApp : ViewBase
         // Select options from constants
         var nodeIdOptions = nodes.Value.Select(n => n.Id).ToList();
 
-        // Nodes compact list
-        var nodesView = nodes.Value.Count == 0
-            ? (object)Text.Muted("No nodes yet")
-            : (object)nodes.Value.Select(node =>
-                Layout.Horizontal().Gap(3).Align(Align.Left)
-                | Text.Small(node.Id).Width(Size.Fraction(0.25f))
-                | Text.Small(node.Text).Width(Size.Fraction(0.25f))
-                | Text.Small(node.Shape).Width(Size.Fraction(0.25f))
-                | new Button("Delete", onClick: () => RemoveNode(node.Id)).Size(Sizes.Small)
-            ).ToArray();
+        // Nodes table
+        object nodesView;
+        if (nodes.Value.Count == 0)
+        {
+            nodesView = Text.Muted("No nodes yet");
+        }
+        else
+        {
+            var nodesTableRows = new List<TableRow>();
+            // Header row
+            nodesTableRows.Add(new TableRow([
+                new TableCell("ID").IsHeader(),
+                new TableCell("Text").IsHeader(),
+                new TableCell("Shape").IsHeader(),
+                new TableCell("Action").IsHeader()
+            ]));
+            // Data rows
+            foreach (var node in nodes.Value)
+            {
+                nodesTableRows.Add(new TableRow([
+                    new TableCell(node.Id),
+                    new TableCell(node.Text),
+                    new TableCell(node.Shape),
+                    new TableCell(new Button("Delete", onClick: () => RemoveNode(node.Id)).Size(Sizes.Small))
+                ]));
+            }
+            nodesView = new Table([.. nodesTableRows]);
+        }
 
-        // Links compact list
-        var linksView = links.Value.Count == 0
-            ? (object)Text.Muted("No links yet")
-            : (object)links.Value.Select((link, index) =>
-                Layout.Horizontal().Gap(3).Align(Align.Left)
-                | Text.Small(link.From).Width(Size.Fraction(0.07f))
-                | Text.Small("→").Width(Size.Fraction(0.03f))
-                | Text.Small(link.To).Width(Size.Fraction(0.13f))
-                | Text.Small(string.IsNullOrEmpty(link.Label) ? "—" : link.Label).Width(Size.Fraction(0.25f))
-                | Text.Small($"{link.LinkType}/{link.ArrowType}").Width(Size.Fraction(0.24f))
-                | new Button("Delete", onClick: () => RemoveLink(index)).Size(Sizes.Small)
-            ).ToArray();
+        // Links table
+        object linksView;
+        if (links.Value.Count == 0)
+        {
+            linksView = Text.Muted("No links yet");
+        }
+        else
+        {
+            var linksTableRows = new List<TableRow>();
+            // Header row
+            linksTableRows.Add(new TableRow([
+                new TableCell("From").IsHeader(),
+                new TableCell("To").IsHeader(),
+                new TableCell("Label").IsHeader(),
+                new TableCell("Type").IsHeader(),
+                new TableCell("Action").IsHeader()
+            ]));
+            // Data rows
+            for (int i = 0; i < links.Value.Count; i++)
+            {
+                var link = links.Value[i];
+                var index = i;
+                linksTableRows.Add(new TableRow([
+                    new TableCell(link.From),
+                    new TableCell(link.To),
+                    new TableCell(string.IsNullOrEmpty(link.Label) ? "—" : link.Label),
+                    new TableCell($"{link.LinkType}/{link.ArrowType}"),
+                    new TableCell(new Button("Delete", onClick: () => RemoveLink(index)).Size(Sizes.Small))
+                ]));
+            }
+            linksView = new Table([.. linksTableRows]);
+        }
 
         // Add Node form - extracted as array to fix layout issues
         var addNodeView = (object)new[]
@@ -191,8 +229,6 @@ public class MermaidApp : ViewBase
                 | linksView
                 | Text.H4("Add Link")
                 | addLinkView
-
-                | new Spacer()
             ).Width(Size.Half()).Height(Size.Fit().Min(Size.Full()))
 
             | new Card(
@@ -211,6 +247,7 @@ public class MermaidApp : ViewBase
                     .Height(Size.Px(150))
                     .Disabled(true)
                 | new Spacer()
+                | Text.Small("This demo uses the MermaidDotNet NuGet package to generate Mermaid diagrams.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MermaidDotNet](https://github.com/samsmithnz/MermaidDotNet)")
             ).Width(Size.Half()).Height(Size.Fit().Min(Size.Full()));
     }
