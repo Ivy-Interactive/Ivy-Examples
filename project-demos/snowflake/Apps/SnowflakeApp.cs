@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using SnowflakeExample.Services;
 
-namespace SnowflakeExample.Apps;
+namespace SnowflakeExample;
 
 /// <summary>
 /// Snowflake Demo App - Interactive dashboard for exploring Snowflake databases

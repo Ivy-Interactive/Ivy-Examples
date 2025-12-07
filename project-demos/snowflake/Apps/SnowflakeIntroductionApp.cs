@@ -3,9 +3,9 @@ using SnowflakeExample.Services;
 using SnowflakeExample.Connections;
 using System.ComponentModel.DataAnnotations;
 
-namespace SnowflakeExample.Apps;
+namespace SnowflakeExample;
 
-[App(icon: Icons.Info, title: "Snowflake Settings")]
+[App(icon: Icons.Info, title: "Snowflake Settings", isVisible: false)]
 public class SnowflakeIntroductionApp : ViewBase
 {
     private record SnowflakeCredentialsRequest
@@ -154,4 +154,3 @@ public class SnowflakeIntroductionApp : ViewBase
                    : null);
     }
 }
-

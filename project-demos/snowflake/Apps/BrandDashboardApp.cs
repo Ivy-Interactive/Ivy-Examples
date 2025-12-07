@@ -1,7 +1,7 @@
 using System.Data;
 using SnowflakeExample.Services;
 
-namespace SnowflakeExample.Apps;
+namespace SnowflakeExample;
 
 /// <summary>
 /// Brand Dashboard - Analytics dashboard for top brands from PART table
