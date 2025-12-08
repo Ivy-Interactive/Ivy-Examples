@@ -24,7 +24,12 @@ global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Logging;
 global using System.Collections.Immutable;
 global using System.ComponentModel.DataAnnotations;
+global using System.Data;
 global using System.Globalization;
 global using System.Reactive.Linq;
+global using Ivy.Connections;
+global using SnowflakeDashboard.Services;
+global using SnowflakeDashboard.Connections;
+global using Snowflake.Data.Client;
 
 namespace SnowflakeDashboard;
