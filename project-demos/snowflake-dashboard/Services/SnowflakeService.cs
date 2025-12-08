@@ -35,4 +35,25 @@ public class SnowflakeService
         command.CommandText = sql;
         return await command.ExecuteScalarAsync();
     }
+    
+    /// <summary>
+    /// Test connection to Snowflake
+    /// </summary>
+    public async Task<bool> TestConnectionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_connectionString))
+        {
+            return false;
+        }
+        
+        try
+        {
+            var result = await ExecuteScalarAsync("SELECT 1");
+            return result != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

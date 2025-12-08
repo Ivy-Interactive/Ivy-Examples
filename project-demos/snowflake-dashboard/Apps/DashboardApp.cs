@@ -9,6 +9,42 @@ public class DashboardApp : ViewBase
         const float CONTENT_WIDTH = 0.8f;
         
         var refreshToken = this.UseRefreshToken();
+        var configuration = this.UseService<IConfiguration>();
+        
+        // Track verification status
+        var isVerified = this.UseState(() => VerifiedCredentials.IsVerified);
+        
+        // Subscribe to verification status changes
+        this.UseEffect(() =>
+        {
+            void OnVerificationStatusChanged()
+            {
+                isVerified.Value = VerifiedCredentials.IsVerified;
+                refreshToken.Refresh();
+            }
+            
+            VerifiedCredentials.VerificationStatusChanged += OnVerificationStatusChanged;
+            isVerified.Value = VerifiedCredentials.IsVerified;
+        }, [EffectTrigger.AfterInit()]);
+        
+        // Load credentials from configuration on mount
+        this.UseEffect(() =>
+        {
+            VerifiedCredentials.LoadFromConfiguration(configuration);
+        }, [EffectTrigger.AfterInit()]);
+        
+        // Credentials form state (must be declared before conditional return)
+        var isDialogOpen = this.UseState(false);
+        var credentialsForm = this.UseState(() => new SnowflakeCredentialsRequest());
+        var verificationStatus = this.UseState<string?>(() => null);
+        var isVerifying = this.UseState(false);
+        
+        // Show credentials card if not verified
+        if (!isVerified.Value)
+        {
+            return BuildCredentialsCard(refreshToken, configuration, isDialogOpen, credentialsForm, verificationStatus, isVerifying);
+        }
+        
         var snowflakeService = this.UseService<SnowflakeService>();
         
         var brandData = this.UseState<List<BrandStats>>(() => new List<BrandStats>());
@@ -193,10 +229,21 @@ public class DashboardApp : ViewBase
             .Height(Size.Units(80));
 
         var mostPopularBrand = brandData.Value.Count > 0 ? brandData.Value[0].Brand : "N/A";
-
+        
+        // Clear credentials button
+        var clearCredentialsButton = new Button("Log Out")
+            .Icon(Icons.LogOut)
+            .Variant(ButtonVariant.Secondary)
+            .HandleClick(_ =>
+            {
+                VerifiedCredentials.Clear();
+                refreshToken.Refresh();
+            });
+ 
         return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | Text.H1("Snowflake Dashboard")
             | Text.Muted($"Brand analytics from Snowflake Sample Data - Top {LIMIT}")
+            |  new FloatingPanel(clearCredentialsButton, Align.TopRight).Offset(new Thickness(0, 5, 5, 0))
             | metrics.Width(Size.Fraction(CONTENT_WIDTH))
             | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | minPriceChart).Title("Min Price by Brand")
@@ -213,6 +260,103 @@ public class DashboardApp : ViewBase
             | new Card(Layout.Vertical().Gap(3).Padding(3) | brandsTable)
                 .Title($"Top {LIMIT} Brands")
                 .Width(Size.Fraction(CONTENT_WIDTH));
+    }
+    
+    private object BuildCredentialsCard(dynamic refreshToken, IConfiguration configuration, IState<bool> isDialogOpen, IState<SnowflakeCredentialsRequest> credentialsForm, IState<string?> verificationStatus, IState<bool> isVerifying)
+    {
+        // Handle credential verification when form is submitted
+        this.UseEffect(async () =>
+        {
+            var credentials = credentialsForm.Value;
+            if (!string.IsNullOrWhiteSpace(credentials.Account) && !isDialogOpen.Value && !isVerifying.Value && verificationStatus.Value == null)
+            {
+                isVerifying.Value = true;
+
+                try
+                {
+                    var connectionString = $"account={credentials.Account};user={credentials.User};password={credentials.Password};";
+                    var snowflakeService = new SnowflakeService(connectionString);
+
+                    var isValid = await snowflakeService.TestConnectionAsync();
+
+                    if (isValid)
+                    {
+                        VerifiedCredentials.SetCredentials(credentials.Account, credentials.User, credentials.Password);
+                        verificationStatus.Value = "success";
+                        isVerifying.Value = false;
+                        refreshToken.Refresh();
+                    }
+                    else
+                    {
+                        VerifiedCredentials.Clear();
+                        verificationStatus.Value = "error";
+                        isVerifying.Value = false;
+                    }
+                }
+                catch
+                {
+                    VerifiedCredentials.Clear();
+                    verificationStatus.Value = "error";
+                    isVerifying.Value = false;
+                }
+            }
+        }, [credentialsForm, isDialogOpen]);
+        
+        var showSuccessMessage = VerifiedCredentials.IsVerified && verificationStatus.Value == null;
+        
+        return Layout.Center()
+            | new Card(
+                Layout.Vertical().Gap(4).Padding(4)
+                | Text.H3("Snowflake Connection Required")
+                | Text.Muted("Please enter your Snowflake credentials to access the dashboard.")
+                | (Layout.Vertical().Gap(3).Padding(3)
+                    | Text.Markdown("**1. Sign up or log in** to [Snowflake](https://www.snowflake.com/)")
+                    | Text.Markdown("**2. Navigate to your Account** settings")
+                    | Text.Markdown("**3. Copy your Account Identifier** (e.g., `xy12345.us-east-1`)")
+                    | Text.Markdown("**4. Note your Username and Password**")
+                    | Text.Markdown("**5. Enter your credentials below**"))
+                | (VerifiedCredentials.IsVerified
+                    ? new Button("Clear Credentials")
+                        .Icon(Icons.LogOut)
+                        .Variant(ButtonVariant.Secondary)
+                        .HandleClick(_ =>
+                        {
+                            VerifiedCredentials.Clear();
+                            verificationStatus.Value = null;
+                            refreshToken.Refresh();
+                        })
+                    : new Button("Enter Credentials")
+                        .Icon(Icons.Key)
+                        .Variant(ButtonVariant.Primary)
+                        .Disabled(isVerifying.Value)
+                        .HandleClick(_ =>
+                        {
+                            isDialogOpen.Value = true;
+                            verificationStatus.Value = null;
+                        }))
+                | new Spacer()
+                | (showSuccessMessage
+                    ? new Callout("Connection verified successfully! Dashboard is now available.", "Success", CalloutVariant.Success)
+                    : verificationStatus.Value == "success"
+                    ? new Callout("Connection successful! Dashboard is now available.", "Success", CalloutVariant.Success)
+                    : verificationStatus.Value == "error"
+                    ? new Callout("Connection failed. Please check your credentials and try again.", "Error", CalloutVariant.Error)
+                    : new Callout("Never publish credentials in public repositories or share them with unauthorized parties.", "Important Notice", CalloutVariant.Warning, Icons.TriangleAlert))
+            ).Width(Size.Fraction(0.3f))
+            | (isDialogOpen.Value
+                ? credentialsForm.ToForm()
+                    .Builder(e => e.Account, e => e.ToTextInput())
+                    .Label(e => e.Account, "Account Identifier")
+                    .Builder(e => e.User, e => e.ToTextInput())
+                    .Label(e => e.User, "Username")
+                    .Builder(e => e.Password, e => e.ToPasswordInput())
+                    .Label(e => e.Password, "Password")
+                    .ToDialog(isDialogOpen,
+                        title: "Enter Snowflake Credentials",
+                        submitTitle: isVerifying.Value ? "Verifying..." : "Save",
+                        width: Size.Fraction(0.3f)
+                    )
+                : null);
     }
     
     private class BrandStats
@@ -234,6 +378,18 @@ public class DashboardApp : ViewBase
     {
         public string Container { get; set; } = "";
         public long Count { get; set; }
+    }
+    
+    private record SnowflakeCredentialsRequest
+    {
+        [Required]
+        public string Account { get; init; } = "";
+
+        [Required]
+        public string User { get; init; } = "";
+
+        [Required]
+        public string Password { get; init; } = "";
     }
     
     // Helper methods
