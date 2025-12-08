@@ -7,8 +7,4 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings()
-    .UseTabs(preventDuplicates: true)
-    .DefaultApp<DashboardApp>();
-server.UseChrome(chromeSettings);
 await server.RunAsync();
