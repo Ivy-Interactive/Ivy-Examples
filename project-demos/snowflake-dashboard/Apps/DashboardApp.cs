@@ -6,7 +6,7 @@ public class DashboardApp : ViewBase
     public override object? Build()
     {   // Limits configuration
         const int LIMIT = 7;
-        const float CONTENT_WIDTH = 0.8f;
+        const float CONTENT_WIDTH = 0.7f;
         
         var refreshToken = this.UseRefreshToken();
         var configuration = this.UseService<IConfiguration>();
@@ -118,19 +118,18 @@ public class DashboardApp : ViewBase
                 | Text.H1("Snowflake Dashboard")
                 | Text.Muted($"Brand analytics from Snowflake Sample Data - Top {LIMIT}")
                 | (Layout.Grid().Columns(5).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
-                    | new Skeleton().Height(Size.Units(60))
-                    | new Skeleton().Height(Size.Units(60))
-                    | new Skeleton().Height(Size.Units(60))
-                    | new Skeleton().Height(Size.Units(60))
-                    | new Skeleton().Height(Size.Units(60)))
+                    | new Skeleton().Height(Size.Units(50))
+                    | new Skeleton().Height(Size.Units(50))
+                    | new Skeleton().Height(Size.Units(50))
+                    | new Skeleton().Height(Size.Units(50))
+                    | new Skeleton().Height(Size.Units(50)))
+                | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                    | new Skeleton().Height(Size.Units(80))
+                    | new Skeleton().Height(Size.Units(80))
+                    | new Skeleton().Height(Size.Units(80))
+                    | new Skeleton().Height(Size.Units(80)))
                 | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                     | new Skeleton().Height(Size.Units(80))
-                    | new Skeleton().Height(Size.Units(80))
-                    | new Skeleton().Height(Size.Units(80)))
-                | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
-                    | new Skeleton().Height(Size.Units(80))
-                    | new Skeleton().Height(Size.Units(80)))
-                | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                     | new Skeleton().Height(Size.Units(80))
                     | new Skeleton().Height(Size.Units(80)))
                 | new Skeleton().Height(Size.Units(120)).Width(Size.Fraction(CONTENT_WIDTH));
@@ -245,17 +244,22 @@ public class DashboardApp : ViewBase
             | Text.Muted($"Brand analytics from Snowflake Sample Data - Top {LIMIT}")
             |  new FloatingPanel(clearCredentialsButton, Align.TopRight).Offset(new Thickness(0, 5, 5, 0))
             | metrics.Width(Size.Fraction(CONTENT_WIDTH))
-            | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | minPriceChart).Title("Min Price by Brand")
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | pieChart).Title($"Top {LIMIT} Brands Distribution")
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | maxPriceChart).Title("Max Price by Brand"))
-            | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+            | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | priceChart).Title("Average Prices")
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | containerChart).Title($"Top {LIMIT} Container Distribution"))
-
-            | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | pieChart).Title($"Top {LIMIT} Brands Distribution")
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | maxPriceChart).Title("Max Price by Brand")
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | minPriceChart).Title("Min Price by Brand")
+                )
+            | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                // | new Card(Layout.Vertical().Gap(3).Padding(3) | priceChart).Title("Average Prices")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | sizesChart).Title($"Sizes - Most Popular Brand ({mostPopularBrand})")
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | brandContainersChart).Title($"Containers - Most Popular Brand ({mostPopularBrand})"))
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | containerChart).Title($"Top {LIMIT} Container Distribution")
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | brandContainersChart).Title($"Containers - Most Popular Brand ({mostPopularBrand})")
+                )
+
+            // | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                
+            //     )
 
             | new Card(Layout.Vertical().Gap(3).Padding(3) | brandsTable)
                 .Title($"Top {LIMIT} Brands")
