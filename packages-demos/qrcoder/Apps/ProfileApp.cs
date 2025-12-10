@@ -84,16 +84,14 @@ public class ProfileApp : ViewBase
                 | Text.H2("Your QR Code")
                 | Text.Block("Scan this QR code with your phone to automatically add this contact to your contacts:")
                 | (Layout.Horizontal().Align(Align.Center)
-                | new DemoBox(
-                    Text.Html($"<img src=\"data:image/png;base64,{qrCodeBase64.Value}\" />")
-            ).BorderStyle(BorderStyle.None).Width(Size.Units(70)).Height(Size.Units(70)))
-            ).Height(Size.Full())
+                | new Image($"data:image/png;base64,{qrCodeBase64.Value}"))
+            ).Height(Size.Fit().Min(Size.Full()))
             : new Card(
                 Layout.Vertical().Padding(2)
                 | Text.H2("Welcome to Profile Creator")
                 | Text.Block("Fill out the form in the sidebar to create your shareable profile QR code.")
                 | Text.Block("Once you submit the form, your QR code will appear here in the main content area.")
-            ).Height(Size.Full());
+            ).Height(Size.Fit().Min(Size.Full()));
 
         return Layout.Horizontal().Gap(6)
             | formContent.Width(Size.Fraction(0.70f))
