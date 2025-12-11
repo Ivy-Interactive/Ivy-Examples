@@ -15,6 +15,16 @@ public class SnowflakeConnection : IConnection
         services.AddSingleton<SnowflakeConnection>(this);
         services.AddScoped<SnowflakeService>(sp =>
         {
+            string connString;
+            
+            // First, check if credentials are set via UI (VerifiedCredentials)
+            if (VerifiedCredentials.IsVerified && VerifiedCredentials.HasCredentials)
+            {
+                connString = $"account={VerifiedCredentials.Account};user={VerifiedCredentials.User};password={VerifiedCredentials.Password};";
+                return new SnowflakeService(connString);
+            }
+            
+            // Fallback to configuration (user secrets or environment variables)
             var config = sp.GetRequiredService<IConfiguration>();
             var account = config["Snowflake:Account"] ?? "";
             var user = config["Snowflake:User"] ?? "";
@@ -23,7 +33,7 @@ public class SnowflakeConnection : IConnection
             if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
                 return new SnowflakeService("");
             
-            var connString = $"account={account};user={user};password={password};";
+            connString = $"account={account};user={user};password={password};";
             return new SnowflakeService(connString);
         });
     }
