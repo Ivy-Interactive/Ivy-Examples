@@ -5,7 +5,7 @@ public class DashboardApp : ViewBase
 {
     public override object? Build()
     {   // Limits configuration
-        const int LIMIT = 7;
+        var limit = this.UseState(7);
         const float CONTENT_WIDTH = 0.7f;
         
         var refreshToken = this.UseRefreshToken();
@@ -77,9 +77,9 @@ public class DashboardApp : ViewBase
                     WHERE P_BRAND IS NOT NULL
                     GROUP BY P_BRAND
                     ORDER BY ItemCount DESC
-                    LIMIT {LIMIT}";
+                    LIMIT {limit.Value}";
                 
-                var brands = await LoadBrandsAsync(snowflakeService, LIMIT);
+                var brands = await LoadBrandsAsync(snowflakeService, limit.Value);
                 brandData.Value = brands;
                 
                 if (brands.Count > 0)
@@ -88,7 +88,7 @@ public class DashboardApp : ViewBase
                     await LoadPopularBrandDataAsync(snowflakeService, brands[0].Brand, popularBrandSizes, popularBrandContainers);
                 }
                 
-                containerDistribution.Value = await LoadContainersAsync(snowflakeService, LIMIT);
+                containerDistribution.Value = await LoadContainersAsync(snowflakeService, limit.Value);
                 
                 refreshToken.Refresh();
             }
@@ -100,7 +100,7 @@ public class DashboardApp : ViewBase
             {
                 isLoading.Value = false;
             }
-        }, []);
+        }, [EffectTrigger.AfterInit(), limit]);
         
         if (errorMessage.Value != null)
         {
@@ -116,7 +116,13 @@ public class DashboardApp : ViewBase
         {
             return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
                 | Text.H1("Snowflake Dashboard")
-                | Text.Muted($"Brand analytics from Snowflake Sample Data - Top {LIMIT}")
+                | Text.Muted("Select the number of top brands to display:")
+                | (Layout.Grid().Columns(7).Gap(6).Width(Size.Fraction(CONTENT_WIDTH))
+                    | " "
+                    | " "
+                    | " "
+                    | new NumberInput<int>(limit).Min(1).Max(100)
+                    )
                 | (Layout.Grid().Columns(5).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                     | new Skeleton().Height(Size.Units(50))
                     | new Skeleton().Height(Size.Units(50))
@@ -241,19 +247,25 @@ public class DashboardApp : ViewBase
  
         return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | Text.H1("Snowflake Dashboard")
-            | Text.Muted($"Brand analytics from Snowflake Sample Data - Top {LIMIT}")
+            | Text.Muted("Select the number of top brands to display:")
+            | (Layout.Grid().Columns(7).Gap(6).Width(Size.Fraction(CONTENT_WIDTH))
+                | " "
+                | " "
+                | " "
+                | new NumberInput<int>(limit).Min(1).Max(100)
+                )
             |  new FloatingPanel(clearCredentialsButton, Align.TopRight).Offset(new Thickness(0, 5, 5, 0))
             | metrics.Width(Size.Fraction(CONTENT_WIDTH))
             | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | priceChart).Title("Average Prices")
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | pieChart).Title($"Top {LIMIT} Brands Distribution")
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | pieChart).Title($"Top {limit} Brands Distribution")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | maxPriceChart).Title("Max Price by Brand")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | minPriceChart).Title("Min Price by Brand")
                 )
             | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                 // | new Card(Layout.Vertical().Gap(3).Padding(3) | priceChart).Title("Average Prices")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | sizesChart).Title($"Sizes - Most Popular Brand ({mostPopularBrand})")
-                | new Card(Layout.Vertical().Gap(3).Padding(3) | containerChart).Title($"Top {LIMIT} Container Distribution")
+                | new Card(Layout.Vertical().Gap(3).Padding(3) | containerChart).Title($"Top {limit} Container Distribution")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | brandContainersChart).Title($"Containers - Most Popular Brand ({mostPopularBrand})")
                 )
 
@@ -262,7 +274,7 @@ public class DashboardApp : ViewBase
             //     )
 
             | new Card(Layout.Vertical().Gap(3).Padding(3) | brandsTable)
-                .Title($"Top {LIMIT} Brands")
+                .Title($"Top {limit} Brands")
                 .Width(Size.Fraction(CONTENT_WIDTH));
     }
     
