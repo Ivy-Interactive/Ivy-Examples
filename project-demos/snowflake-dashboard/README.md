@@ -58,8 +58,16 @@ The dashboard can be configured in two ways:
    cd project-demos/snowflake-dashboard
    ```
 3. **Set up your Snowflake credentials** (choose one):
-   - **Option A:** Use the UI to enter credentials when the app starts
-   - **Option B:** Configure via `dotnet user secrets`
+   - **Option A:** Configure via `dotnet user secrets` (recommended):
+     ```bash
+     dotnet user-secrets set "Snowflake:Account" "your-account-identifier"
+     dotnet user-secrets set "Snowflake:User" "your-username"
+     dotnet user-secrets set "Snowflake:Password" "your-password"
+     ```
+     - If secrets are valid, the app will connect automatically
+     - If secrets are invalid or missing, the login screen will appear
+   - **Option B:** Use the UI to enter credentials when the login screen appears
+     - This option is used automatically if secrets are not configured or invalid
 4. **Restore dependencies:**
    ```bash
    dotnet restore
