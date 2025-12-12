@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
+    <EmbeddedResource Include="Apps/**/*.cs" />
   </ItemGroup>
 
   
