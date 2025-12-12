@@ -129,13 +129,13 @@ Each example follows a consistent structure:
 example-name/
 ├── Apps/              # Ivy application components
 ├── Connections/       # Database connections (if needed)
-├── Models/           # Data models (if needed)
-├── Services/         # Business logic (if needed)
-├── Program.cs        # Application entry point
-├── GlobalUsings.cs   # Global using statements
-├── *.csproj         # Project file
-├── Dockerfile       # Docker configuration
-└── README.md        # Example-specific documentation
+├── Models/            # Data models (if needed)
+├── Services/          # Business logic (if needed)
+├── Program.cs         # Application entry point
+├── GlobalUsings.cs    # Global using statements
+├── *.csproj           # Project file
+├── Dockerfile         # Docker configuration
+└── README.md          # Example-specific documentation
 ```
 
 ## Contributing
