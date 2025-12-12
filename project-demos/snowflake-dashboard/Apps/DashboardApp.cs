@@ -27,10 +27,12 @@ public class DashboardApp : ViewBase
             isVerified.Value = VerifiedCredentials.IsVerified;
         }, [EffectTrigger.AfterInit()]);
         
-        // Load credentials from configuration on mount
-        this.UseEffect(() =>
+        // Try to load and verify credentials from configuration on mount
+        // If credentials are invalid or missing, login screen will be shown
+        this.UseEffect(async () =>
         {
-            VerifiedCredentials.LoadFromConfiguration(configuration);
+            await VerifiedCredentials.TryLoadAndVerifyFromConfigurationAsync(configuration);
+            refreshToken.Refresh();
         }, [EffectTrigger.AfterInit()]);
         
         // Credentials form state (must be declared before conditional return)
