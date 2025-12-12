@@ -233,7 +233,7 @@ public class DashboardApp : ViewBase
             .Header(b => b.AvgPrice, "Avg Price")
             .Header(b => b.MinPrice, "Min Price")
             .Header(b => b.MaxPrice, "Max Price")
-            .Height(Size.Units(80));
+            .Height(Size.Units(240));
 
         var mostPopularBrand = brandData.Value.Count > 0 ? brandData.Value[0].Brand : "N/A";
         
@@ -254,7 +254,7 @@ public class DashboardApp : ViewBase
                 | " "
                 | " "
                 | " "
-                | new NumberInput<int>(limit).Min(1).Max(100)
+                | new NumberInput<int>(limit).Min(1).Max(25)
                 )
             |  new FloatingPanel(clearCredentialsButton, Align.TopRight).Offset(new Thickness(0, 5, 5, 0))
             | metrics.Width(Size.Fraction(CONTENT_WIDTH))
@@ -265,16 +265,10 @@ public class DashboardApp : ViewBase
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | minPriceChart).Title("Min Price by Brand")
                 )
             | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
-                // | new Card(Layout.Vertical().Gap(3).Padding(3) | priceChart).Title("Average Prices")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | sizesChart).Title($"Sizes - Most Popular Brand ({mostPopularBrand})")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | containerChart).Title($"Top {limit} Container Distribution")
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | brandContainersChart).Title($"Containers - Most Popular Brand ({mostPopularBrand})")
                 )
-
-            // | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
-                
-            //     )
-
             | new Card(Layout.Vertical().Gap(3).Padding(3) | brandsTable)
                 .Title($"Top {limit} Brands")
                 .Width(Size.Fraction(CONTENT_WIDTH));
