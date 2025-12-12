@@ -236,17 +236,15 @@ public class DashboardApp : ViewBase
             .Height(Size.Units(240));
 
         var mostPopularBrand = brandData.Value.Count > 0 ? brandData.Value[0].Brand : "N/A";
-        
-        // Clear credentials button
-        var clearCredentialsButton = new Button("Log Out")
-            .Icon(Icons.LogOut)
-            .Variant(ButtonVariant.Secondary)
-            .HandleClick(_ =>
-            {
-                VerifiedCredentials.Clear();
-                refreshToken.Refresh();
-            });
- 
+        var runtimeType = GetType();
+        // Show code button
+        var showCodeButton = new Button("Show Code")
+            .Icon(Icons.Code)
+            .Variant(ButtonVariant.Outline)
+            .BorderRadius(BorderRadius.Full)
+            .Large()            
+            .WithSheet(() => new CodeView(runtimeType), "SnowflakeDashboard/Apps/DashboardApp.cs", width: Size.Fraction(1 / 2f))
+            ;
         return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | Text.H1("Snowflake Dashboard")
             | Text.Muted("Select the number of top brands to display:")
@@ -256,7 +254,7 @@ public class DashboardApp : ViewBase
                 | " "
                 | new NumberInput<int>(limit).Min(1).Max(25)
                 )
-            |  new FloatingPanel(clearCredentialsButton, Align.TopRight).Offset(new Thickness(0, 5, 5, 0))
+            | new FloatingPanel(showCodeButton, Align.BottomRight).Offset(new Thickness(0, 0, 15, 2))
             | metrics.Width(Size.Fraction(CONTENT_WIDTH))
             | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                 | new Card(Layout.Vertical().Gap(3).Padding(3) | priceChart).Title("Average Prices")
