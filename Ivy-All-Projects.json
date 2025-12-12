@@ -92,6 +92,22 @@
         "SQL",
         "Data Warehouse"
       ]
+    },
+    {
+      "name": "Snowflake Dashboard",
+      "description": "Snowflake Dashboard is a web application for visualizing and analyzing data from Snowflake databases. It provides interactive charts, metrics, and data tables to explore brand analytics, price distributions, container types, and size patterns from Snowflake sample data.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/snowflake-dashboard",
+      "deploymentLink": "ivy-projectdemos-snowflake-dashboard.sliplane.app",
+      "tags": [
+        "Snowflake",
+        "Dashboard",
+        "Data Visualization",
+        "Analytics",
+        "Business Intelligence",
+        "Charts",
+        "SQL",
+        "Data Warehouse"
+      ]
     }
   ],
   "package-demos": [
