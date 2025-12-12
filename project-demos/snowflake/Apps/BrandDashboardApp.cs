@@ -1,7 +1,4 @@
-using System.Data;
-using SnowflakeExample.Services;
-
-namespace SnowflakeExample.Apps;
+namespace SnowflakeExample;
 
 /// <summary>
 /// Brand Dashboard - Analytics dashboard for top brands from PART table
@@ -11,8 +8,45 @@ public class BrandDashboardApp : ViewBase
 {
     public override object? Build()
     {
-        var snowflakeService = this.UseService<SnowflakeService>();
         var refreshToken = this.UseRefreshToken();
+        
+        // Use state to track verification status - this allows the UI to reactively update
+        var isVerified = this.UseState(() => VerifiedCredentials.IsVerified);
+        
+        // Subscribe to verification status changes and update state + trigger refresh
+         this.UseEffect(() =>
+        {
+            void OnVerificationStatusChanged()
+            {
+                isVerified.Value = VerifiedCredentials.IsVerified;
+                refreshToken.Refresh();
+            }
+            
+            VerifiedCredentials.VerificationStatusChanged += OnVerificationStatusChanged;
+            
+            // Also sync on mount
+            isVerified.Value = VerifiedCredentials.IsVerified;
+        }, [EffectTrigger.AfterInit()]);
+        
+        // Check if credentials are verified - show instruction card if not verified
+        if (!isVerified.Value)
+        {
+            return Layout.Center()
+                | new Card(
+                    Layout.Vertical().Gap(4).Padding(4)
+                    | Text.H3("Authentication Required")
+                    | Text.Muted("Please enter your Snowflake credentials to access this application.")
+                    | Text.Markdown("**To get started:**")
+                    | (Layout.Vertical().Gap(3).Padding(4)
+                        | Text.Markdown("**1.** Navigate to **Snowflake Settings** app")
+                        | Text.Markdown("**2.** Click **Enter Credentials** button")
+                        | Text.Markdown("**3.** Enter your Snowflake account credentials")
+                        | Text.Markdown("**4.** After successful verification, the dashboard will appear automatically"))
+                    | Text.Small("Your credentials are securely stored and verified before accessing Snowflake databases.")
+                ).Width(Size.Fraction(0.5f));
+        }
+        
+        var snowflakeService = this.UseService<SnowflakeService>();
 
         // State management
         var brandData = this.UseState<List<BrandStats>>(() => new List<BrandStats>());
@@ -34,6 +68,12 @@ public class BrandDashboardApp : ViewBase
         // Load data on mount
         this.UseEffect(async () =>
         {
+            // Only load data if credentials are verified
+            if (!isVerified.Value)
+            {
+                return;
+            }
+            
             isLoading.Value = true;
             errorMessage.Value = null;
 

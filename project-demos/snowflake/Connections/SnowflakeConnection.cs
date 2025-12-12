@@ -1,7 +1,3 @@
-using Ivy.Connections;
-using Snowflake.Data.Client;
-using SnowflakeExample.Services;
-
 namespace SnowflakeExample.Connections;
 
 /// <summary>
@@ -38,36 +34,25 @@ public class SnowflakeConnection : IConnection
         // Register this connection as singleton
         services.AddSingleton<SnowflakeConnection>(this);
         
-        // Register SnowflakeService with connection string built from configuration
-        services.AddSingleton<SnowflakeService>(sp =>
+        // Register SnowflakeService as scoped so it gets recreated with updated credentials
+        // This ensures it always uses the latest VerifiedCredentials when they are updated
+        services.AddScoped<SnowflakeService>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();
             
-            // Get connection parameters from configuration or use defaults
-            var account = configuration["Snowflake:Account"] ?? "";
-            var user = configuration["Snowflake:User"] ?? "";
-            var password = configuration["Snowflake:Password"] ?? "";
+            // Priority: VerifiedCredentials > Environment Variables > Configuration
+            var account = VerifiedCredentials.Account ?? configuration["Snowflake:Account"] ?? "";
+            var user = VerifiedCredentials.User ?? configuration["Snowflake:User"] ?? "";
+            var password = VerifiedCredentials.Password ?? configuration["Snowflake:Password"] ?? "";
             var warehouse = configuration["Snowflake:Warehouse"] ?? "";
             var database = configuration["Snowflake:Database"] ?? "SNOWFLAKE_SAMPLE_DATA";
             var schema = configuration["Snowflake:Schema"] ?? "TPCH_SF1";
             
-            // Validate required parameters
-            if (string.IsNullOrWhiteSpace(account))
+            // Only validate if we have credentials (don't throw if credentials are being entered)
+            if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
             {
-                throw new InvalidOperationException(
-                    "Snowflake Account is not configured. Please set 'Snowflake:Account' in appsettings.json or environment variables.");
-            }
-            
-            if (string.IsNullOrWhiteSpace(user))
-            {
-                throw new InvalidOperationException(
-                    "Snowflake User is not configured. Please set 'Snowflake:User' in appsettings.json or environment variables.");
-            }
-            
-            if (string.IsNullOrWhiteSpace(password))
-            {
-                throw new InvalidOperationException(
-                    "Snowflake Password is not configured. Please set 'Snowflake:Password' in appsettings.json or environment variables.");
+                // Return a service with empty connection string - it will fail gracefully when used
+                return new SnowflakeService("");
             }
             
             // Build connection string
@@ -80,10 +65,10 @@ public class SnowflakeConnection : IConnection
     
     public string GetConnectionString(IConfiguration configuration)
     {
-        // Get connection parameters from configuration or use defaults
-        var account = configuration["Snowflake:Account"] ?? "";
-        var user = configuration["Snowflake:User"] ?? "";
-        var password = configuration["Snowflake:Password"] ?? "";
+        // Priority: VerifiedCredentials > Environment Variables > Configuration
+        var account = VerifiedCredentials.Account ?? configuration["Snowflake:Account"] ?? "";
+        var user = VerifiedCredentials.User ?? configuration["Snowflake:User"] ?? "";
+        var password = VerifiedCredentials.Password ?? configuration["Snowflake:Password"] ?? "";
         var warehouse = configuration["Snowflake:Warehouse"] ?? "";
         var database = configuration["Snowflake:Database"] ?? "SNOWFLAKE_SAMPLE_DATA";
         var schema = configuration["Snowflake:Schema"] ?? "TPCH_SF1";

@@ -28,9 +28,8 @@ global using System.Data;
 global using System.Globalization;
 global using System.Reactive.Linq;
 global using Ivy.Connections;
-global using SnowflakeExample.Services;
-global using SnowflakeExample.Connections;
+global using SnowflakeDashboard.Services;
+global using SnowflakeDashboard.Connections;
 global using Snowflake.Data.Client;
-global using System.Linq.Expressions;
 
-namespace SnowflakeExample;
+namespace SnowflakeDashboard;

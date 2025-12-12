@@ -1,6 +1,3 @@
-using System.Data;
-using Snowflake.Data.Client;
-
 namespace SnowflakeExample.Services;
 
 public class TableInfo
@@ -26,9 +23,9 @@ public class ColumnInfo
 /// </summary>
 public class SnowflakeService
 {
-    private readonly string _connectionString;
+    private readonly string? _connectionString;
     
-    public SnowflakeService(string connectionString)
+    public SnowflakeService(string? connectionString)
     {
         _connectionString = connectionString;
     }
@@ -38,6 +35,11 @@ public class SnowflakeService
     /// </summary>
     public async Task<System.Data.DataTable> ExecuteQueryAsync(string sql)
     {
+        if (string.IsNullOrWhiteSpace(_connectionString))
+        {
+            throw new InvalidOperationException("Snowflake connection string is not configured. Please enter your credentials.");
+        }
+        
         using var connection = new SnowflakeDbConnection(_connectionString);
         await connection.OpenAsync();
         
@@ -56,6 +58,11 @@ public class SnowflakeService
     /// </summary>
     public async Task<object?> ExecuteScalarAsync(string sql)
     {
+        if (string.IsNullOrWhiteSpace(_connectionString))
+        {
+            throw new InvalidOperationException("Snowflake connection string is not configured. Please enter your credentials.");
+        }
+        
         using var connection = new SnowflakeDbConnection(_connectionString);
         await connection.OpenAsync();
         
@@ -183,6 +190,11 @@ public class SnowflakeService
     /// </summary>
     public async Task<bool> TestConnectionAsync()
     {
+        if (string.IsNullOrWhiteSpace(_connectionString))
+        {
+            return false;
+        }
+        
         try
         {
             var result = await ExecuteScalarAsync("SELECT 1");

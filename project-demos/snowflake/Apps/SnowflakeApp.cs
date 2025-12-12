@@ -1,9 +1,4 @@
-using System.Data;
-using System.Linq.Expressions;
-using System.Reflection;
-using SnowflakeExample.Services;
-
-namespace SnowflakeExample.Apps;
+namespace SnowflakeExample;
 
 /// <summary>
 /// Snowflake Demo App - Interactive dashboard for exploring Snowflake databases
@@ -13,8 +8,45 @@ public class SnowflakeApp : ViewBase
 {
     public override object? Build()
     {
-        var snowflakeService = this.UseService<SnowflakeService>();
         var refreshToken = this.UseRefreshToken();
+        
+        // Use state to track verification status - this allows the UI to reactively update
+        var isVerified = this.UseState(() => VerifiedCredentials.IsVerified);
+        
+        // Subscribe to verification status changes and update state + trigger refresh
+        this.UseEffect(() =>
+        {
+            void OnVerificationStatusChanged()
+            {
+                isVerified.Value = VerifiedCredentials.IsVerified;
+                refreshToken.Refresh();
+            }
+            
+            VerifiedCredentials.VerificationStatusChanged += OnVerificationStatusChanged;
+            
+            // Also sync on mount
+            isVerified.Value = VerifiedCredentials.IsVerified;
+        }, [EffectTrigger.AfterInit()]);
+        
+        // Check if credentials are verified - show instruction card if not verified
+        if (!isVerified.Value)
+        {
+            return Layout.Center()
+                | new Card(
+                    Layout.Vertical().Gap(4).Padding(4)
+                    | Text.H3("Authentication Required")
+                    | Text.Muted("Please enter your Snowflake credentials to access this application.")
+                    | Text.Markdown("**To get started:**")
+                    | (Layout.Vertical().Gap(3).Padding(4)
+                        | Text.Markdown("**1.** Navigate to **Snowflake Settings** app")
+                        | Text.Markdown("**2.** Click **Enter Credentials** button")
+                        | Text.Markdown("**3.** Enter your Snowflake account credentials")
+                        | Text.Markdown("**4.** After successful verification, the dashboard will appear automatically"))
+
+                    | Text.Small("Your credentials are securely stored and verified before accessing Snowflake databases.")
+                ).Width(Size.Fraction(0.5f));
+        }
+        var snowflakeService = this.UseService<SnowflakeService>();
         
         // State management
         var databases = this.UseState<List<string>>(() => new List<string>());
@@ -43,12 +75,20 @@ public class SnowflakeApp : ViewBase
         // UseEffect hooks - must be at the top
         this.UseEffect(async () =>
         {
+            // Only load data if credentials are verified
+            if (!isVerified.Value)
+            {
+                return;
+            }
+            
             await LoadDatabases();
             if (databases.Value.Count > 0) await LoadStatistics(null);
         }, []);
         
         this.UseEffect(async () =>
         {
+            if (!isVerified.Value) return;
+            
             if (string.IsNullOrEmpty(selectedDatabase.Value))
             {
                 schemas.Value = new List<string>();
@@ -64,6 +104,8 @@ public class SnowflakeApp : ViewBase
         
         this.UseEffect(async () =>
         {
+            if (!isVerified.Value) return;
+            
             if (!string.IsNullOrEmpty(selectedDatabase.Value) && !string.IsNullOrEmpty(selectedSchema.Value))
             {
                 await LoadTables(selectedDatabase.Value, selectedSchema.Value);
@@ -80,6 +122,8 @@ public class SnowflakeApp : ViewBase
         
         this.UseEffect(async () =>
         {
+            if (!isVerified.Value) return;
+            
             if (!string.IsNullOrEmpty(selectedDatabase.Value) 
                 && !string.IsNullOrEmpty(selectedSchema.Value)
                 && !string.IsNullOrEmpty(selectedTable.Value))
