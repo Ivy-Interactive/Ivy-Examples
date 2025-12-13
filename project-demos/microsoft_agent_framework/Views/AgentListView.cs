@@ -34,6 +34,10 @@ public class AgentListView : ViewBase
             BingApiKey = _bingApiKey.Value ?? string.Empty
         });
 
+        // Track open agents in tabs
+        var openAgentsList = UseState(new List<AgentConfiguration>());
+        var hasOpenBlade = UseState(false);
+
         var hasOllamaConfig = !string.IsNullOrWhiteSpace(_ollamaUrl.Value) && !string.IsNullOrWhiteSpace(_ollamaModel.Value);
 
         // Handle settings save
@@ -56,6 +60,28 @@ public class AgentListView : ViewBase
             }
         }, [isSettingsOpen]);
 
+        // Update blade when agents list changes
+        UseEffect(() =>
+        {
+            if (openAgentsList.Value.Count > 0 && hasOpenBlade.Value)
+            {
+                // Close and reopen blade with updated agents
+                blades.Pop();
+                blades.Push(
+                    this,
+                    new AgentMultiChatView(_agents, _ollamaUrl, _ollamaModel, _bingApiKey, openAgentsList),
+                    "Agent Chats",
+                    Size.Units(220)
+                );
+            }
+            else if (openAgentsList.Value.Count == 0 && hasOpenBlade.Value)
+            {
+                // All agents closed, close the blade
+                blades.Pop();
+                hasOpenBlade.Set(false);
+            }
+        }, [openAgentsList]);
+
         void StartChat(AgentConfiguration agent)
         {
             if (string.IsNullOrWhiteSpace(_ollamaUrl.Value))
@@ -65,12 +91,23 @@ public class AgentListView : ViewBase
                 return;
             }
             
-            // Use agent's model if set, otherwise fall back to global model
-            var modelToUse = !string.IsNullOrWhiteSpace(agent.OllamaModel) 
-                ? agent.OllamaModel 
-                : (_ollamaModel.Value ?? "llama2");
+            // Check if agent is already open
+            if (openAgentsList.Value.Any(a => a.Id == agent.Id))
+            {
+                client.Toast($"Agent '{agent.Name}' is already open", "Info");
+                return;
+            }
             
-            blades.Push(this, new AgentChatView(agent, _agents, _ollamaUrl.Value!, modelToUse, _bingApiKey.Value), agent.Name, Size.Units(220));
+            // Add agent to open list
+            var updatedList = openAgentsList.Value.ToList();
+            updatedList.Add(agent);
+            openAgentsList.Set(updatedList);
+            
+            // Open blade if not already open
+            if (!hasOpenBlade.Value)
+            {
+                hasOpenBlade.Set(true);
+            }
         }
 
         var onItemClicked = new Action<Event<ListItem>>(e =>
