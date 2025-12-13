@@ -8,18 +8,15 @@ public class AgentListView : ViewBase
     private readonly IState<List<AgentConfiguration>> _agents;
     private readonly IState<string?> _ollamaUrl;
     private readonly IState<string?> _ollamaModel;
-    private readonly IState<string?> _bingApiKey;
 
     public AgentListView(
         IState<List<AgentConfiguration>> agents,
         IState<string?> ollamaUrl,
-        IState<string?> ollamaModel,
-        IState<string?> bingApiKey)
+        IState<string?> ollamaModel)
     {
         _agents = agents;
         _ollamaUrl = ollamaUrl;
         _ollamaModel = ollamaModel;
-        _bingApiKey = bingApiKey;
     }
 
     public override object? Build()
@@ -30,8 +27,7 @@ public class AgentListView : ViewBase
         var settingsForm = UseState(new ApiSettingsModel
         {
             OllamaUrl = _ollamaUrl.Value ?? "http://localhost:11434",
-            OllamaModel = _ollamaModel.Value ?? "llama2",
-            BingApiKey = _bingApiKey.Value ?? string.Empty
+            OllamaModel = _ollamaModel.Value ?? "llama2"
         });
 
         // Track open agents in tabs
@@ -53,10 +49,6 @@ public class AgentListView : ViewBase
                 {
                     _ollamaModel.Set(settingsForm.Value.OllamaModel);
                 }
-                if (settingsForm.Value.BingApiKey != _bingApiKey.Value)
-                {
-                    _bingApiKey.Set(settingsForm.Value.BingApiKey);
-                }
             }
         }, [isSettingsOpen]);
 
@@ -69,7 +61,7 @@ public class AgentListView : ViewBase
                 blades.Pop();
                 blades.Push(
                     this,
-                    new AgentMultiChatView(_agents, _ollamaUrl, _ollamaModel, _bingApiKey, openAgentsList),
+                    new AgentMultiChatView(_agents, _ollamaUrl, _ollamaModel, openAgentsList),
                     "Agent Chats",
                     Size.Units(220)
                 );

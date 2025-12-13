@@ -8,20 +8,17 @@ public class AgentMultiChatView : ViewBase
     private readonly IState<List<AgentConfiguration>> _agents;
     private readonly IState<string?> _ollamaUrl;
     private readonly IState<string?> _ollamaModel;
-    private readonly IState<string?> _bingApiKey;
     private readonly IState<List<AgentConfiguration>> _openAgentsList;
 
     public AgentMultiChatView(
         IState<List<AgentConfiguration>> agents,
         IState<string?> ollamaUrl,
         IState<string?> ollamaModel,
-        IState<string?> bingApiKey,
         IState<List<AgentConfiguration>> openAgentsList)
     {
         _agents = agents;
         _ollamaUrl = ollamaUrl;
         _ollamaModel = ollamaModel;
-        _bingApiKey = bingApiKey;
         _openAgentsList = openAgentsList;
     }
 
@@ -61,7 +58,7 @@ public class AgentMultiChatView : ViewBase
         // Create tabs - AgentChatView uses AgentManager which handles model selection
         var tabs = _openAgentsList.Value
             .Select(agent => new Tab(agent.Name, 
-                new AgentChatView(agent, _agents, _ollamaUrl.Value!, _ollamaModel.Value, _bingApiKey.Value))
+                new AgentChatView(agent, _agents, _ollamaUrl.Value!, _ollamaModel.Value))
                 .Icon(Icons.MessageSquare))
             .ToArray();
 

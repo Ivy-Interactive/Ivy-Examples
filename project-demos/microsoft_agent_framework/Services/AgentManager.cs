@@ -2,6 +2,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using MicrosoftAgentFramework.Models;
+using System.ComponentModel;
 
 namespace MicrosoftAgentFramework.Services;
 
@@ -12,48 +13,41 @@ public class AgentManager : IDisposable
 {
     private readonly string _ollamaUrl;
     private readonly string _ollamaModel;
-    private readonly string? _bingApiKey;
     private AIAgent? _agent;
     private AgentConfiguration? _currentConfig;
     private bool _disposed;
 
-    public AgentManager(string ollamaUrl, string ollamaModel, string? bingApiKey = null)
+    public AgentManager(string ollamaUrl, string ollamaModel)
     {
         _ollamaUrl = ollamaUrl;
         _ollamaModel = ollamaModel;
-        _bingApiKey = bingApiKey;
     }
+
+    private static List<AITool> CreateTools() => new()
+    {
+        AIFunctionFactory.Create(AgentTools.GetCurrentTime),
+        AIFunctionFactory.Create(AgentTools.Calculate)
+    };
+
+    private OllamaApiClient CreateClient(string model) => new(new Uri(_ollamaUrl), model);
 
     /// <summary>
     /// Configures the manager with the specified agent using Microsoft Agent Framework with Ollama
     /// </summary>
-    public void ConfigureAgent(AgentConfiguration config)
+    public async Task ConfigureAgentAsync(AgentConfiguration config)
     {
         _currentConfig = config;
-        
-        // Use model from agent configuration, fallback to constructor model if not set
-        var modelToUse = !string.IsNullOrWhiteSpace(config.OllamaModel) 
-            ? config.OllamaModel 
-            : _ollamaModel;
-        
-        // Create OllamaApiClient which implements IChatClient
-        var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl), modelToUse);
+        var modelToUse = !string.IsNullOrWhiteSpace(config.OllamaModel) ? config.OllamaModel : _ollamaModel;
+        var client = CreateClient(modelToUse);
 
-        // Create tools/functions for the agent
-        // Note: Tools functionality may require additional setup depending on Microsoft Agents AI version
-        // For now, create agent without tools to maintain functionality
-        var tools = new List<AITool>();
+        // Try with tools first, fallback to without tools if not supported during execution
+        _agent = new ChatClientAgent(client, instructions: config.Instructions, name: config.Name, tools: CreateTools());
+    }
 
-        // Create agent using ChatClientAgent from Microsoft Agent Framework with tools
-        // This works with any IChatClient implementation, including Ollama
-        _agent = new ChatClientAgent(
-            ollamaClient,
-            instructions: _currentConfig.Instructions,
-            name: _currentConfig.Name,
-            tools: tools
-        );
-
-        // Agent is ready to use
+    private void EnsureAgentConfigured()
+    {
+        if (_agent == null || _currentConfig == null)
+            throw new InvalidOperationException("Agent not configured. Call ConfigureAgentAsync first.");
     }
 
     /// <summary>
@@ -61,23 +55,15 @@ public class AgentManager : IDisposable
     /// </summary>
     public async Task<string> SendMessageAsync(string userMessage)
     {
-        if (_agent == null || _currentConfig == null)
-        {
-            throw new InvalidOperationException("Agent not configured. Call ConfigureAgent first.");
-        }
-
+        EnsureAgentConfigured();
         try
         {
-            // Run agent using Microsoft Agent Framework
-            // Tools are not used for now
-            var response = await _agent.RunAsync(userMessage);
-            
+            var response = await _agent!.RunAsync(userMessage);
             return response.Text ?? response.ToString() ?? "I couldn't generate a response.";
         }
         catch (Exception ex)
         {
-            var errorMessage = $"Error: {ex.Message}";
-            return errorMessage;
+            return $"Error: {ex.Message}";
         }
     }
 
@@ -86,24 +72,31 @@ public class AgentManager : IDisposable
     /// </summary>
     public IAsyncEnumerable<AgentRunResponseUpdate> RunStreamingAsync(string userMessage)
     {
-        if (_agent == null || _currentConfig == null)
-        {
-            throw new InvalidOperationException("Agent not configured. Call ConfigureAgent first.");
-        }
+        EnsureAgentConfigured();
+        return _agent!.RunStreamingAsync(userMessage);
+    }
 
-        return _agent.RunStreamingAsync(userMessage);
+    /// <summary>
+    /// Recreates the agent without tools (used when model doesn't support tools during execution)
+    /// </summary>
+    public async Task RecreateAgentWithoutToolsAsync()
+    {
+        if (_currentConfig == null) return;
+        var modelToUse = !string.IsNullOrWhiteSpace(_currentConfig.OllamaModel) ? _currentConfig.OllamaModel : _ollamaModel;
+        var client = CreateClient(modelToUse);
+        _agent = new ChatClientAgent(client, instructions: _currentConfig.Instructions, name: _currentConfig.Name);
     }
 
 
     /// <summary>
     /// Clears the chat history (recreates agent with same configuration)
     /// </summary>
-    public void ClearHistory()
+    public async Task ClearHistoryAsync()
     {
         if (_currentConfig != null)
         {
             // Recreate agent to clear history
-            ConfigureAgent(_currentConfig);
+            await ConfigureAgentAsync(_currentConfig);
         }
     }
 

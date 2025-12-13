@@ -11,20 +11,17 @@ public class AgentChatView : ViewBase
     private readonly IState<List<AgentConfiguration>> _agents;
     private readonly string _ollamaUrl;
     private readonly string _ollamaModel;
-    private readonly string? _bingApiKey;
 
     public AgentChatView(
         AgentConfiguration agent,
         IState<List<AgentConfiguration>> agents,
         string ollamaUrl,
-        string ollamaModel,
-        string? bingApiKey)
+        string ollamaModel)
     {
         _agent = agent;
         _agents = agents;
         _ollamaUrl = ollamaUrl;
         _ollamaModel = ollamaModel;
-        _bingApiKey = bingApiKey;
     }
 
     public override object? Build()
@@ -37,6 +34,7 @@ public class AgentChatView : ViewBase
 
         // Create agent manager
         var agentManager = UseState<AgentManager?>(default(AgentManager?));
+        var isInitializing = UseState(false);
         
         // Initialize welcome message
         var welcomeMessage = $"Hello! I'm **{_agent.Name}**. {_agent.Description}\n\n" +
@@ -49,23 +47,34 @@ public class AgentChatView : ViewBase
         // Track agent changes to update manager when agent is edited
         var agentId = UseState(_agent.Id);
         
-        // Initialize agent manager
-        UseEffect(() =>
+        // Initialize agent manager asynchronously after first render (non-blocking)
+        UseEffect(async () =>
         {
-            var manager = new AgentManager(_ollamaUrl, _ollamaModel, _bingApiKey);
-            manager.ConfigureAgent(_agent);
-            agentManager.Set(manager);
-        }, []);
+            isInitializing.Set(true);
+            try
+            {
+                var manager = new AgentManager(_ollamaUrl, _ollamaModel);
+                await manager.ConfigureAgentAsync(_agent);
+                agentManager.Set(manager);
+            }
+            finally
+            {
+                isInitializing.Set(false);
+            }
+        }, EffectTrigger.AfterInit());
 
         // Update agent manager when agent is edited
-        UseEffect(() =>
+        UseEffect(async () =>
         {
             // Find updated agent from the list
             var updatedAgent = _agents.Value?.FirstOrDefault(a => a.Id == _agent.Id);
             if (updatedAgent != null && updatedAgent.Id == agentId.Value)
             {
                 // Agent was updated, reconfigure manager
-                agentManager.Value?.ConfigureAgent(updatedAgent);
+                if (agentManager.Value != null)
+                {
+                    await agentManager.Value.ConfigureAgentAsync(updatedAgent);
+                }
                 
                 // Update welcome message if name or description changed
                 var newWelcomeMessage = $"Hello! I'm **{updatedAgent.Name}**. {updatedAgent.Description}\n\n" +
@@ -85,36 +94,27 @@ public class AgentChatView : ViewBase
         {
             if (agentManager.Value == null)
             {
-                client.Toast("Agent not initialized", "Error");
+                client.Toast("Agent is initializing, please wait...", "Info");
                 return;
             }
 
-            // Add user message
             messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
 
-            // Create initial assistant message with waiting status
             var assistantMessageIndex = messages.Value.Length;
             var streamingText = new System.Text.StringBuilder();
             var isWaitingForFirstWord = true;
             messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, new ChatStatus("Thinking..."))));
 
-            try
+            async Task ProcessStreamAsync(string message)
             {
-                // Stream response word by word
-                await foreach (var update in agentManager.Value.RunStreamingAsync(@event.Value))
+                await foreach (var update in agentManager.Value!.RunStreamingAsync(message))
                 {
                     var textUpdate = update.Text ?? update.ToString() ?? "";
                     if (!string.IsNullOrEmpty(textUpdate))
                     {
                         streamingText.Append(textUpdate);
+                        if (isWaitingForFirstWord) isWaitingForFirstWord = false;
                         
-                        // If this is the first word, replace waiting status with actual text
-                        if (isWaitingForFirstWord)
-                        {
-                            isWaitingForFirstWord = false;
-                        }
-                        
-                        // Update the assistant message with accumulated text
                         var currentMessagesList = messages.Value.ToList();
                         currentMessagesList[assistantMessageIndex] = new Ivy.ChatMessage(
                             ChatSender.Assistant, 
@@ -124,15 +124,38 @@ public class AgentChatView : ViewBase
                     }
                 }
             }
-            catch (Exception ex)
+
+            void ShowError(string errorMessage)
             {
-                // Replace streaming message with error
                 var currentMessagesList = messages.Value.ToList();
                 currentMessagesList[assistantMessageIndex] = new Ivy.ChatMessage(
                     ChatSender.Assistant, 
-                    $"Error: {ex.Message}"
+                    $"Error: {errorMessage}"
                 );
                 messages.Set(currentMessagesList.ToImmutableArray());
+            }
+
+            try
+            {
+                await ProcessStreamAsync(@event.Value);
+            }
+            catch (Exception ex) when (ex.Message.Contains("does not support tools", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    await agentManager.Value.RecreateAgentWithoutToolsAsync();
+                    streamingText.Clear();
+                    isWaitingForFirstWord = true;
+                    await ProcessStreamAsync(@event.Value);
+                }
+                catch (Exception retryEx)
+                {
+                    ShowError(retryEx.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex.Message);
             }
         }
 
@@ -194,7 +217,7 @@ public class AgentChatView : ViewBase
         }, [nameState, descState, instState, modelState]);
 
         // Handle save in dialog
-        UseEffect(() =>
+        UseEffect(async () =>
         {
             if (!isEditDialogOpen.Value && (editForm.Value.Name != _agent.Name || editForm.Value.OllamaModel != _agent.OllamaModel))
             {
@@ -209,14 +232,17 @@ public class AgentChatView : ViewBase
                 // If model changed, recreate agent manager with new model
                 if (editForm.Value.OllamaModel != oldModel)
                 {
-                    var manager = new AgentManager(_ollamaUrl, editForm.Value.OllamaModel, _bingApiKey);
-                    manager.ConfigureAgent(_agent);
+                    var manager = new AgentManager(_ollamaUrl, editForm.Value.OllamaModel);
+                    await manager.ConfigureAgentAsync(_agent);
                     agentManager.Set(manager);
                 }
                 else
                 {
                     // Just reconfigure with updated agent
-                    agentManager.Value?.ConfigureAgent(_agent);
+                    if (agentManager.Value != null)
+                    {
+                        await agentManager.Value.ConfigureAgentAsync(_agent);
+                    }
                 }
                 
                 // Reset form to current agent values
@@ -262,7 +288,14 @@ public class AgentChatView : ViewBase
             : null;
 
         var chatContent = Layout.Vertical().Gap(2)
-            | new Ivy.Chat(messages.Value.ToArray(), HandleMessageAsync);
+            | new Ivy.Chat(
+                messages.Value.ToArray(), 
+                isInitializing.Value ? null : HandleMessageAsync
+            )
+            | (isInitializing.Value 
+                ? Layout.Center().Padding(2) 
+                    | Text.Muted("Initializing agent...") 
+                : null);
 
         return new Fragment()
             | BladeHelper.WithHeader(editButton, chatContent)
