@@ -19,62 +19,78 @@ jobs:
     name: Check Ivy Version
     runs-on: ubuntu-latest
     outputs:
-      should-build: ${{ steps.version-check.outputs.should-build }}
-      current-version: ${{ steps.version-check.outputs.current-version }}
-      latest-version: ${{ steps.version-check.outputs.latest-version }}
-      version-changed: ${{ steps.version-check.outputs.version-changed }}
+      should-build: ${{ steps.check.outputs.should-build }}
+      latest-version: ${{ steps.check.outputs.latest-version }}
+      current-version: ${{ steps.check.outputs.current-version }}
+      has-multiple-versions: ${{ steps.get-current.outputs.has-multiple-versions }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ github.ref }}
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Check Ivy version
-        id: version-check
+      - name: Get latest Ivy version from NuGet
+        id: get-latest
         run: |
-          echo "🔍 Checking latest Ivy version on NuGet..."
-          latest_version=$(curl -s "https://api.nuget.org/v3-flatcontainer/ivy/index.json" | jq -r '.versions | last')
-          echo "Latest Ivy version: $latest_version"
-          current_version="wildcard"
-          version_changed="false"
-          should_build="false"
+          echo "Fetching latest Ivy version from NuGet..."
+          IVY_VERSION=$(curl -s "https://api.nuget.org/v3-flatcontainer/ivy/index.json" \
+            | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' \
+            | tail -1 | tr -d '"' || echo "")
 
-          if [ "${{ github.event_name }}" == "schedule" ]; then
-            last_known_version_file=".github/last-ivy-version.txt"
-            last_known_version=""
-            if [ -f "$last_known_version_file" ]; then
-              last_known_version=$(cat "$last_known_version_file")
-              echo "Last known Ivy version: $last_known_version"
-            else
-              echo "No previous version record found"
-            fi
-
-            if [ -z "$last_known_version" ] || [ "$last_known_version" != "$latest_version" ]; then
-              echo "🆕 New Ivy version detected!"
-              should_build="true"
-              version_changed="true"
-              echo "$latest_version" > "$last_known_version_file"
-            else
-              echo "✅ No new Ivy version since last check"
-            fi
+          if [ -z "$IVY_VERSION" ]; then
+            echo "Error: Could not fetch Ivy version"
+            exit 1
           fi
 
+          echo "Latest Ivy version: $IVY_VERSION"
+          echo "latest-version=$IVY_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get current Ivy version from csproj
+        id: get-current
+        run: |
+          versions=$(find . -name "*.csproj" -not -path "*/bin/*" -not -path "*/obj/*" \
+            | xargs grep -h -oE 'PackageReference Include="Ivy" Version="[^"]*"' 2>/dev/null \
+            | grep -oE 'Version="[^"]*"' \
+            | sed 's/Version="\(.*\)"/\1/' | sort -u)
+          
+          unique_versions=$(echo "$versions" | sort -u)
+          unique_count=$(echo "$unique_versions" | grep -c . || echo "0")
+      
+          current_version=$(echo "$unique_versions" | head -1 | tr -d '\n' | tr -d '\r')
+          
+          if [ -z "$current_version" ]; then
+            echo "current-version=unknown" >> $GITHUB_OUTPUT
+            echo "has-multiple-versions=false" >> $GITHUB_OUTPUT
+            echo "Current Ivy version: unknown"
+          elif [ "$unique_count" -gt 1 ]; then
+            echo "Current Ivy version: $current_version (multiple versions detected)"
+            echo "Found versions: $(echo "$unique_versions" | tr '\n' ',' | sed 's/,$//')"
+            echo "current-version=$current_version" >> $GITHUB_OUTPUT
+            echo "has-multiple-versions=true" >> $GITHUB_OUTPUT
+          else
+            echo "Current Ivy version: $current_version"
+            echo "current-version=$current_version" >> $GITHUB_OUTPUT
+            echo "has-multiple-versions=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine if build is needed
+        id: check
+        run: |
+          latest="${{ steps.get-latest.outputs.latest-version }}"
+          current="${{ steps.get-current.outputs.current-version }}"
+          
+          # Always build for PRs and manual triggers
           if [ "${{ github.event_name }}" == "push" ] || [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            should_build="true"
-            echo "🔄 Code change detected - will build"
-            echo "$latest_version" > ".github/last-ivy-version.txt"
+            echo "should-build=true" >> $GITHUB_OUTPUT
+            echo "latest-version=$latest" >> $GITHUB_OUTPUT
+            echo "current-version=$current" >> $GITHUB_OUTPUT
+          elif [ "$latest" != "$current" ]; then
+            echo "should-build=true" >> $GITHUB_OUTPUT
+            echo "latest-version=$latest" >> $GITHUB_OUTPUT
+            echo "current-version=$current" >> $GITHUB_OUTPUT
+          else
+            echo "should-build=false" >> $GITHUB_OUTPUT
+            echo "latest-version=$latest" >> $GITHUB_OUTPUT
+            echo "current-version=$current" >> $GITHUB_OUTPUT
           fi
-
-          echo "should-build=$should_build" >> $GITHUB_OUTPUT
-          echo "current-version=$current_version" >> $GITHUB_OUTPUT
-          echo "latest-version=$latest_version" >> $GITHUB_OUTPUT
-          echo "version-changed=$version_changed" >> $GITHUB_OUTPUT
 
   discover-projects:
     name: Discover Projects
@@ -208,6 +224,48 @@ jobs:
             fi
           else
             echo "resolved-version=unknown" >> $GITHUB_OUTPUT
+          fi
+
+  update-ivy-version:
+    name: Update Ivy Version
+    runs-on: ubuntu-latest
+    needs: check-ivy-version
+    if: needs.check-ivy-version.outputs.should-build == 'true' && (needs.check-ivy-version.outputs.latest-version != needs.check-ivy-version.outputs.current-version || needs.check-ivy-version.outputs.has-multiple-versions == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Update Ivy version in csproj files
+        run: |
+          IVY_VERSION="${{ needs.check-ivy-version.outputs.latest-version }}"
+          echo "Updating Ivy to version: $IVY_VERSION"
+
+          for csproj in $(find . -name "*.csproj"); do
+            if grep -q 'PackageReference Include="Ivy"' "$csproj"; then
+              echo "Updating: $csproj"
+              sed -i \
+                "s|<PackageReference Include=\"Ivy\" Version=\"[^\"]*\"|<PackageReference Include=\"Ivy\" Version=\"$IVY_VERSION\"|g" \
+                "$csproj"
+            fi
+          done
+
+      - name: Commit changes if needed
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Update Ivy to version ${{ needs.check-ivy-version.outputs.latest-version }}"
+            git push
           fi
 
   build-summary:

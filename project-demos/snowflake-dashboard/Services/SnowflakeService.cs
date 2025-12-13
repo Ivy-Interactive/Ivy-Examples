@@ -36,24 +36,38 @@ public class SnowflakeService
         return await command.ExecuteScalarAsync();
     }
     
-    /// <summary>
-    /// Test connection to Snowflake
-    /// </summary>
     public async Task<bool> TestConnectionAsync()
     {
-        if (string.IsNullOrWhiteSpace(_connectionString))
-        {
-            return false;
-        }
+        if (string.IsNullOrWhiteSpace(_connectionString)) return false;
         
+        SnowflakeDbConnection? connection = null;
         try
         {
-            var result = await ExecuteScalarAsync("SELECT 1");
-            return result != null;
+            var testConnectionString = _connectionString.TrimEnd(';') + ";poolingEnabled=false;";
+            connection = new SnowflakeDbConnection(testConnectionString);
+            
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await connection.OpenAsync(cts.Token);
+            
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            command.CommandTimeout = 5;
+            
+            return await command.ExecuteScalarAsync(cts.Token) != null;
         }
         catch
         {
             return false;
+        }
+        finally
+        {
+            try
+            {
+                if (connection?.State == System.Data.ConnectionState.Open)
+                    connection.Close();
+                connection?.Dispose();
+            }
+            catch { }
         }
     }
 }

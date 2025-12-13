@@ -15,16 +15,12 @@ public class SnowflakeConnection : IConnection
         services.AddSingleton<SnowflakeConnection>(this);
         services.AddScoped<SnowflakeService>(sp =>
         {
-            var config = sp.GetRequiredService<IConfiguration>();
-            var account = config["Snowflake:Account"] ?? "";
-            var user = config["Snowflake:User"] ?? "";
-            var password = config["Snowflake:Password"] ?? "";
-            
-            if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
-                return new SnowflakeService("");
-            
-            var connString = $"account={account};user={user};password={password};";
-            return new SnowflakeService(connString);
+            if (VerifiedCredentials.IsVerified && VerifiedCredentials.HasCredentials)
+            {
+                var connString = $"account={VerifiedCredentials.Account};user={VerifiedCredentials.User};password={VerifiedCredentials.Password};";
+                return new SnowflakeService(connString);
+            }
+            return new SnowflakeService("");
         });
     }
     
