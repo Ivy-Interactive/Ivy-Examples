@@ -67,6 +67,26 @@
       ]
     },
     {
+      "name": "AI Agent Workspace",
+      "description": "AI Agent Workspace is a web application for creating and interacting with customizable AI agents using Microsoft Agent Framework and Ollama. It features a blade-based navigation for managing multiple agent personas with configurable tools, dynamic model discovery, and real-time tool invocation visualization. https://github.com/user-attachments/assets/765c9bf6-05e8-4eb9-acad-ced624f818bd",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/microsoft_agent_framework",
+      "deploymentLink": "ivy-projectdemos-microsoft_agent_framework.sliplane.app",
+      "tags": [
+        "AI",
+        "Agents",
+        "Ollama",
+        "Microsoft Agent Framework",
+        "Chat",
+        "Function Calling",
+        "Tools",
+        "Multi-Agent",
+        "LLM",
+        "Local AI",
+        "Streaming",
+        "Tool Invocation"
+      ]
+    },
+    {
       "name": "OpperAI Chat",
       "description": "OpperAI Chat is a web application for interactive AI-powered conversations using Opper.ai API with support for multiple AI models, conversation context, custom instructions, and mathematical expression rendering.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/opperai",
