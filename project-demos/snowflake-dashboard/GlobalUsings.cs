@@ -30,6 +30,7 @@ global using System.Reactive.Linq;
 global using Ivy.Connections;
 global using SnowflakeDashboard.Services;
 global using SnowflakeDashboard.Connections;
+global using SnowflakeDashboard.Helpers;
 global using Snowflake.Data.Client;
 
 namespace SnowflakeDashboard;
