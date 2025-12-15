@@ -95,7 +95,7 @@ public class DashboardApp : ViewBase
                     | new Skeleton().Height(Size.Units(80))
                     | new Skeleton().Height(Size.Units(80))
                     | new Skeleton().Height(Size.Units(80)))
-                | new Skeleton().Height(Size.Units(270)).Width(Size.Fraction(CONTENT_WIDTH));
+                | new Skeleton().Height(Size.Units(170)).Width(Size.Fraction(CONTENT_WIDTH));
         }
 
         // Key metrics
@@ -188,7 +188,7 @@ public class DashboardApp : ViewBase
             .Header(b => b.AvgPrice, "Avg Price")
             .Header(b => b.MinPrice, "Min Price")
             .Header(b => b.MaxPrice, "Max Price")
-            .Height(Size.Units(240));
+            .Height(Size.Units(160));
 
         var mostPopularBrand = brandData.Value.Count > 0 ? brandData.Value[0].Brand : "N/A";
         // Show code button
