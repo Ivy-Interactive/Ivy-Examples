@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RootNamespace>BarcodelibExample</RootNamespace>
@@ -9,7 +9,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ivy" Version="1.*" />
+		<PackageReference Include="Ivy" Version="1.2.5" />
 		<PackageReference Include="BarcodeLib" Version="3.1.5" />
 	</ItemGroup>
 </Project>
