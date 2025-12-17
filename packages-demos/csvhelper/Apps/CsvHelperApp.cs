@@ -157,7 +157,7 @@ public class CsvHelperApp : ViewBase
                 .Builder(m => m.Price, s => s.ToNumberInput().Placeholder("Enter price...").Min(0))
                 .Builder(m => m.Category, s => s.ToTextInput().Placeholder("Enter category..."))
                 .ToDialog(isDialogOpen, "Create New Product", "Please provide product information",
-                         width: Size.Units(500))
+                         width: Size.Fraction(0.5f))
 
             // Export CSV button
             | new Button("Export CSV")
