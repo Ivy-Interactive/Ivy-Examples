@@ -88,18 +88,17 @@ public class ExcelDataReaderApp : ViewBase
             }
         }, [uploadState]);
 
-        // Clear analysis when file is removed
+        // Clear analysis and filePath when file is removed from input
         UseEffect(() =>
         {
-            if (filePath.Value == null)
+            if (uploadState.Value == null && filePath.Value != null)
             {
-                fileAnalysis.Set((FileAnalysis?)null);
-                uploadState.Reset();
+                filePath.Set((string?)null);
             }
-        }, filePath);
+        }, uploadState);
 
-        // Manual analysis trigger
-        var startAnalysis = () =>
+        // Automatically analyze file when filePath is set
+        UseEffect(() =>
         {
             if (filePath.Value != null && !isAnalyzing.Value)
             {
@@ -123,7 +122,12 @@ public class ExcelDataReaderApp : ViewBase
                     }
                 });
             }
-        };
+            else if (filePath.Value == null)
+            {
+                fileAnalysis.Set((FileAnalysis?)null);
+                selectedSheetIndex.Set(0);
+            }
+        }, filePath);
 
         return Layout.Horizontal(
             // Left Card - Functionality and File Input
@@ -134,21 +138,6 @@ public class ExcelDataReaderApp : ViewBase
                     uploadState.ToFileInput(uploadContext)
                         .Placeholder("Select Excel/CSV file")
                         .Width(Size.Full()),
-
-                    // Action buttons
-                    Layout.Horizontal(
-                        new Button("Analyze", _ => startAnalysis())
-                            .Disabled(filePath.Value == null || isAnalyzing.Value),
-
-                        new Button("Clear", _ =>
-                        {
-                            filePath.Set((string?)null);
-                            selectedSheetIndex.Set(0);
-                            uploadState.Reset();
-                        })
-                        .Destructive()
-                        .Disabled(filePath.Value == null || isAnalyzing.Value)
-                    ).Align(Align.Left),
 
                     new Spacer(),
                     Text.Small("This demo uses the ExcelDataReader NuGet package to read Excel and CSV files."),
@@ -217,7 +206,7 @@ public class ExcelDataReaderApp : ViewBase
 
                             Layout.Vertical(
                                 Text.Muted("Quick Start:"),
-                                Text.Muted("1. Upload file → 2. Click 'Analyze' → 3. View results")
+                                Text.Muted("1. Upload file → 2. View results automatically")
                             ).Padding(8),
 
                             Layout.Vertical(
