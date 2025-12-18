@@ -71,7 +71,7 @@
 
             if (!string.IsNullOrEmpty(checkoutUrl.Value))
             {
-                client.Redirect(checkoutUrl.Value);
+                client.OpenUrl(checkoutUrl.Value);
                 checkoutUrl.Value = string.Empty;
             }
 
