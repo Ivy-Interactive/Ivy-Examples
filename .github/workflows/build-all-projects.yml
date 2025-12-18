@@ -10,7 +10,7 @@ on:
     - cron: '0 6 * * *' # daily at 6 AM UTC
 
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.0.x'
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
