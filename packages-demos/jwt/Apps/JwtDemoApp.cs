@@ -47,11 +47,11 @@ public class JwtDemoApp : ViewBase
                 var claimsText = result.Claims != null 
                     ? string.Join("\n", result.Claims.Select(kvp => $"{kvp.Key}: {kvp.Value}"))
                     : "No claims found";
-                validationResult.Set($"✅ Token is valid!\n\nClaims:\n{claimsText}");
+                validationResult.Set($"Token is valid!\n\nClaims:\n{claimsText}");
             }
             else
             {
-                validationResult.Set($"❌ Token is invalid: {result.ErrorMessage}");
+                validationResult.Set($"Token is invalid: {result.ErrorMessage}");
             }
         });
 
@@ -63,7 +63,7 @@ public class JwtDemoApp : ViewBase
             validationResult.Set("");
         });
 
-        return Layout.Center()
+        return Layout.Vertical().Align(Align.TopCenter)
                | (new Card(
                    Layout.Vertical().Gap(6).Padding(2)
                    | Text.H2("JWT Demo Application")

@@ -144,7 +144,7 @@ public class GitHubExampleApp : ViewBase
 				| new Spacer().Height(Size.Units(5))
 				| Text.Small("This demo integrates with the GitHub REST API to fetch user statistics and profile information.")
 			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [GitHub REST API](https://docs.github.com/en/rest)")
-				).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Fraction(0.5f)));
+				).Width(Size.Fraction(0.35f)).Height(Size.Fit());
 
 		return rightContent != null 
 			? (Layout.Horizontal().Gap(20).Align(Align.Center) | leftCard | rightContent)
