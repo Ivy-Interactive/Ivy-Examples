@@ -2,15 +2,15 @@ name: Build All Projects
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * *' # daily at 6 AM UTC
+    - cron: "0 6 * * *" # daily at 6 AM UTC
 
 env:
-  DOTNET_VERSION: '10.0.x'
+  DOTNET_VERSION: "10.0.x"
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
@@ -50,12 +50,12 @@ jobs:
             | xargs grep -h -oE 'PackageReference Include="Ivy" Version="[^"]*"' 2>/dev/null \
             | grep -oE 'Version="[^"]*"' \
             | sed 's/Version="\(.*\)"/\1/' | sort -u)
-          
+
           unique_versions=$(echo "$versions" | sort -u)
           unique_count=$(echo "$unique_versions" | grep -c . || echo "0")
-      
+
           current_version=$(echo "$unique_versions" | head -1 | tr -d '\n' | tr -d '\r')
-          
+
           if [ -z "$current_version" ]; then
             echo "current-version=unknown" >> $GITHUB_OUTPUT
             echo "has-multiple-versions=false" >> $GITHUB_OUTPUT
@@ -76,7 +76,7 @@ jobs:
         run: |
           latest="${{ steps.get-latest.outputs.latest-version }}"
           current="${{ steps.get-current.outputs.current-version }}"
-          
+
           # Always build for PRs and manual triggers
           if [ "${{ github.event_name }}" == "push" ] || [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "should-build=true" >> $GITHUB_OUTPUT
@@ -235,7 +235,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -271,7 +271,13 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [check-ivy-version, discover-projects, build-projects, detect-resolved-version]
+    needs:
+      [
+        check-ivy-version,
+        discover-projects,
+        build-projects,
+        detect-resolved-version,
+      ]
     if: always() && needs.check-ivy-version.outputs.should-build == 'true'
     steps:
       - name: Generate build summary

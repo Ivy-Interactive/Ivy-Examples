@@ -2,7 +2,7 @@ name: Update Project Catalog
 
 on:
   schedule:
-    - cron: '0 2 * * *' # daily at 2 AM UTC
+    - cron: "0 2 * * *" # daily at 2 AM UTC
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT }}
           fetch-depth: 0
 
       - name: Generate project catalog
@@ -30,16 +30,16 @@ jobs:
           git config --local user.name "GitHub Action"
           BRANCH_NAME="catalog-updates"
           git fetch origin main
-          
+
           # Save the generated catalog file
           cp Ivy-All-Projects.json Ivy-All-Projects.json.tmp
-          
+
           # Stash any local changes to tracked files
           git stash push -m "Temporary stash before branch switch" || true
-          
+
           # Remove untracked files that might conflict
           rm -f Ivy-All-Projects.json
-          
+
           # Create or checkout catalog-updates branch and merge main
           if git show-ref --verify --quiet refs/remotes/origin/"$BRANCH_NAME"; then
             git checkout -b "$BRANCH_NAME" origin/"$BRANCH_NAME" || git checkout "$BRANCH_NAME"
@@ -47,10 +47,10 @@ jobs:
           else
             git checkout -b "$BRANCH_NAME" origin/main
           fi
-          
+
           # Restore the generated catalog file
           mv Ivy-All-Projects.json.tmp Ivy-All-Projects.json
-          
+
           # Restore stashed changes if any
           git stash pop || true
 
@@ -59,4 +59,3 @@ jobs:
           git add Ivy-All-Projects.json
           git commit -m "chore: update project catalog [skip ci]"
           git push origin catalog-updates --force
-
