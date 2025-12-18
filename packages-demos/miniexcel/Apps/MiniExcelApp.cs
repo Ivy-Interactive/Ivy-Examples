@@ -302,7 +302,7 @@ public class MiniExcelViewApp : ViewBase
                     ? students.Value.AsQueryable().ToDataTable()
                         .Hidden(s => s.ID)
                         .Width(Size.Full())
-                        .Height(Size.Fit())
+                        .Height(Size.Units(140))
                         .Key($"students-{students.Value.Count}-{students.Value.Sum(s => s.GetHashCode())}") // Force re-render when data changes
                     : Layout.Center()
                         | Text.Muted("No data to display")
