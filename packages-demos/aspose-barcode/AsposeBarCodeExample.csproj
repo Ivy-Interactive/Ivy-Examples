@@ -16,7 +16,7 @@
   
   
   <ItemGroup>
-     <PackageReference Include="Ivy" Version="1.1.0" />
+     <PackageReference Include="Ivy" Version="1.2.5" />
      <PackageReference Include="Aspose.BarCode" Version="25.11.0" />
   </ItemGroup>
   
