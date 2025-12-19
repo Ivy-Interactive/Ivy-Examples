@@ -24,38 +24,10 @@ jobs:
           chmod +x .github/scripts/generate-project-catalog.sh
           .github/scripts/generate-project-catalog.sh
 
-      - name: Update catalog-updates branch with main
+      - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          BRANCH_NAME="catalog-updates"
-          git fetch origin main
-
-          # Save the generated catalog file
-          cp Ivy-All-Projects.json Ivy-All-Projects.json.tmp
-
-          # Stash any local changes to tracked files
-          git stash push -m "Temporary stash before branch switch" || true
-
-          # Remove untracked files that might conflict
-          rm -f Ivy-All-Projects.json
-
-          # Create or checkout catalog-updates branch and merge main
-          if git show-ref --verify --quiet refs/remotes/origin/"$BRANCH_NAME"; then
-            git checkout -b "$BRANCH_NAME" origin/"$BRANCH_NAME" || git checkout "$BRANCH_NAME"
-            git merge origin/main --no-edit
-          else
-            git checkout -b "$BRANCH_NAME" origin/main
-          fi
-
-          # Restore the generated catalog file
-          mv Ivy-All-Projects.json.tmp Ivy-All-Projects.json
-
-          # Restore stashed changes if any
-          git stash pop || true
-
-      - name: Commit and push changes
-        run: |
           git add Ivy-All-Projects.json
-          git commit -m "chore: update project catalog [skip ci]"
-          git push origin catalog-updates --force
+          git diff --staged --quiet || git commit -m "chore: update project catalog [skip ci]"
+          git push origin main
