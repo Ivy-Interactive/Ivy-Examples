@@ -95,7 +95,7 @@ This implementation creates an **AI Agent Workspace** that allows users to:
 3. **Navigate to the example**:
 
    ```bash
-   cd project-demos/microsoft_agent_framework
+   cd project-demos/microsoft-agent-framework
    ```
 
 4. **Restore dependencies**:
@@ -121,7 +121,7 @@ Deploy this example to Ivy's hosting platform:
 1. **Navigate to the example**:
 
    ```bash
-   cd project-demos/microsoft_agent_framework
+   cd project-demos/microsoft-agent-framework
    ```
 
 2. **Deploy to Ivy hosting**:
@@ -139,8 +139,8 @@ This will deploy your AI agent workspace with a single command.
 
 ## Project Structure
 
-```
-project-demos/microsoft_agent_framework/
+```text
+project-demos/microsoft-agent-framework/
 ├── Apps/
 │   └── AgentWorkspaceExample.cs    # Main app with UseBlades and dynamic model loading
 ├── Views/

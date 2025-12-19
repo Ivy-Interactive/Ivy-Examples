@@ -109,7 +109,7 @@ This implementation creates a **Complete CRM System** that allows dealerships to
 1. **Navigate to the example**:
 
    ```bash
-   cd project-demos/autodealer_crm
+   cd project-demos/autodealer-crm
    ```
 
 2. **Restore dependencies**:
@@ -133,7 +133,7 @@ Deploy this example to Ivy's hosting platform:
 1. **Navigate to the example**:
 
    ```bash
-   cd project-demos/autodealer_crm
+   cd project-demos/autodealer-crm
    ```
 
 2. **Deploy to Ivy hosting**:
