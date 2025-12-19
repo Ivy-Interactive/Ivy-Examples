@@ -22,7 +22,7 @@ SHOPIFY_ACCESS_TOKEN=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
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fshopifysharp%2Fdevcontainer.json&location=EuropeWest)
 
 Launch the repository in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
 
@@ -60,7 +60,7 @@ This example showcases how to integrate the [ShopifySharp](https://github.com/no
 ## Run
 
 1. **Prerequisites**
-   - .NET 9.0 SDK
+   - .NET 10.0 SDK
    - A Shopify store with an Admin API access token
 2. **Navigate to the example**
    ```bash

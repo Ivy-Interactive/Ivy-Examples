@@ -38,7 +38,7 @@ Thank you for your interest in contributing to Ivy Examples! This repository sho
 
 Before contributing, ensure you have:
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 
 ### Setting Up Your Development Environment
 
@@ -143,7 +143,7 @@ When choosing packages to showcase:
 - Popular and actively maintained
 - Well-documented with clear APIs
 - Useful for business applications
-- Compatible with .NET 9.0+
+- Compatible with .NET 10.0+
 - Avoid experimental or unstable packages
 - Avoid packages with licensing issues
 

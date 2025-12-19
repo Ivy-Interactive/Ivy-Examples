@@ -54,7 +54,7 @@ Some examples go beyond simple demonstrations and showcase complete business app
 
 ### Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 - Any code editor (Visual Studio, VS Code, JetBrains Rider)
 
 ### Running an Example
@@ -106,7 +106,7 @@ Many examples support GitHub Codespaces for instant development:
 
 Click the badge above to open any example in a fully configured development environment with:
 
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
 

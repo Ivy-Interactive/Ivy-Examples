@@ -17,7 +17,7 @@ OpperAI Chat is a web application for interactive AI-powered conversations using
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fopperai%2Fdevcontainer.json&location=EuropeWest)
 
 Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
 
@@ -58,7 +58,7 @@ This implementation creates an **AI Chat Application** that allows users to:
 
 ## Prerequisites
 
-1. **.NET 9.0 SDK** or later
+1. **.NET 10.0 SDK** or later
 2. **Opper.ai API Key**: Get yours at [platform.opper.ai/settings/api-keys](https://platform.opper.ai/settings/api-keys)
 
 ## How to Run

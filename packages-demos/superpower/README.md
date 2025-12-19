@@ -19,7 +19,7 @@ Superpower is a web application demonstrating parser-combinator capabilities wit
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fsuperpower%2Fdevcontainer.json&location=EuropeWest)
 
 Launch the repository in GitHub Codespaces pre-configured with:
-- **.NET 9.0** SDK
+- **.NET 10.0** SDK
 - **Superpower** sample dependencies restored
 - **Ivy CLI** tooling pre-installed
 - **No local setup** required
@@ -72,7 +72,7 @@ Each Ivy view (`JsonParserView`, `IntegerCalculatorView`, `DateTimeParserView`) 
 
 ## How to Run Locally
 
-1. **Install prerequisites:** .NET 9.0 SDK  
+1. **Install prerequisites:** .NET 10.0 SDK  
 2. **Navigate to the example directory:**
    ```bash
    cd packages-demos/superpower

@@ -15,7 +15,7 @@ SharpYaml is a web application for converting JSON to YAML format with syntax-hi
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fsharpyaml%2Fdevcontainer.json&location=EuropeWest)
 
 Open the project instantly in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
 
@@ -38,7 +38,7 @@ This example demonstrates how to convert JSON payloads into YAML using the [Shar
 
 ## How to Run
 
-1. **Prerequisites**: .NET 9.0 SDK
+1. **Prerequisites**: .NET 10.0 SDK
 2. **Navigate to this demo**:
    ```bash
    cd packages-demos/sharpyaml

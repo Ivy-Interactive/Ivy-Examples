@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/7fec362b-3fd5-4050-aaf5-4147c229b6eb
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fsnowflake%2Fdevcontainer.json&location=EuropeWest)
 
 Launch a ready-to-code workspace with:
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Snowflake.Data** SDK and Ivy tooling available out of the box
 - **Zero local setup** required
 
@@ -82,7 +82,7 @@ The required secrets are:
 
 ## How to Run Locally
 
-1. **Prerequisites:** .NET 9.0 SDK and Snowflake account credentials
+1. **Prerequisites:** .NET 10.0 SDK and Snowflake account credentials
 2. **Navigate to the project:**
    ```bash
    cd project-demos/snowflake

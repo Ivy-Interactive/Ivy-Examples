@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/765c9bf6-05e8-4eb9-acad-ced624f818bd
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fmicrosoft_agent_framework%2Fdevcontainer.json&location=EuropeWest)
 
 Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
 
@@ -69,7 +69,7 @@ This implementation creates an **AI Agent Workspace** that allows users to:
 
 ## Prerequisites
 
-1. **.NET 9.0 SDK** or later
+1. **.NET 10.0 SDK** or later
 2. **Ollama** installed and running: [ollama.ai](https://ollama.ai)
 3. **Ollama Model**: Install at least one model (e.g., `ollama pull phi3` or `ollama pull llama3`)
 4. **Bing Search API Key** (optional): For web search functionality - get yours at [Azure Portal](https://portal.azure.com)

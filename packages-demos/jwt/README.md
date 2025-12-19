@@ -31,7 +31,7 @@ This demo application demonstrates the core features of JWT token management:
 ## Getting Started
 
 ### Prerequisites
-- .NET 9.0 SDK
+- .NET 10.0 SDK
 - Ivy Framework
 
 ### Running the Application

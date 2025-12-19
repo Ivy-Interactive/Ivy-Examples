@@ -17,7 +17,7 @@ Stripe.net is a web application for creating Stripe checkout sessions with confi
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fstripe-net%2Fdevcontainer.json&location=EuropeWest)
 
 Launch a ready-to-code workspace with:
-- **.NET 9.0** SDK pre-installed
+- **.NET 10.0** SDK pre-installed
 - **Stripe CLI** and Ivy tooling available out of the box
 - **Zero local setup** required
 
@@ -85,7 +85,7 @@ dotnet watch
 ```
 ## How to Run Locally
 
-1. **Prerequisites:** .NET 9.0 SDK and a Stripe test secret key
+1. **Prerequisites:** .NET 10.0 SDK and a Stripe test secret key
 2. **Navigate to the project:**
    ```bash
    cd packages-demos/stripe-net
