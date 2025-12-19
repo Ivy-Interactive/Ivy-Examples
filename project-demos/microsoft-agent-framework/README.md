@@ -4,13 +4,14 @@
 
 AI Agent Workspace is a web application for creating and interacting with customizable AI agents using Microsoft Agent Framework and Ollama. It features a blade-based navigation for managing multiple agent personas with configurable tools, dynamic model discovery, and real-time tool invocation visualization.
 
-https://github.com/user-attachments/assets/765c9bf6-05e8-4eb9-acad-ced624f818bd
+<https://github.com/user-attachments/assets/765c9bf6-05e8-4eb9-acad-ced624f818bd>
 
 ## One-Click Development Environment
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fmicrosoft_agent_framework%2Fdevcontainer.json&location=EuropeWest)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fmicrosoft-agent-framework%2Fdevcontainer.json&location=EuropeWest)
 
 Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+
 - **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
@@ -77,6 +78,7 @@ This implementation creates an **AI Agent Workspace** that allows users to:
 ## How to Run
 
 1. **Install and start Ollama**:
+
    ```bash
    # Download from https://ollama.ai
    # Start Ollama service (usually runs automatically)
@@ -84,22 +86,26 @@ This implementation creates an **AI Agent Workspace** that allows users to:
    ```
 
 2. **Pull a model** (in another terminal):
+
    ```bash
    ollama pull phi3
    # Or use another model like llama3, mistral, gemma, etc.
    ```
 
 3. **Navigate to the example**:
+
    ```bash
    cd project-demos/microsoft_agent_framework
    ```
 
 4. **Restore dependencies**:
+
    ```bash
    dotnet restore
    ```
 
 5. **Run the application**:
+
    ```bash
    dotnet watch
    ```
@@ -113,11 +119,13 @@ This implementation creates an **AI Agent Workspace** that allows users to:
 Deploy this example to Ivy's hosting platform:
 
 1. **Navigate to the example**:
+
    ```bash
    cd project-demos/microsoft_agent_framework
    ```
 
 2. **Deploy to Ivy hosting**:
+
    ```bash
    ivy deploy
    ```

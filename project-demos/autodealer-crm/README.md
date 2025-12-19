@@ -10,9 +10,10 @@ Autodealer CRM is a comprehensive customer relationship management system design
 
 ## One-Click Development Environment
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fautodealer_crm%2Fdevcontainer.json&location=EuropeWest)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fautodealer-crm%2Fdevcontainer.json&location=EuropeWest)
 
 Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+
 - **.NET 10.0** SDK pre-installed
 - **Ready-to-run** development environment
 - **No local setup** required
@@ -106,16 +107,19 @@ This implementation creates a **Complete CRM System** that allows dealerships to
 ## How to Run
 
 1. **Navigate to the example**:
+
    ```bash
    cd project-demos/autodealer_crm
    ```
 
 2. **Restore dependencies**:
+
    ```bash
    dotnet restore
    ```
 
 3. **Run the application**:
+
    ```bash
    dotnet watch
    ```
@@ -127,11 +131,13 @@ This implementation creates a **Complete CRM System** that allows dealerships to
 Deploy this example to Ivy's hosting platform:
 
 1. **Navigate to the example**:
+
    ```bash
    cd project-demos/autodealer_crm
    ```
 
 2. **Deploy to Ivy hosting**:
+
    ```bash
    ivy deploy
    ```
