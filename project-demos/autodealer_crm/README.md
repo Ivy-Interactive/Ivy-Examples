@@ -6,7 +6,7 @@ Autodealer CRM is a comprehensive customer relationship management system design
 
 ## Live Demo
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Autodealer%20CRM-blue?style=for-the-badge)](https://ivy-projectdemos-autodealer_crm.sliplane.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Autodealer%20CRM-blue?style=for-the-badge)](https://ivy-projectdemos-autodealer-crm.sliplane.app)
 
 ## One-Click Development Environment
 
