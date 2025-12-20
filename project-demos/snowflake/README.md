@@ -43,42 +43,7 @@ This demo showcases how to build an interactive database explorer using the offi
 
 ### Configuration
 
-See the "Setting Up Credentials" section below for instructions on configuring these values using `dotnet user secrets`.
-
-## Setting Up Credentials
-
-Before running the application, you need to configure your Snowflake credentials using `dotnet user secrets`.
-
-### Step 1: Get Your Snowflake Credentials
-
-1. **Sign up or log in** to [Snowflake](https://www.snowflake.com/)
-2. Navigate to your **Account** settings
-3. Copy your **Account Identifier** (e.g., `xy12345.us-east-1`)
-4. Note your **Username** and **Password**
-
-> **Important:** Never publish credentials in public repositories or share them with unauthorized parties.
-
-### Step 2: Configure the Credentials
-
-Use `dotnet user secrets` to securely store your Snowflake credentials:
-
-```bash
-cd project-demos/snowflake
-dotnet user secrets set "Snowflake:Account" "your_account_identifier"
-dotnet user secrets set "Snowflake:User" "your_username"
-dotnet user secrets set "Snowflake:Password" "your_password"
-dotnet user secrets set "Snowflake:Warehouse" "COMPUTE_WH"
-dotnet user secrets set "Snowflake:Database" "SNOWFLAKE_SAMPLE_DATA"
-dotnet user secrets set "Snowflake:Schema" "TPCH_SF1"
-```
-
-The required secrets are:
-- `Snowflake:Account` – Your Snowflake account identifier
-- `Snowflake:User` – Your Snowflake username
-- `Snowflake:Password` – Your Snowflake password
-- `Snowflake:Warehouse` – Snowflake warehouse name (optional, default: `COMPUTE_WH`)
-- `Snowflake:Database` – Database name (optional, default: `SNOWFLAKE_SAMPLE_DATA`)
-- `Snowflake:Schema` – Schema name (optional, default: `TPCH_SF1`)
+Credentials are entered through the application UI when you first run it. No external configuration is required.
 
 ## How to Run Locally
 
@@ -87,16 +52,16 @@ The required secrets are:
    ```bash
    cd project-demos/snowflake
    ```
-3. **Set up your Snowflake credentials** using `dotnet user secrets` (see "Setting Up Credentials" section above)
-4. **Restore dependencies:**
+3. **Restore dependencies:**
    ```bash
    dotnet restore
    ```
-5. **Start the app:**
+4. **Start the app:**
    ```bash
    dotnet watch
    ```
-6. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+5. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+6. **Enter your Snowflake credentials** in the application UI when prompted
 
 ## Deploy to Ivy Hosting
 

@@ -34,41 +34,13 @@ public class SnowflakeConnection : IConnection
         // Register this connection as singleton
         services.AddSingleton<SnowflakeConnection>(this);
         
-        // Register SnowflakeService as scoped so it gets recreated with updated credentials
-        // This ensures it always uses the latest VerifiedCredentials when they are updated
-        services.AddScoped<SnowflakeService>(sp =>
-        {
-            var configuration = sp.GetRequiredService<IConfiguration>();
-            
-            // Priority: VerifiedCredentials > Environment Variables > Configuration
-            var account = VerifiedCredentials.Account ?? configuration["Snowflake:Account"] ?? "";
-            var user = VerifiedCredentials.User ?? configuration["Snowflake:User"] ?? "";
-            var password = VerifiedCredentials.Password ?? configuration["Snowflake:Password"] ?? "";
-            var warehouse = configuration["Snowflake:Warehouse"] ?? "";
-            var database = configuration["Snowflake:Database"] ?? "SNOWFLAKE_SAMPLE_DATA";
-            var schema = configuration["Snowflake:Schema"] ?? "TPCH_SF1";
-            
-            // Only validate if we have credentials (don't throw if credentials are being entered)
-            if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
-            {
-                // Return a service with empty connection string - it will fail gracefully when used
-                return new SnowflakeService("");
-            }
-            
-            // Build connection string
-            // Note: Account should be in format like "ab12345.us-west-2" (without snowflakecomputing.com)
-            var connectionString = $"account={account};user={user};password={password};warehouse={warehouse};db={database};schema={schema};";
-            
-            return new SnowflakeService(connectionString);
-        });
+        // SnowflakeService will be created in components with credentials from UseState
+        // Register as scoped but with empty connection string - components will create their own instances
+        services.AddScoped<SnowflakeService>(sp => new SnowflakeService(""));
     }
     
-    public string GetConnectionString(IConfiguration configuration)
+    public string GetConnectionString(IConfiguration configuration, string account, string user, string password)
     {
-        // Priority: VerifiedCredentials > Environment Variables > Configuration
-        var account = VerifiedCredentials.Account ?? configuration["Snowflake:Account"] ?? "";
-        var user = VerifiedCredentials.User ?? configuration["Snowflake:User"] ?? "";
-        var password = VerifiedCredentials.Password ?? configuration["Snowflake:Password"] ?? "";
         var warehouse = configuration["Snowflake:Warehouse"] ?? "";
         var database = configuration["Snowflake:Database"] ?? "SNOWFLAKE_SAMPLE_DATA";
         var schema = configuration["Snowflake:Schema"] ?? "TPCH_SF1";
