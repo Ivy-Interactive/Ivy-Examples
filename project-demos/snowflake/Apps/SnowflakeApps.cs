@@ -73,6 +73,64 @@ public class SnowflakeApp : ViewBase
         var sortOrder = this.UseState<string>("DESC");
         var limit = this.UseState<int>(7);
 
+        // ========== LOAD CREDENTIALS FROM SECRETS ON INIT ==========
+        this.UseEffect(() =>
+        {
+            // Try to load credentials from configuration (user secrets)
+            var configAccount = configuration["Snowflake:Account"];
+            var configUser = configuration["Snowflake:User"];
+            var configPassword = configuration["Snowflake:Password"];
+            
+            if (!string.IsNullOrWhiteSpace(configAccount) 
+                && !string.IsNullOrWhiteSpace(configUser) 
+                && !string.IsNullOrWhiteSpace(configPassword)
+                && !isVerified.Value)
+            {
+                account.Value = configAccount;
+                user.Value = configUser;
+                password.Value = configPassword;
+                // Auto-verify credentials from secrets
+                isVerifying.Value = true;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var connectionString = BuildConnectionString(configuration, configAccount, configUser, configPassword);
+                        var snowflakeService = new SnowflakeService(connectionString);
+                        var valid = await snowflakeService.TestConnectionAsync();
+
+                        if (valid)
+                        {
+                            isVerified.Value = true;
+                            verificationStatus.Value = "success";
+                            refreshToken.Refresh();
+                        }
+                        else
+                        {
+                            account.Value = "";
+                            user.Value = "";
+                            password.Value = "";
+                            verificationStatus.Value = "error";
+                            refreshToken.Refresh();
+                        }
+                    }
+                    catch
+                    {
+                        account.Value = "";
+                        user.Value = "";
+                        password.Value = "";
+                        verificationStatus.Value = "error";
+                        refreshToken.Refresh();
+                    }
+                    finally
+                    {
+                        isVerifying.Value = false;
+                        refreshToken.Refresh();
+                    }
+                });
+            }
+        }, []);
+
         // ========== CREDENTIAL VERIFICATION ==========
         this.UseEffect(async () =>
         {
@@ -527,6 +585,7 @@ public class SnowflakeApp : ViewBase
         IState<bool> isVerified)
     {
         var refreshToken = this.UseRefreshToken();
+        var configuration = this.UseService<IConfiguration>();
         var showSuccessMessage = isVerified.Value && verificationStatus.Value == null;
         
         return Layout.Center()
@@ -539,7 +598,7 @@ public class SnowflakeApp : ViewBase
                     | Text.Markdown("**2. Navigate to your Account** settings")
                     | Text.Markdown("**3. Copy your Account Identifier** (e.g., `xy12345.us-east-1`)")
                     | Text.Markdown("**4. Note your Username and Password**")
-                    | Text.Markdown("**5. Enter your credentials below**")
+                    | Text.Markdown("**5. Enter your credentials below or load from user secrets**")
                 | (isVerified.Value
                     ? new Button("Clear Credentials")
                         .Icon(Icons.LogOut)

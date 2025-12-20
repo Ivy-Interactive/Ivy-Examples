@@ -43,7 +43,23 @@ This demo showcases how to build an interactive database explorer using the offi
 
 ### Configuration
 
-Credentials are entered through the application UI when you first run it. No external configuration is required.
+You can configure Snowflake credentials in two ways:
+
+#### Option 1: Using User Secrets (Recommended for Development)
+
+Set your credentials using dotnet user secrets:
+
+```bash
+dotnet user-secrets set "Snowflake:Account" "your-account-identifier"
+dotnet user-secrets set "Snowflake:User" "your-username"
+dotnet user-secrets set "Snowflake:Password" "your-password"
+```
+
+**Note:** Credentials from user secrets will be automatically loaded when the application starts.
+
+#### Option 2: Using UI Input
+
+Credentials can be entered through the application UI when you first run it. Click the "Enter Credentials" button in the Settings tab.
 
 ## How to Run Locally
 
@@ -56,12 +72,22 @@ Credentials are entered through the application UI when you first run it. No ext
    ```bash
    dotnet restore
    ```
-4. **Start the app:**
+4. **Configure credentials (optional):**
+   
+   Using user secrets (recommended):
+   ```bash
+   dotnet user-secrets set "Snowflake:Account" "your-account-identifier"
+   dotnet user-secrets set "Snowflake:User" "your-username"
+   dotnet user-secrets set "Snowflake:Password" "your-password"
+   ```
+   
+   Or enter credentials through the UI after starting the app.
+5. **Start the app:**
    ```bash
    dotnet watch
    ```
-5. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
-6. **Enter your Snowflake credentials** in the application UI when prompted
+6. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+7. **If using UI input**, enter your Snowflake credentials in the Settings tab when prompted
 
 ## Deploy to Ivy Hosting
 
