@@ -14,6 +14,12 @@ public class SnowflakeApp : ViewBase
         [Required] public string Password { get; init; } = "";
     }
 
+    private record DatabaseExplorerForm(
+        string? Database,
+        string? Schema,
+        string? Table
+    );
+
     public override object? Build()
     {
         var refreshToken = this.UseRefreshToken();
@@ -220,25 +226,7 @@ public class SnowflakeApp : ViewBase
             }
         }, selectedSchema);
 
-        this.UseEffect(async () =>
-        {
-            if (!isVerified.Value || activeTab.Value != 1) return;
-            var service = CreateSnowflakeService(configuration, account, user, password);
-            if (service == null) return;
-            
-            if (!string.IsNullOrEmpty(selectedDatabase.Value) 
-                && !string.IsNullOrEmpty(selectedSchema.Value)
-                && !string.IsNullOrEmpty(selectedTable.Value))
-            {
-                dataTab.Value = 0;
-                await LoadTablePreview(service, selectedDatabase.Value, selectedSchema.Value, selectedTable.Value);
-            }
-            else
-            {
-                tableInfo.Value = null;
-                tablePreview.Value = null;
-            }
-        }, selectedTable);
+        // Removed automatic table data loading - now triggered by button click only
 
         // ========== BRAND DASHBOARD EFFECTS ==========
         this.UseEffect(async () =>
@@ -688,6 +676,37 @@ public class SnowflakeApp : ViewBase
         var snowflakeService = CreateSnowflakeService(configuration, account, user, password);
         if (snowflakeService == null) return Text.Muted("Error creating service");
         
+        // Helper function for async operations with error handling
+        async Task<T?> TryAsync<T>(Func<Task<T>> action, string errorPrefix)
+        {
+            try
+            {
+                refreshToken.Refresh();
+                return await action();
+            }
+            catch (Exception ex)
+            {
+                errorMessage.Value = $"{errorPrefix}: {ex.Message}";
+                return default;
+            }
+            finally
+            {
+                refreshToken.Refresh();
+            }
+        }
+        
+        // Local function to load table preview data
+        async Task LoadTablePreview(SnowflakeService service, string database, string schema, string table)
+        {
+            isLoadingTableData.Value = true;
+            errorMessage.Value = null;
+            var info = await TryAsync(() => service.GetTableInfoAsync(database, schema, table), "Error loading table info");
+            if (info != null) tableInfo.Value = info;
+            var preview = await TryAsync(() => service.GetTablePreviewAsync(database, schema, table, 1000), "Error loading table preview");
+            if (preview != null) tablePreview.Value = preview;
+            isLoadingTableData.Value = false;
+        }
+        
         var hasDatabase = !string.IsNullOrEmpty(selectedDatabase.Value);
         var hasSchema = hasDatabase && !string.IsNullOrEmpty(selectedSchema.Value);
         var hasTable = hasSchema && !string.IsNullOrEmpty(selectedTable.Value);
@@ -768,6 +787,94 @@ public class SnowflakeApp : ViewBase
             .Prepend(new Option<string>("-- Select Table --", ""))
             .ToArray();
         
+        // Create form state
+        var explorerForm = this.UseState(() => new DatabaseExplorerForm(
+            Database: selectedDatabase.Value,
+            Schema: selectedSchema.Value,
+            Table: selectedTable.Value
+        ));
+        
+        // Sync form state with selectedDatabase/selectedSchema/selectedTable when they change
+        // This ensures form values are updated when user selects from dropdowns
+        this.UseEffect(() =>
+        {
+            explorerForm.Value = new DatabaseExplorerForm(
+                Database: selectedDatabase.Value,
+                Schema: selectedSchema.Value,
+                Table: selectedTable.Value
+            );
+        }, [selectedDatabase, selectedSchema, selectedTable]);
+        
+        // Clear table data when form values change (user changed selection but hasn't clicked button yet)
+        this.UseEffect(() =>
+        {
+            if (tablePreview.Value != null || tableInfo.Value != null)
+            {
+                // Clear data if form values don't match the currently loaded table
+                if (explorerForm.Value.Database != selectedDatabase.Value 
+                    || explorerForm.Value.Schema != selectedSchema.Value 
+                    || explorerForm.Value.Table != selectedTable.Value)
+                {
+                    tableInfo.Value = null;
+                    tablePreview.Value = null;
+                }
+            }
+        }, [explorerForm]);
+        
+        // Form builder with validation - bind directly to form state
+        // When user selects a value, it updates explorerForm.Value, which triggers validation
+        var formBuilder = explorerForm.ToForm("Database Explorer")
+            .Required(f => f.Database, f => f.Schema, f => f.Table)
+            .Builder(f => f.Database, s => s.ToSelectInput(databaseOptions))
+            .Label(f => f.Database, "Database")
+            .Builder(f => f.Schema, s => s.ToSelectInput(schemaOptions))
+            .Label(f => f.Schema, "Schema")
+            .Builder(f => f.Table, s => s.ToSelectInput(tableOptions))
+            .Label(f => f.Table, "Table");
+        
+        // Sync explorerForm values back to selectedDatabase/selectedSchema/selectedTable when form changes
+        // This ensures the dropdowns reflect the form state
+        this.UseEffect(() =>
+        {
+            if (explorerForm.Value.Database != selectedDatabase.Value)
+            {
+                selectedDatabase.Value = explorerForm.Value.Database;
+            }
+            if (explorerForm.Value.Schema != selectedSchema.Value)
+            {
+                selectedSchema.Value = explorerForm.Value.Schema;
+            }
+            if (explorerForm.Value.Table != selectedTable.Value)
+            {
+                selectedTable.Value = explorerForm.Value.Table;
+            }
+        }, [explorerForm]);
+        
+        var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(this.Context);
+        
+        // Handle form submission - load table data
+        async void HandleLoadTable()
+        {
+            if (await onSubmit())
+            {
+                if (!string.IsNullOrEmpty(explorerForm.Value.Database) 
+                    && !string.IsNullOrEmpty(explorerForm.Value.Schema)
+                    && !string.IsNullOrEmpty(explorerForm.Value.Table))
+                {
+                    selectedDatabase.Value = explorerForm.Value.Database;
+                    selectedSchema.Value = explorerForm.Value.Schema;
+                    selectedTable.Value = explorerForm.Value.Table;
+                    
+                    var service = CreateSnowflakeService(configuration, account, user, password);
+                    if (service != null)
+                    {
+                        dataTab.Value = 0;
+                        await LoadTablePreview(service, explorerForm.Value.Database, explorerForm.Value.Schema, explorerForm.Value.Table);
+                    }
+                }
+            }
+        }
+        
         var leftSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
             | Text.H2("Database Explorer")
@@ -775,18 +882,23 @@ public class SnowflakeApp : ViewBase
             | (isLoadingData
                 ? BuildSkeletons(3)
                 : Layout.Vertical().Gap(3)
-                    | selectedDatabase.ToSelectInput(databaseOptions).Placeholder("Select a database...").WithField().Label("Database")
-                    | (isLoadingSchemas.Value && hasDatabase
-                        ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                        : selectedSchema.ToSelectInput(schemaOptions).Placeholder("Select a schema...").Disabled(!hasDatabase || schemas.Value.Count == 0).WithField().Label("Schema"))
-                    | (isLoadingTables.Value && hasSchema
-                        ? new Skeleton().Height(Size.Units(24)).Width(Size.Full())
-                        : selectedTable.ToSelectInput(tableOptions).Placeholder("Select a table...").Disabled(!hasSchema || tables.Value.Count == 0).WithField().Label("Table")))
+                    | formView
+                    | Layout.Horizontal().Gap(2)
+                        | new Button("View Table", new Action(HandleLoadTable))
+                            .Variant(ButtonVariant.Primary)
+                            .Icon(Icons.Database)
+                            .Loading(loading)
+                            .Disabled(loading || isLoadingTableData.Value)
+                        | validationView)
+                    
         ).Width(Size.Fraction(0.3f));
+        
+        // Show table data only if it has been loaded (after button click)
+        var hasLoadedTableData = tablePreview.Value != null || tableInfo.Value != null;
         
         var rightSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
-            | (hasTable
+            | (hasTable && hasLoadedTableData
                 ? Layout.Vertical().Gap(3)
                     | Text.H2($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
                     | BuildDataTabs(dataTab, tableInfo.Value)
@@ -803,9 +915,12 @@ public class SnowflakeApp : ViewBase
                                 : Text.Muted("No structure information available")))
                 : Layout.Vertical().Gap(4)
                     | Text.H2("Table Preview")
-                    | Text.Muted("Select a table to preview data"))
-                    | (isLoadingData
-                        ? BuildSkeletons(3) : new Spacer())
+                    | Text.Muted(hasTable 
+                        ? "Click 'View Table' button to load table data"
+                        : "Select database, schema, and table, then click 'View Table'"))
+                    | (isLoadingTableData.Value
+                        ? BuildSkeletons(3) 
+                        : new Spacer())
         ).Width(Size.Fraction(0.7f));
 
         return Layout.Vertical().Gap(2)
