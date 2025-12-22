@@ -7,10 +7,7 @@ Snowflake Database Explorer is a web application for exploring Snowflake databas
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Snowflake-blue?style=for-the-badge)](https://ivy-projectdemos-snowflake.sliplane.app)
 
-https://github.com/user-attachments/assets/bc069ffb-d36f-4eb8-a4da-f279db05d959
-
-
-https://github.com/user-attachments/assets/7fec362b-3fd5-4050-aaf5-4147c229b6eb
+https://github.com/user-attachments/assets/eb3594a8-bcb6-40e4-b0f2-cc475147ad8b
 
 ## One-Click Development Environment
 
