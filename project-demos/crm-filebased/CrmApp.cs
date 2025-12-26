@@ -11,7 +11,9 @@ global using Ivy.Hooks;
 global using Ivy.Services;
 global using Ivy.Shared;
 global using Ivy.Views;
+global using Ivy.Views.Alerts;
 global using Ivy.Views.Blades;
+global using Ivy.Views.Builders;
 global using Ivy.Views.Forms;
 global using Ivy.Widgets.Inputs;
 global using System.Globalization;
@@ -144,6 +146,8 @@ public class DashboardApp : ViewBase
         var notes = UseState<List<NoteItem>>(() => new List<NoteItem>());
         var contacts = UseState<List<ContactItem>>(() => new List<ContactItem>());
 
+        var refreshToken = this.UseRefreshToken();
+
         UseEffect(async () =>
         {
             if (volume != null)
@@ -152,7 +156,7 @@ public class DashboardApp : ViewBase
                 notes.Value = await Database.GetNotesAsync(volume);
                 contacts.Value = await Database.GetContactsAsync(volume);
             }
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.AfterInit(), refreshToken]);
 
         var completedTasks = tasks.Value.Count(t => t.IsCompleted);
         var totalTasks = tasks.Value.Count;
@@ -193,10 +197,13 @@ public class TaskListBlade : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
-        var tasks = UseState<List<TaskItem>>(() => new List<TaskItem>());
-        var client = UseService<IClientProvider>();
+        var refreshToken = this.UseRefreshToken();
 
-        UseEffect(async () => tasks.Value = await Database.GetTasksAsync(volume), [EffectTrigger.AfterInit()]);
+        UseEffect(() =>
+        {
+            if (refreshToken.ReturnValue != null)
+                blades.Pop(this);
+        }, [refreshToken]);
 
         var onItemClick = new Action<Event<ListItem>>(e =>
         {
@@ -211,8 +218,6 @@ public class TaskListBlade : ViewBase
             tag: task,
             icon: task.IsCompleted ? Icons.Check : Icons.Square
         );
-
-        var refreshToken = this.UseRefreshToken();
         var createBtn = Icons.Plus.ToButton(_ => { }).Ghost().Tooltip("Add Task")
             .ToTrigger(isOpen => new TaskCreateDialog(isOpen, volume, refreshToken));
 
@@ -221,8 +226,7 @@ public class TaskListBlade : ViewBase
             {
                 var all = await Database.GetTasksAsync(volume);
                 if (string.IsNullOrWhiteSpace(filter)) return all.OrderByDescending(t => t.CreatedAt).ToArray();
-                filter = filter.Trim();
-                return all.Where(t => t.Title.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                return all.Where(t => t.Title.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(t => t.CreatedAt).ToArray();
             },
             createItem: CreateItem,
@@ -238,9 +242,93 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
+        var refreshToken = this.UseRefreshToken();
         var task = UseState<TaskItem?>(() => null);
-        var editTitle = UseState<string>();
-        var isEditing = UseState<bool>(() => false);
+        var (alertView, showAlert) = this.UseAlert();
+
+        UseEffect(async () =>
+        {
+            var tasks = await Database.GetTasksAsync(volume);
+            task.Value = tasks.FirstOrDefault(t => t.Id == taskId);
+        }, [EffectTrigger.AfterInit(), refreshToken]);
+
+        if (task.Value == null) return null;
+
+        var taskValue = task.Value;
+
+        var onDelete = () =>
+        {
+            showAlert("Are you sure you want to delete this task?", result =>
+            {
+                if (result.IsOk())
+                {
+                    Delete(volume);
+                    refreshToken.Refresh();
+                    blades.Pop(refresh: true);
+                }
+            }, "Delete Task", AlertButtonSet.OkCancel);
+        };
+
+        var onToggle = async () =>
+        {
+            try
+            {
+                await Database.SaveTaskAsync(volume, taskValue with { IsCompleted = !taskValue.IsCompleted });
+                refreshToken.Refresh();
+            }
+            catch (Exception ex) { UseService<IClientProvider>().Toast(ex.Message, "Error"); }
+        };
+
+        var dropDown = Icons.Ellipsis
+            .ToButton()
+            .Ghost()
+            .WithDropDown(
+                MenuItem.Default(taskValue.IsCompleted ? "Mark as Pending" : "Mark as Completed")
+                    .Icon(taskValue.IsCompleted ? Icons.Square : Icons.Check)
+                    .HandleSelect(async _ => await onToggle()),
+                MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(onDelete)
+            );
+
+        var editBtn = new Button("Edit")
+            .Variant(ButtonVariant.Outline)
+            .Icon(Icons.Pencil)
+            .Width(Size.Grow())
+            .ToTrigger((isOpen) => new TaskEditSheet(isOpen, volume, refreshToken, taskId));
+
+        var detailsCard = new Card(
+            content: Layout.Vertical()
+                | Text.H4("Task Details")
+                | new
+                {
+                    Id = taskValue.Id.ToString(),
+                    Title = taskValue.Title,
+                    Status = taskValue.IsCompleted ? "Completed" : "Pending",
+                    CreatedAt = taskValue.CreatedAt.ToString("g")
+                }
+                .ToDetails()
+                .RemoveEmpty()
+                .Builder(e => e.Id, e => e.CopyToClipboard()),
+            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
+                | dropDown
+                | editBtn
+        ).Width(Size.Units(100));
+
+        return new Fragment()
+            | (Layout.Vertical() | detailsCard!)
+            | alertView!;
+    }
+
+    private void Delete(IVolume volume)
+    {
+        Database.DeleteTaskAsync(volume, taskId).Wait();
+    }
+}
+
+public class TaskEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken refreshToken, Guid taskId) : ViewBase
+{
+    public override object? Build()
+    {
+        var task = UseState<TaskItem?>(() => null);
         var client = UseService<IClientProvider>();
 
         UseEffect(async () =>
@@ -249,66 +337,29 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
             task.Value = tasks.FirstOrDefault(t => t.Id == taskId);
         }, [EffectTrigger.AfterInit()]);
 
-        if (task.Value == null) return Text.Muted("Loading...");
+        if (task.Value == null) return null;
 
-        var t = task.Value;
-        
-        if (isEditing.Value && editTitle.Value == "")
-        {
-            editTitle.Value = t.Title;
-        }
+        var taskValue = task.Value;
 
-        async Task Save()
+        UseEffect(async () =>
         {
-            if (string.IsNullOrWhiteSpace(editTitle.Value)) return;
-            try
+            if (taskValue != null && !string.IsNullOrWhiteSpace(taskValue.Title))
             {
-                await Database.SaveTaskAsync(volume, t with { Title = editTitle.Value.Trim() });
-                blades.Pop(refresh: true);
+                try
+                {
+                    await Database.SaveTaskAsync(volume, taskValue);
+                    refreshToken.Refresh();
+                }
+                catch (Exception ex) { client.Toast(ex.Message, "Error"); }
             }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
+        }, [task]);
 
-        async Task Toggle()
-        {
-            try
-            {
-                await Database.SaveTaskAsync(volume, t with { IsCompleted = !t.IsCompleted });
-                blades.Pop(refresh: true);
-            }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
-
-        async Task Delete()
-        {
-            try
-            {
-                await Database.DeleteTaskAsync(volume, taskId);
-                blades.Pop(refresh: true);
-            }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
-
-        return new Card(
-            Layout.Vertical().Gap(3).Padding(3)
-            | Layout.Horizontal().Gap(2).Width(Size.Full())
-                | Text.H3(t.Title).Bold()
-                | new Spacer()
-                | new Button("", _ => isEditing.Value = true).Icon(Icons.Pencil).Ghost()
-                | new Button("", async _ => await Delete()).Icon(Icons.Trash).Ghost()
-            | (isEditing.Value
-                ? Layout.Vertical().Gap(2)
-                    | editTitle.ToInput(placeholder: "Task title...")
-                    | Layout.Horizontal().Gap(2)
-                        | new Button("Save", async _ => await Save()).Primary()
-                        | new Button("Cancel", _ => isEditing.Value = false).Ghost()
-                : Layout.Vertical().Gap(2)
-                    | Layout.Horizontal().Gap(2)
-                        | new Button(t.IsCompleted ? "Mark as Pending" : "Mark as Completed", async _ => await Toggle())
-                            .Icon(t.IsCompleted ? Icons.Check : Icons.Square)
-                        | Text.Small($"Created: {t.CreatedAt:g}")
-            )
-        ).Title("Task Details").Width(Size.Units(100));
+        return task
+            .ToForm()
+            .Builder(t => t!.Title, e => e.ToTextInput())
+            .Builder(t => t!.IsCompleted, e => e.ToSwitchInput())
+            .Remove(t => t!.Id, t => t!.CreatedAt)
+            .ToSheet(isOpen, "Edit Task");
     }
 }
 
@@ -410,68 +461,72 @@ public class NoteDetailsBlade(Guid noteId) : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
+        var refreshToken = this.UseRefreshToken();
         var note = UseState<NoteItem?>(() => null);
-        var editTitle = UseState<string>();
-        var editContent = UseState<string>();
-        var isEditing = UseState<bool>(() => false);
-        var client = UseService<IClientProvider>();
+        var (alertView, showAlert) = this.UseAlert();
 
         UseEffect(async () =>
         {
             var notes = await Database.GetNotesAsync(volume);
             note.Value = notes.FirstOrDefault(n => n.Id == noteId);
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.AfterInit(), refreshToken]);
 
-        if (note.Value == null) return Text.Muted("Loading...");
+        if (note.Value == null) return null;
 
-        var n = note.Value;
+        var noteValue = note.Value;
 
-        async Task Save()
+        var onDelete = () =>
         {
-            if (string.IsNullOrWhiteSpace(editTitle.Value)) return;
-            try
+            showAlert("Are you sure you want to delete this note?", result =>
             {
-                await Database.SaveNoteAsync(volume, n with { Title = editTitle.Value.Trim(), Content = editContent.Value ?? "" });
-                blades.Pop(refresh: true);
-            }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
+                if (result.IsOk())
+                {
+                    Delete(volume);
+                    refreshToken.Refresh();
+                    blades.Pop(refresh: true);
+                }
+            }, "Delete Note", AlertButtonSet.OkCancel);
+        };
 
-        async Task Delete()
-        {
-            try
-            {
-                await Database.DeleteNoteAsync(volume, noteId);
-                blades.Pop(refresh: true);
-            }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
+        var editBtn = new Button("Edit")
+            .Variant(ButtonVariant.Outline)
+            .Icon(Icons.Pencil)
+            .Width(Size.Grow())
+            .ToTrigger((isOpen) => new NoteEditSheet(isOpen, volume, refreshToken, noteId));
 
-        if (isEditing.Value)
-        {
-            editTitle.Value = n.Title;
-            editContent.Value = n.Content;
-        }
+        var deleteBtn = new Button("Delete")
+            .Variant(ButtonVariant.Outline)
+            .Icon(Icons.Trash)
+            .Width(Size.Grow())
+            .HandleClick(onDelete);
 
-        return new Card(
-            Layout.Vertical().Gap(3).Padding(3)
-            | Layout.Horizontal().Gap(2).Width(Size.Full())
-                | Text.H3(n.Title).Bold()
-                | new Spacer()
-                | new Button("", _ => { isEditing.Value = true; editTitle.Value = n.Title; editContent.Value = n.Content; }).Icon(Icons.Pencil).Ghost()
-                | new Button("", async _ => await Delete()).Icon(Icons.Trash).Ghost()
-            | (isEditing.Value
-                ? Layout.Vertical().Gap(2)
-                    | editTitle.ToInput(placeholder: "Note title...")
-                    | editContent.ToTextAreaInput(placeholder: "Note content...").Height(Size.Units(10))
-                    | Layout.Horizontal().Gap(2)
-                        | new Button("Save", async _ => await Save()).Primary()
-                        | new Button("Cancel", _ => isEditing.Value = false).Ghost()
-                : Layout.Vertical().Gap(2)
-                    | (string.IsNullOrWhiteSpace(n.Content) ? Text.Muted("(empty)") : Text.Block(n.Content))
-                    | Text.Small($"Created: {n.CreatedAt:g}")
-            )
-        ).Title("Note Details").Width(Size.Units(100));
+        var detailsCard = new Card(
+            content: Layout.Vertical()
+                | Text.H4("Note Details")
+                | new
+                {
+                    Id = noteValue.Id.ToString(),
+                    Title = noteValue.Title,
+                    Content = string.IsNullOrWhiteSpace(noteValue.Content) ? "(empty)" : noteValue.Content,
+                    CreatedAt = noteValue.CreatedAt.ToString("g")
+                }
+                .ToDetails()
+                .RemoveEmpty()
+                .Builder(e => e.Id, e => e.CopyToClipboard())
+                .MultiLine(e => e.Content),
+            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
+                | editBtn
+                | deleteBtn
+        ).Width(Size.Units(100));
+
+        return new Fragment()
+            | (Layout.Vertical() | detailsCard!)
+            | alertView!;
+    }
+
+    private void Delete(IVolume volume)
+    {
+        Database.DeleteNoteAsync(volume, noteId).Wait();
     }
 }
 
@@ -508,6 +563,44 @@ public class NoteCreateDialog(IState<bool> isOpen, IVolume volume, RefreshToken 
             .Required(n => n.Title)
             .Builder(n => n.Content, e => e.ToTextAreaInput().Height(Size.Units(8)))
             .ToDialog(isOpen, title: "New Note", submitTitle: "Create");
+    }
+}
+
+public class NoteEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken refreshToken, Guid noteId) : ViewBase
+{
+    public override object? Build()
+    {
+        var note = UseState<NoteItem?>(() => null);
+        var client = UseService<IClientProvider>();
+
+        UseEffect(async () =>
+        {
+            var notes = await Database.GetNotesAsync(volume);
+            note.Value = notes.FirstOrDefault(n => n.Id == noteId);
+        }, [EffectTrigger.AfterInit()]);
+
+        if (note.Value == null) return null;
+
+        UseEffect(async () =>
+        {
+            var noteValue = note.Value;
+            if (noteValue != null && !string.IsNullOrWhiteSpace(noteValue.Title))
+            {
+                try
+                {
+                    await Database.SaveNoteAsync(volume, noteValue);
+                    refreshToken.Refresh();
+                }
+                catch (Exception ex) { client.Toast(ex.Message, "Error"); }
+            }
+        }, [note]);
+
+        return note
+            .ToForm()
+            .Builder(n => n!.Title, e => e.ToTextInput())
+            .Builder(n => n!.Content, e => e.ToTextAreaInput().Height(Size.Units(8)))
+            .Remove(n => n!.Id, n => n!.CreatedAt)
+            .ToSheet(isOpen, "Edit Note");
     }
 }
 
@@ -576,72 +669,72 @@ public class ContactDetailsBlade(Guid contactId) : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
+        var refreshToken = this.UseRefreshToken();
         var contact = UseState<ContactItem?>(() => null);
-        var editName = UseState<string>();
-        var editEmail = UseState<string>();
-        var editPhone = UseState<string>();
-        var isEditing = UseState<bool>(() => false);
-        var client = UseService<IClientProvider>();
+        var (alertView, showAlert) = this.UseAlert();
 
         UseEffect(async () =>
         {
             var contacts = await Database.GetContactsAsync(volume);
             contact.Value = contacts.FirstOrDefault(c => c.Id == contactId);
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.AfterInit(), refreshToken]);
 
-        if (contact.Value == null) return Text.Muted("Loading...");
+        if (contact.Value == null) return null;
 
-        var c = contact.Value;
+        var contactValue = contact.Value;
 
-        async Task Save()
+        var onDelete = () =>
         {
-            if (string.IsNullOrWhiteSpace(editName.Value) || string.IsNullOrWhiteSpace(editEmail.Value)) return;
-            try
+            showAlert("Are you sure you want to delete this contact?", result =>
             {
-                await Database.SaveContactAsync(volume, c with { Name = editName.Value.Trim(), Email = editEmail.Value.Trim(), Phone = editPhone.Value?.Trim() });
-                blades.Pop(refresh: true);
-            }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
+                if (result.IsOk())
+                {
+                    Delete(volume);
+                    refreshToken.Refresh();
+                    blades.Pop(refresh: true);
+                }
+            }, "Delete Contact", AlertButtonSet.OkCancel);
+        };
 
-        async Task Delete()
-        {
-            try
-            {
-                await Database.DeleteContactAsync(volume, contactId);
-                blades.Pop(refresh: true);
-            }
-            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
-        }
+        var editBtn = new Button("Edit")
+            .Variant(ButtonVariant.Outline)
+            .Icon(Icons.Pencil)
+            .Width(Size.Grow())
+            .ToTrigger((isOpen) => new ContactEditSheet(isOpen, volume, refreshToken, contactId));
 
-        if (isEditing.Value)
-        {
-            editName.Value = c.Name;
-            editEmail.Value = c.Email;
-            editPhone.Value = c.Phone ?? "";
-        }
+        var deleteBtn = new Button("Delete")
+            .Variant(ButtonVariant.Outline)
+            .Icon(Icons.Trash)
+            .Width(Size.Grow())
+            .HandleClick(onDelete);
 
-        return new Card(
-            Layout.Vertical().Gap(3).Padding(3)
-            | Layout.Horizontal().Gap(2).Width(Size.Full())
-                | Text.H3(c.Name).Bold()
-                | new Spacer()
-                | new Button("", _ => { isEditing.Value = true; editName.Value = c.Name; editEmail.Value = c.Email; editPhone.Value = c.Phone ?? ""; }).Icon(Icons.Pencil).Ghost()
-                | new Button("", async _ => await Delete()).Icon(Icons.Trash).Ghost()
-            | (isEditing.Value
-                ? Layout.Vertical().Gap(2)
-                    | editName.ToInput(placeholder: "Name...")
-                    | editEmail.ToInput(placeholder: "Email...")
-                    | editPhone.ToInput(placeholder: "Phone (optional)...")
-                    | Layout.Horizontal().Gap(2)
-                        | new Button("Save", async _ => await Save()).Primary()
-                        | new Button("Cancel", _ => isEditing.Value = false).Ghost()
-                : Layout.Vertical().Gap(2)
-                    | Text.Block(c.Email)
-                    | (string.IsNullOrWhiteSpace(c.Phone) ? new Spacer() : Text.Block(c.Phone))
-                    | Text.Small($"Created: {c.CreatedAt:g}")
-            )
-        ).Title("Contact Details").Width(Size.Units(100));
+        var detailsCard = new Card(
+            content: Layout.Vertical()
+                | Text.H4("Contact Details")
+                | new
+                {
+                    Id = contactValue.Id.ToString(),
+                    Name = contactValue.Name,
+                    Email = contactValue.Email,
+                    Phone = contactValue.Phone ?? "N/A",
+                    CreatedAt = contactValue.CreatedAt.ToString("g")
+                }
+                .ToDetails()
+                .RemoveEmpty()
+                .Builder(e => e.Id, e => e.CopyToClipboard()),
+            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
+                | editBtn
+                | deleteBtn
+        ).Width(Size.Units(100));
+
+        return new Fragment()
+            | (Layout.Vertical() | detailsCard!)
+            | alertView!;
+    }
+
+    private void Delete(IVolume volume)
+    {
+        Database.DeleteContactAsync(volume, contactId).Wait();
     }
 }
 
@@ -681,5 +774,44 @@ public class ContactCreateDialog(IState<bool> isOpen, IVolume volume, RefreshTok
             .Required(c => c.Name, c => c.Email)
             .Builder(c => c.Email, e => e.ToEmailInput())
             .ToDialog(isOpen, title: "New Contact", submitTitle: "Create");
+    }
+}
+
+public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken refreshToken, Guid contactId) : ViewBase
+{
+    public override object? Build()
+    {
+        var contact = UseState<ContactItem?>(() => null);
+        var client = UseService<IClientProvider>();
+
+        UseEffect(async () =>
+        {
+            var contacts = await Database.GetContactsAsync(volume);
+            contact.Value = contacts.FirstOrDefault(c => c.Id == contactId);
+        }, [EffectTrigger.AfterInit()]);
+
+        if (contact.Value == null) return null;
+
+        UseEffect(async () =>
+        {
+            var contactValue = contact.Value;
+            if (contactValue != null && !string.IsNullOrWhiteSpace(contactValue.Name) && !string.IsNullOrWhiteSpace(contactValue.Email))
+            {
+                try
+                {
+                    await Database.SaveContactAsync(volume, contactValue);
+                    refreshToken.Refresh();
+                }
+                catch (Exception ex) { client.Toast(ex.Message, "Error"); }
+            }
+        }, [contact]);
+
+        return contact
+            .ToForm()
+            .Builder(c => c!.Name, e => e.ToTextInput())
+            .Builder(c => c!.Email, e => e.ToEmailInput())
+            .Builder(c => c!.Phone, e => e.ToTextInput())
+            .Remove(c => c!.Id, c => c!.CreatedAt)
+            .ToSheet(isOpen, "Edit Contact");
     }
 }
