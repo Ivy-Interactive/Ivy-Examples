@@ -4,7 +4,7 @@ Web application created using [Ivy](https://github.com/Ivy-Interactive/Ivy).
 
 ## Description
 
-Hello is a simple starter application demonstrating the basic structure and setup of an Ivy web application.
+Hello is a simple starter application demonstrating the basic structure and setup of an Ivy web application. This is a File-Based App.
 
 Ivy is a web framework for building interactive web applications using C# and .NET.
 
@@ -26,4 +26,4 @@ ivy deploy
 
 ## Tags
 
-Starter, Template, Getting Started, Demo
+Starter, Template, Getting Started, Demo, Single, File-Based App

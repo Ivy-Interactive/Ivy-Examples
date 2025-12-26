@@ -1,6 +1,34 @@
-namespace Helloworld.Apps;
+#:package Ivy@1.2.5-pre-20251224220701
 
-[App(icon:Icons.PartyPopper, title:"Hello")]
+global using Ivy;
+global using Ivy.Apps;
+global using Ivy.Chrome;
+global using Ivy.Core;
+global using Ivy.Hooks;
+global using Ivy.Shared;
+global using Ivy.Views;
+global using Ivy.Widgets.Inputs;
+global using System.Globalization;
+
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
+
+var server = new Server();
+#if DEBUG
+server.UseHotReload();
+#endif
+
+server.AddAppsFromAssembly();
+server.AddConnectionsFromAssembly();
+
+var chromeSettings = new ChromeSettings()
+    .DefaultApp<HelloApp>()
+    .UseTabs(preventDuplicates: true);
+
+server.UseChrome(chromeSettings);
+await server.RunAsync();
+
+
+[App(icon: Icons.PartyPopper, title: "Hello")]
 public class HelloApp : ViewBase
 {
     public override object? Build()
@@ -20,3 +48,4 @@ public class HelloApp : ViewBase
                  .Width(Size.Units(120).Max(500)));
     }
 }
+
