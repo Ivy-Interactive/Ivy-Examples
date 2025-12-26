@@ -15,6 +15,7 @@ global using Ivy.Views.Alerts;
 global using Ivy.Views.Blades;
 global using Ivy.Views.Builders;
 global using Ivy.Views.Forms;
+global using Ivy.Views.Charts;
 global using Ivy.Widgets.Inputs;
 global using System.Globalization;
 global using System.ComponentModel.DataAnnotations;
@@ -162,14 +163,43 @@ public class DashboardApp : ViewBase
         var totalTasks = tasks.Value.Count;
         var pendingTasks = totalTasks - completedTasks;
 
+        // Prepare data for Task Status Pie Chart
+        var taskStatusData = new[]
+        {
+            new { Status = "Completed", Count = completedTasks },
+            new { Status = "Pending", Count = pendingTasks }
+        }.Where(x => x.Count > 0).ToList();
+
+        var taskStatusPieChart = taskStatusData.Count > 0
+            ? taskStatusData.ToPieChart(
+                dimension: x => x.Status,
+                measure: x => x.Sum(f => f.Count),
+                PieChartStyles.Dashboard,
+                new PieChartTotal(totalTasks.ToString(), "Total Tasks"))
+            : null;
+
+        // Prepare data for Activity Over Time Bar Chart
+        var activityData = tasks.Value.Select(t => new { Date = t.CreatedAt.Date })
+            .Concat(notes.Value.Select(n => new { Date = n.CreatedAt.Date }))
+            .Concat(contacts.Value.Select(c => new { Date = c.CreatedAt.Date }))
+            .GroupBy(x => x.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        var activityBarChart = activityData.Count > 0
+            ? activityData.ToBarChart()
+                .Dimension("Date", x => x.Date.ToString("MMM dd"))
+                .Measure("Items Created", x => x.Sum(f => f.Count))
+            : null;
+
         return Layout.Vertical().Gap(4).Padding(4)
             | Text.H1("CRM Dashboard")
-            | Layout.Grid().Columns(3).Gap(3)
+            | (Layout.Grid().Columns(3).Gap(3)
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                     | Text.H2(totalTasks.ToString()).Bold()
                     | Text.Muted("Total Tasks")
-                    | Text.Small($"{completedTasks} completed, {pendingTasks} pending")
                 ).Icon(Icons.ListTodo)
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
@@ -180,7 +210,30 @@ public class DashboardApp : ViewBase
                     Layout.Vertical().Gap(2).Padding(3)
                     | Text.H2(contacts.Value.Count.ToString()).Bold()
                     | Text.Muted("Total Contacts")
-                ).Icon(Icons.Users);
+                ).Icon(Icons.Users))
+            | (Layout.Grid().Columns(2).Gap(3)
+                | (taskStatusPieChart != null
+                    ? new Card(
+                        Layout.Vertical().Gap(3).Padding(3)
+                            | Text.H3("Task Status")
+                            | Text.Muted("Distribution of completed vs pending tasks")
+                            | taskStatusPieChart
+                    )
+                    : new Card(
+                        Layout.Vertical().Gap(2).Padding(3)
+                            | Text.Muted("No tasks data available")
+                    ))
+                | (activityBarChart != null
+                    ? new Card(
+                        Layout.Vertical().Gap(3).Padding(3)
+                            | Text.H3("Activity Over Time")
+                            | Text.Muted("Items created by date")
+                            | activityBarChart
+                    )
+                    : new Card(
+                        Layout.Vertical().Gap(2).Padding(3)
+                            | Text.Muted("No activity data available")
+                    )));
     }
 }
 
