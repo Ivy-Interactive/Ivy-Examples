@@ -845,9 +845,10 @@ public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken 
 
         if (contact.Value == null) return null;
 
+        var contactValue = contact.Value;
+
         UseEffect(async () =>
         {
-            var contactValue = contact.Value;
             if (contactValue != null && !string.IsNullOrWhiteSpace(contactValue.Name) && !string.IsNullOrWhiteSpace(contactValue.Email))
             {
                 try
@@ -863,7 +864,7 @@ public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken 
             .ToForm()
             .Builder(c => c!.Name, e => e.ToTextInput())
             .Builder(c => c!.Email, e => e.ToEmailInput())
-            .Builder(c => c!.Phone, e => e.ToTextInput())
+            .Builder(c => c!.Phone ?? "", e => e.ToTextInput())
             .Remove(c => c!.Id, c => c!.CreatedAt)
             .ToSheet(isOpen, "Edit Contact");
     }
