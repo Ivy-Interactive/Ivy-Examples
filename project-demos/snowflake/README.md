@@ -7,10 +7,7 @@ Snowflake Database Explorer is a web application for exploring Snowflake databas
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Snowflake-blue?style=for-the-badge)](https://ivy-projectdemos-snowflake.sliplane.app)
 
-https://github.com/user-attachments/assets/bc069ffb-d36f-4eb8-a4da-f279db05d959
-
-
-https://github.com/user-attachments/assets/7fec362b-3fd5-4050-aaf5-4147c229b6eb
+https://github.com/user-attachments/assets/eb3594a8-bcb6-40e4-b0f2-cc475147ad8b
 
 ## One-Click Development Environment
 
@@ -43,42 +40,23 @@ This demo showcases how to build an interactive database explorer using the offi
 
 ### Configuration
 
-See the "Setting Up Credentials" section below for instructions on configuring these values using `dotnet user secrets`.
+You can configure Snowflake credentials in two ways:
 
-## Setting Up Credentials
+#### Option 1: Using User Secrets (Recommended for Development)
 
-Before running the application, you need to configure your Snowflake credentials using `dotnet user secrets`.
-
-### Step 1: Get Your Snowflake Credentials
-
-1. **Sign up or log in** to [Snowflake](https://www.snowflake.com/)
-2. Navigate to your **Account** settings
-3. Copy your **Account Identifier** (e.g., `xy12345.us-east-1`)
-4. Note your **Username** and **Password**
-
-> **Important:** Never publish credentials in public repositories or share them with unauthorized parties.
-
-### Step 2: Configure the Credentials
-
-Use `dotnet user secrets` to securely store your Snowflake credentials:
+Set your credentials using dotnet user secrets:
 
 ```bash
-cd project-demos/snowflake
-dotnet user secrets set "Snowflake:Account" "your_account_identifier"
-dotnet user secrets set "Snowflake:User" "your_username"
-dotnet user secrets set "Snowflake:Password" "your_password"
-dotnet user secrets set "Snowflake:Warehouse" "COMPUTE_WH"
-dotnet user secrets set "Snowflake:Database" "SNOWFLAKE_SAMPLE_DATA"
-dotnet user secrets set "Snowflake:Schema" "TPCH_SF1"
+dotnet user-secrets set "Snowflake:Account" "your-account-identifier"
+dotnet user-secrets set "Snowflake:User" "your-username"
+dotnet user-secrets set "Snowflake:Password" "your-password"
 ```
 
-The required secrets are:
-- `Snowflake:Account` – Your Snowflake account identifier
-- `Snowflake:User` – Your Snowflake username
-- `Snowflake:Password` – Your Snowflake password
-- `Snowflake:Warehouse` – Snowflake warehouse name (optional, default: `COMPUTE_WH`)
-- `Snowflake:Database` – Database name (optional, default: `SNOWFLAKE_SAMPLE_DATA`)
-- `Snowflake:Schema` – Schema name (optional, default: `TPCH_SF1`)
+**Note:** Credentials from user secrets will be automatically loaded when the application starts.
+
+#### Option 2: Using UI Input
+
+Credentials can be entered through the application UI when you first run it. Click the "Enter Credentials" button in the Settings tab.
 
 ## How to Run Locally
 
@@ -87,16 +65,26 @@ The required secrets are:
    ```bash
    cd project-demos/snowflake
    ```
-3. **Set up your Snowflake credentials** using `dotnet user secrets` (see "Setting Up Credentials" section above)
-4. **Restore dependencies:**
+3. **Restore dependencies:**
    ```bash
    dotnet restore
    ```
+4. **Configure credentials (optional):**
+   
+   Using user secrets (recommended):
+   ```bash
+   dotnet user-secrets set "Snowflake:Account" "your-account-identifier"
+   dotnet user-secrets set "Snowflake:User" "your-username"
+   dotnet user-secrets set "Snowflake:Password" "your-password"
+   ```
+   
+   Or enter credentials through the UI after starting the app.
 5. **Start the app:**
    ```bash
    dotnet watch
    ```
 6. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+7. **If using UI input**, enter your Snowflake credentials in the Settings tab when prompted
 
 ## Deploy to Ivy Hosting
 
