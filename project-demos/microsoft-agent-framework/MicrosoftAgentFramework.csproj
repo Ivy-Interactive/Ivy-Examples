@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.5" />
+    <PackageReference Include="Ivy" Version="1.2.6" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-preview.251204.1" />
     <PackageReference Include="OllamaSharp" Version="5.4.12" />
   </ItemGroup>
