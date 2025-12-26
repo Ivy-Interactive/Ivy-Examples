@@ -42,7 +42,7 @@ await server.RunAsync();
 // Models
 record TaskItem(Guid Id, string Title, bool IsCompleted, DateTime CreatedAt);
 record NoteItem(Guid Id, string Title, string Content, DateTime CreatedAt);
-record ContactItem(Guid Id, string Name, string Email, string? Phone, DateTime CreatedAt);
+record ContactItem(Guid Id, string Name, string Email, string Phone, DateTime CreatedAt);
 
 // SQLite Database Helper
 static class Database
@@ -115,13 +115,13 @@ static class Database
         using var reader = await cmd.ExecuteReaderAsync();
         var contacts = new List<ContactItem>();
         while (await reader.ReadAsync())
-            contacts.Add(new ContactItem(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetString(3), DateTime.Parse(reader.GetString(4))));
+            contacts.Add(new ContactItem(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2), reader.IsDBNull(3) ? "" : reader.GetString(3), DateTime.Parse(reader.GetString(4))));
         return contacts;
     }
 
     public static async Task SaveContactAsync(IVolume volume, ContactItem contact) =>
         await ExecuteAsync(volume, "INSERT OR REPLACE INTO Contacts (Id, Name, Email, Phone, CreatedAt) VALUES (@Id, @Name, @Email, @Phone, @CreatedAt)",
-            ("@Id", contact.Id.ToString()), ("@Name", contact.Name), ("@Email", contact.Email), ("@Phone", (object?)contact.Phone ?? DBNull.Value), ("@CreatedAt", contact.CreatedAt.ToString("O")));
+            ("@Id", contact.Id.ToString()), ("@Name", contact.Name), ("@Email", contact.Email), ("@Phone", string.IsNullOrEmpty(contact.Phone) ? DBNull.Value : contact.Phone), ("@CreatedAt", contact.CreatedAt.ToString("O")));
 
     public static async Task DeleteContactAsync(IVolume volume, Guid id) =>
         await ExecuteAsync(volume, "DELETE FROM Contacts WHERE Id = @Id", ("@Id", id.ToString()));
@@ -769,7 +769,7 @@ public class ContactDetailsBlade(Guid contactId) : ViewBase
                     Id = contactValue.Id.ToString(),
                     Name = contactValue.Name,
                     Email = contactValue.Email,
-                    Phone = contactValue.Phone ?? "N/A",
+                    Phone = string.IsNullOrEmpty(contactValue.Phone) ? "N/A" : contactValue.Phone,
                     CreatedAt = contactValue.CreatedAt.ToString("g")
                 }
                 .ToDetails()
@@ -814,7 +814,7 @@ public class ContactCreateDialog(IState<bool> isOpen, IVolume volume, RefreshTok
             {
                 try
                 {
-                    await Database.SaveContactAsync(volume, new ContactItem(Guid.NewGuid(), contact.Value.Name.Trim(), contact.Value.Email.Trim(), contact.Value.Phone?.Trim(), DateTime.UtcNow));
+                    await Database.SaveContactAsync(volume, new ContactItem(Guid.NewGuid(), contact.Value.Name.Trim(), contact.Value.Email.Trim(), contact.Value.Phone?.Trim() ?? "", DateTime.UtcNow));
                     refreshToken.Refresh();
                     contact.Set(new ContactCreateRequest());
                 }
@@ -864,7 +864,7 @@ public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken 
             .ToForm()
             .Builder(c => c!.Name, e => e.ToTextInput())
             .Builder(c => c!.Email, e => e.ToEmailInput())
-            .Builder(c => c!.Phone ?? "", e => e.ToTextInput())
+            .Builder(c => c!.Phone, e => e.ToTextInput())
             .Remove(c => c!.Id, c => c!.CreatedAt)
             .ToSheet(isOpen, "Edit Contact");
     }
