@@ -324,29 +324,18 @@ public class DashboardApp : ViewBase
                 new PieChartTotal(userStatuses.Value.Sum(u => u.Count).ToString("N0"), "Users"))
             : null;
 
-        var headerRow = Layout.Grid().Columns(3).Gap(2).Padding(2)
-            | Text.Small("Table").Bold()
-            | Text.Small("Rows").Bold()
-            | Text.Small("Size (MB)").Bold();
-        
-        var dataRows = Layout.Vertical().Gap(1);
-        foreach (var t in tableData.Value)
-        {
-            dataRows = dataRows | (Layout.Grid().Columns(3).Gap(2).Padding(2)
-                | Text.Small(t.TableName)
-                | Text.Small(t.RowCount.ToString("N0"))
-                | Text.Small(t.SizeMB.ToString("N2")));
-        }
-        
-        var tablesTable = Layout.Vertical().Gap(2)
-            | headerRow
-            | new Separator()
-            | Layout.Vertical().Gap(1)
-                | dataRows;
+#pragma warning disable IL2026, IL3050
+        var tablesDataTable = tableData.Value.AsQueryable()
+            .ToDataTable()
+            .Header(t => t.TableName, "Table")
+            .Header(t => t.RowCount, "Rows")
+            .Header(t => t.SizeMB, "Size (MB)")
+            .Height(Size.Units(90));
+#pragma warning restore IL2026, IL3050
 
         return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | Text.H1("ClickHouse Dashboard")
-            | Text.Label($"{totalTables} Tables").Bold().Muted()
+            | Text.Label("Analytics and monitoring dashboard for ClickHouse database").Bold().Muted()
             | metrics.Width(Size.Fraction(0.9f))
             | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.9f))
                 | new Card(pieChart).Title("Size Distribution")
@@ -355,6 +344,6 @@ public class DashboardApp : ViewBase
                 | new Card(transactionStatusChart).Title("Transaction Statuses")
                 | new Card(logTimelineChart).Title("Logs Timeline (30 days)")
                 | new Card(userStatusChart).Title("User Statuses"))
-            | new Card(tablesTable).Title("All Tables").Width(Size.Fraction(0.9f));
+            | new Card(tablesDataTable).Title("All Tables").Width(Size.Fraction(0.9f));
     }
 }
