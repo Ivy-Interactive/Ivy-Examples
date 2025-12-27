@@ -1,69 +1,69 @@
 # ClickHouse Dashboard
 
-Простий дашборд для відображення статистики таблиць ClickHouse, побудований на Ivy Framework.
+A simple dashboard for displaying ClickHouse table statistics, built with Ivy Framework.
 
-## Запуск ClickHouse
+## Starting ClickHouse
 
-1. Запустіть ClickHouse через Docker Compose:
+1. Start ClickHouse using Docker Compose:
 ```bash
 docker-compose up -d
 ```
 
-**Примітка:** Якщо контейнер вже був запущений раніше, перезапустіть його для застосування нових налаштувань:
+**Note:** If the container was already running, restart it to apply new settings:
 ```bash
 docker-compose down
 docker-compose up -d
 ```
 
-2. Перевірте, що ClickHouse запущений:
+2. Verify that ClickHouse is running:
 ```bash
 docker ps
 ```
 
-3. Перевірте підключення (опціонально):
+3. Test the connection (optional):
 ```bash
 curl http://localhost:8123
 ```
 
-**Параметри підключення:**
+**Connection parameters:**
 - Host: `localhost`
 - Port: `8123`
 - Username: `default`
 - Password: `default`
 
-## Запуск додатку
+## Running the Application
 
 ```bash
 dotnet build ClickHouseDashboard.cs
 dotnet run ClickHouseDashboard.cs
 ```
 
-Або просто:
+Or simply:
 ```bash
 dotnet run ClickHouseDashboard.cs
 ```
 
-Додаток автоматично підключиться до ClickHouse на `localhost:8123` і відобразить статистику всіх таблиць.
+The application will automatically connect to ClickHouse on `localhost:8123` and display statistics for all tables.
 
-## Структура даних
+## Data Structure
 
-Docker Compose автоматично створить тестові таблиці при першому запуску:
-- `events` - події (1,000,000 рядків)
-- `users` - користувачі (500,000 рядків)
-- `sessions` - сесії (500,000 рядків)
-- `metrics` - метрики (2,000,000 рядків)
-- `logs` - логи (1,000,000 рядків)
-- `transactions` - транзакції (300,000 рядків)
+Docker Compose will automatically create test tables on first startup:
+- `events` - events (1,000,000 rows)
+- `users` - users (500,000 rows)
+- `sessions` - sessions (500,000 rows)
+- `metrics` - metrics (2,000,000 rows)
+- `logs` - logs (1,000,000 rows)
+- `transactions` - transactions (300,000 rows)
 
-**Загалом: ~5.3 мільйони рядків**
+**Total: ~5.3 million rows**
 
-## Зупинка
+## Stopping
 
 ```bash
 docker-compose down
 ```
 
-Для видалення всіх даних:
+To remove all data:
 ```bash
 docker-compose down -v
 ```
