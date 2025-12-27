@@ -39,17 +39,41 @@ public class TableStats
     public double SizeMB { get; set; }
 }
 
+public class TransactionStatusStats
+{
+    public string Status { get; set; } = "";
+    public long Count { get; set; }
+    public double TotalAmount { get; set; }
+}
+
+public class LogTimeline
+{
+    public string Date { get; set; } = "";
+    public long Count { get; set; }
+}
+
+public class UserStatusStats
+{
+    public string Status { get; set; } = "";
+    public long Count { get; set; }
+}
+
 [App(icon: Icons.ChartBar, title: "ClickHouse Dashboard")]
 public class DashboardApp : ViewBase
 {
+    private static async Task<ClickHouseConnection> GetConnection()
+    {
+        var connectionString = "Host=localhost;Port=8123;Username=default;Password=default;Database=default;Protocol=http";
+        var connection = new ClickHouseConnection(connectionString);
+        await connection.OpenAsync();
+        return connection;
+    }
+
     private static async Task<List<TableStats>> LoadFromClickHouse()
     {
         try
         {
-            var connectionString = "Host=localhost;Port=8123;Username=default;Password=default;Database=default;Protocol=http";
-            
-            await using var connection = new ClickHouseConnection(connectionString);
-            await connection.OpenAsync();
+            await using var connection = await GetConnection();
 
             var sql = @"SELECT 
                 name as TableName,
@@ -87,9 +111,100 @@ public class DashboardApp : ViewBase
         }
     }
 
+    private static async Task<List<TransactionStatusStats>> LoadTransactionStatuses()
+    {
+        try
+        {
+            await using var connection = await GetConnection();
+            var sql = @"SELECT status as Status, count() as Count, sum(amount) as TotalAmount 
+                       FROM transactions 
+                       GROUP BY status 
+                       ORDER BY Count DESC";
+
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            var results = new List<TransactionStatusStats>();
+            using var reader = await command.ExecuteReaderAsync();
+            
+            while (await reader.ReadAsync())
+            {
+                results.Add(new TransactionStatusStats
+                {
+                    Status = reader.GetString(0),
+                    Count = Convert.ToInt64(reader.GetValue(1)),
+                    TotalAmount = Convert.ToDouble(reader.GetValue(2))
+                });
+            }
+            return results;
+        }
+        catch { return new List<TransactionStatusStats>(); }
+    }
+
+    private static async Task<List<LogTimeline>> LoadLogTimeline()
+    {
+        try
+        {
+            await using var connection = await GetConnection();
+            var sql = @"SELECT toDate(timestamp) as Date, count() as Count 
+                       FROM logs 
+                       WHERE timestamp >= now() - INTERVAL 30 DAY
+                       GROUP BY Date 
+                       ORDER BY Date";
+
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            var results = new List<LogTimeline>();
+            using var reader = await command.ExecuteReaderAsync();
+            
+            while (await reader.ReadAsync())
+            {
+                var date = reader.GetValue(0);
+                results.Add(new LogTimeline
+                {
+                    Date = date is DateTime dt ? dt.ToString("MMM dd") : date.ToString() ?? "",
+                    Count = Convert.ToInt64(reader.GetValue(1))
+                });
+            }
+            return results;
+        }
+        catch { return new List<LogTimeline>(); }
+    }
+
+    private static async Task<List<UserStatusStats>> LoadUserStatuses()
+    {
+        try
+        {
+            await using var connection = await GetConnection();
+            var sql = @"SELECT status as Status, count() as Count 
+                       FROM users 
+                       GROUP BY status 
+                       ORDER BY Count DESC";
+
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            var results = new List<UserStatusStats>();
+            using var reader = await command.ExecuteReaderAsync();
+            
+            while (await reader.ReadAsync())
+            {
+                results.Add(new UserStatusStats
+                {
+                    Status = reader.GetString(0),
+                    Count = Convert.ToInt64(reader.GetValue(1))
+                });
+            }
+            return results;
+        }
+        catch { return new List<UserStatusStats>(); }
+    }
+
     public override object? Build()
     {
         var tableData = this.UseState<List<TableStats>>(() => new List<TableStats>());
+        var transactionStatuses = this.UseState<List<TransactionStatusStats>>(() => new List<TransactionStatusStats>());
+        var logTimeline = this.UseState<List<LogTimeline>>(() => new List<LogTimeline>());
+        var userStatuses = this.UseState<List<UserStatusStats>>(() => new List<UserStatusStats>());
+        
         var refreshToken = this.UseRefreshToken();
         var isLoading = this.UseState(true);
         var errorMessage = this.UseState<string?>();
@@ -102,6 +217,16 @@ public class DashboardApp : ViewBase
             {
                 var data = await LoadFromClickHouse();
                 tableData.Value = data;
+                
+                // Load analytics data in parallel
+                var tasks = new List<Task>
+                {
+                    Task.Run(async () => transactionStatuses.Value = await LoadTransactionStatuses()),
+                    Task.Run(async () => logTimeline.Value = await LoadLogTimeline()),
+                    Task.Run(async () => userStatuses.Value = await LoadUserStatuses())
+                };
+                
+                await Task.WhenAll(tasks);
                 refreshToken.Refresh();
             }
             catch (Exception ex)
@@ -156,6 +281,7 @@ public class DashboardApp : ViewBase
             | new Card(Text.H3(totalSizeMB.ToString("N1") + " MB")).Title("Total Size").Icon(Icons.ArchiveX)
             | new Card(Text.H3(avgRows.ToString("N0"))).Title("Avg Rows/Table").Icon(Icons.ChartBar);
 
+        // Database Overview Charts
         var pieChart = tableData.Value.ToPieChart(
             dimension: t => t.TableName,
             measure: t => t.Sum(f => f.SizeMB),
@@ -171,6 +297,32 @@ public class DashboardApp : ViewBase
         var barChart = topTables.ToBarChart()
             .Dimension("Table", e => e.Table)
             .Measure("Rows", e => e.Sum(f => f.Rows));
+
+        // Transaction Statuses
+        var transactionStatusChart = transactionStatuses.Value.Count > 0
+            ? transactionStatuses.Value.ToPieChart(
+                dimension: t => t.Status,
+                measure: t => t.Sum(f => (double)f.Count),
+                PieChartStyles.Dashboard,
+                new PieChartTotal(transactionStatuses.Value.Sum(t => t.Count).ToString("N0"), "Transactions"))
+            : null;
+
+        // Logs Timeline
+        var logTimelineChart = logTimeline.Value.Count > 0
+            ? logTimeline.Value.ToLineChart(
+                e => e.Date,
+                [e => e.Sum(f => (double)f.Count)],
+                LineChartStyles.Dashboard)
+            : null;
+
+        // User Statuses
+        var userStatusChart = userStatuses.Value.Count > 0
+            ? userStatuses.Value.ToPieChart(
+                dimension: u => u.Status,
+                measure: u => u.Sum(f => (double)f.Count),
+                PieChartStyles.Dashboard,
+                new PieChartTotal(userStatuses.Value.Sum(u => u.Count).ToString("N0"), "Users"))
+            : null;
 
         var headerRow = Layout.Grid().Columns(3).Gap(2).Padding(2)
             | Text.Small("Table").Bold()
@@ -199,6 +351,10 @@ public class DashboardApp : ViewBase
             | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.9f))
                 | new Card(pieChart).Title("Size Distribution")
                 | new Card(barChart).Title("Top Tables by Rows"))
+            | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(0.9f))
+                | new Card(transactionStatusChart).Title("Transaction Statuses")
+                | new Card(logTimelineChart).Title("Logs Timeline (30 days)")
+                | new Card(userStatusChart).Title("User Statuses"))
             | new Card(tablesTable).Title("All Tables").Width(Size.Fraction(0.9f));
     }
 }
