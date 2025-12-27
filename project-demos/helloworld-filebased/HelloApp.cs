@@ -1,4 +1,4 @@
-#:package Ivy@1.2.5-pre-20251224220701
+#:package Ivy@1.2.6
 
 global using Ivy;
 global using Ivy.Apps;
