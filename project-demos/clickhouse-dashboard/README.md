@@ -2,48 +2,47 @@
 
 A simple dashboard for displaying ClickHouse table statistics, built with Ivy Framework.
 
-## Starting ClickHouse
+## Running the Application
 
-1. Start ClickHouse using Docker Compose:
+Simply run:
+```bash
+dotnet run ClickHouseDashboard.cs
+```
+
+The application will **automatically**:
+- Check if ClickHouse is running on port 8123
+- Start ClickHouse via Docker Compose if it's not running
+- Wait for ClickHouse to become available (up to 30 seconds)
+- Connect and display statistics for all tables
+
+**No manual Docker commands needed!** The application handles everything automatically.
+
+### Manual Docker Control (Optional)
+
+If you prefer to manage ClickHouse manually:
+
+**Start ClickHouse:**
 ```bash
 docker-compose up -d
 ```
 
-**Note:** If the container was already running, restart it to apply new settings:
+**Stop ClickHouse:**
 ```bash
 docker-compose down
-docker-compose up -d
 ```
 
-2. Verify that ClickHouse is running:
+**Stop and remove all data (fresh start):**
 ```bash
-docker ps
+docker-compose down -v
 ```
 
-3. Test the connection (optional):
-```bash
-curl http://localhost:8123
-```
+This removes the Docker volume with all ClickHouse data. On next startup, `init.sql` will create fresh tables with new random data.
 
 **Connection parameters:**
 - Host: `localhost`
 - Port: `8123`
 - Username: `default`
 - Password: `default`
-
-## Running the Application
-
-```bash
-dotnet build ClickHouseDashboard.cs
-dotnet run ClickHouseDashboard.cs
-```
-
-Or simply:
-```bash
-dotnet run ClickHouseDashboard.cs
-```
-
-The application will automatically connect to ClickHouse on `localhost:8123` and display statistics for all tables.
 
 ## Data Structure
 
@@ -54,16 +53,3 @@ Docker Compose will automatically create test tables on first startup:
 - `metrics` - metrics (2,000,000 rows)
 - `logs` - logs (1,000,000 rows)
 - `transactions` - transactions (300,000 rows)
-
-**Total: ~5.3 million rows**
-
-## Stopping
-
-```bash
-docker-compose down
-```
-
-To remove all data:
-```bash
-docker-compose down -v
-```

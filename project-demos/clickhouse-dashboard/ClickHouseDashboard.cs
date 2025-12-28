@@ -14,8 +14,14 @@ global using Ivy.Views.DataTables;
 global using ClickHouse.Driver.ADO;
 global using System.Data;
 global using System.Globalization;
+global using System.Diagnostics;
+global using System.Net.Sockets;
+global using System.Threading;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
+
+// Check if ClickHouse is running, if not try to start it via Docker
+await EnsureClickHouseRunning();
 
 var server = new Server();
 #if DEBUG
@@ -31,6 +37,60 @@ var chromeSettings = new ChromeSettings()
 
 server.UseChrome(chromeSettings);
 await server.RunAsync();
+
+static async Task EnsureClickHouseRunning()
+{
+    if (await IsPortOpen("localhost", 8123))
+        return;
+
+    Console.WriteLine("Starting ClickHouse via Docker...");
+    
+    try
+    {
+        var dockerComposePath = Path.Combine(Directory.GetCurrentDirectory(), "docker-compose.yml");
+        if (!File.Exists(dockerComposePath))
+            dockerComposePath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "", "docker-compose.yml");
+
+        if (File.Exists(dockerComposePath))
+        {
+            var dir = Path.GetDirectoryName(dockerComposePath);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "docker-compose",
+                Arguments = "up -d",
+                WorkingDirectory = dir,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            })?.WaitForExit();
+
+            // Wait for ClickHouse to start (max 30 seconds)
+            for (int i = 0; i < 30; i++)
+            {
+                if (await IsPortOpen("localhost", 8123)) break;
+                await Task.Delay(1000);
+            }
+        }
+    }
+    catch
+    {
+        Console.WriteLine("Could not start ClickHouse. Please run: docker-compose up -d");
+    }
+}
+
+static async Task<bool> IsPortOpen(string host, int port)
+{
+    try
+    {
+        using var client = new TcpClient();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await client.ConnectAsync(host, port, cts.Token);
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
+}
 
 public class TableStats
 {
