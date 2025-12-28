@@ -6,7 +6,6 @@ services:
     container_name: clickhouse-server
     ports:
       - "8123:8123"  # HTTP interface
-      - "9000:9000"  # Native protocol
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql

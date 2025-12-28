@@ -124,9 +124,26 @@ public class DashboardApp : ViewBase
     private static async Task<ClickHouseConnection> GetConnection()
     {
         var connectionString = "Host=localhost;Port=8123;Username=default;Password=default;Database=default;Protocol=http";
-        var connection = new ClickHouseConnection(connectionString);
-        await connection.OpenAsync();
-        return connection;
+        
+        // Retry connection up to 5 times with delay
+        for (int attempt = 1; attempt <= 5; attempt++)
+        {
+            try
+            {
+                var connection = new ClickHouseConnection(connectionString);
+                await connection.OpenAsync();
+                return connection;
+            }
+            catch (Exception ex)
+            {
+                if (attempt == 5)
+                    throw new Exception($"Failed to connect to ClickHouse after {attempt} attempts: {ex.Message}", ex);
+                
+                await Task.Delay(1000 * attempt); // Exponential backoff: 1s, 2s, 3s, 4s
+            }
+        }
+        
+        throw new Exception("Failed to establish connection to ClickHouse");
     }
 
     private static async Task<List<TableStats>> LoadFromClickHouse()
