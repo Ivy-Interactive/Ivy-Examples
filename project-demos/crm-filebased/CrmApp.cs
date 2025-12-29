@@ -472,14 +472,22 @@ public class NoteListBlade : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
-        var notes = UseState<List<NoteItem>>(() => new List<NoteItem>());
+        var refreshToken = this.UseRefreshToken();
+        var refreshKey = UseState(() => 0);
 
-        UseEffect(async () => notes.Value = await Database.GetNotesAsync(volume), [EffectTrigger.AfterInit()]);
+        this.UseEffect(() =>
+        {
+            if (refreshToken.ReturnValue is NoteItem newNote)
+            {
+                blades.Pop(this, true);
+            }
+            refreshKey.Value++;
+        }, [refreshToken]);
 
         var onItemClick = new Action<Event<ListItem>>(e =>
         {
             var note = (NoteItem)e.Sender.Tag!;
-            blades.Push(this, new NoteDetailsBlade(note.Id), note.Title);
+            blades.Push(this, new NoteDetailsBlade(note.Id, refreshToken), note.Title);
         });
 
         ListItem CreateItem(NoteItem note) => new(
@@ -490,40 +498,36 @@ public class NoteListBlade : ViewBase
             icon: Icons.FileText
         );
 
-        var refreshToken = this.UseRefreshToken();
-        var createBtn = Icons.Plus.ToButton(_ => { }).Ghost().Tooltip("Add Note")
-            .ToTrigger(isOpen => new NoteCreateDialog(isOpen, volume, refreshToken));
-
-        UseEffect(() =>
+        var createBtn = Icons.Plus.ToButton(_ =>
         {
-            if (refreshToken.ReturnValue != null)
-                notes.Value = Database.GetNotesAsync(volume).Result;
-        }, [refreshToken]);
-
-        return new FilteredListView<NoteItem>(
-            fetchRecords: async filter =>
-            {
-                var all = await Database.GetNotesAsync(volume);
-                if (string.IsNullOrWhiteSpace(filter)) return all.OrderByDescending(n => n.CreatedAt).ToArray();
-                filter = filter.Trim();
-                return all.Where(n => n.Title.Contains(filter, StringComparison.OrdinalIgnoreCase) || 
-                                     n.Content.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(n => n.CreatedAt).ToArray();
-            },
-            createItem: CreateItem,
-            toolButtons: createBtn,
-            onFilterChanged: _ => blades.Pop(this)
-        );
+            blades.Pop(this);
+        }).Ghost().Tooltip("Add Note")
+            .ToTrigger((isOpen) => new NoteCreateDialog(isOpen, volume, refreshToken));
+        
+        return new Fragment() { Key = $"note-list-{refreshKey.Value}" }
+            | new FilteredListView<NoteItem>(
+                fetchRecords: async filter =>
+                {
+                    var all = await Database.GetNotesAsync(volume);
+                    if (string.IsNullOrWhiteSpace(filter)) return all.OrderByDescending(n => n.CreatedAt).ToArray();
+                    filter = filter.Trim();
+                    return all.Where(n => n.Title.Contains(filter, StringComparison.OrdinalIgnoreCase) || 
+                                         n.Content.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(n => n.CreatedAt).ToArray();
+                },
+                createItem: CreateItem,
+                toolButtons: createBtn,
+                onFilterChanged: _ => blades.Pop(this)
+            );
     }
 }
 
-public class NoteDetailsBlade(Guid noteId) : ViewBase
+public class NoteDetailsBlade(Guid noteId, RefreshToken token) : ViewBase
 {
     public override object? Build()
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
-        var refreshToken = this.UseRefreshToken();
         var note = UseState<NoteItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -531,7 +535,7 @@ public class NoteDetailsBlade(Guid noteId) : ViewBase
         {
             var notes = await Database.GetNotesAsync(volume);
             note.Value = notes.FirstOrDefault(n => n.Id == noteId);
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.AfterInit(), token]);
 
         if (note.Value == null) return null;
 
@@ -544,7 +548,7 @@ public class NoteDetailsBlade(Guid noteId) : ViewBase
                 if (result.IsOk())
                 {
                     Delete(volume);
-                    refreshToken.Refresh();
+                    token.Refresh();
                     blades.Pop(refresh: true);
                 }
             }, "Delete Note", AlertButtonSet.OkCancel);
@@ -554,7 +558,7 @@ public class NoteDetailsBlade(Guid noteId) : ViewBase
             .Variant(ButtonVariant.Outline)
             .Icon(Icons.Pencil)
             .Width(Size.Grow())
-            .ToTrigger((isOpen) => new NoteEditSheet(isOpen, volume, refreshToken, noteId));
+            .ToTrigger((isOpen) => new NoteEditSheet(isOpen, volume, token, noteId));
 
         var deleteBtn = new Button("Delete")
             .Variant(ButtonVariant.Outline)
@@ -612,8 +616,9 @@ public class NoteCreateDialog(IState<bool> isOpen, IVolume volume, RefreshToken 
             {
                 try
                 {
-                    await Database.SaveNoteAsync(volume, new NoteItem(Guid.NewGuid(), note.Value.Title.Trim(), note.Value.Content ?? "", DateTime.UtcNow));
-                    refreshToken.Refresh();
+                    var newNote = new NoteItem(Guid.NewGuid(), note.Value.Title.Trim(), note.Value.Content ?? "", DateTime.UtcNow);
+                    await Database.SaveNoteAsync(volume, newNote);
+                    refreshToken.Refresh(returnValue: newNote);
                     note.Set(new NoteCreateRequest());
                 }
                 catch (Exception ex) { client.Toast(ex.Message, "Error"); }
@@ -634,28 +639,27 @@ public class NoteEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken ref
     {
         var note = UseState<NoteItem?>(() => null);
         var client = UseService<IClientProvider>();
+        var skipSave = UseState(() => true);
 
         UseEffect(async () =>
         {
             var notes = await Database.GetNotesAsync(volume);
             note.Value = notes.FirstOrDefault(n => n.Id == noteId);
+            skipSave.Value = false;
         }, [EffectTrigger.AfterInit()]);
-
-        if (note.Value == null) return null;
 
         UseEffect(async () =>
         {
-            var noteValue = note.Value;
-            if (noteValue != null && !string.IsNullOrWhiteSpace(noteValue.Title))
+            if (skipSave.Value || note.Value == null || string.IsNullOrWhiteSpace(note.Value.Title)) return;
+            try
             {
-                try
-                {
-                    await Database.SaveNoteAsync(volume, noteValue);
-                    refreshToken.Refresh();
-                }
-                catch (Exception ex) { client.Toast(ex.Message, "Error"); }
+                await Database.SaveNoteAsync(volume, note.Value);
+                refreshToken.Refresh();
             }
+            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
         }, [note]);
+
+        if (note.Value == null) return null;
 
         return note
             .ToForm()
