@@ -217,21 +217,9 @@ public class DashboardApp : ViewBase
         return Layout.Vertical().Gap(4).Padding(4)
             | Text.H1("CRM Dashboard")
             | (Layout.Grid().Columns(3).Gap(3)
-                | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H2(totalTasks.ToString()).Bold()
-                    | Text.Muted("Total Tasks")
-                ).Icon(Icons.ListTodo)
-                | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H2(notes.Value.Count.ToString()).Bold()
-                    | Text.Muted("Total Notes")
-                ).Icon(Icons.FileText)
-                | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H2(contacts.Value.Count.ToString()).Bold()
-                    | Text.Muted("Total Contacts")
-                ).Icon(Icons.Users))
+                | new Card(Text.H3(totalTasks.ToString())).Title("Total Tasks").Icon(Icons.ListTodo)
+                | new Card(Text.H3(notes.Value.Count.ToString())).Title("Total Notes").Icon(Icons.FileText)
+                | new Card(Text.H3(contacts.Value.Count.ToString())).Title("Total Contacts").Icon(Icons.Users))
             | (Layout.Grid().Columns(2).Gap(3)
                 | (taskStatusPieChart != null
                     ? new Card(
