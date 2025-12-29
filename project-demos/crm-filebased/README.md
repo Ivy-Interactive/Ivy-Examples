@@ -61,15 +61,11 @@ This demo showcases how to build a complete CRM application using SQLite file-ba
    ```bash
    cd project-demos/crm-filebased
    ```
-3. **Restore dependencies:**
+3. **Start the app:**
    ```bash
-   dotnet restore
+   dotnet run CrmApp.cs
    ```
-4. **Start the app:**
-   ```bash
-   dotnet watch
-   ```
-5. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+4. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
 
 The application will automatically create a `db.sqlite` database file in the project directory on first run.
 
@@ -82,18 +78,6 @@ The application uses SQLite with three main tables:
 - **Contacts** – `Id`, `Name`, `Email`, `Phone`, `CreatedAt`
 
 Data is persisted locally in the `db.sqlite` file, which is automatically created if it doesn't exist.
-
-## Deploy to Ivy Hosting
-
-1. **Navigate to the project:**
-   ```bash
-   cd project-demos/crm-filebased
-   ```
-2. **Deploy:**
-   ```bash
-   ivy deploy
-   ```
-
 ## Learn More
 
 - SQLite Documentation: [sqlite.org](https://www.sqlite.org/)
