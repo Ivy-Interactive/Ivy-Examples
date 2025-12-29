@@ -251,19 +251,23 @@ public class TaskListBlade : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeController>();
         var refreshToken = this.UseRefreshToken();
+        var refreshKey = UseState(() => 0);
 
-        UseEffect(() =>
+        this.UseEffect(() =>
         {
-            if (refreshToken.ReturnValue != null)
-                blades.Pop(this);
+            if (refreshToken.ReturnValue is TaskItem newTask)
+            {
+                blades.Pop(this, true);
+            }
+            refreshKey.Value++;
         }, [refreshToken]);
 
         var onItemClick = new Action<Event<ListItem>>(e =>
         {
             var task = (TaskItem)e.Sender.Tag!;
-            blades.Push(this, new TaskDetailsBlade(task.Id), task.Title);
+            blades.Push(this, new TaskDetailsBlade(task.Id, refreshToken), task.Title);
         });
 
         ListItem CreateItem(TaskItem task) => new(
@@ -273,31 +277,35 @@ public class TaskListBlade : ViewBase
             tag: task,
             icon: task.IsCompleted ? Icons.Check : Icons.Square
         );
-        var createBtn = Icons.Plus.ToButton(_ => { }).Ghost().Tooltip("Add Task")
-            .ToTrigger(isOpen => new TaskCreateDialog(isOpen, volume, refreshToken));
 
-        return new FilteredListView<TaskItem>(
-            fetchRecords: async filter =>
-            {
-                var all = await Database.GetTasksAsync(volume);
-                if (string.IsNullOrWhiteSpace(filter)) return all.OrderByDescending(t => t.CreatedAt).ToArray();
-                return all.Where(t => t.Title.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(t => t.CreatedAt).ToArray();
-            },
-            createItem: CreateItem,
-            toolButtons: createBtn,
-            onFilterChanged: _ => blades.Pop(this)
-        );
+        var createBtn = Icons.Plus.ToButton(_ =>
+        {
+            blades.Pop(this);
+        }).Ghost().Tooltip("Add Task")
+            .ToTrigger((isOpen) => new TaskCreateDialog(isOpen, volume, refreshToken));
+        
+        return new Fragment() { Key = $"task-list-{refreshKey.Value}" }
+            | new FilteredListView<TaskItem>(
+                fetchRecords: async filter =>
+                {
+                    var all = await Database.GetTasksAsync(volume);
+                    if (string.IsNullOrWhiteSpace(filter)) return all.OrderByDescending(t => t.CreatedAt).ToArray();
+                    return all.Where(t => t.Title.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(t => t.CreatedAt).ToArray();
+                },
+                createItem: CreateItem,
+                toolButtons: createBtn,
+                onFilterChanged: _ => blades.Pop(this)
+            );
     }
 }
 
-public class TaskDetailsBlade(Guid taskId) : ViewBase
+public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
 {
     public override object? Build()
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
-        var refreshToken = this.UseRefreshToken();
         var task = UseState<TaskItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -305,7 +313,7 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
         {
             var tasks = await Database.GetTasksAsync(volume);
             task.Value = tasks.FirstOrDefault(t => t.Id == taskId);
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.AfterInit(), token]);
 
         if (task.Value == null) return null;
 
@@ -317,8 +325,8 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
             {
                 if (result.IsOk())
                 {
-                    Delete(volume);
-                    refreshToken.Refresh();
+                    Delete(volume, taskId);
+                    token.Refresh();
                     blades.Pop(refresh: true);
                 }
             }, "Delete Task", AlertButtonSet.OkCancel);
@@ -329,7 +337,7 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
             try
             {
                 await Database.SaveTaskAsync(volume, taskValue with { IsCompleted = !taskValue.IsCompleted });
-                refreshToken.Refresh();
+                token.Refresh();
             }
             catch (Exception ex) { UseService<IClientProvider>().Toast(ex.Message, "Error"); }
         };
@@ -348,7 +356,7 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
             .Variant(ButtonVariant.Outline)
             .Icon(Icons.Pencil)
             .Width(Size.Grow())
-            .ToTrigger((isOpen) => new TaskEditSheet(isOpen, volume, refreshToken, taskId));
+            .ToTrigger((isOpen) => new TaskEditSheet(isOpen, volume, token, taskValue.Id));
 
         var detailsCard = new Card(
             content: Layout.Vertical()
@@ -373,7 +381,7 @@ public class TaskDetailsBlade(Guid taskId) : ViewBase
             | alertView!;
     }
 
-    private void Delete(IVolume volume)
+    private void Delete(IVolume volume, Guid taskId)
     {
         Database.DeleteTaskAsync(volume, taskId).Wait();
     }
@@ -437,8 +445,9 @@ public class TaskCreateDialog(IState<bool> isOpen, IVolume volume, RefreshToken 
             {
                 try
                 {
-                    await Database.SaveTaskAsync(volume, new TaskItem(Guid.NewGuid(), task.Value.Title.Trim(), false, DateTime.UtcNow));
-                    refreshToken.Refresh();
+                    var newTask = new TaskItem(Guid.NewGuid(), task.Value.Title.Trim(), false, DateTime.UtcNow);
+                    await Database.SaveTaskAsync(volume, newTask);
+                    refreshToken.Refresh(returnValue: newTask);
                     task.Set(new TaskCreateRequest());
                 }
                 catch (Exception ex) { client.Toast(ex.Message, "Error"); }
