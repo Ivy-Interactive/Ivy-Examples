@@ -393,29 +393,27 @@ public class TaskEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken ref
     {
         var task = UseState<TaskItem?>(() => null);
         var client = UseService<IClientProvider>();
+        var skipSave = UseState(() => true);
 
         UseEffect(async () =>
         {
             var tasks = await Database.GetTasksAsync(volume);
             task.Value = tasks.FirstOrDefault(t => t.Id == taskId);
+            skipSave.Value = false;
         }, [EffectTrigger.AfterInit()]);
-
-        if (task.Value == null) return null;
-
-        var taskValue = task.Value;
 
         UseEffect(async () =>
         {
-            if (taskValue != null && !string.IsNullOrWhiteSpace(taskValue.Title))
+            if (skipSave.Value || task.Value == null || string.IsNullOrWhiteSpace(task.Value.Title)) return;
+            try
             {
-                try
-                {
-                    await Database.SaveTaskAsync(volume, taskValue);
-                    refreshToken.Refresh();
-                }
-                catch (Exception ex) { client.Toast(ex.Message, "Error"); }
+                await Database.SaveTaskAsync(volume, task.Value);
+                refreshToken.Refresh();
             }
+            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
         }, [task]);
+
+        if (task.Value == null) return null;
 
         return task
             .ToForm()
@@ -880,3 +878,4 @@ public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken 
             .ToSheet(isOpen, "Edit Contact");
     }
 }
+
