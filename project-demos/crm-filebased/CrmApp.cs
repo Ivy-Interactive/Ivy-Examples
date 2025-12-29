@@ -683,14 +683,22 @@ public class ContactListBlade : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
-        var contacts = UseState<List<ContactItem>>(() => new List<ContactItem>());
+        var refreshToken = this.UseRefreshToken();
+        var refreshKey = UseState(() => 0);
 
-        UseEffect(async () => contacts.Value = await Database.GetContactsAsync(volume), [EffectTrigger.AfterInit()]);
+        this.UseEffect(() =>
+        {
+            if (refreshToken.ReturnValue is ContactItem newContact)
+            {
+                blades.Pop(this, true);
+            }
+            refreshKey.Value++;
+        }, [refreshToken]);
 
         var onItemClick = new Action<Event<ListItem>>(e =>
         {
             var contact = (ContactItem)e.Sender.Tag!;
-            blades.Push(this, new ContactDetailsBlade(contact.Id), contact.Name);
+            blades.Push(this, new ContactDetailsBlade(contact.Id, refreshToken), contact.Name);
         });
 
         ListItem CreateItem(ContactItem contact) => new(
@@ -701,41 +709,37 @@ public class ContactListBlade : ViewBase
             icon: Icons.Users
         );
 
-        var refreshToken = this.UseRefreshToken();
-        var createBtn = Icons.Plus.ToButton(_ => { }).Ghost().Tooltip("Add Contact")
-            .ToTrigger(isOpen => new ContactCreateDialog(isOpen, volume, refreshToken));
-
-        UseEffect(() =>
+        var createBtn = Icons.Plus.ToButton(_ =>
         {
-            if (refreshToken.ReturnValue != null)
-                contacts.Value = Database.GetContactsAsync(volume).Result;
-        }, [refreshToken]);
-
-        return new FilteredListView<ContactItem>(
-            fetchRecords: async filter =>
-            {
-                var all = await Database.GetContactsAsync(volume);
-                if (string.IsNullOrWhiteSpace(filter)) return all.OrderBy(c => c.Name).ToArray();
-                filter = filter.Trim();
-                return all.Where(c => c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) || 
-                                     c.Email.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                                     (c.Phone != null && c.Phone.Contains(filter, StringComparison.OrdinalIgnoreCase)))
-                    .OrderBy(c => c.Name).ToArray();
-            },
-            createItem: CreateItem,
-            toolButtons: createBtn,
-            onFilterChanged: _ => blades.Pop(this)
-        );
+            blades.Pop(this);
+        }).Ghost().Tooltip("Add Contact")
+            .ToTrigger((isOpen) => new ContactCreateDialog(isOpen, volume, refreshToken));
+        
+        return new Fragment() { Key = $"contact-list-{refreshKey.Value}" }
+            | new FilteredListView<ContactItem>(
+                fetchRecords: async filter =>
+                {
+                    var all = await Database.GetContactsAsync(volume);
+                    if (string.IsNullOrWhiteSpace(filter)) return all.OrderBy(c => c.Name).ToArray();
+                    filter = filter.Trim();
+                    return all.Where(c => c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) || 
+                                         c.Email.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                                         (c.Phone != null && c.Phone.Contains(filter, StringComparison.OrdinalIgnoreCase)))
+                        .OrderBy(c => c.Name).ToArray();
+                },
+                createItem: CreateItem,
+                toolButtons: createBtn,
+                onFilterChanged: _ => blades.Pop(this)
+            );
     }
 }
 
-public class ContactDetailsBlade(Guid contactId) : ViewBase
+public class ContactDetailsBlade(Guid contactId, RefreshToken token) : ViewBase
 {
     public override object? Build()
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeController>();
-        var refreshToken = this.UseRefreshToken();
         var contact = UseState<ContactItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -743,7 +747,7 @@ public class ContactDetailsBlade(Guid contactId) : ViewBase
         {
             var contacts = await Database.GetContactsAsync(volume);
             contact.Value = contacts.FirstOrDefault(c => c.Id == contactId);
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.AfterInit(), token]);
 
         if (contact.Value == null) return null;
 
@@ -756,7 +760,7 @@ public class ContactDetailsBlade(Guid contactId) : ViewBase
                 if (result.IsOk())
                 {
                     Delete(volume);
-                    refreshToken.Refresh();
+                    token.Refresh();
                     blades.Pop(refresh: true);
                 }
             }, "Delete Contact", AlertButtonSet.OkCancel);
@@ -766,7 +770,7 @@ public class ContactDetailsBlade(Guid contactId) : ViewBase
             .Variant(ButtonVariant.Outline)
             .Icon(Icons.Pencil)
             .Width(Size.Grow())
-            .ToTrigger((isOpen) => new ContactEditSheet(isOpen, volume, refreshToken, contactId));
+            .ToTrigger((isOpen) => new ContactEditSheet(isOpen, volume, token, contactId));
 
         var deleteBtn = new Button("Delete")
             .Variant(ButtonVariant.Outline)
@@ -827,8 +831,9 @@ public class ContactCreateDialog(IState<bool> isOpen, IVolume volume, RefreshTok
             {
                 try
                 {
-                    await Database.SaveContactAsync(volume, new ContactItem(Guid.NewGuid(), contact.Value.Name.Trim(), contact.Value.Email.Trim(), contact.Value.Phone?.Trim() ?? "", DateTime.UtcNow));
-                    refreshToken.Refresh();
+                    var newContact = new ContactItem(Guid.NewGuid(), contact.Value.Name.Trim(), contact.Value.Email.Trim(), contact.Value.Phone?.Trim() ?? "", DateTime.UtcNow);
+                    await Database.SaveContactAsync(volume, newContact);
+                    refreshToken.Refresh(returnValue: newContact);
                     contact.Set(new ContactCreateRequest());
                 }
                 catch (Exception ex) { client.Toast(ex.Message, "Error"); }
@@ -849,29 +854,27 @@ public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken 
     {
         var contact = UseState<ContactItem?>(() => null);
         var client = UseService<IClientProvider>();
+        var skipSave = UseState(() => true);
 
         UseEffect(async () =>
         {
             var contacts = await Database.GetContactsAsync(volume);
             contact.Value = contacts.FirstOrDefault(c => c.Id == contactId);
+            skipSave.Value = false;
         }, [EffectTrigger.AfterInit()]);
-
-        if (contact.Value == null) return null;
-
-        var contactValue = contact.Value;
 
         UseEffect(async () =>
         {
-            if (contactValue != null && !string.IsNullOrWhiteSpace(contactValue.Name) && !string.IsNullOrWhiteSpace(contactValue.Email))
+            if (skipSave.Value || contact.Value == null || string.IsNullOrWhiteSpace(contact.Value.Name) || string.IsNullOrWhiteSpace(contact.Value.Email)) return;
+            try
             {
-                try
-                {
-                    await Database.SaveContactAsync(volume, contactValue);
-                    refreshToken.Refresh();
-                }
-                catch (Exception ex) { client.Toast(ex.Message, "Error"); }
+                await Database.SaveContactAsync(volume, contact.Value);
+                refreshToken.Refresh();
             }
+            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
         }, [contact]);
+
+        if (contact.Value == null) return null;
 
         return contact
             .ToForm()
