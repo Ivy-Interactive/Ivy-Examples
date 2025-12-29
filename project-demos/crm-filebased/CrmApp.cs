@@ -49,6 +49,11 @@ record ContactItem(Guid Id, string Name, string Email, string Phone, DateTime Cr
 // SQLite Database Helper
 static class Database
 {
+    // Global event for data changes - allows DashboardApp to react to updates
+    public static event Action? DataChanged;
+
+    private static void NotifyDataChanged() => DataChanged?.Invoke();
+
     private static async Task<SqliteConnection> GetConnectionAsync(IVolume volume)
     {
         var relativePath = "db.sqlite";
@@ -86,11 +91,11 @@ static class Database
     }
 
     public static async Task SaveTaskAsync(IVolume volume, TaskItem task) =>
-        await ExecuteAsync(volume, "INSERT OR REPLACE INTO Tasks (Id, Title, IsCompleted, CreatedAt) VALUES (@Id, @Title, @IsCompleted, @CreatedAt)",
+        await ExecuteWithNotificationAsync(volume, "INSERT OR REPLACE INTO Tasks (Id, Title, IsCompleted, CreatedAt) VALUES (@Id, @Title, @IsCompleted, @CreatedAt)",
             ("@Id", task.Id.ToString()), ("@Title", task.Title), ("@IsCompleted", task.IsCompleted ? 1 : 0), ("@CreatedAt", task.CreatedAt.ToString("O")));
 
     public static async Task DeleteTaskAsync(IVolume volume, Guid id) =>
-        await ExecuteAsync(volume, "DELETE FROM Tasks WHERE Id = @Id", ("@Id", id.ToString()));
+        await ExecuteWithNotificationAsync(volume, "DELETE FROM Tasks WHERE Id = @Id", ("@Id", id.ToString()));
 
     public static async Task<List<NoteItem>> GetNotesAsync(IVolume volume)
     {
@@ -104,11 +109,11 @@ static class Database
     }
 
     public static async Task SaveNoteAsync(IVolume volume, NoteItem note) =>
-        await ExecuteAsync(volume, "INSERT OR REPLACE INTO Notes (Id, Title, Content, CreatedAt) VALUES (@Id, @Title, @Content, @CreatedAt)",
+        await ExecuteWithNotificationAsync(volume, "INSERT OR REPLACE INTO Notes (Id, Title, Content, CreatedAt) VALUES (@Id, @Title, @Content, @CreatedAt)",
             ("@Id", note.Id.ToString()), ("@Title", note.Title), ("@Content", note.Content), ("@CreatedAt", note.CreatedAt.ToString("O")));
 
     public static async Task DeleteNoteAsync(IVolume volume, Guid id) =>
-        await ExecuteAsync(volume, "DELETE FROM Notes WHERE Id = @Id", ("@Id", id.ToString()));
+        await ExecuteWithNotificationAsync(volume, "DELETE FROM Notes WHERE Id = @Id", ("@Id", id.ToString()));
 
     public static async Task<List<ContactItem>> GetContactsAsync(IVolume volume)
     {
@@ -122,11 +127,11 @@ static class Database
     }
 
     public static async Task SaveContactAsync(IVolume volume, ContactItem contact) =>
-        await ExecuteAsync(volume, "INSERT OR REPLACE INTO Contacts (Id, Name, Email, Phone, CreatedAt) VALUES (@Id, @Name, @Email, @Phone, @CreatedAt)",
+        await ExecuteWithNotificationAsync(volume, "INSERT OR REPLACE INTO Contacts (Id, Name, Email, Phone, CreatedAt) VALUES (@Id, @Name, @Email, @Phone, @CreatedAt)",
             ("@Id", contact.Id.ToString()), ("@Name", contact.Name), ("@Email", contact.Email), ("@Phone", string.IsNullOrEmpty(contact.Phone) ? DBNull.Value : contact.Phone), ("@CreatedAt", contact.CreatedAt.ToString("O")));
 
     public static async Task DeleteContactAsync(IVolume volume, Guid id) =>
-        await ExecuteAsync(volume, "DELETE FROM Contacts WHERE Id = @Id", ("@Id", id.ToString()));
+        await ExecuteWithNotificationAsync(volume, "DELETE FROM Contacts WHERE Id = @Id", ("@Id", id.ToString()));
 
     private static async Task ExecuteAsync(IVolume volume, string sql, params (string, object)[] parameters)
     {
@@ -135,6 +140,12 @@ static class Database
         foreach (var (name, value) in parameters)
             cmd.Parameters.AddWithValue(name, value);
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    private static async Task ExecuteWithNotificationAsync(IVolume volume, string sql, params (string, object)[] parameters)
+    {
+        await ExecuteAsync(volume, sql, parameters);
+        NotifyDataChanged();
     }
 }
 
@@ -151,6 +162,7 @@ public class DashboardApp : ViewBase
 
         var refreshToken = this.UseRefreshToken();
 
+        // Load data on init, when refreshToken changes, and subscribe to global data changes
         UseEffect(async () =>
         {
             if (volume != null)
@@ -160,6 +172,13 @@ public class DashboardApp : ViewBase
                 contacts.Value = await Database.GetContactsAsync(volume);
             }
         }, [EffectTrigger.AfterInit(), refreshToken]);
+
+        // Subscribe to global data changes from Database (for cross-app sync)
+        UseEffect(() =>
+        {
+            void OnDataChanged() => refreshToken.Refresh();
+            Database.DataChanged += OnDataChanged;
+        }, [EffectTrigger.AfterInit()]);
 
         var completedTasks = tasks.Value.Count(t => t.IsCompleted);
         var totalTasks = tasks.Value.Count;
