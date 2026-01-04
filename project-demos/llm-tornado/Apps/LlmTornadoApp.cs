@@ -142,18 +142,6 @@ public class MainMenuBlade : ViewBase
                                 .Disabled(selectedModel.Value == null)
                                 .HandleClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
                     )
-                    | new Card(
-                        Layout.Horizontal().Gap(3)
-                        | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
-                            | new Icon(Icons.Image).Size(16))
-                        | (Layout.Vertical().Gap(2)
-                            | Text.Large("Multimedia")
-                            | Text.Small("Working with images and multimodal models").Muted()
-                            | new Button("Try It")
-                                .Variant(ButtonVariant.Primary)
-                                .Disabled(selectedModel.Value == null)
-                                .HandleClick(_ => blades.Push(this, new MultimediaBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Multimedia")))
-                    )
         );
     }
 }
