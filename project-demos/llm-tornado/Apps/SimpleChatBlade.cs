@@ -19,7 +19,7 @@ public class SimpleChatBlade : ViewBase
         var client = UseService<IClientProvider>();
         
         _messages = UseState(ImmutableArray.Create<ChatMessage>(
-            new ChatMessage(ChatSender.Assistant, "Hello! I'm powered by LlmTornado. How can I help you today?")
+            new ChatMessage(ChatSender.Assistant, Text.Markdown("Hello! I'm powered by LlmTornado. How can I help you today?"))
         ));
 
         // Initialize TornadoApi client
@@ -94,14 +94,14 @@ public class SimpleChatBlade : ViewBase
                     if ((DateTime.UtcNow - lastUpdate).TotalMilliseconds > 100)
                     {
                         var updatedMessages = _messages.Value.Take(_messages.Value.Length - 1).ToImmutableArray();
-                        _messages.Set(updatedMessages.Add(new ChatMessage(ChatSender.Assistant, builder.ToString())));
+                        _messages.Set(updatedMessages.Add(new ChatMessage(ChatSender.Assistant, Text.Markdown(builder.ToString()))));
                         lastUpdate = DateTime.UtcNow;
                     }
                 });
 
                 // Final update
                 var finalMessages = _messages.Value.Take(_messages.Value.Length - 1).ToImmutableArray();
-                _messages.Set(finalMessages.Add(new ChatMessage(ChatSender.Assistant, builder.ToString())));
+                _messages.Set(finalMessages.Add(new ChatMessage(ChatSender.Assistant, Text.Markdown(builder.ToString()))));
             }
             catch (Exception ex)
             {
@@ -111,7 +111,7 @@ public class SimpleChatBlade : ViewBase
                     errorMessages = errorMessages.Take(errorMessages.Length - 1).ToImmutableArray();
                 }
                 _messages.Set(errorMessages.Add(
-                    new ChatMessage(ChatSender.Assistant, $"Error: {ex.Message}")
+                    new ChatMessage(ChatSender.Assistant, Text.Markdown($"**Error:** {ex.Message}"))
                 ));
             }
         });

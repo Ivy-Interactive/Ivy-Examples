@@ -19,14 +19,16 @@ public class MultimediaBlade : ViewBase
     {
         var client = UseService<IClientProvider>();
         
+        var welcomeMessage = "**Hello! I'm a multimodal assistant.**\n\n" +
+            "I can analyze images you provide.\n\n" +
+            "**Note:** This requires a vision-capable model like:\n\n" +
+            "• llava (recommended)\n\n" +
+            "• llama3.2-vision\n\n" +
+            "• bakllava\n\n" +
+            "Paste an image URL above and ask me about it!";
+        
         _messages = UseState(ImmutableArray.Create<ChatMessage>(
-            new ChatMessage(ChatSender.Assistant, 
-                "Hello! I'm a multimodal assistant. I can analyze images you provide.\n\n" +
-                "**Note:** This requires a vision-capable model like:\n" +
-                "• llava (recommended)\n" +
-                "• llama3.2-vision\n" +
-                "• bakllava\n\n" +
-                "Paste an image URL above and ask me about it!")
+            new ChatMessage(ChatSender.Assistant, Text.Markdown(welcomeMessage))
         ));
 
         _imageUrl = UseState("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/481px-Cat03.jpg");
@@ -130,14 +132,14 @@ public class MultimediaBlade : ViewBase
                     if ((DateTime.UtcNow - lastUpdate).TotalMilliseconds > 100)
                     {
                         var updatedMessages = _messages.Value.Take(_messages.Value.Length - 1).ToImmutableArray();
-                        _messages.Set(updatedMessages.Add(new ChatMessage(ChatSender.Assistant, builder.ToString())));
+                        _messages.Set(updatedMessages.Add(new ChatMessage(ChatSender.Assistant, Text.Markdown(builder.ToString()))));
                         lastUpdate = DateTime.UtcNow;
                     }
                 });
 
                 // Final update
                 var finalMessages = _messages.Value.Take(_messages.Value.Length - 1).ToImmutableArray();
-                _messages.Set(finalMessages.Add(new ChatMessage(ChatSender.Assistant, builder.ToString())));
+                _messages.Set(finalMessages.Add(new ChatMessage(ChatSender.Assistant, Text.Markdown(builder.ToString()))));
             }
             catch (Exception ex)
             {
@@ -147,14 +149,14 @@ public class MultimediaBlade : ViewBase
                     errorMessages = errorMessages.Take(errorMessages.Length - 1).ToImmutableArray();
                 }
                 
-                var errorText = $"Error: {ex.Message}\n\n" +
+                var errorText = $"**Error:** {ex.Message}\n\n" +
                     "**Troubleshooting:**\n" +
                     "• Make sure you're using a vision-capable model (e.g., `llava`, `llama3.2-vision`)\n" +
                     "• Download with: `ollama pull llava`\n" +
                     "• Check that the image URL is accessible";
                 
                 _messages.Set(errorMessages.Add(
-                    new ChatMessage(ChatSender.Assistant, errorText)
+                    new ChatMessage(ChatSender.Assistant, Text.Markdown(errorText))
                 ));
             }
         });
