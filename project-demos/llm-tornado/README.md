@@ -4,6 +4,8 @@
 
 LlmTornado Examples is a web application demonstrating the [LlmTornado](https://llmtornado.ai) library capabilities for interacting with LLM models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support.
 
+https://github.com/user-attachments/assets/4466bb03-4a59-4469-b857-5bcd2e254963
+
 ## One-Click Development Environment
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fllm-tornado%2Fdevcontainer.json&location=EuropeWest)
