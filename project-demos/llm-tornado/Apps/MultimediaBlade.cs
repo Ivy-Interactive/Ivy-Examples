@@ -50,7 +50,8 @@ public class MultimediaBlade : ViewBase
 
         return BladeHelper.WithHeader(
             Layout.Horizontal().Gap(2)
-                | new Icon(Icons.Image)
+                | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
+                    | new Icon(Icons.Image).Size(8))
                 | Text.H4($"Multimedia - {_modelName}"),
             Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400)))
                 | new Card(
