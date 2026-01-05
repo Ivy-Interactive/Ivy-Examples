@@ -125,7 +125,13 @@ public class DashboardApp : ViewBase
 {
     private static async Task<ClickHouseConnection> GetConnection()
     {
-        var connectionString = "Host=localhost;Port=8123;Username=default;Password=default;Database=default;Protocol=http";
+        var host = Environment.GetEnvironmentVariable("CLICKHOUSE_HOST") ?? "localhost";
+        var port = Environment.GetEnvironmentVariable("CLICKHOUSE_PORT") ?? "8123";
+        var user = Environment.GetEnvironmentVariable("CLICKHOUSE_USER") ?? "default";
+        var password = Environment.GetEnvironmentVariable("CLICKHOUSE_PASSWORD") ?? "default";
+        var database = Environment.GetEnvironmentVariable("CLICKHOUSE_DB") ?? "default";
+        
+        var connectionString = $"Host={host};Port={port};Username={user};Password={password};Database={database};Protocol=http";
         
         // Retry connection up to 5 times with delay
         for (int attempt = 1; attempt <= 5; attempt++)

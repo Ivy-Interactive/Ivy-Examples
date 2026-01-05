@@ -4,8 +4,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0
 WORKDIR /app
 COPY ClickHouseDashboard.cs ./
 
-ENV ASPNETCORE_URLS=http://+:5010
+ENV PORT=5000
+ENV ASPNETCORE_URLS=http://+:5000
 ENV CLICKHOUSE_HOST=clickhouse
-EXPOSE 5010
+EXPOSE 5000
 
 CMD ["dotnet", "run", "ClickHouseDashboard.cs"]
