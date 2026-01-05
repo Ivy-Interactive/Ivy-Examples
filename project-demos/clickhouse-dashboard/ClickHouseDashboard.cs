@@ -22,6 +22,7 @@ CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICult
 
 // Check if ClickHouse is running, if not try to start it via Docker
 await EnsureClickHouseRunning();
+await InitializeDatabase();
 
 var server = new Server();
 #if DEBUG
@@ -91,6 +92,70 @@ static async Task<bool> IsPortOpen(string host, int port)
     catch
     {
         return false;
+    }
+}
+
+static async Task InitializeDatabase()
+{
+    try
+    {
+        Console.WriteLine("Initializing database...");
+        
+        var host = Environment.GetEnvironmentVariable("CLICKHOUSE_HOST") ?? "localhost";
+        var port = Environment.GetEnvironmentVariable("CLICKHOUSE_PORT") ?? "8123";
+        var user = Environment.GetEnvironmentVariable("CLICKHOUSE_USER") ?? "default";
+        var password = Environment.GetEnvironmentVariable("CLICKHOUSE_PASSWORD") ?? "default";
+        var database = Environment.GetEnvironmentVariable("CLICKHOUSE_DB") ?? "default";
+        
+        var connectionString = $"Host={host};Port={port};Username={user};Password={password};Database={database};Protocol=http";
+        
+        await using var connection = new ClickHouseConnection(connectionString);
+        await connection.OpenAsync();
+        
+        // Check if tables already exist
+        using var checkCmd = connection.CreateCommand();
+        checkCmd.CommandText = "SELECT count() FROM system.tables WHERE database = currentDatabase() AND name = 'events'";
+        var exists = Convert.ToInt64(await checkCmd.ExecuteScalarAsync()) > 0;
+        
+        if (exists)
+        {
+            Console.WriteLine("Database already initialized.");
+            return;
+        }
+        
+        // Read and execute init.sql
+        var initSqlPath = Path.Combine(Directory.GetCurrentDirectory(), "init.sql");
+        if (!File.Exists(initSqlPath))
+            initSqlPath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "", "init.sql");
+        
+        if (!File.Exists(initSqlPath))
+        {
+            Console.WriteLine("Warning: init.sql not found. Skipping database initialization.");
+            return;
+        }
+        
+        var sqlScript = await File.ReadAllTextAsync(initSqlPath);
+        
+        // Split SQL script by semicolons and execute each statement
+        var statements = sqlScript.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var statement in statements)
+        {
+            var trimmedStatement = statement.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedStatement) || trimmedStatement.StartsWith("--"))
+                continue;
+                
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = trimmedStatement;
+            await cmd.ExecuteNonQueryAsync();
+        }
+        
+        Console.WriteLine("Database initialized successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Failed to initialize database: {ex.Message}");
+        // Don't throw - let the app continue even if initialization fails
     }
 }
 
