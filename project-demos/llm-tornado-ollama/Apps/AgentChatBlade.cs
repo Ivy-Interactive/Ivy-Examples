@@ -181,7 +181,7 @@ public class AgentChatBlade : ViewBase
                             _instructionsForm.Set(new InstructionsModel(_instructions.Value));
                             _showSettings.Set(true);
                         }).Ghost().Tooltip("Edit agent instructions")),
-                Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400)))
+                Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400))).Height(Size.Units(233))
                     | new Chat(_messages.Value.ToArray(), OnSendMessage)
             )
             | instructionsDialog;

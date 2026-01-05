@@ -45,7 +45,7 @@ public class SimpleChatBlade : ViewBase
                 | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                     | new Icon(Icons.MessageSquare).Size(8))
                 | Text.H4($"Simple Chat - {_modelName}"),
-            Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400)))
+            Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400))).Height(Size.Units(233))
                 | new Chat(_messages.Value.ToArray(), OnSendMessage)
         );
     }
