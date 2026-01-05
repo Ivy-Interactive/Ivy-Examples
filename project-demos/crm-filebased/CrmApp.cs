@@ -153,6 +153,8 @@ static class Database
 [App(icon: Icons.ChartBar, title: "Dashboard")]
 public class DashboardApp : ViewBase
 {
+    private const float CONTENT_WIDTH = 0.8f;
+    
     public override object? Build()
     {
         var volume = UseService<IVolume>();
@@ -183,6 +185,14 @@ public class DashboardApp : ViewBase
         var completedTasks = tasks.Value.Count(t => t.IsCompleted);
         var totalTasks = tasks.Value.Count;
         var pendingTasks = totalTasks - completedTasks;
+        var completionRate = totalTasks > 0 ? (double)completedTasks / totalTasks * 100 : 0;
+        
+        // Recent activity (last 7 days)
+        var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+        var recentTasks = tasks.Value.Count(t => t.CreatedAt >= sevenDaysAgo);
+        var recentNotes = notes.Value.Count(n => n.CreatedAt >= sevenDaysAgo);
+        var recentContacts = contacts.Value.Count(c => c.CreatedAt >= sevenDaysAgo);
+        var recentActivity = recentTasks + recentNotes + recentContacts;
 
         // Prepare data for Task Status Pie Chart
         var taskStatusData = new[]
@@ -199,50 +209,85 @@ public class DashboardApp : ViewBase
                 new PieChartTotal(totalTasks.ToString(), "Total Tasks"))
             : null;
 
-        // Prepare data for Activity Over Time Bar Chart
-        var activityData = tasks.Value.Select(t => new { Date = t.CreatedAt.Date })
-            .Concat(notes.Value.Select(n => new { Date = n.CreatedAt.Date }))
-            .Concat(contacts.Value.Select(c => new { Date = c.CreatedAt.Date }))
+        // Prepare data for Tasks Over Time Line Chart
+        var tasksData = tasks.Value
+            .GroupBy(t => t.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        var tasksLineChart = tasksData.ToLineChart(
+            dimension: x => x.Date.ToString("MMM dd"),
+            measures: [x => x.Sum(f => (double)f.Count)],
+            LineChartStyles.Dashboard);
+
+        // Prepare data for Notes Over Time Line Chart
+        var notesData = notes.Value
+            .GroupBy(n => n.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        var notesLineChart = notesData.ToLineChart(
+            dimension: x => x.Date.ToString("MMM dd"),
+            measures: [x => x.Sum(f => (double)f.Count)],
+            LineChartStyles.Dashboard);
+
+        // Prepare data for Contacts Over Time Line Chart
+        var contactsData = contacts.Value
+            .GroupBy(c => c.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        var contactsLineChart = contactsData.ToLineChart(
+            dimension: x => x.Date.ToString("MMM dd"),
+            measures: [x => x.Sum(f => (double)f.Count)],
+            LineChartStyles.Dashboard);
+
+        // Prepare data for Activity Over Time Bar Chart (combined)
+        var activityData = tasks.Value.Select(t => new { Date = t.CreatedAt.Date, Type = "Tasks" })
+            .Concat(notes.Value.Select(n => new { Date = n.CreatedAt.Date, Type = "Notes" }))
+            .Concat(contacts.Value.Select(c => new { Date = c.CreatedAt.Date, Type = "Contacts" }))
             .GroupBy(x => x.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
             .ToList();
 
-        var activityBarChart = activityData.Count > 0
-            ? activityData.ToBarChart()
-                .Dimension("Date", x => x.Date.ToString("MMM dd"))
-                .Measure("Items Created", x => x.Sum(f => f.Count))
-            : null;
+        var activityBarChart = activityData.ToBarChart()
+            .Dimension("Date", x => x.Date.ToString("MMM dd"))
+            .Measure("Items Created", x => x.Sum(f => f.Count));
 
-        return Layout.Vertical().Gap(4).Padding(4)
+        return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | Text.H1("CRM Dashboard")
-            | (Layout.Grid().Columns(3).Gap(3)
-                | new Card(Text.H3(totalTasks.ToString())).Title("Total Tasks").Icon(Icons.ListTodo)
-                | new Card(Text.H3(notes.Value.Count.ToString())).Title("Total Notes").Icon(Icons.FileText)
-                | new Card(Text.H3(contacts.Value.Count.ToString())).Title("Total Contacts").Icon(Icons.Users))
-            | (Layout.Grid().Columns(2).Gap(3)
-                | (taskStatusPieChart != null
-                    ? new Card(
-                        Layout.Vertical().Gap(3).Padding(3)
-                            | Text.H3("Task Status")
-                            | Text.Muted("Distribution of completed vs pending tasks")
-                            | taskStatusPieChart
-                    )
-                    : new Card(
-                        Layout.Vertical().Gap(2).Padding(3)
-                            | Text.Muted("No tasks data available")
-                    ))
-                | (activityBarChart != null
-                    ? new Card(
-                        Layout.Vertical().Gap(3).Padding(3)
-                            | Text.H3("Activity Over Time")
-                            | Text.Muted("Items created by date")
-                            | activityBarChart
-                    )
-                    : new Card(
-                        Layout.Vertical().Gap(2).Padding(3)
-                            | Text.Muted("No activity data available")
-                    )));
+            | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3(totalTasks.ToString())
+                        | Text.Small($"{completedTasks} completed, {pendingTasks} pending").Muted()
+                ).Title("Total Tasks").Icon(Icons.ListTodo)
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3(completionRate.ToString("F1") + "%")
+                        | Text.Small($"{completedTasks} of {totalTasks} tasks").Muted()
+                ).Title("Completion Rate").Icon(Icons.Check)
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3(notes.Value.Count.ToString())
+                        | Text.Small($"{recentNotes} in last 7 days").Muted()
+                ).Title("Total Notes").Icon(Icons.FileText)
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3(contacts.Value.Count.ToString())
+                        | Text.Small($"{recentContacts} in last 7 days").Muted()
+                ).Title("Total Contacts").Icon(Icons.Users))
+            | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                | new Card(taskStatusPieChart!).Title("Task Status")
+                | new Card(activityBarChart).Title("Activity Over Time"))
+            | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
+                | new Card(tasksLineChart).Title("Tasks Created")
+                | new Card(notesLineChart).Title("Notes Created")
+                | new Card(contactsLineChart).Title("Contacts Created"));
     }
 }
 
