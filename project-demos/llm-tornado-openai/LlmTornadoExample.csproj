@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>LlmTornadoExample</RootNamespace>
+    <UserSecretsId>983195f6-ee72-40f2-9072-46a10e4d85d5</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

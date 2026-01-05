@@ -8,7 +8,7 @@ public class AgentChatBlade : ViewBase
 {
     private record InstructionsModel(string Instructions);
 
-    private readonly string _ollamaUrl;
+    private readonly string _openAiApiKey;
     private readonly string _modelName;
 
     private IState<ImmutableArray<ChatMessage>> _messages;
@@ -17,9 +17,9 @@ public class AgentChatBlade : ViewBase
     private IState<bool> _showSettings;
     private TornadoApi? _api;
 
-    public AgentChatBlade(string ollamaUrl, string modelName)
+    public AgentChatBlade(string openAiApiKey, string modelName)
     {
-        _ollamaUrl = ollamaUrl;
+        _openAiApiKey = openAiApiKey;
         _modelName = modelName;
     }
 
@@ -139,12 +139,12 @@ public class AgentChatBlade : ViewBase
             {
                 try
                 {
-                    _api = new TornadoApi(new Uri(_ollamaUrl));
+                    _api = new TornadoApi(apiKey: _openAiApiKey);
                     await Task.CompletedTask;
                 }
                 catch (Exception ex)
                 {
-                    client.Toast($"Failed to connect to Ollama: {ex.Message}", "Connection Error");
+                    client.Toast($"Failed to connect to OpenAI: {ex.Message}", "Connection Error");
                 }
             }
         }, EffectTrigger.AfterInit());
@@ -278,7 +278,7 @@ public class AgentChatBlade : ViewBase
                               $"This model cannot use tools to perform actions like getting weather, calculating, or checking the current time.\n\n" +
                               $"**Recommendations:**\n\n" +
                               $"• Use the **Simple Chat** mode instead (works with any model)\n\n" +
-                              $"• For Ollama: check if your model version supports tools/function calling";
+                              $"• For OpenAI: ensure you're using a model that supports function calling (e.g., gpt-4, gpt-4-turbo, gpt-3.5-turbo)";
                 }
                 
                 // Final update

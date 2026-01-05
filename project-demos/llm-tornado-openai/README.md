@@ -1,10 +1,8 @@
-# LlmTornado
+# LlmTornado OpenAI Examples
 
 ## Description
 
-LlmTornado Examples is a web application demonstrating the [LlmTornado](https://llmtornado.ai) library capabilities for interacting with LLM models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support.
-
-https://github.com/user-attachments/assets/4466bb03-4a59-4469-b857-5bcd2e254963
+LlmTornado OpenAI Examples is a web application demonstrating the [LlmTornado](https://llmtornado.ai) library capabilities for interacting with OpenAI models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support.
 
 ## One-Click Development Environment
 
@@ -30,21 +28,21 @@ This example demonstrates various capabilities of the [LlmTornado](https://llmto
 
 **What This Application Does:**
 
-This implementation creates an **LlmTornado Examples** workspace that allows users to:
+This implementation creates an **LlmTornado OpenAI Examples** workspace that allows users to:
 
 - **Simple Chat**: Basic conversation interface with real-time streaming responses
 - **Agent with Tools**: AI agent with function calling capabilities (GetCurrentTime, Calculate, GetWeather)
-- **Dynamic Model Discovery**: Automatically discovers available Ollama models from your local installation
+- **OpenAI Model Selection**: Select from popular OpenAI models (gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo)
 - **Streaming Responses**: Real-time streaming of responses as they're generated with markdown formatting
-- **Model Selection**: Select and switch between different Ollama models with live filtering
+- **Secure API Key Management**: Uses dotnet user-secrets for secure API key storage
 - **Customizable Instructions**: Configure agent instructions for different use cases
 
 **Technical Implementation:**
 
 - **LlmTornado Library** for LLM model interactions and streaming
 - **TornadoAgent** with function calling/tools support
-- **Ollama Integration** using TornadoApi client
-- **Dynamic Model Loading**: Automatic discovery via Ollama API `/api/tags` endpoint
+- **OpenAI Integration** using TornadoApi client with API key authentication
+- **Secure Configuration**: API keys stored using dotnet user-secrets
 - **Custom Tool Definitions**: GetCurrentTime, Calculate, and GetWeather tools
 - **Blade-based Navigation**: Seamless navigation between different examples
 - **Streaming Support**: Real-time response streaming with UI updates every 100ms
@@ -55,12 +53,12 @@ This implementation creates an **LlmTornado Examples** workspace that allows use
 
 ### Simple Chat
 
-Basic conversation interface with streaming responses. Perfect for simple Q&A interactions with any Ollama model.
+Basic conversation interface with streaming responses. Perfect for simple Q&A interactions with OpenAI models.
 
 **Features:**
 - Real-time streaming responses
 - Markdown formatting support
-- Works with any Ollama model
+- Works with any OpenAI model
 
 ### Agent with Tools
 
@@ -89,36 +87,34 @@ AI agent with function calling capabilities. The agent can use tools to perform 
 ## Prerequisites
 
 1. **.NET 10.0 SDK** or later
-2. **Ollama** installed and running: [ollama.ai](https://ollama.ai)
-3. **Ollama Model**: Install at least one model (e.g., `ollama pull llama3.2:1b` or `ollama pull llama3.2`)
+2. **OpenAI API Key**: Get your API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 ## How to Run
 
-1. **Install and start Ollama**:
+1. **Get your OpenAI API Key**:
+   - Visit [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+   - Create a new API key if you don't have one
+
+2. **Navigate to the example**:
 
    ```bash
-   # Download from https://ollama.ai
-   # Start Ollama service (usually runs automatically)
-   ollama serve
+   cd project-demos/llm-tornado-openai
    ```
 
-2. **Pull a model** (in another terminal):
-
-   ```bash
-   ollama pull llama3.2:1b
-   # Or use another model like llama3.2, mistral, gemma, etc.
-   ```
-
-3. **Navigate to the example**:
-
-   ```bash
-   cd project-demos/llm-tornado
-   ```
-
-4. **Restore dependencies**:
+3. **Restore dependencies**:
 
    ```bash
    dotnet restore
+   ```
+
+4. **Set up OpenAI API Key using dotnet user-secrets**:
+
+   ```bash
+   # Set your OpenAI API key
+   dotnet user-secrets set "OpenAI:ApiKey" "your-api-key-here"
+
+   # Set your OpenAI model (recommended: gpt-4o-mini)
+   dotnet user-secrets set "OpenAI:Model" "gpt-4o-mini"
    ```
 
 5. **Run the application**:
@@ -129,7 +125,6 @@ AI agent with function calling capabilities. The agent can use tools to perform 
 
 6. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
 
-7. **Configure Ollama** (if needed): Set the Ollama URL (default: `http://localhost:11434`) and select a model from the dropdown. The application will automatically discover available models.
 
 ## How to Deploy
 
@@ -138,7 +133,7 @@ Deploy this example to Ivy's hosting platform:
 1. **Navigate to the example**:
 
    ```bash
-   cd project-demos/llm-tornado
+   cd project-demos/llm-tornado-openai
    ```
 
 2. **Deploy to Ivy hosting**:
@@ -148,15 +143,15 @@ Deploy this example to Ivy's hosting platform:
    ```
 
 3. **Configure environment variables** in your deployment settings:
-   - Set `OLLAMA_URL` to your Ollama server URL (default: `http://localhost:11434`)
-   - Set `OLLAMA_MODEL` to your preferred model (default: `llama3.2:1b`)
+   - Set `OpenAI:ApiKey` to your OpenAI API key
+   - Set `OpenAI:Model` to your preferred model (e.g., `gpt-4o-mini`)
 
-This will deploy your LlmTornado examples with a single command.
+This will deploy your LlmTornado OpenAI examples with a single command.
 
 ## Project Structure
 
 ```text
-project-demos/llm-tornado/
+project-demos/llm-tornado-openai/
 ├── Apps/
 │   ├── LlmTornadoApp.cs          # Main app with UseBlades and model selection
 │   ├── SimpleChatBlade.cs        # Simple chat interface with streaming
@@ -169,10 +164,11 @@ project-demos/llm-tornado/
 ## Learn More
 
 - LlmTornado: [llmtornado.ai](https://llmtornado.ai)
-- Ollama: [ollama.ai](https://ollama.ai)
+- OpenAI: [platform.openai.com](https://platform.openai.com)
+- OpenAI API Documentation: [platform.openai.com/docs](https://platform.openai.com/docs)
 - Ivy Documentation: [docs.ivy.app](https://docs.ivy.app)
 - Ivy Framework: [github.com/Ivy-Interactive/Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework)
 
 ## Tags
 
-AI, LLM, Ollama, LlmTornado, Chat, Function Calling, Tools, Streaming, Agents, Local AI, Markdown
+AI, LLM, OpenAI, LlmTornado, Chat, Function Calling, Tools, Streaming, Agents, GPT-4, GPT-3.5, Markdown, User Secrets

@@ -2,15 +2,15 @@ namespace LlmTornadoExample.Apps;
 
 public class SimpleChatBlade : ViewBase
 {
-    private readonly string _ollamaUrl;
+    private readonly string _openAiApiKey;
     private readonly string _modelName;
     
     private IState<ImmutableArray<ChatMessage>> _messages;
     private TornadoApi? _api;
 
-    public SimpleChatBlade(string ollamaUrl, string modelName)
+    public SimpleChatBlade(string openAiApiKey, string modelName)
     {
-        _ollamaUrl = ollamaUrl;
+        _openAiApiKey = openAiApiKey;
         _modelName = modelName;
     }
 
@@ -29,13 +29,13 @@ public class SimpleChatBlade : ViewBase
             {
                 try
                 {
-                    _api = new TornadoApi(new Uri(_ollamaUrl));
+                    _api = new TornadoApi(apiKey: _openAiApiKey);
                     // Test connection
                     await Task.CompletedTask;
                 }
                 catch (Exception ex)
                 {
-                    client.Toast($"Failed to connect to Ollama: {ex.Message}", "Connection Error");
+                    client.Toast($"Failed to connect to OpenAI: {ex.Message}", "Connection Error");
                 }
             }
         }, EffectTrigger.AfterInit());
