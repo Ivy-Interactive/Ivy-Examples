@@ -49,10 +49,10 @@ public class TestAuthApp : ViewBase
         if (loading.Value)
         {
             return Layout.Center()
-                   | new Card(Layout.Vertical().Gap(3)
-                       | Icons.Github.ToIcon().Color(Colors.Primary)
-                       | Text.H2("GitHub Authentication Test"))
-                     .Width(Size.Fraction(0.3f));
+                   | new Card(Layout.Vertical().Align(Align.Center)
+                       | Icons.Github.ToIcon()
+                       | Text.H3("GitHub Authentication Test"))
+                     .Width(Size.Fraction(0.4f));
         }
 
         if (userInfo.Value == null)
@@ -61,7 +61,7 @@ public class TestAuthApp : ViewBase
                    | new Card(Layout.Vertical().Gap(3)
                        | Text.H2("Not Authenticated")
                        | Text.Block("Please login via navigation bar to authenticate with GitHub."))
-                     .Width(Size.Fraction(0.3f));
+                     .Width(Size.Fraction(0.4f));
         }
 
         var client = this.UseService<IClientProvider>();
@@ -79,7 +79,7 @@ public class TestAuthApp : ViewBase
                        Email = userInfo.Value.Email ?? "N/A"
                    }).ToDetails()
                    | BuildRepositories(repositories.Value, client))
-                   .Width(Size.Fraction(0.3f));
+                   .Width(Size.Fraction(0.4f));
     }
 
     private object BuildRepositories(List<GitHubRepo>? repos, IClientProvider client)
