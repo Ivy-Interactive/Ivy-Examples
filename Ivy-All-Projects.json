@@ -67,6 +67,25 @@
       ]
     },
     {
+      "name": "LlmTornado",
+      "description": "LlmTornado Examples is a web application demonstrating the \\1 library capabilities for interacting with LLM models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support. https://github.com/user-attachments/assets/4466bb03-4a59-4469-b857-5bcd2e254963",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/llm-tornado-ollama",
+      "deploymentLink": "ivy-projectdemos-llm-tornado-ollama.sliplane.app",
+      "tags": [
+        "AI",
+        "LLM",
+        "Ollama",
+        "LlmTornado",
+        "Chat",
+        "Function Calling",
+        "Tools",
+        "Streaming",
+        "Agents",
+        "Local AI",
+        "Markdown"
+      ]
+    },
+    {
       "name": "AI Agent Workspace",
       "description": "AI Agent Workspace is a web application for creating and interacting with customizable AI agents using Microsoft Agent Framework and Ollama. It features a blade-based navigation for managing multiple agent personas with configurable tools, dynamic model discovery, and real-time tool invocation visualization. <https://github.com/user-attachments/assets/765c9bf6-05e8-4eb9-acad-ced624f818bd>",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/microsoft-agent-framework",
