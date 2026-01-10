@@ -41,10 +41,10 @@ public class DailyNewStartupsLineChartView(DateTime startDate, DateTime endDate)
             return card | new ErrorTeaserView(exception.Value);
         }
 
-        if (chart.Value == null)
-        {
-            return card | new Skeleton();
-        }
+        // if (chart.Value == null)
+        // {
+        //     return card | new Skeleton();
+        // }
 
         return card | chart.Value;
     }

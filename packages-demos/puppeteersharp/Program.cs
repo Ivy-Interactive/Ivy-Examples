@@ -21,7 +21,7 @@ await fetcher.DownloadAsync();
 
 Console.WriteLine("Download complete. Running App..");
 
-server.UseBuilder(builder =>
+server.UseWebApplicationBuilder(builder =>
 {
     builder.Services.AddSingleton<IStartupFilter, DownloadEndpointStartupFilter>();
 });

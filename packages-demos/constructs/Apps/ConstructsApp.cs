@@ -4,7 +4,7 @@ using ConstructsExample.Extensions;
 
 namespace ConstructsExample.Apps;
 
-[App(icon: Icons.FileCode2, title: "Constructs")]
+[App(icon: Icons.FileCode, title: "Constructs")]
 public class ConstructsApp : ViewBase
 {
     private RootConstruct? _root;

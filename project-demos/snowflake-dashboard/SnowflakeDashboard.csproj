@@ -5,7 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
+    <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113;NU1901</NoWarn>
     <RootNamespace>SnowflakeDashboard</RootNamespace>
     <UserSecretsId>eaa0f587-8bd7-4165-8bb4-0e62dad3c0a7</UserSecretsId>
   </PropertyGroup>
@@ -17,7 +17,7 @@
 
   
     <ItemGroup>
-      <PackageReference Include="Ivy" Version="1.2.6" />
+      <PackageReference Include="Ivy" Version="1.2.7" />
       <PackageReference Include="Snowflake.Data" Version="5.2.1" />
     </ItemGroup>
     
