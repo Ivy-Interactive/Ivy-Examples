@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
+    <RootNamespace>LlmTornadoExample</RootNamespace>
+    <UserSecretsId>983195f6-ee72-40f2-9072-46a10e4d85d5</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/**/*" />
+  </ItemGroup>
+
+  
+    <ItemGroup>
+      <PackageReference Include="Ivy" Version="1.2.6" />
+      <PackageReference Include="LlmTornado" Version="3.8.39" />
+      <PackageReference Include="LlmTornado.A2A" Version="1.0.26" />
+      <PackageReference Include="LlmTornado.Agents" Version="1.0.35" />
+      <PackageReference Include="LlmTornado.Contrib" Version="1.1.10" />
+      <PackageReference Include="LlmTornado.Mcp" Version="1.1.36" />
+      <PackageReference Include="LlmTornado.Microsoft.Extensions.AI" Version="1.1.36" />
+    </ItemGroup>
+    
+
+  <ItemGroup>
+    <Folder Include="Apps" />
+    <Folder Include="Connections" />
+  </ItemGroup>
+
+</Project>
