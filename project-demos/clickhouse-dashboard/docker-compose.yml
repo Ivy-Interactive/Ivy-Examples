@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse-server
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native protocol
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clickhouse-dashboard-app
+    depends_on:
+      - clickhouse
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      ASPNETCORE_URLS: http://+:5000
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+      CLICKHOUSE_DB: default
+    restart: unless-stopped
+
+volumes:
+  clickhouse-data:
