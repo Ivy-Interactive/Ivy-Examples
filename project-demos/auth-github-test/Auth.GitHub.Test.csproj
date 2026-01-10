@@ -13,12 +13,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
-
-  <!-- <ItemGroup>
-    <ProjectReference Include="C:\git\Ivy-Interactive\Ivy-Framework\Ivy\Ivy.csproj" />
-    <ProjectReference Include="C:\git\Ivy-Interactive\Ivy-Framework\Ivy.Auth.GitHub\Ivy.Auth.GitHub.csproj" />
-  </ItemGroup> -->
-
+  
   <ItemGroup>
     <Folder Include="Connections" />
   </ItemGroup>
