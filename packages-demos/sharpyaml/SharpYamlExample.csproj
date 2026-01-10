@@ -14,7 +14,7 @@
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
 <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.6" />
+    <PackageReference Include="Ivy" Version="1.2.7" />
     <PackageReference Include="SharpYaml" Version="2.1.4" />
   </ItemGroup>
   <ItemGroup>

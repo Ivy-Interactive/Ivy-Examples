@@ -16,7 +16,7 @@
   
   <ItemGroup>
     <PackageReference Include="FastMember" Version="1.5.0" />
-    <PackageReference Include="Ivy" Version="1.2.6" />
+    <PackageReference Include="Ivy" Version="1.2.7" />
   </ItemGroup>
 
 </Project>

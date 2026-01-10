@@ -15,7 +15,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.6" />
+    <PackageReference Include="Ivy" Version="1.2.7" />
     <PackageReference Include="Stripe.net" Version="50.1.0" />
   </ItemGroup>
   
