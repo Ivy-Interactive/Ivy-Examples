@@ -273,15 +273,17 @@ process_project() {
     local readme_file="$project_dir/README.md"
     local csproj_file=$(find "$project_dir" -maxdepth 1 -name "*.csproj" | head -1)
     
-    if [ -z "$csproj_file" ]; then
-        echo "Warning: No .csproj found in $project_dir" >&2
-        return
-    fi
-    
     # Extract data
     local project_name=$(extract_project_name "$readme_file" "$folder_name")
     local description=$(extract_description "$readme_file")
-    local packages_json=$(extract_packages "$csproj_file")
+    
+    # Extract packages if .csproj exists, otherwise use empty array
+    local packages_json
+    if [ -n "$csproj_file" ]; then
+        packages_json=$(extract_packages "$csproj_file")
+    else
+        packages_json="[]"
+    fi
     
     # Try to extract tags from README first, fallback to generated tags
     local tags_json=$(extract_tags "$readme_file")
