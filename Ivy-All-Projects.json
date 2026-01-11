@@ -1,6 +1,22 @@
 {
   "project-demos": [
     {
+      "name": "GitHub Authentication Test",
+      "description": "",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/auth-github-test",
+      "deploymentLink": "ivy-projectdemos-auth-github-test.sliplane.app",
+      "tags": [
+        "Authentication",
+        "OAuth",
+        "GitHub",
+        "Security",
+        "User Management",
+        "Ivy Framework",
+        "C#",
+        ".NET"
+      ]
+    },
+    {
       "name": "Autodealer CRM",
       "description": "Autodealer CRM is a comprehensive customer relationship management system designed specifically for automotive dealerships. Built with Ivy Framework, it provides a complete solution for managing customers, leads, vehicles, tasks, communications, and sales analytics.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/autodealer-crm",
@@ -83,6 +99,27 @@
         "Agents",
         "Local AI",
         "Markdown"
+      ]
+    },
+    {
+      "name": "LlmTornado OpenAI Examples",
+      "description": "LlmTornado OpenAI Examples is a web application demonstrating the \\1 library capabilities for interacting with OpenAI models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/llm-tornado-openai",
+      "deploymentLink": "ivy-projectdemos-llm-tornado-openai.sliplane.app",
+      "tags": [
+        "AI",
+        "LLM",
+        "OpenAI",
+        "LlmTornado",
+        "Chat",
+        "Function Calling",
+        "Tools",
+        "Streaming",
+        "Agents",
+        "GPT-4",
+        "GPT-3.5",
+        "Markdown",
+        "User Secrets"
       ]
     },
     {
