@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.7" />
+    <PackageReference Include="Ivy" Version="1.2.8" />
     <PackageReference Include="Ivy.Auth.GitHub" Version="1.2.7" />
   </ItemGroup>
 

@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.7" />
+    <PackageReference Include="Ivy" Version="1.2.8" />
     <PackageReference Include="MiniExcel" Version="1.42.0" />
   </ItemGroup>
 

@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.7" />
+    <PackageReference Include="Ivy" Version="1.2.8" />
     <PackageReference Include="QuestPDF" Version="2025.12.0" />
   </ItemGroup>
 

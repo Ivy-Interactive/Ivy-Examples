@@ -17,7 +17,7 @@
   
   
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.7" />
+    <PackageReference Include="Ivy" Version="1.2.8" />
     <PackageReference Include="Mapster" Version="7.4.0" />
   </ItemGroup>
 
