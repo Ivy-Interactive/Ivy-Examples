@@ -8,6 +8,6 @@
     <RootNamespace>Jwt</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.8" />
+    <PackageReference Include="Ivy" Version="1.2.10" />
   </ItemGroup>
 </Project>
