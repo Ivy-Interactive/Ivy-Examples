@@ -33,6 +33,20 @@
       ]
     },
     {
+      "name": "ClickHouse Dashboard",
+      "description": "ClickHouse Dashboard is a web application for visualizing and analyzing ClickHouse database statistics with interactive charts, real-time metrics, table statistics, and comprehensive data insights.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/clickhouse-dashboard",
+      "deploymentLink": "ivy-projectdemos-clickhouse-dashboard.sliplane.app",
+      "tags": [
+        "ClickHouse",
+        "Analytics Dashboard",
+        "Data Visualization",
+        "Database Monitoring",
+        "SQL",
+        "OLAP"
+      ]
+    },
+    {
       "name": "Cold Call Tracker",
       "description": "Cold Call Tracker is a web application for managing and tracking cold call leads with integration to Exa.ai websets API for company data and contact information. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/cold-call-tracker",
@@ -58,6 +72,21 @@
       ]
     },
     {
+      "name": "CRM File-Based",
+      "description": "A simple CRM (Customer Relationship Management) application built with Ivy Framework using SQLite file-based database. This demo showcases how to build a full-featured CRUD application with data visualization, blade navigation, and reactive UI updates.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/crm-filebased",
+      "deploymentLink": "ivy-projectdemos-crm-filebased.sliplane.app",
+      "tags": [
+        "CRM",
+        "SQLite",
+        "File-Based Database",
+        "Data Visualization",
+        "CRUD Application",
+        "Task Management",
+        "Contact Management"
+      ]
+    },
+    {
       "name": "Vc",
       "description": "Vc is a CRM system for venture capital firms to manage startups, deals, founders, partners, and industries with comprehensive tracking and analytics capabilities. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/crm-vc",
@@ -80,6 +109,20 @@
         "Template",
         "Getting Started",
         "Demo"
+      ]
+    },
+    {
+      "name": "Hello",
+      "description": "Hello is a simple starter application demonstrating the basic structure and setup of an Ivy web application. This is a File-Based App. Ivy is a web framework for building interactive web applications using C# and .NET.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/helloworld-filebased",
+      "deploymentLink": "ivy-projectdemos-helloworld-filebased.sliplane.app",
+      "tags": [
+        "Starter",
+        "Template",
+        "Getting Started",
+        "Demo",
+        "Single",
+        "File-Based App"
       ]
     },
     {
