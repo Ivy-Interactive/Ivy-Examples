@@ -5,13 +5,18 @@ A demonstration application showcasing GitHub OAuth authentication integration w
 This project demonstrates how to:
 - Configure GitHub OAuth authentication in an Ivy application
 - Display authenticated user information with a modern UI
+- Fetch and display GitHub repositories using the GitHub API
+- Implement search functionality with real-time filtering
 - Handle authentication state and user sessions
 
 ## Features
 
 - **GitHub OAuth Integration** - Secure authentication via GitHub
 - **User Profile Display** - Shows authenticated user's avatar, name, email, and ID
-- **Modern UI** - Clean, responsive interface built with Ivy components
+- **Repository Management** - Displays user's GitHub repositories with detailed information
+- **Search Functionality** - Real-time search to filter repositories by name or language
+- **Modern UI Components** - Uses Sheet component for repository display and ToDetails for structured data
+- **Smart Data Display** - Automatically hides empty fields and zero values for cleaner presentation
 - **Real-time State Management** - React-like hooks for managing authentication state
 
 ## Prerequisites
@@ -82,6 +87,12 @@ Alternatively, you can create an `appsettings.json` file:
    - You'll be redirected to GitHub for authorization
    - After authorizing, you'll be redirected back to the app
    - Your profile information will be displayed
+
+6. **View Repositories**:
+   - Click the "Repositories" button to open a sheet with your GitHub repositories
+   - Use the search box to filter repositories by name or programming language
+   - Click on any repository card to open it in GitHub
+   - Repository details include language badge, stars, forks, and last updated date
 
 ## Deploy
 
