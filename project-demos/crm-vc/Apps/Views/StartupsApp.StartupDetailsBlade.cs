@@ -5,7 +5,7 @@ public class StartupDetailsBlade(int startupId) : ViewBase
     public override object? Build()
     {
         var factory = this.UseService<VcContextFactory>();
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var startup = this.UseState<Startup?>();
         var dealCount = this.UseState<int>();
@@ -16,7 +16,7 @@ public class StartupDetailsBlade(int startupId) : ViewBase
             var db = factory.CreateDbContext();
             startup.Set(await db.Startups.SingleOrDefaultAsync(e => e.Id == startupId));
             dealCount.Set(await db.Deals.CountAsync(e => e.StartupId == startupId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (startup.Value == null) return null;
 

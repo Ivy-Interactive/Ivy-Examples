@@ -5,7 +5,7 @@ public class FounderDetailsBlade(int founderId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var founder = UseState<Founder?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();
@@ -16,7 +16,7 @@ public class FounderDetailsBlade(int founderId) : ViewBase
             founder.Set(await db.Founders
                 .Include(f => f.Gender)
                 .SingleOrDefaultAsync(f => f.Id == founderId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (founder.Value == null) return null;
 

@@ -5,7 +5,7 @@ public class DealDetailsBlade(int dealId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var deal = UseState<Deal?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();
@@ -14,7 +14,7 @@ public class DealDetailsBlade(int dealId) : ViewBase
         {
             var db = factory.CreateDbContext();
             deal.Set(await db.Deals.Include(d => d.Startup).SingleOrDefaultAsync(d => d.Id == dealId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (deal.Value == null) return null;
 

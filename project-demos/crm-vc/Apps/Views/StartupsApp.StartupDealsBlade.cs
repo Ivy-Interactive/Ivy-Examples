@@ -13,7 +13,7 @@ public class StartupDealsBlade(int startupId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             deals.Set(await db.Deals.Include(e => e.Partners).Where(e => e.StartupId == startupId).ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -56,7 +56,8 @@ public class StartupDealsBlade(int startupId) : ViewBase
             .ToTrigger((isOpen) => new StartupDealsCreateDialog(isOpen, refreshToken, startupId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 
