@@ -8,42 +8,51 @@ public class NumberOfTasksCompletedMetricView(DateTime fromDate, DateTime toDate
 {
     public override object? Build()
     {
-        var factory = UseService<AutodealerCrmContextFactory>();
-        
-        async Task<MetricRecord> CalculateNumberOfTasksCompleted()
+        QueryResult<MetricRecord> CalculateNumberOfTasksCompleted(IViewContext ctx)
         {
-            await using var db = factory.CreateDbContext();
-            
-            // Count completed tasks where UpdatedAt is in the date range (UpdatedAt is when task was marked completed)
-            var currentPeriodTasksCompleted = await db.Tasks
-                .Where(t => t.Completed && t.DueDate >= fromDate && t.DueDate <= toDate)
-                .CountAsync();;
-            
-            var previousPeriodTasksCompleted = await db.Tasks
-                .Where(t => t.DueDate >= fromDate && t.DueDate <= toDate)
-                .CountAsync();
+            var factory = ctx.UseService<AutodealerCrmContextFactory>();
+            return ctx.UseQuery<MetricRecord, (DateTime, DateTime)>(
+                key: (fromDate, toDate),
+                fetcher: async (key, ct) =>
+                {
+                    var (fd, td) = key;
+                    await using var db = factory.CreateDbContext();
+                    
+                    // Count completed tasks where UpdatedAt is in the date range (UpdatedAt is when task was marked completed)
+                    var currentPeriodTasksCompleted = await db.Tasks
+                        .Where(t => t.Completed && t.DueDate >= fd && t.DueDate <= td)
+                        .CountAsync(ct);
+                    
+                    var periodLength = td - fd;
+                    var previousFromDate = fd.AddDays(-periodLength.TotalDays);
+                    var previousToDate = fd.AddDays(-1);
+                    
+                    var previousPeriodTasksCompleted = await db.Tasks
+                        .Where(t => t.Completed && t.DueDate >= previousFromDate && t.DueDate <= previousToDate)
+                        .CountAsync(ct);
 
-            if (previousPeriodTasksCompleted == 0)
-            {
-                return new MetricRecord(
-                    MetricFormatted: currentPeriodTasksCompleted.ToString("N0"),
-                    TrendComparedToPreviousPeriod: null,
-                    GoalAchieved: null,
-                    GoalFormatted: null
-                );
-            }
-            
-            double? trend = ((double)currentPeriodTasksCompleted - previousPeriodTasksCompleted) / previousPeriodTasksCompleted;
-            
-            var goal = previousPeriodTasksCompleted * 1.1;
-            double? goalAchievement = goal > 0 ? (double?)(currentPeriodTasksCompleted / goal ): null;
-            
-            return new MetricRecord(
-                MetricFormatted: currentPeriodTasksCompleted.ToString("N0"),
-                TrendComparedToPreviousPeriod: trend,
-                GoalAchieved: goalAchievement,
-                GoalFormatted: goal.ToString("N0")
-            );
+                    if (previousPeriodTasksCompleted == 0)
+                    {
+                        return new MetricRecord(
+                            MetricFormatted: currentPeriodTasksCompleted.ToString("N0"),
+                            TrendComparedToPreviousPeriod: null,
+                            GoalAchieved: null,
+                            GoalFormatted: null
+                        );
+                    }
+                    
+                    double? trend = ((double)currentPeriodTasksCompleted - previousPeriodTasksCompleted) / previousPeriodTasksCompleted;
+                    
+                    var goal = previousPeriodTasksCompleted * 1.1;
+                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodTasksCompleted / goal ): null;
+                    
+                    return new MetricRecord(
+                        MetricFormatted: currentPeriodTasksCompleted.ToString("N0"),
+                        TrendComparedToPreviousPeriod: trend,
+                        GoalAchieved: goalAchievement,
+                        GoalFormatted: goal.ToString("N0")
+                    );
+                });
         }
 
         return new MetricView(

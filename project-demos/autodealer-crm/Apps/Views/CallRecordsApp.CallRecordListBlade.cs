@@ -6,7 +6,7 @@ public class CallRecordListBlade : ViewBase
     
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var factory = UseService<AutodealerCrmContextFactory>();
         var refreshToken = this.UseRefreshToken();
         

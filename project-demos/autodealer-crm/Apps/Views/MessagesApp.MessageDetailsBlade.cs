@@ -5,7 +5,7 @@ public class MessageDetailsBlade(int messageId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<AutodealerCrmContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var message = UseState<Message?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();
@@ -22,7 +22,7 @@ public class MessageDetailsBlade(int messageId) : ViewBase
                 .Include(e => e.MessageDirection)
                 .Include(e => e.MessageType)
                 .SingleOrDefaultAsync(e => e.Id == messageId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (message.Value == null) return null;
 

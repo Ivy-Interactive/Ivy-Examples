@@ -17,7 +17,7 @@ public class CustomerLeadsBlade(int customerId) : ViewBase
                                     .Include(e => e.LeadStage)
                                     .Where(e => e.CustomerId == customerId)
                                     .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -63,7 +63,8 @@ public class CustomerLeadsBlade(int customerId) : ViewBase
             .ToTrigger((isOpen) => new CustomerLeadsCreateDialog(isOpen, refreshToken, customerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 
