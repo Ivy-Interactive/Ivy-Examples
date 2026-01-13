@@ -147,7 +147,7 @@ public class AgentChatBlade : ViewBase
                     client.Toast($"Failed to connect to OpenAI: {ex.Message}", "Connection Error");
                 }
             }
-        }, EffectTrigger.AfterInit());
+        }, EffectTrigger.OnMount());
 
         // Update instructions when form is submitted (dialog closes)
         UseEffect(() =>
@@ -169,9 +169,7 @@ public class AgentChatBlade : ViewBase
                 description: "Configure the system instructions for the AI agent",
                 width: Size.Units(125));
 
-        return new Fragment()
-            | BladeHelper.WithHeader(
-                Layout.Horizontal().Gap(2)
+        var header = Layout.Horizontal().Gap(2)
                     | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                         | new Icon(Icons.Bot).Size(8))
                     | Text.H4($"Agent Chat - {_modelName}")
@@ -180,11 +178,15 @@ public class AgentChatBlade : ViewBase
                         {
                             _instructionsForm.Set(new InstructionsModel(_instructions.Value));
                             _showSettings.Set(true);
-                        }).Ghost().Tooltip("Edit agent instructions")),
-                Layout.Horizontal()
+                        }).Ghost().Tooltip("Edit agent instructions"));
+
+        var chatContent = Layout.Horizontal()
                 | (Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400))).Height(Size.Auto())
-                    | new Chat(_messages.Value.ToArray(), OnSendMessage))
-            )
+                    | new Chat(_messages.Value.ToArray(), OnSendMessage));
+
+        return new Fragment()
+            | new BladeHeader(header)
+            | chatContent
             | instructionsDialog;
     }
 
