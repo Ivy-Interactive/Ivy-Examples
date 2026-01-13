@@ -109,25 +109,22 @@ public class TestAuthApp : ViewBase
 
         var repoCards = filteredRepos.Select(repo =>
         {
-            var stats = Layout.Horizontal().Gap(4).Align(Align.Center)
-                | Text.Small($"Stars: {repo.StargazersCount}")
-                | Text.Small($"Forks: {repo.ForksCount}");
-            
-            if (repo.Language != null)
-            {
-                stats = stats | new Badge(repo.Language, variant: BadgeVariant.Outline);
-            }
-
             var updatedText = repo.UpdatedAt.ToString("MMM dd, yyyy");
 
-            return new Card(Layout.Vertical().Gap(3)
-                | (Layout.Horizontal().Gap(2)
-                    | (Layout.Vertical().Gap(2)
-                       | new Button(repo.Name, variant: ButtonVariant.Link)
-                       .Url(repo.HtmlUrl))
-                    | (Layout.Vertical().Gap(2).Align(Align.Right)
-                       | Text.Small(updatedText).Muted()))
-                | stats)
+            var details = new
+            {
+                Language = repo.Language,
+                Stars = repo.StargazersCount == 0 ? (int?)null : repo.StargazersCount,
+                Forks = repo.ForksCount == 0 ? (int?)null : repo.ForksCount,
+                Updated = updatedText,
+            }.ToDetails()
+                .RemoveEmpty();
+            
+            var content = Layout.Vertical().Align(Align.Center)
+                | Text.Literal(repo.Name).Italic().Bold()
+                | details;
+            
+            return new Card(content)
                 .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
         });
 
@@ -146,7 +143,7 @@ public class TestAuthApp : ViewBase
             content,
             title: "Repositories",
             description: $"Found {filteredRepos.Count} of {repos.Count} repositories"
-        ).Width(Size.Fraction(0.3f));
+        ).Width(Size.Fraction(0.25f));
     }
 
     private async Task<List<GitHubRepo>> FetchRepositoriesAsync(
