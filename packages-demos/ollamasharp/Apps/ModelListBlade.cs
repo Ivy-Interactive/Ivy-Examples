@@ -11,7 +11,7 @@ public class ModelListBlade : ViewBase
 
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         
         _models = UseState(ImmutableArray.Create<ModelListRecord>());
         _modelsLoaded = UseState(false);
@@ -23,7 +23,7 @@ public class ModelListBlade : ViewBase
             {
                 await OnRefreshClicked();
             }
-        }, EffectTrigger.AfterInit());
+        }, EffectTrigger.OnMount());
 
         var onItemClicked = new Action<Event<ListItem>>(e =>
         {
