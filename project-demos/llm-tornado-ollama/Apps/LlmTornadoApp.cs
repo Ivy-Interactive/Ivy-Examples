@@ -13,7 +13,7 @@ public class MainMenuBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
         var ollamaUrl = UseState("http://localhost:11434");
         var selectedModel = UseState<string?>(() => null);
@@ -88,12 +88,10 @@ public class MainMenuBlade : ViewBase
         }
         
         // Load models on initialization and when URL changes
-        UseEffect(async () => await LoadModels(), EffectTrigger.AfterInit());
+        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
         UseEffect(async () => await LoadModels(), [ollamaUrl]);
 
-        return BladeHelper.WithHeader(
-            Text.H4("LlmTornado Examples"),
-            Layout.Vertical()
+        var content = Layout.Vertical()
                 | new Card(
                     Layout.Vertical().Gap(3)
                     | Text.H3("Getting Started")
@@ -141,8 +139,11 @@ public class MainMenuBlade : ViewBase
                                 .Variant(ButtonVariant.Primary)
                                 .Disabled(selectedModel.Value == null)
                                 .HandleClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
-                    )
-        );
+                    );
+
+        return new Fragment()
+               | new BladeHeader(Text.H4("LlmTornado Examples"))
+               | content;
     }
 }
 
