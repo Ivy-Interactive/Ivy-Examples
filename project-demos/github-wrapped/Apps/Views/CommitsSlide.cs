@@ -20,7 +20,7 @@ public class CommitsSlide : ViewBase
         var peakMonth = _stats.CommitsByMonth
             .OrderByDescending(kvp => kvp.Value)
             .FirstOrDefault();
-        var commitsPerWeek = _stats.TotalContributionDays > 0 
+        var targetCommitsPerWeek = _stats.TotalContributionDays > 0 
             ? Math.Round(_targetCommits / (double)(_stats.TotalContributionDays / 7.0), 1)
             : 0;
         var activeMonths = _stats.CommitsByMonth.Values.Count(v => v > 0);
@@ -34,15 +34,73 @@ public class CommitsSlide : ViewBase
             ? months.Skip(peakMonthIndex + 1).Count(m => _stats.CommitsByMonth.GetValueOrDefault(m, 0) > 0)
             : 0;
 
-        return Layout.Horizontal().Gap(6).Align(Align.Center)
+        // Animated values
+        var animatedCommits = this.UseState(0);
+        var animatedCommitsPerWeek = this.UseState(0.0);
+        var refresh = this.UseRefreshToken();
+        var hasAnimated = this.UseState(false);
+
+        // Animate numbers on first render
+        this.UseEffect(() =>
+        {
+            if (hasAnimated.Value) return;
+
+            var scheduler = new JobScheduler(maxParallelJobs: 2);
+            var steps = 50;
+            var delayMs = 30;
+
+            // Animate Total Commits
+            scheduler.CreateJob("Animate Commits")
+                .WithAction(async (_, _, progress, token) =>
+                {
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        if (token.IsCancellationRequested) break;
+                        var currentValue = (int)Math.Round((i / (double)steps) * _targetCommits);
+                        animatedCommits.Set(Math.Min(currentValue, _targetCommits));
+                        refresh.Refresh();
+                        progress.Report(i / (double)steps);
+                        await Task.Delay(delayMs, token);
+                    }
+                    animatedCommits.Set(_targetCommits);
+                    refresh.Refresh();
+                })
+                .Build();
+
+            // Animate Commits Per Week
+            scheduler.CreateJob("Animate Commits Per Week")
+                .WithAction(async (_, _, progress, token) =>
+                {
+                    await Task.Delay(300, token); // Stagger start
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        if (token.IsCancellationRequested) break;
+                        var currentValue = Math.Round((i / (double)steps) * targetCommitsPerWeek, 1);
+                        animatedCommitsPerWeek.Set(Math.Min(currentValue, targetCommitsPerWeek));
+                        refresh.Refresh();
+                        progress.Report(i / (double)steps);
+                        await Task.Delay(delayMs, token);
+                    }
+                    animatedCommitsPerWeek.Set(targetCommitsPerWeek);
+                    hasAnimated.Set(true);
+                    refresh.Refresh();
+                })
+                .Build();
+
+            _ = Task.Run(async () => await scheduler.RunAsync());
+        });
+
+        return Layout.Vertical().Gap(6).Align(Align.Center)
                | (Layout.Vertical().Gap(4).Align(Align.Center)
-                  | Text.H2($"{_stats.TotalCommits.ToString()} Commits").Bold()
+                  | Text.H2($"{animatedCommits.Value} Commits").Bold().Italic()
                   | Text.Block("shipped in 2025").Muted()
-                  | Text.Small($"That's ~{commitsPerWeek} commits per active week.").Muted()
-                  | BuildInsights(activeMonths, activeMonthsPercentage, peakMonth.Key, peakMonth.Value, monthsAfterPeak))
+                  | Text.Small($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
                  .Width(Size.Fraction(0.4f))
                | (Layout.Vertical().Gap(4)
-                   | BuildMonthlyChart(maxCommits))
+                   | new Spacer()
+                   | BuildMonthlyChart(maxCommits)
+                   | new Spacer()
+                   | BuildInsights(activeMonths, activeMonthsPercentage, peakMonth.Key, peakMonth.Value, monthsAfterPeak))
                  .Width(Size.Fraction(0.6f));
     }
 
