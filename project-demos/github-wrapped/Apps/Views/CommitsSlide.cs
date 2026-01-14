@@ -1,51 +1,181 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
+using Ivy.Helpers;
 
 public class CommitsSlide : ViewBase
 {
     private readonly GitHubStats _stats;
+    private readonly int _targetCommits;
 
     public CommitsSlide(GitHubStats stats)
     {
         _stats = stats;
+        _targetCommits = stats.TotalCommits;
     }
 
     public override object? Build()
     {
-        var maxCommits = _stats.CommitsByMonth.Values.Max();
+        var maxCommits = _stats.CommitsByMonth.Values.DefaultIfEmpty(0).Max();
+        var peakMonth = _stats.CommitsByMonth
+            .OrderByDescending(kvp => kvp.Value)
+            .FirstOrDefault();
+        var commitsPerWeek = _stats.TotalContributionDays > 0 
+            ? Math.Round(_targetCommits / (double)(_stats.TotalContributionDays / 7.0), 1)
+            : 0;
+        var activeMonths = _stats.CommitsByMonth.Values.Count(v => v > 0);
+        var totalMonths = 12;
+        var activeMonthsPercentage = Math.Round((activeMonths / (double)totalMonths) * 100);
         
-        return Layout.Vertical().Gap(6).Align(Align.Center)
-               | (Layout.Vertical().Gap(2).Align(Align.Center)
-                  | Icons.Github.ToIcon()
-                  | Text.H1(_stats.TotalCommits.ToString())
-                  | Text.H3("Commits in 2025").Muted())
-               | new Card(Layout.Vertical().Gap(4)
-                   | (Layout.Horizontal().Align(Align.Center)
-                      | Text.H4("Monthly Breakdown"))
-                   | (Layout.Vertical().Gap(2)
-                      | BuildMonthlyChart(maxCommits)));
+        // Calculate months after peak month with activity
+        var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        var peakMonthIndex = peakMonth.Value > 0 ? Array.IndexOf(months, peakMonth.Key) : -1;
+        var monthsAfterPeak = peakMonthIndex >= 0 
+            ? months.Skip(peakMonthIndex + 1).Count(m => _stats.CommitsByMonth.GetValueOrDefault(m, 0) > 0)
+            : 0;
+
+        return Layout.Horizontal().Gap(6).Align(Align.Center)
+               | (Layout.Vertical().Gap(4).Align(Align.Center)
+                  | Text.H2($"{_stats.TotalCommits.ToString()} Commits").Bold()
+                  | Text.Block("shipped in 2025").Muted()
+                  | Text.Small($"That's ~{commitsPerWeek} commits per active week.").Muted()
+                  | BuildInsights(activeMonths, activeMonthsPercentage, peakMonth.Key, peakMonth.Value, monthsAfterPeak))
+                 .Width(Size.Fraction(0.4f))
+               | (Layout.Vertical().Gap(4)
+                   | BuildMonthlyChart(maxCommits))
+                 .Width(Size.Fraction(0.6f));
     }
 
     private object BuildMonthlyChart(int maxCommits)
     {
         var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-        var progressState = this.UseState(0);
+        var peakMonth = _stats.CommitsByMonth
+            .OrderByDescending(kvp => kvp.Value)
+            .FirstOrDefault();
         
-        var rows = months.Select(month =>
+        // Filter to show only months with activity, or show all but make empty ones more compact
+        var rows = months.Select((month, index) =>
         {
             var count = _stats.CommitsByMonth.GetValueOrDefault(month, 0);
-            var percentage = maxCommits > 0 ? (int)Math.Round(count * 100.0 / maxCommits) : 0;
+            var isPeak = month == peakMonth.Key && peakMonth.Value > 0;
+            var progressValue = maxCommits > 0 ? (int)Math.Round((count / (double)maxCommits) * 100) : 0;
             
-            return Layout.Horizontal().Gap(3).Align(Align.Center)
-                   | Text.Small(month).Width(40)
-                   | (Layout.Horizontal()
-                      | Text.Block($"{new string('█', Math.Max(1, percentage / 5))}{new string('░', Math.Max(1, (100 - percentage) / 5))}"))
-                        .Width(Size.Fraction(1))
-                   | (Layout.Horizontal().Align(Align.Right)
-                      | Text.Small(count.ToString())).Width(40);
+            var progressState = this.UseState(0);
+            
+            // Animate progress bar
+            this.UseEffect(() =>
+            {
+                if (count == 0) return;
+                
+                var finalValue = progressValue;
+                var steps = 30;
+                var delay = index * 30; // Stagger by month index
+                
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(delay);
+                    
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        var currentValue = (int)Math.Round((i / (double)steps) * finalValue);
+                        progressState.Set(currentValue);
+                        await Task.Delay(30);
+                    }
+                    
+                    progressState.Set(finalValue);
+                });
+            });
+            
+            if (count == 0)
+            {
+                return Layout.Horizontal().Gap(2).Align(Align.Center)
+                       | Text.Small(month).Width(10).Muted()
+                       | new Progress(progressState)
+                           .Height(Size.Units(4))
+                       | Text.Small("0").Width(10).Muted();
+            }
+            
+            return Layout.Horizontal().Gap(2).Align(Align.Center)
+                   | Text.Small(month).Width(10).Bold(isPeak)
+                   | new Progress(progressState)
+                       .Goal(count > 0 ? count.ToString() : null)
+                   | Text.Small(count.ToString()).Width(10).Bold(isPeak);
         });
 
         return Layout.Vertical().Gap(2) | rows;
+    }
+
+    private object BuildInsights(int activeMonths, double activeMonthsPercentage, string peakMonth, int peakMonthCommits, int monthsAfterPeak)
+    {
+        var mainInsight = "";
+        var subInsight = "";
+        
+        if (activeMonths == 0)
+        {
+            mainInsight = "Your coding journey in 2025.";
+            subInsight = "Every commit counts — keep going!";
+        }
+        else if (activeMonthsPercentage >= 80)
+        {
+            mainInsight = "You shipped consistently throughout the year.";
+            subInsight = "That's the kind of dedication that builds something great.";
+        }
+        else if (activeMonthsPercentage >= 50)
+        {
+            mainInsight = $"You were active in {activeMonths} months.";
+            subInsight = "Solid consistency — you're building something real.";
+        }
+        else if (peakMonthCommits > 0 && monthsAfterPeak >= 2)
+        {
+            // Started in peak month and continued for at least 2 more months
+            var monthName = GetFullMonthName(peakMonth);
+            mainInsight = $"{monthName} was your turning point — and you ran with it!";
+            subInsight = "You kept the momentum going till the end of the year.";
+        }
+        else if (peakMonthCommits > 0 && monthsAfterPeak >= 1)
+        {
+            // Started in peak month and continued for at least 1 more month
+            var monthName = GetFullMonthName(peakMonth);
+            mainInsight = $"Once you started shipping in {monthName},";
+            subInsight = "you never looked back.";
+        }
+        else if (peakMonthCommits > 0)
+        {
+            // Peak month exists but limited activity after
+            var monthName = GetFullMonthName(peakMonth);
+            mainInsight = $"{monthName} was your moment.";
+            subInsight = "You made it count — that's what matters.";
+        }
+        else
+        {
+            mainInsight = $"You were active in {activeMonths} months.";
+            subInsight = "Keep building momentum — you're on the right track.";
+        }
+
+        return Layout.Vertical().Gap(2).Align(Align.Center)
+            | (Layout.Horizontal().Align(Align.Center)
+                | Icons.Activity.ToIcon()
+                | Text.Block(mainInsight).Bold())
+            | Text.Small(subInsight).Muted();
+    }
+    
+    private string GetFullMonthName(string monthAbbr)
+    {
+        return monthAbbr switch
+        {
+            "Jan" => "January",
+            "Feb" => "February",
+            "Mar" => "March",
+            "Apr" => "April",
+            "May" => "May",
+            "Jun" => "June",
+            "Jul" => "July",
+            "Aug" => "August",
+            "Sep" => "September",
+            "Oct" => "October",
+            "Nov" => "November",
+            "Dec" => "December",
+            _ => monthAbbr
+        };
     }
 }
