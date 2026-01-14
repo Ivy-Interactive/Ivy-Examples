@@ -22,11 +22,6 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = new ChromeSettings()
-    .DefaultApp<GitHubWrapped.Apps.GitHubWrappedApp>()
-    .UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
-
 // Configure GitHub Auth Provider
 server.UseAuth<GitHubAuthProvider>(c => c.UseGitHub());
 
