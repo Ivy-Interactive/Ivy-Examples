@@ -84,27 +84,32 @@ public class GitHubWrappedApp : ViewBase
             new StepperItem("6", null, "Summary", "2025 highlights")
         };
 
-        return Layout.Vertical().Gap(4).Align(Align.TopCenter)
-               | new Card(Layout.Vertical().Gap(6)
-                   | new Stepper(OnSelect, selectedIndex.Value, stepperItems)
-                       .AllowSelectForward()
-                   | BuildCurrentSlide(selectedIndex.Value, stats.Value)
-                   | (Layout.Horizontal().Gap(2).Align(Align.Center)
-                      | new Button("Previous")
-                          .Variant(ButtonVariant.Outline)
-                          .Disabled(selectedIndex.Value == 0)
-                          .HandleClick(() =>
-                          {
-                              selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
-                          })
-                      | new Button("Next")
-                          .HandleClick(() =>
-                          {
-                              selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
-                          })
-                          .Disabled(selectedIndex.Value == stepperItems.Length - 1)
-                   ))
-                 .Width(Size.Fraction(0.8f));
+        return (Layout.Vertical().Align(Align.TopCenter)
+               | Layout.Horizontal()
+                   | new Card(Layout.Vertical().Gap(6)
+                       | new Stepper(OnSelect, selectedIndex.Value, stepperItems)
+                           .AllowSelectForward()
+                       | new Spacer()
+                       | BuildCurrentSlide(selectedIndex.Value, stats.Value)
+                       | new Spacer()
+                       | (Layout.Horizontal().Gap(3).Align(Align.Center)
+                          | new Button("Previous")
+                              .Icon(Icons.ChevronLeft)
+                              .Variant(ButtonVariant.Outline)
+                              .Disabled(selectedIndex.Value == 0)
+                              .HandleClick(() =>
+                              {
+                                  selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
+                              })
+                          | new Button("Show me more")
+                              .Icon(Icons.ChevronRight, Align.Right)
+                              .HandleClick(() =>
+                              {
+                                  selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
+                              })
+                              .Disabled(selectedIndex.Value == stepperItems.Length - 1)
+                       ))
+                     .Width(Size.Fraction(0.8f)));
 
         ValueTask OnSelect(Event<Stepper, int> e)
         {
