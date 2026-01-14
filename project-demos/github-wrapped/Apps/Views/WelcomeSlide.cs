@@ -13,24 +13,28 @@ public class WelcomeSlide : ViewBase
 
     public override object? Build()
     {
-        return Layout.Vertical().Gap(6).Align(Align.Center)
-               | (Layout.Vertical().Gap(3).Align(Align.Center)
-                  | new Avatar(_stats.UserInfo.FullName ?? _stats.UserInfo.Id, _stats.UserInfo.AvatarUrl)
-                      .Height(120).Width(120)
-                  | Text.H1($"Welcome, {_stats.UserInfo.FullName ?? _stats.UserInfo.Id}!")
-                  | Text.H3("Your GitHub Wrapped 2025").Muted())
-               | new Card(Layout.Vertical().Gap(4)
-                   | (Layout.Horizontal().Align(Align.Center)
-                      | Text.Block("Let's take a look at your GitHub journey in 2025."))
+        var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
+
+        return Layout.Vertical().Gap(4).Align(Align.Center)
+                   | (Layout.Vertical().Gap(2).Align(Align.Center)
+                      | new Avatar(userName, _stats.UserInfo.AvatarUrl)
+                          .Height(80).Width(80)
+                      | Text.H1($"Hey, {userName}!").Bold()
+                      | Text.Block("Your GitHub Wrapped 2025 is ready").Muted())
+                   | (Layout.Vertical().Gap(1).Align(Align.Center)
+                      | Text.Block("Let’s rewind what you shipped").Muted())
                    | (Layout.Grid().Gap(3).Columns(3)
                       | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                          | Text.H2(_stats.TotalCommits.ToString())
-                          | Text.Small("Commits").Muted())
+                          | Text.H2(_stats.TotalCommits.ToString()).Bold().Italic()
+                          | Text.Small("Commits pushed across your repositories").Muted())
+                          .Title("Commits").Icon(Icons.GitCommitVertical)
                       | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                          | Text.H2(_stats.PullRequestsCreated.ToString())
-                          | Text.Small("Pull Requests").Muted())
+                          | Text.H2(_stats.PullRequestsCreated.ToString()).Bold().Italic()
+                          | Text.Small("Pull requests opened & reviewed").Muted())
+                          .Title("Pull Requests").Icon(Icons.GitPullRequestCreate)
                       | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                          | Text.H2(_stats.TotalContributionDays.ToString())
-                          | Text.Small("Active Days").Muted())));
+                          | Text.H2(_stats.TotalContributionDays.ToString()).Bold().Italic()
+                          | Text.Small("Days you showed up and shipped code").Muted())
+                          .Title("Active Days").Icon(Icons.Activity));
     }
 }
