@@ -26,7 +26,7 @@ public class GitHubWrappedApp : ViewBase
                 
                 if (userInfo != null)
                 {
-                    var fetchedStats = await statsService.FetchStatsAsync();
+                    var fetchedStats = await statsService.FetchStatsAsync(auth);
                     stats.Set(fetchedStats);
                 }
             }

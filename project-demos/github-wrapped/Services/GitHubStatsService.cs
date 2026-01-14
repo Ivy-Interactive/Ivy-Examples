@@ -5,33 +5,38 @@ using GitHubWrapped.Models;
 public class GitHubStatsService
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IAuthService _authService;
     private readonly DateTime _year2025Start = new(2025, 1, 1);
     private readonly DateTime _year2025End = new(2025, 12, 31, 23, 59, 59);
 
-    public GitHubStatsService(IHttpClientFactory httpClientFactory, IAuthService authService)
+    public GitHubStatsService(IHttpClientFactory httpClientFactory)
     {
         _httpClientFactory = httpClientFactory;
-        _authService = authService;
     }
 
-    public async Task<GitHubStats?> FetchStatsAsync()
+    public async Task<GitHubStats?> FetchStatsAsync(IAuthService authService)
     {
-        var token = _authService.GetAuthSession().AuthToken?.AccessToken;
+        var token = authService.GetAuthSession().AuthToken?.AccessToken;
         if (string.IsNullOrWhiteSpace(token))
         {
             return null;
         }
 
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await authService.GetUserInfoAsync();
         if (userInfo == null)
         {
             return null;
         }
 
+        // Get the GitHub username (login) from the API
+        var username = await FetchGitHubUsernameAsync(token);
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return null;
+        }
+
         var repositories = await FetchRepositoriesAsync(token);
-        var commits = await FetchCommitsAsync(token, repositories, userInfo.Id);
-        var pullRequests = await FetchPullRequestsAsync(token, userInfo.Id);
+        var commits = await FetchCommitsAsync(token, repositories, username);
+        var pullRequests = await FetchPullRequestsAsync(token, username);
         
         var commitsByMonth = CalculateCommitsByMonth(commits);
         var languageBreakdown = CalculateLanguageBreakdown(repositories, commits);
@@ -55,6 +60,23 @@ public class GitHubStatsService
         );
     }
 
+    private async Task<string?> FetchGitHubUsernameAsync(string accessToken)
+    {
+        using var httpClient = _httpClientFactory.CreateClient("GitHubAuth");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user");
+        request.Headers.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return doc.RootElement.GetProperty("login").GetString();
+    }
+
     private async Task<List<GitHubRepository>> FetchRepositoriesAsync(string accessToken)
     {
         var repos = new List<GitHubRepository>();
@@ -63,7 +85,7 @@ public class GitHubStatsService
         for (var page = 1; page <= 10; page++) // Limit to 1000 repos max
         {
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"https://api.github.com/user/repos?type=owner&sort=updated&per_page=100&page={page}");
+                $"https://api.github.com/user/repos?type=all&sort=updated&per_page=100&page={page}");
             request.Headers.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -104,10 +126,61 @@ public class GitHubStatsService
         var allCommits = new List<GitHubCommit>();
         using var httpClient = _httpClientFactory.CreateClient("GitHubAuth");
 
+        // Use GitHub Search API to get all commits by the user across all repositories
+        try
+        {
+            for (var page = 1; page <= 10; page++) // Up to 1000 commits
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://api.github.com/search/commits?q=author:{username}+committer-date:2025-01-01..2025-12-31&sort=committer-date&order=desc&per_page=100&page={page}");
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                // Required for commit search API
+                request.Headers.Accept.Clear();
+                request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/vnd.github.cloak-preview+json"));
+
+                var response = await httpClient.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    break;
+                }
+
+                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                var items = doc.RootElement.GetProperty("items").EnumerateArray()
+                    .Select(e => new GitHubCommit(
+                        Sha: e.GetProperty("sha").GetString() ?? "",
+                        Date: e.GetProperty("commit").GetProperty("committer").GetProperty("date").GetDateTime(),
+                        Message: e.GetProperty("commit").GetProperty("message").GetString() ?? "",
+                        RepoName: e.GetProperty("repository").GetProperty("full_name").GetString() ?? ""
+                    ))
+                    .Where(c => c.Date >= _year2025Start && c.Date <= _year2025End)
+                    .ToList();
+
+                if (items.Count == 0) break;
+                allCommits.AddRange(items);
+                
+                if (items.Count < 100) break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Fallback to old method if search API fails
+            Console.WriteLine($"Search API failed: {ex.Message}, falling back to repo-by-repo fetch");
+            return await FetchCommitsLegacy(httpClient, accessToken, repositories, username);
+        }
+
+        return allCommits;
+    }
+
+    private async Task<List<GitHubCommit>> FetchCommitsLegacy(HttpClient httpClient, 
+        string accessToken, List<GitHubRepository> repositories, string username)
+    {
+        var allCommits = new List<GitHubCommit>();
+
         // Only fetch commits from repos that were active in 2025
         var activeRepos = repositories
             .Where(r => r.PushedAt.HasValue && r.PushedAt.Value >= _year2025Start)
-            .Take(50) // Limit to 50 most recent repos to avoid too many API calls
+            .Take(100) // Increased from 50 to 100
             .ToList();
 
         foreach (var repo in activeRepos)
@@ -172,30 +245,38 @@ public class GitHubStatsService
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"https://api.github.com/search/issues?q=author:{username}+type:pr+created:2025-01-01..2025-12-31&per_page=100&sort=created&order=desc");
-            request.Headers.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-            var response = await httpClient.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
+            for (var page = 1; page <= 10; page++) // Up to 1000 PRs
             {
-                return pullRequests;
-            }
+                using var request = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://api.github.com/search/issues?q=author:{username}+type:pr+created:2025-01-01..2025-12-31&per_page=100&page={page}&sort=created&order=desc");
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            pullRequests = doc.RootElement.GetProperty("items").EnumerateArray()
-                .Select(e => new GitHubPullRequest(
-                    Number: e.GetProperty("number").GetInt32(),
-                    Title: e.GetProperty("title").GetString() ?? "",
-                    State: e.GetProperty("state").GetString() ?? "",
-                    CreatedAt: e.GetProperty("created_at").GetDateTime(),
-                    MergedAt: e.TryGetProperty("pull_request", out var pr) 
-                        && pr.TryGetProperty("merged_at", out var ma) 
-                        && ma.ValueKind != JsonValueKind.Null
-                        ? ma.GetDateTime() : null,
-                    HtmlUrl: e.GetProperty("html_url").GetString() ?? ""
-                )).ToList();
+                var response = await httpClient.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    break;
+                }
+
+                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                var items = doc.RootElement.GetProperty("items").EnumerateArray()
+                    .Select(e => new GitHubPullRequest(
+                        Number: e.GetProperty("number").GetInt32(),
+                        Title: e.GetProperty("title").GetString() ?? "",
+                        State: e.GetProperty("state").GetString() ?? "",
+                        CreatedAt: e.GetProperty("created_at").GetDateTime(),
+                        MergedAt: e.TryGetProperty("pull_request", out var pr) 
+                            && pr.TryGetProperty("merged_at", out var ma) 
+                            && ma.ValueKind != JsonValueKind.Null
+                            ? ma.GetDateTime() : null,
+                        HtmlUrl: e.GetProperty("html_url").GetString() ?? ""
+                    )).ToList();
+
+                if (items.Count == 0) break;
+                pullRequests.AddRange(items);
+                
+                if (items.Count < 100) break;
+            }
         }
         catch
         {
@@ -246,22 +327,47 @@ public class GitHubStatsService
     private List<RepoStats> CalculateTopRepos(List<GitHubRepository> repos, 
         List<GitHubCommit> commits)
     {
+        // Group commits by repository
         var repoCommitCounts = commits
             .GroupBy(c => c.RepoName)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        return repos
-            .Where(r => repoCommitCounts.ContainsKey(r.FullName))
-            .OrderByDescending(r => repoCommitCounts[r.FullName])
+        // Create a lookup for repos we have info about
+        var repoLookup = repos.ToDictionary(r => r.FullName);
+
+        // Get top 5 repos by commit count, including repos we don't own
+        return repoCommitCounts
+            .OrderByDescending(kvp => kvp.Value)
             .Take(5)
-            .Select(r => new RepoStats(
-                Name: r.Name,
-                HtmlUrl: r.HtmlUrl,
-                CommitCount: repoCommitCounts[r.FullName],
-                Language: r.Language,
-                Stars: r.StargazersCount,
-                Forks: r.ForksCount
-            ))
+            .Select(kvp =>
+            {
+                var repoName = kvp.Key;
+                var commitCount = kvp.Value;
+
+                // If we have repo info, use it
+                if (repoLookup.TryGetValue(repoName, out var repo))
+                {
+                    return new RepoStats(
+                        Name: repo.Name,
+                        HtmlUrl: repo.HtmlUrl,
+                        CommitCount: commitCount,
+                        Language: repo.Language,
+                        Stars: repo.StargazersCount,
+                        Forks: repo.ForksCount
+                    );
+                }
+
+                // Otherwise, create basic stats from commit data
+                var repoShortName = repoName.Split('/').LastOrDefault() ?? repoName;
+                return new RepoStats(
+                    Name: repoShortName,
+                    HtmlUrl: $"https://github.com/{repoName}",
+                    CommitCount: commitCount,
+                    Language: null,
+                    Stars: 0,
+                    Forks: 0
+                );
+            })
             .ToList();
     }
 
