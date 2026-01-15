@@ -737,8 +737,7 @@ public class SnowflakeApp : ViewBase
         object statsCards;
         if (shouldShowSkeleton)
         {
-            // statsCards = BuildStatsSkeletons();
-            statsCards = new Spacer();
+            statsCards = BuildStatsSkeletons();
         }
         else
         {
@@ -788,9 +787,9 @@ public class SnowflakeApp : ViewBase
             Layout.Vertical().Gap(4).Padding(3)
             | Text.H2("Database Explorer")
             | Text.Muted("Select database, schema, and table (auto-loads on selection)")
-            // | (isLoadingData
-            //     ? BuildSkeletons(3)
-            //     : formView)
+            | (isLoadingData
+                ? BuildSkeletons(3)
+                : formView)
                     
         ).Width(Size.Fraction(0.3f));
         
@@ -804,7 +803,7 @@ public class SnowflakeApp : ViewBase
                     ? Layout.Vertical().Gap(4)
                         | Text.H2($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
                         | Text.Muted("Loading table data...")
-                        // | BuildSkeletons(7)
+                        | BuildSkeletons(7)
                     : Layout.Vertical().Gap(3)
                         | Text.H2($"{selectedDatabase.Value}.{selectedSchema.Value}.{selectedTable.Value}")
                         | BuildDataTabs(dataTab, tableInfo.Value)
@@ -820,7 +819,7 @@ public class SnowflakeApp : ViewBase
                 : Layout.Vertical().Gap(4)
                     | Text.H2("Table Preview")
                     | Text.Muted("Select database, schema, and table to load data"))
-                    // | (isLoadingData ? BuildSkeletons(3) : new Spacer()))
+                    | (isLoadingData ? BuildSkeletons(3) : new Spacer())
         ).Width(Size.Fraction(0.7f));
 
         return Layout.Vertical().Gap(2)
@@ -914,28 +913,28 @@ public class SnowflakeApp : ViewBase
             );
         }
 
-        // if (isLoadingBrands.Value || brandData.Value.Count == 0)
-        // {
-        //     return new HeaderLayout(
-        //         header: controlsHeader,
-        //         content: Layout.Vertical().Gap(3).Padding(4).Align(Align.TopCenter)
-        //             | pageHeader.Width(Size.Fraction(0.8f))
-        //             | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.8f))
-        //                 | new Skeleton().Height(Size.Units(60))
-        //                 | new Skeleton().Height(Size.Units(60))
-        //                 | new Skeleton().Height(Size.Units(60))
-        //                 | new Skeleton().Height(Size.Units(60))
-        //                 | new Skeleton().Height(Size.Units(80))
-        //                 | new Skeleton().Height(Size.Units(80))
-        //                 | new Skeleton().Height(Size.Units(80))
-        //                 | new Skeleton().Height(Size.Units(80)))
-        //             | (Layout.Vertical().Gap(3).Width(Size.Fraction(0.8f))
-        //                 | new Skeleton().Height(Size.Units(80)))
-        //             | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.8f))
-        //                 | new Skeleton().Height(Size.Units(80))
-        //                 | new Skeleton().Height(Size.Units(80)))
-        //     );
-        // }
+        if (isLoadingBrands.Value || brandData.Value.Count == 0)
+        {
+            return new HeaderLayout(
+                header: controlsHeader,
+                content: Layout.Vertical().Gap(3).Padding(4).Align(Align.TopCenter)
+                    | pageHeader.Width(Size.Fraction(0.8f))
+                    | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.8f))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(60))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80)))
+                    | (Layout.Vertical().Gap(3).Width(Size.Fraction(0.8f))
+                        | new Skeleton().Height(Size.Units(80)))
+                    | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.8f))
+                        | new Skeleton().Height(Size.Units(80))
+                        | new Skeleton().Height(Size.Units(80)))
+            );
+        }
 
         var totalItems = brandData.Value.Sum(b => b.ItemCount);
         var avgItemsPerBrand = brandData.Value.Count > 0 ? totalItems / (double)brandData.Value.Count : 0;
@@ -1083,25 +1082,25 @@ public class SnowflakeApp : ViewBase
     }
 
     // ========== UI HELPER METHODS ==========
-    // private object BuildSkeletons(int count)
-    // {
-    //     var layout = Layout.Vertical().Gap(2);
-    //     foreach (var _ in Enumerable.Range(0, count))
-    //     {
-    //         layout = layout | new Skeleton().Height(Size.Units(24)).Width(Size.Full());
-    //     }
-    //     return layout;
-    // }
+    private object BuildSkeletons(int count)
+    {
+        var layout = Layout.Vertical().Gap(2);
+        foreach (var _ in Enumerable.Range(0, count))
+        {
+            layout = layout | new Skeleton().Height(Size.Units(24)).Width(Size.Full());
+        }
+        return layout;
+    }
     
-    // private object BuildStatsSkeletons()
-    // {
-    //     var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
-    //     foreach (var _ in Enumerable.Range(0, 3))
-    //     {
-    //         layout = layout | new Skeleton().Height(Size.Units(50));
-    //     }
-    //     return layout;
-    // }
+    private object BuildStatsSkeletons()
+    {
+        var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
+        foreach (var _ in Enumerable.Range(0, 3))
+        {
+            layout = layout | new Skeleton().Height(Size.Units(50));
+        }
+        return layout;
+    }
     
     private object BuildDataTabs(IState<int> activeTab, TableInfo? tableInfo)
     {
