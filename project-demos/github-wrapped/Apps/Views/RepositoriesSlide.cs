@@ -100,7 +100,7 @@ public class RepositoriesSlide : ViewBase
 
         return Layout.Vertical().Gap(6).Align(Align.Center)
                | (Layout.Vertical().Gap(4).Align(Align.Center)
-                  | Text.H2(repoName).Bold().Italic()
+                  | Text.H2($"{repoName} Repository").Bold().Italic()
                   | Text.Block(headline).Muted()
                   | Text.Small(subheadline).Muted())
                  .Width(Size.Fraction(0.4f))
