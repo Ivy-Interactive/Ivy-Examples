@@ -4,7 +4,7 @@ public record GitHubStats(
     UserInfo UserInfo,
     int TotalCommits,
     Dictionary<string, int> CommitsByMonth,
-    Dictionary<string, int> LanguageBreakdown,
+    Dictionary<string, long> LanguageBreakdown, // Changed to long to store bytes
     List<RepoStats> TopRepos,
     int PullRequestsCreated,
     int PullRequestsMerged,
@@ -48,6 +48,7 @@ public record GitHubRepository(
     int ForksCount,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    DateTime? PushedAt
+    DateTime? PushedAt,
+    Dictionary<string, long> Languages
 );
 

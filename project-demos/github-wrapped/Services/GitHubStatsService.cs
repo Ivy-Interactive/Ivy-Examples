@@ -108,7 +108,8 @@ public class GitHubStatsService
                     CreatedAt: e.GetProperty("created_at").GetDateTime(),
                     UpdatedAt: e.GetProperty("updated_at").GetDateTime(),
                     PushedAt: e.TryGetProperty("pushed_at", out var p) && p.ValueKind != JsonValueKind.Null
-                        ? p.GetDateTime() : null
+                        ? p.GetDateTime() : null,
+                    Languages: new Dictionary<string, long>() // Will be populated later
                 )).ToList();
 
             if (pageRepos.Count == 0) break;
@@ -117,7 +118,55 @@ public class GitHubStatsService
             if (pageRepos.Count < 100) break; // Last page
         }
 
+        // Fetch language statistics for each repository (limit to repos with activity in 2025)
+        await FetchLanguagesForReposAsync(httpClient, accessToken, repos);
+
         return repos;
+    }
+
+    private async Task FetchLanguagesForReposAsync(HttpClient httpClient, string accessToken, List<GitHubRepository> repos)
+    {
+        // Only fetch languages for repos that were pushed in 2025
+        var reposToFetch = repos
+            .Where(r => r.PushedAt.HasValue && r.PushedAt.Value.Year == 2025)
+            .Take(100) // Limit to avoid too many API calls
+            .ToList();
+
+        var tasks = reposToFetch.Select(async repo =>
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://api.github.com/repos/{repo.FullName}/languages");
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+                var response = await httpClient.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                    var languages = new Dictionary<string, long>();
+                    
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        languages[prop.Name] = prop.Value.GetInt64();
+                    }
+                    
+                    // Update the repo in the list using FullName to find it
+                    var index = repos.FindIndex(r => r.FullName == repo.FullName);
+                    if (index >= 0)
+                    {
+                        repos[index] = repo with { Languages = languages };
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors for individual repos
+            }
+        });
+
+        await Task.WhenAll(tasks);
     }
 
     private async Task<List<GitHubCommit>> FetchCommitsAsync(string accessToken, 
@@ -300,27 +349,32 @@ public class GitHubStatsService
         return commitsByMonth;
     }
 
-    private Dictionary<string, int> CalculateLanguageBreakdown(List<GitHubRepository> repos, 
+    private Dictionary<string, long> CalculateLanguageBreakdown(List<GitHubRepository> repos, 
         List<GitHubCommit> commits)
     {
-        var languageCommits = new Dictionary<string, int>();
+        // Use language statistics by bytes (as GitHub does) instead of commits
+        var languageBytes = new Dictionary<string, long>();
 
-        foreach (var commit in commits)
+        // Aggregate bytes by language across all repositories
+        foreach (var repo in repos)
         {
-            var repo = repos.FirstOrDefault(r => r.FullName == commit.RepoName);
-            if (repo?.Language != null)
+            if (repo.Languages == null || repo.Languages.Count == 0)
+                continue;
+
+            foreach (var (language, bytes) in repo.Languages)
             {
-                if (!languageCommits.ContainsKey(repo.Language))
+                if (!languageBytes.ContainsKey(language))
                 {
-                    languageCommits[repo.Language] = 0;
+                    languageBytes[language] = 0;
                 }
-                languageCommits[repo.Language]++;
+                languageBytes[language] += bytes;
             }
         }
 
-        return languageCommits
+        // Return bytes as-is (no conversion), conversion will be done only for display
+        return languageBytes
             .OrderByDescending(kvp => kvp.Value)
-            .Take(5)
+            .Take(7)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
