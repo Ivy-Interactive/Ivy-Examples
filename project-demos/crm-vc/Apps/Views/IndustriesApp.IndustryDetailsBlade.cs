@@ -5,7 +5,7 @@ public class IndustryDetailsBlade(int industryId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var industry = UseState<Industry?>(() => null!);
         var startups = UseState<List<Startup>>(() => new());
@@ -18,7 +18,7 @@ public class IndustryDetailsBlade(int industryId) : ViewBase
             startups.Set(await db.Startups
                 .Where(s => s.Industries.Any(i => i.Id == industryId))
                 .ToListAsync());
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (industry.Value == null) return null;
 

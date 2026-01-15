@@ -19,7 +19,7 @@ public class UserLeadsBlade(int? managerId) : ViewBase
                 .Include(e => e.SourceChannel)
                 .Where(e => managerId == null || e.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -65,7 +65,8 @@ public class UserLeadsBlade(int? managerId) : ViewBase
             .ToTrigger((isOpen) => new UserLeadsCreateDialog(isOpen, refreshToken, managerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

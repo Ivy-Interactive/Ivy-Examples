@@ -16,7 +16,7 @@ public class CustomerCallRecordsBlade(int customerId) : ViewBase
                 .Include(e => e.Manager)
                 .Where(e => e.CustomerId == customerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -61,7 +61,8 @@ public class CustomerCallRecordsBlade(int customerId) : ViewBase
             .ToTrigger((isOpen) => new CustomerCallRecordsCreateDialog(isOpen, refreshToken, customerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

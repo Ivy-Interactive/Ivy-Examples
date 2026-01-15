@@ -5,7 +5,7 @@ public class CallRecordDetailsBlade(int callRecordId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<AutodealerCrmContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var callRecord = UseState<CallRecord?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();
@@ -19,7 +19,7 @@ public class CallRecordDetailsBlade(int callRecordId) : ViewBase
                 .Include(e => e.Manager)
                 .Include(e => e.CallDirection)
                 .SingleOrDefaultAsync(e => e.Id == callRecordId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (callRecord.Value == null) return null;
 

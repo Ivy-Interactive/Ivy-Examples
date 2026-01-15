@@ -26,9 +26,9 @@ public class CustomerLeadsCreateDialog(IState<bool> isOpen, RefreshToken refresh
         return lead
             .ToForm()
             .Builder(e => e.Notes, e => e.ToTextAreaInput())
-            .Builder(e => e.SourceChannelId, e => e.ToAsyncSelectInput(QuerySourceChannels(factory), LookupSourceChannel(factory), placeholder: "Select Source Channel"))
-            .Builder(e => e.LeadIntentId, e => e.ToAsyncSelectInput(QueryLeadIntents(factory), LookupLeadIntent(factory), placeholder: "Select Lead Intent"))
-            .Builder(e => e.LeadStageId, e => e.ToAsyncSelectInput(QueryLeadStages(factory), LookupLeadStage(factory), placeholder: "Select Lead Stage"))
+            .Builder(e => e.SourceChannelId, e => e.ToAsyncSelectInput<int>(QuerySourceChannels, LookupSourceChannel, placeholder: "Select Source Channel"))
+            .Builder(e => e.LeadIntentId, e => e.ToAsyncSelectInput<int>(QueryLeadIntents, LookupLeadIntent, placeholder: "Select Lead Intent"))
+            .Builder(e => e.LeadStageId, e => e.ToAsyncSelectInput<int>(QueryLeadStages, LookupLeadStage, placeholder: "Select Lead Stage"))
             .ToDialog(isOpen, title: "Create Lead", submitTitle: "Create");
     }
 
@@ -53,84 +53,99 @@ public class CustomerLeadsCreateDialog(IState<bool> isOpen, RefreshToken refresh
         return lead.Id;
     }
 
-    private static AsyncSelectQueryDelegate<int?> QuerySourceChannels(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QuerySourceChannels(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.SourceChannels
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QuerySourceChannels), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.SourceChannels
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupSourceChannel(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupSourceChannel(IViewContext context, int id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var channel = await db.SourceChannels.FirstOrDefaultAsync(e => e.Id == id);
-            if (channel == null) return null;
-            return new Option<int?>(channel.DescriptionText, channel.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupSourceChannel), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var channel = await db.SourceChannels.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (channel == null) return null;
+                return new Option<int>(channel.DescriptionText, channel.Id);
+            });
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryLeadIntents(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QueryLeadIntents(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.LeadIntents
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QueryLeadIntents), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.LeadIntents
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupLeadIntent(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupLeadIntent(IViewContext context, int id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var intent = await db.LeadIntents.FirstOrDefaultAsync(e => e.Id == id);
-            if (intent == null) return null;
-            return new Option<int?>(intent.DescriptionText, intent.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupLeadIntent), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var intent = await db.LeadIntents.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (intent == null) return null;
+                return new Option<int>(intent.DescriptionText, intent.Id);
+            });
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryLeadStages(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QueryLeadStages(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.LeadStages
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QueryLeadStages), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.LeadStages
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupLeadStage(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupLeadStage(IViewContext context, int id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var stage = await db.LeadStages.FirstOrDefaultAsync(e => e.Id == id);
-            if (stage == null) return null;
-            return new Option<int?>(stage.DescriptionText, stage.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupLeadStage), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var stage = await db.LeadStages.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (stage == null) return null;
+                return new Option<int>(stage.DescriptionText, stage.Id);
+            });
     }
 }

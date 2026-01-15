@@ -20,7 +20,7 @@ public class WorkbooksListBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
@@ -88,7 +88,7 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
@@ -96,7 +96,7 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
         this.UseEffect(() =>
         {
             workbookRepository.SetCurrentFile(fileName);
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
         // Get the first worksheet - passing fileName directly to avoid shared state issues
         var table = workbookRepository.GetCurrentTable(fileName);
 
@@ -107,7 +107,7 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
 /// <summary>
 /// Worksheet Editor - Allows adding columns, rows, and saving changes
 /// </summary>
-public class WorksheetEditor(DataTable table, string fileName, IBladeController blades) : ViewBase
+public class WorksheetEditor(DataTable table, string fileName, IBladeService blades) : ViewBase
 {
     public override object? Build()
     {

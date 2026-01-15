@@ -5,7 +5,7 @@ public class LeadDetailsBlade(int leadId) : ViewBase
     public override object? Build()
     {
         var factory = this.UseService<AutodealerCrmContextFactory>();
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var lead = this.UseState<Lead?>();
         var callRecordCount = this.UseState<int>();
@@ -28,7 +28,7 @@ public class LeadDetailsBlade(int leadId) : ViewBase
             mediaCount.Set(await db.Media.CountAsync(e => e.LeadId == leadId));
             messageCount.Set(await db.Messages.CountAsync(e => e.LeadId == leadId));
             taskCount.Set(await db.Tasks.CountAsync(e => e.LeadId == leadId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (lead.Value == null) return null;
 

@@ -14,7 +14,7 @@ public class VehicleMediaBlade(int? vehicleId) : ViewBase
             if (vehicleId == null) return;
             await using var db = factory.CreateDbContext();
             media.Set(await db.Media.Where(m => m.VehicleId == vehicleId).ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -56,7 +56,8 @@ public class VehicleMediaBlade(int? vehicleId) : ViewBase
             .ToTrigger((isOpen) => new VehicleMediaCreateDialog(isOpen, refreshToken, vehicleId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

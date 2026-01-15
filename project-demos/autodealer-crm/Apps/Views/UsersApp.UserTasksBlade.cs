@@ -15,7 +15,7 @@ public class UserTasksBlade(int managerId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             tasks.Set(await db.Tasks.Include(t => t.Lead).Where(t => t.ManagerId == managerId).ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -59,7 +59,8 @@ public class UserTasksBlade(int managerId) : ViewBase
             .ToTrigger((isOpen) => new UserTasksCreateDialog(isOpen, refreshToken, managerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

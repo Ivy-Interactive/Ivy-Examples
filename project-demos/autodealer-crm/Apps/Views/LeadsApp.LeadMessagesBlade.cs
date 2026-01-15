@@ -19,7 +19,7 @@ public class LeadMessagesBlade(int? leadId) : ViewBase
                 .Include(m => m.Media)
                 .Where(m => m.LeadId == leadId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -64,7 +64,8 @@ public class LeadMessagesBlade(int? leadId) : ViewBase
             .ToTrigger((isOpen) => new LeadMessagesCreateDialog(isOpen, refreshToken, leadId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

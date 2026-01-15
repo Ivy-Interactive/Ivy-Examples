@@ -19,7 +19,7 @@ public class UserMessagesBlade(int? managerId) : ViewBase
                 .Include(m => m.MessageType)
                 .Where(m => managerId == null || m.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -64,7 +64,8 @@ public class UserMessagesBlade(int? managerId) : ViewBase
             .ToTrigger((isOpen) => new UserMessagesCreateDialog(isOpen, refreshToken, managerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

@@ -6,7 +6,7 @@ public class StartupListBlade : ViewBase
 
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var factory = UseService<VcContextFactory>();
         var refreshToken = this.UseRefreshToken();
 

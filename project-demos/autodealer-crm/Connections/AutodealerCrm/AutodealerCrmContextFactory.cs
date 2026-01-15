@@ -59,7 +59,7 @@ public sealed class AutodealerCrmContextFactory : IDbContextFactory<AutodealerCr
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_absolutePath)!);
 
-            var appDir = AppContext.BaseDirectory;
+            var appDir = System.AppContext.BaseDirectory;
             var templatePath = System.IO.Path.Combine(appDir, _relativePath);
 
             if (!System.IO.File.Exists(templatePath))

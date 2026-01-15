@@ -13,7 +13,7 @@ public class LeadMediaBlade(int? leadId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             media.Set(await db.Media.Include(e => e.Lead).Where(e => e.LeadId == leadId).ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -55,7 +55,8 @@ public class LeadMediaBlade(int? leadId) : ViewBase
             .ToTrigger((isOpen) => new LeadMediaCreateDialog(isOpen, refreshToken, leadId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

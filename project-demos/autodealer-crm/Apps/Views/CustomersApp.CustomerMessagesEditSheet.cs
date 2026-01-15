@@ -19,63 +19,75 @@ public class CustomerMessagesEditSheet(IState<bool> isOpen, RefreshToken refresh
         return message
             .ToForm()
             .Builder(e => e.Content, e => e.ToTextAreaInput())
-            .Builder(e => e.MessageChannelId, e => e.ToAsyncSelectInput(QueryMessageChannels(factory), LookupMessageChannel(factory), placeholder: "Select Message Channel"))
-            .Builder(e => e.MessageDirectionId, e => e.ToAsyncSelectInput(QueryMessageDirections(factory), LookupMessageDirection(factory), placeholder: "Select Message Direction"))
+            .Builder(e => e.MessageChannelId, e => e.ToAsyncSelectInput<int?>(QueryMessageChannels, LookupMessageChannel, placeholder: "Select Message Channel"))
+            .Builder(e => e.MessageDirectionId, e => e.ToAsyncSelectInput<int?>(QueryMessageDirections, LookupMessageDirection, placeholder: "Select Message Direction"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
             .ToSheet(isOpen, "Edit Message");
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryMessageChannels(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int?>[]> QueryMessageChannels(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.MessageChannels
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int?>[], (string, string)>(
+            key: (nameof(QueryMessageChannels), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.MessageChannels
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int?>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupMessageChannel(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int?>?> LookupMessageChannel(IViewContext context, int? id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var channel = await db.MessageChannels.FirstOrDefaultAsync(e => e.Id == id);
-            if (channel == null) return null;
-            return new Option<int?>(channel.DescriptionText, channel.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int?>?, (string, int?)>(
+            key: (nameof(LookupMessageChannel), id),
+            fetcher: async ct =>
+            {
+                if (id == null) return null;
+                await using var db = factory.CreateDbContext();
+                var channel = await db.MessageChannels.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (channel == null) return null;
+                return new Option<int?>(channel.DescriptionText, channel.Id);
+            });
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryMessageDirections(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int?>[]> QueryMessageDirections(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.MessageDirections
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int?>[], (string, string)>(
+            key: (nameof(QueryMessageDirections), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.MessageDirections
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int?>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupMessageDirection(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int?>?> LookupMessageDirection(IViewContext context, int? id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var direction = await db.MessageDirections.FirstOrDefaultAsync(e => e.Id == id);
-            if (direction == null) return null;
-            return new Option<int?>(direction.DescriptionText, direction.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int?>?, (string, int?)>(
+            key: (nameof(LookupMessageDirection), id),
+            fetcher: async ct =>
+            {
+                if (id == null) return null;
+                await using var db = factory.CreateDbContext();
+                var direction = await db.MessageDirections.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (direction == null) return null;
+                return new Option<int?>(direction.DescriptionText, direction.Id);
+            });
     }
 }

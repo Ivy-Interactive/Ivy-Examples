@@ -5,7 +5,7 @@ public class PartnerDetailsBlade(int partnerId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var partner = UseState<Partner?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();
@@ -14,7 +14,7 @@ public class PartnerDetailsBlade(int partnerId) : ViewBase
         {
             var db = factory.CreateDbContext();
             partner.Set(await db.Partners.Include(p => p.Gender).SingleOrDefaultAsync(p => p.Id == partnerId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (partner.Value == null) return null;
 

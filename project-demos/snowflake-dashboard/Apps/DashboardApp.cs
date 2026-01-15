@@ -63,7 +63,7 @@ public class DashboardApp : ViewBase
             {
                 isLoading.Value = false;
             }
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         if (errorMessage.Value != null)
         {

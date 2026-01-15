@@ -28,35 +28,41 @@ public class FounderEditSheet(IState<bool> isOpen, RefreshToken refreshToken, in
             .ToForm()
             .Place(e => e.FirstName, e => e.LastName)
             .Builder(e => e.Email, e => e.ToEmailInput())
-            .Builder(e => e.GenderId, e => e.ToAsyncSelectInput(QueryGenders(factory), LookupGender(factory), placeholder: "Select Gender"))
+            .Builder(e => e.GenderId, e => e.ToAsyncSelectInput<int?>(QueryGenders, LookupGender, placeholder: "Select Gender"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
             .ToSheet(isOpen, "Edit Founder");
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryGenders(VcContextFactory factory)
+    private static QueryResult<Option<int?>[]> QueryGenders(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.Genders
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<VcContextFactory>();
+        return context.UseQuery<Option<int?>[], (string, string)>(
+            key: (nameof(QueryGenders), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.Genders
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int?>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupGender(VcContextFactory factory)
+    private static QueryResult<Option<int?>?> LookupGender(IViewContext context, int? id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var gender = await db.Genders.FirstOrDefaultAsync(e => e.Id == id);
-            if (gender == null) return null;
-            return new Option<int?>(gender.DescriptionText, gender.Id);
-        };
+        var factory = context.UseService<VcContextFactory>();
+        return context.UseQuery<Option<int?>?, (string, int?)>(
+            key: (nameof(LookupGender), id),
+            fetcher: async ct =>
+            {
+                if (id == null) return null;
+                await using var db = factory.CreateDbContext();
+                var gender = await db.Genders.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (gender == null) return null;
+                return new Option<int?>(gender.DescriptionText, gender.Id);
+            });
     }
 }

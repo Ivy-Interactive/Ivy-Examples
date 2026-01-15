@@ -160,26 +160,33 @@ public class AgentChatView : ViewBase
             }
         }
         
-        UseEffect(async () => await LoadModels(), EffectTrigger.AfterInit());
+        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
         
         // Query function for AsyncSelectInput
-        Task<Option<string>[]> QueryModels(string query)
+        QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
         {
-            var models = availableModels.Value;
-            if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
-            
-            var filtered = string.IsNullOrEmpty(query) 
-                ? models.Take(10) 
-                : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
-            
-            return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
+            return context.UseQuery<Option<string>[], (string, string)>(
+                key: (nameof(QueryModels), query),
+                fetcher: ct =>
+                {
+                    var models = availableModels.Value;
+                    if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
+                    
+                    var filtered = string.IsNullOrEmpty(query) 
+                        ? models.Take(10) 
+                        : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
+                    
+                    return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
+                });
         }
 
         // Lookup function for AsyncSelectInput
-        Task<Option<string>?> LookupModel(string? model)
+        QueryResult<Option<string>?> LookupModel(IViewContext context, string? model)
         {
-            if (string.IsNullOrEmpty(model)) return Task.FromResult<Option<string>?>(null);
-            return Task.FromResult<Option<string>?>(new Option<string>(model));
+            return context.UseQuery<Option<string>?, (string, string?)>(
+                key: (nameof(LookupModel), model),
+                fetcher: ct => Task.FromResult<Option<string>?>(
+                    string.IsNullOrEmpty(model) ? null : new Option<string>(model)));
         }
 
         UseEffect(() =>
@@ -250,7 +257,7 @@ public class AgentChatView : ViewBase
                 .Label(e => e.Name, "Name")
                 .Builder(e => e.Description, e => e.ToTextInput(placeholder: "Short description..."))
                 .Label(e => e.Description, "Description")
-                .Builder(e => e.OllamaModel,e => modelState.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search models..."))
+                .Builder(e => e.OllamaModel,e => modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models..."))
                 .Label(e => e.OllamaModel, "Ollama Model")
                 .Builder(e => e.Instructions, e => e.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50)))
@@ -265,7 +272,8 @@ public class AgentChatView : ViewBase
             | new Ivy.Chat(messages.Value.ToArray(), HandleMessageAsync);
 
         return new Fragment()
-            | BladeHelper.WithHeader(editButton, chatContent)
+            | new BladeHeader(editButton)
+            | chatContent
             | editDialog;
     }
 }

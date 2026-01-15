@@ -24,7 +24,7 @@ public class AgentListView : ViewBase
 
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
         var isSettingsOpen = UseState(false);
         var settingsForm = UseState(new ApiSettingsModel

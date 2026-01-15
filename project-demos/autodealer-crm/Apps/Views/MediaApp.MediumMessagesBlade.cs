@@ -18,7 +18,7 @@ public class MediumMessagesBlade(int? mediaId) : ViewBase
                 .Include(m => m.MessageType)
                 .Where(m => m.MediaId == mediaId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -62,7 +62,8 @@ public class MediumMessagesBlade(int? mediaId) : ViewBase
             .ToTrigger((isOpen) => new MediumMessagesCreateDialog(isOpen, refreshToken, mediaId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

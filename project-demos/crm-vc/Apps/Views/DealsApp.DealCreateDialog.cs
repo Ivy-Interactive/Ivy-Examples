@@ -38,7 +38,7 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
 
         return dealState
             .ToForm()
-            .Builder(e => e.StartupId, e => e.ToAsyncSelectInput(QueryStartups(factory), LookupStartup(factory), placeholder: "Select Startup"))
+            .Builder(e => e.StartupId, e => e.ToAsyncSelectInput<int?>(QueryStartups, LookupStartup, placeholder: "Select Startup"))
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
             .ToDialog(isOpen, title: "Create Deal", submitTitle: "Create");
     }
@@ -63,30 +63,36 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
         return deal.Id;
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryStartups(VcContextFactory factory)
+    private static QueryResult<Option<int?>[]> QueryStartups(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.Startups
-                    .Where(e => e.Name.Contains(query))
-                    .Select(e => new { e.Id, e.Name })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.Name, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<VcContextFactory>();
+        return context.UseQuery<Option<int?>[], (string, string)>(
+            key: (nameof(QueryStartups), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.Startups
+                        .Where(e => e.Name.Contains(query))
+                        .Select(e => new { e.Id, e.Name })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int?>(e.Name, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupStartup(VcContextFactory factory)
+    private static QueryResult<Option<int?>?> LookupStartup(IViewContext context, int? id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var startup = await db.Startups.FirstOrDefaultAsync(e => e.Id == id);
-            if (startup == null) return null;
-            return new Option<int?>(startup.Name, startup.Id);
-        };
+        var factory = context.UseService<VcContextFactory>();
+        return context.UseQuery<Option<int?>?, (string, int?)>(
+            key: (nameof(LookupStartup), id),
+            fetcher: async ct =>
+            {
+                if (id == null) return null;
+                await using var db = factory.CreateDbContext();
+                var startup = await db.Startups.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (startup == null) return null;
+                return new Option<int?>(startup.Name, startup.Id);
+            });
     }
 }

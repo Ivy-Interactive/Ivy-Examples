@@ -17,7 +17,7 @@ public class LeadCallRecordsBlade(int? leadId) : ViewBase
                 .Include(e => e.CallDirection)
                 .Where(e => e.LeadId == leadId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -63,7 +63,8 @@ public class LeadCallRecordsBlade(int? leadId) : ViewBase
             .ToTrigger((isOpen) => new LeadCallRecordsCreateDialog(isOpen, refreshToken, leadId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

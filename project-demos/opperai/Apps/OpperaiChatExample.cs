@@ -125,83 +125,93 @@ namespace OpperaiExample.Apps
             }
 
             // Query models asynchronously from API
-            async Task<Option<string>[]> QueryModels(string query)
+            QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
             {
-                if (opperClient.Value == null)
-                    return Array.Empty<Option<string>>();
-
-                try
-                {
-                    var response = await opperClient.Value.ListModelsAsync(limit: 100);
-                    var models = response.Data
-                        .Where(m => string.IsNullOrWhiteSpace(query) ||
-                                   m.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                                   m.HostingProvider.Contains(query, StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(m => m.HostingProvider)
-                        .ThenBy(m => m.Name)
-                        .Select(m => new Option<string>($"{m.HostingProvider}/{m.Name}", m.Name))
-                        .ToArray();
-
-                    // Add default model option if query is empty
-                    if (string.IsNullOrWhiteSpace(query) && models.Length > 0)
+                return context.UseQuery<Option<string>[], (string, string)>(
+                    key: (nameof(QueryModels), query),
+                    fetcher: async ct =>
                     {
-                        var defaultModel = models.FirstOrDefault(m => string.Equals(m.Value as string, DefaultModelName, StringComparison.Ordinal));
-                        if (defaultModel != null)
-                        {
-                            return new[] { defaultModel }
-                                .Concat(models.Where(m => !string.Equals(m.Value as string, DefaultModelName, StringComparison.Ordinal)))
-                                .ToArray();
-                        }
-                    }
+                        if (opperClient.Value == null)
+                            return Array.Empty<Option<string>>();
 
-                    return models;
-                }
-                catch
-                {
-                    return Array.Empty<Option<string>>();
-                }
+                        try
+                        {
+                            var response = await opperClient.Value.ListModelsAsync(limit: 100);
+                            var models = response.Data
+                                .Where(m => string.IsNullOrWhiteSpace(query) ||
+                                           m.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                           m.HostingProvider.Contains(query, StringComparison.OrdinalIgnoreCase))
+                                .OrderBy(m => m.HostingProvider)
+                                .ThenBy(m => m.Name)
+                                .Select(m => new Option<string>($"{m.HostingProvider}/{m.Name}", m.Name))
+                                .ToArray();
+
+                            // Add default model option if query is empty
+                            if (string.IsNullOrWhiteSpace(query) && models.Length > 0)
+                            {
+                                var defaultModel = models.FirstOrDefault(m => string.Equals(m.Value as string, DefaultModelName, StringComparison.Ordinal));
+                                if (defaultModel != null)
+                                {
+                                    return new[] { defaultModel }
+                                        .Concat(models.Where(m => !string.Equals(m.Value as string, DefaultModelName, StringComparison.Ordinal)))
+                                        .ToArray();
+                                }
+                            }
+
+                            return models;
+                        }
+                        catch
+                        {
+                            return Array.Empty<Option<string>>();
+                        }
+                    });
             }
 
             // Lookup model by name
-            async Task<Option<string>?> LookupModel(string? modelName)
+            QueryResult<Option<string>?> LookupModel(IViewContext context, string? modelName)
             {
-                if (string.IsNullOrWhiteSpace(modelName))
-                    modelName = DefaultModelName;
+                return context.UseQuery<Option<string>?, (string, string?)>(
+                    key: (nameof(LookupModel), modelName),
+                    fetcher: async ct =>
+                    {
+                        if (string.IsNullOrWhiteSpace(modelName))
+                            modelName = DefaultModelName;
 
-                try
-                {
-                    var response = await opperClient.Value.ListModelsAsync(limit: 100);
-                    var model = response.Data.FirstOrDefault(m => m.Name == modelName);
-                    if (model != null)
-                    {
-                        return new Option<string>($"{model.HostingProvider}/{model.Name}", model.Name);
-                    }
-                    
-                    // If model not found, return default model option anyway
-                    if (modelName == DefaultModelName)
-                    {
-                        var parts = DefaultModel.Split('/');
-                        var defaultModelFromApi = response.Data.FirstOrDefault(m => 
-                            m.HostingProvider == parts[0] && m.Name == parts[1]);
-                        if (defaultModelFromApi != null)
+                        try
                         {
-                            return new Option<string>($"{defaultModelFromApi.HostingProvider}/{defaultModelFromApi.Name}", defaultModelFromApi.Name);
+                            var response = await opperClient.Value.ListModelsAsync(limit: 100);
+                            var model = response.Data.FirstOrDefault(m => m.Name == modelName);
+                            if (model != null)
+                            {
+                                return new Option<string>($"{model.HostingProvider}/{model.Name}", model.Name);
+                            }
+                            
+                            // If model not found, return default model option anyway
+                            if (modelName == DefaultModelName)
+                            {
+                                var parts = DefaultModel.Split('/');
+                                var defaultModelFromApi = response.Data.FirstOrDefault(m => 
+                                    m.HostingProvider == parts[0] && m.Name == parts[1]);
+                                if (defaultModelFromApi != null)
+                                {
+                                    return new Option<string>($"{defaultModelFromApi.HostingProvider}/{defaultModelFromApi.Name}", defaultModelFromApi.Name);
+                                }
+                                // Fallback: return default model even if not in API response
+                                return new Option<string>($"{DefaultModel}", DefaultModelName);
+                            }
+                            
+                            return null;
                         }
-                        // Fallback: return default model even if not in API response
-                        return new Option<string>($"{DefaultModel}", DefaultModelName);
-                    }
-                    
-                    return null;
-                }
-                catch
-                {
-                    // On error, still return default model option
-                    if (modelName == DefaultModelName)
-                    {
-                        return new Option<string>($"{DefaultModel}", DefaultModelName);
-                    }
-                    return null;
-                }
+                        catch
+                        {
+                            // On error, still return default model option
+                            if (modelName == DefaultModelName)
+                            {
+                                return new Option<string>($"{DefaultModel}", DefaultModelName);
+                            }
+                            return null;
+                        }
+                    });
             }
 
             async void HandleMessageAsync(Event<Chat, string> @event)
@@ -268,7 +278,7 @@ namespace OpperaiExample.Apps
                 | (Layout.Vertical().Align(Align.Left)
                     | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.4f))
                 | (Layout.Horizontal().Align(Align.Right)
-                    | selectedModel.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search and select model...")
+                    | selectedModel.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search and select model...")
                         .Disabled(!hasApiKey))
                 | (Layout.Vertical().Align(Align.Right)
                     | new Button(

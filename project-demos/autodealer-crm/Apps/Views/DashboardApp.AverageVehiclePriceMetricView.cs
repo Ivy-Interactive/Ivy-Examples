@@ -8,53 +8,58 @@ public class AverageVehiclePriceMetricView(DateTime fromDate, DateTime toDate) :
 {
     public override object Build()
     {
-        var factory = UseService<AutodealerCrmContextFactory>();
-
-        async Task<MetricRecord> CalculateAverageVehiclePrice()
+        QueryResult<MetricRecord> CalculateAverageVehiclePrice(IViewContext ctx)
         {
-            await using var db = factory.CreateDbContext();
+            var factory = ctx.UseService<AutodealerCrmContextFactory>();
+            return ctx.UseQuery<MetricRecord, (DateTime, DateTime)>(
+                key: (fromDate, toDate),
+                fetcher: async (key, ct) =>
+                {
+                    var (fd, td) = key;
+                    await using var db = factory.CreateDbContext();
 
-            var currentPeriodVehicles = await db.Vehicles
-                .Where(v => v.CreatedAt >= fromDate && v.CreatedAt <= toDate)
-                .ToListAsync();
+                    var currentPeriodVehicles = await db.Vehicles
+                        .Where(v => v.CreatedAt >= fd && v.CreatedAt <= td)
+                        .ToListAsync(ct);
 
-            var currentAveragePrice = currentPeriodVehicles.Any()
-                ? currentPeriodVehicles.Average(v => (double)v.Price)
-                : 0.0;
+                    var currentAveragePrice = currentPeriodVehicles.Any()
+                        ? currentPeriodVehicles.Average(v => (double)v.Price)
+                        : 0.0;
 
-            var periodLength = toDate - fromDate;
-            var previousFromDate = fromDate.AddDays(-periodLength.TotalDays);
-            var previousToDate = fromDate.AddDays(-1);
+                    var periodLength = td - fd;
+                    var previousFromDate = fd.AddDays(-periodLength.TotalDays);
+                    var previousToDate = fd.AddDays(-1);
 
-            var previousPeriodVehicles = await db.Vehicles
-                .Where(v => v.CreatedAt >= previousFromDate && v.CreatedAt <= previousToDate)
-                .ToListAsync();
+                    var previousPeriodVehicles = await db.Vehicles
+                        .Where(v => v.CreatedAt >= previousFromDate && v.CreatedAt <= previousToDate)
+                        .ToListAsync(ct);
 
-            var previousAveragePrice = previousPeriodVehicles.Any()
-                ? previousPeriodVehicles.Average(v => (double)v.Price)
-                : 0.0;
+                    var previousAveragePrice = previousPeriodVehicles.Any()
+                        ? previousPeriodVehicles.Average(v => (double)v.Price)
+                        : 0.0;
 
-            if (previousAveragePrice == 0.0)
-            {
-                return new MetricRecord(
-                    MetricFormatted: currentAveragePrice.ToString("C0"),
-                    TrendComparedToPreviousPeriod: null,
-                    GoalAchieved: null,
-                    GoalFormatted: null
-                );
-            }
+                    if (previousAveragePrice == 0.0)
+                    {
+                        return new MetricRecord(
+                            MetricFormatted: currentAveragePrice.ToString("C0"),
+                            TrendComparedToPreviousPeriod: null,
+                            GoalAchieved: null,
+                            GoalFormatted: null
+                        );
+                    }
 
-            double? trend = (currentAveragePrice - previousAveragePrice) / previousAveragePrice;
+                    double? trend = (currentAveragePrice - previousAveragePrice) / previousAveragePrice;
 
-            var goal = previousAveragePrice * 1.1;
-            double? goalAchievement = goal > 0 ? (double?)(currentAveragePrice / goal ): null;
+                    var goal = previousAveragePrice * 1.1;
+                    double? goalAchievement = goal > 0 ? (double?)(currentAveragePrice / goal ): null;
 
-            return new MetricRecord(
-                MetricFormatted: currentAveragePrice.ToString("C0"),
-                TrendComparedToPreviousPeriod: trend,
-                GoalAchieved: goalAchievement,
-                GoalFormatted: goal.ToString("C0")
-            );
+                    return new MetricRecord(
+                        MetricFormatted: currentAveragePrice.ToString("C0"),
+                        TrendComparedToPreviousPeriod: trend,
+                        GoalAchieved: goalAchievement,
+                        GoalFormatted: goal.ToString("C0")
+                    );
+                });
         }
 
         return new MetricView(

@@ -16,7 +16,7 @@ public class UserVehiclesBlade(int? managerId) : ViewBase
                 .Include(v => v.VehicleStatus)
                 .Where(v => managerId == null || v.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
 
         Action OnDelete(int id)
         {
@@ -61,7 +61,8 @@ public class UserVehiclesBlade(int? managerId) : ViewBase
             .ToTrigger((isOpen) => new UserVehiclesCreateDialog(isOpen, refreshToken, managerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 
