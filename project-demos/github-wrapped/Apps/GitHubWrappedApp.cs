@@ -43,12 +43,18 @@ public class GitHubWrappedApp : ViewBase
         // Loading state
         if (loading.Value)
         {
-            return Layout.Center()
-                   | new Card(Layout.Vertical().Align(Align.Center).Gap(4)
-                       | Icons.Github.ToIcon()
-                       | Text.H2("Loading your GitHub Wrapped 2025...")
-                       | Text.Block("Please wait...").Muted())
-                     .Width(Size.Fraction(0.5f));
+            return Layout.Vertical().Height(Size.Full()).Align(Align.TopCenter)
+
+                    | (Layout.Vertical().Width(Size.Fraction(0.7f)).Height(Size.Full())
+                        | new Skeleton().Height(Size.Units(30)).Width(Size.Full())
+                    | (Layout.Vertical().Height(Size.Full()).Align(Align.Center)
+                        | new Skeleton().Height(Size.Units(150)).Width(Size.Fraction(0.8f)))
+                    | (Layout.Vertical().Align(Align.BottomCenter)
+                        | (Layout.Horizontal().Gap(3)
+                            | (Layout.Vertical().Align(Align.Left)
+                                | new Skeleton().Height(Size.Units(15)).Width(Size.Units(50)))
+                            | (Layout.Vertical().Align(Align.Right)
+                                | new Skeleton().Height(Size.Units(15)).Width(Size.Units(70))))));
         }
 
         // Error state
@@ -88,10 +94,10 @@ public class GitHubWrappedApp : ViewBase
                     | (Layout.Vertical().Width(Size.Fraction(0.7f)).Height(Size.Full())
                         | new Stepper(OnSelect, selectedIndex.Value, stepperItems)
                             .AllowSelectForward()
-                        | new Spacer().Height(Size.Units(10))
+                    | (Layout.Vertical().Height(Size.Full()).Align(Align.Center)
                         | BuildCurrentSlide(selectedIndex.Value, stats.Value))
-                    | (Layout.Vertical().Width(Size.Fraction(0.7f)).Height(Size.Fit())
-                        | (Layout.Horizontal().Gap(3).Align(Align.Center)
+                    | (Layout.Vertical().Align(Align.BottomCenter)
+                        | (Layout.Horizontal().Gap(3)
                             | (Layout.Vertical().Align(Align.Left)
                                 | new Button("Previous")
                                     .Icon(Icons.ChevronLeft)
@@ -101,13 +107,14 @@ public class GitHubWrappedApp : ViewBase
                                     {
                                         selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
                                     }))
-                            | new Button("Show me more")
-                                .Icon(Icons.ChevronRight, Align.Right)
-                                .HandleClick(() =>
-                                {
-                                    selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
-                                })
-                                .Disabled(selectedIndex.Value == stepperItems.Length - 1)));
+                            | (Layout.Vertical().Align(Align.Right)
+                                | new Button("Show me more")
+                                    .Icon(Icons.ChevronRight, Align.Right)
+                                    .HandleClick(() =>
+                                    {
+                                        selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
+                                    })
+                                    .Disabled(selectedIndex.Value == stepperItems.Length - 1)))));
 
         ValueTask OnSelect(Event<Stepper, int> e)
         {
