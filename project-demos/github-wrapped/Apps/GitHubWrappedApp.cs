@@ -108,7 +108,7 @@ public class GitHubWrappedApp : ViewBase
                                         selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
                                     }))
                             | (Layout.Vertical().Align(Align.Right)
-                                | new Button("Show me more")
+                                | new Button(selectedIndex.Value == 0 ? "Start the recap" : "Show me more")
                                     .Icon(Icons.ChevronRight, Align.Right)
                                     .HandleClick(() =>
                                     {

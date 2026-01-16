@@ -103,13 +103,13 @@ public class RepositoriesSlide : ViewBase
                   | Text.H2($"{repoName} Repository").Bold().Italic()
                   | Text.Block(headline).Muted()
                   | Text.Small(subheadline).Muted())
-                 .Width(Size.Fraction(0.4f))
+                 .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer()
+                   | new Spacer().Height(5)
                    | BuildRepoList(client, maxCommits)
-                   | new Spacer()
+                   | new Spacer().Height(5)
                    | BuildInsights(topRepo, _targetTotalRepos, _targetTopRepoCommits))
-                 .Width(Size.Fraction(0.6f));
+                 .Width(Size.Fraction(0.8f));
     }
 
     private object BuildRepoList(IClientProvider client, int maxCommits)
@@ -159,7 +159,8 @@ public class RepositoriesSlide : ViewBase
                     | Text.H2($"{animatedPercentage.Value}%").Bold().Italic()
                     | Text.Block($"{repo.CommitCount} commits").Muted())
                 .Title($"{repo.Name}")
-                .Icon(Icons.Folder);
+                .Icon(Icons.Folder)
+                .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
         });
 
         // Arrange cards: first row with 2 cards, second row with 3 cards

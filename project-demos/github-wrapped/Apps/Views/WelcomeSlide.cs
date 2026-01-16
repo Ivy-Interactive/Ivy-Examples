@@ -15,26 +15,12 @@ public class WelcomeSlide : ViewBase
     {
         var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
 
-        return Layout.Vertical().Gap(4).Align(Align.Center)
-                   | (Layout.Vertical().Gap(2).Align(Align.Center)
+        return Layout.Vertical().Gap(5).Align(Align.Center).Width(Size.Fraction(0.8f))
+                   | (Layout.Vertical().Gap(4).Align(Align.Center)
                       | new Avatar(userName, _stats.UserInfo.AvatarUrl)
-                          .Height(80).Width(80)
-                      | Text.H1($"Hey, {userName}!").Bold()
-                      | Text.Block("Your GitHub Wrapped 2025 is ready").Muted())
-                   | (Layout.Vertical().Gap(1).Align(Align.Center)
-                      | Text.Block("Let’s rewind what you shipped").Muted())
-                   | (Layout.Grid().Gap(3).Columns(3)
-                      | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                          | Text.H2(_stats.TotalCommits.ToString()).Bold().Italic()
-                          | Text.Small("Commits pushed across your repositories").Muted())
-                          .Title("Commits").Icon(Icons.GitCommitVertical)
-                      | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                          | Text.H2(_stats.PullRequestsCreated.ToString()).Bold().Italic()
-                          | Text.Small("Pull requests opened & reviewed").Muted())
-                          .Title("Pull Requests").Icon(Icons.GitPullRequestCreate)
-                      | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                          | Text.H2(_stats.TotalContributionDays.ToString()).Bold().Italic()
-                          | Text.Small("Days you showed up and shipped code").Muted())
-                          .Title("Active Days").Icon(Icons.Activity));
+                          .Height(100).Width(100)
+                      | Text.H1($"Hey, {userName}, your year on GitHub — wrapped.").Bold()
+                      | Text.H2("Commits, pull requests, and the work you shipped in 2025.").Muted()
+                      | Text.H3("Let's break down what made your year.").Muted());
     }
 }

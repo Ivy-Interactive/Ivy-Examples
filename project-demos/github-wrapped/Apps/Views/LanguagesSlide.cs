@@ -102,13 +102,13 @@ public class LanguagesSlide : ViewBase
                   | Text.H2($"{_topLanguage.Key} Language" ?? "N/A").Bold().Italic()
                   | Text.Block(headline).Muted()
                   | Text.Small(subheadline).Muted())
-                 .Width(Size.Fraction(0.4f))
+                 .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer()
+                   | new Spacer().Height(10)
                    | BuildLanguageChart(maxBytes)
-                   | new Spacer()
+                   | new Spacer().Height(10)
                    | BuildInsights(_topLanguage, languagesCount, _targetTotalCommits))
-                 .Width(Size.Fraction(0.6f));
+                 .Width(Size.Fraction(0.8f));
     }
 
     private object BuildLanguageChart(long maxBytes)

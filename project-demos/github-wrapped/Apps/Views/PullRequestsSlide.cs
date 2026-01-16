@@ -102,8 +102,8 @@ public class PullRequestsSlide : ViewBase
         return Layout.Vertical().Gap(4).Align(Align.Center)
                | Text.H2($"{animatedCreated.Value} Pull Requests").Bold().Italic()
                | Text.Block("ideas turned into pull requests").Muted()
-               | new Spacer()
-               | (Layout.Grid().Gap(3).Columns(2)
+               | new Spacer().Height(10)
+               | (Layout.Grid().Gap(3).Columns(2).Width(Size.Fraction(0.8f))
                    | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                        | Text.H2(animatedMerged.Value.ToString()).Bold().Italic()
                        | Text.Small("Pull Requests successfully merged").Muted())
@@ -112,7 +112,7 @@ public class PullRequestsSlide : ViewBase
                        | Text.H2($"{animatedRate.Value}%").Bold().Italic()
                        | Text.Small("Merge success rate").Muted())
                        .Title("Success Rate").Icon(Icons.TrendingUp))
-               | new Spacer()
+               | new Spacer().Height(10)
                | insight;
     }
 

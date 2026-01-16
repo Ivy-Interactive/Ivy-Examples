@@ -95,13 +95,13 @@ public class CommitsSlide : ViewBase
                   | Text.H2($"{animatedCommits.Value} Commits").Bold().Italic()
                   | Text.Block("shipped in 2025").Muted()
                   | Text.Small($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
-                 .Width(Size.Fraction(0.4f))
+                 .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer()
+                   | new Spacer().Height(10)
                    | BuildMonthlyChart(maxCommits)
-                   | new Spacer()
+                   | new Spacer().Height(10)
                    | BuildInsights(activeMonths, activeMonthsPercentage, peakMonth.Key, peakMonth.Value, monthsAfterPeak))
-                 .Width(Size.Fraction(0.6f));
+                 .Width(Size.Fraction(0.8f));
     }
 
     private object BuildMonthlyChart(int maxCommits)
