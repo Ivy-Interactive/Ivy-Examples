@@ -1,24 +1,40 @@
 # GitHub Wrapped 2025
 
-A Spotify Wrapped-style application for GitHub that displays your 2025 coding activity in an engaging slideshow format.
+## Description
+
+GitHub Wrapped 2025 is a web application for visualizing and analyzing your GitHub coding activity from 2025. It displays your commits, pull requests, languages, repositories, and contribution statistics in an engaging, personalized slideshow format with animated visualizations and dynamic insights.
+
+## One-Click Development Environment
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fgithub-wrapped%2Fdevcontainer.json&location=EuropeWest)
+
+Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
+- **.NET 10.0** SDK pre-installed
+- **Ready-to-run** development environment
+- **No local setup** required
 
 ## Features
 
-- 🔐 **GitHub OAuth Authentication** - Secure login with your GitHub account
-- 📊 **6 Interactive Slides**:
-  1. **Welcome** - Greeting with key stats overview
-  2. **Commits** - Total commits with monthly breakdown
-  3. **Pull Requests** - PRs created, merged, and merge rate
-  4. **Languages** - Top 5 programming languages used
-  5. **Repositories** - Most active repositories by commit count
-  6. **Summary** - Overall 2025 highlights and contribution streak
-- 🎯 **Stepper Navigation** - Easy navigation between slides
-- 📱 **Responsive UI** - Clean, minimal design
+- **GitHub OAuth Authentication** - Secure login with your GitHub account
+- **6 Interactive Slides**:
+  1. **Welcome** - Personalized greeting that sets the storytelling tone (no stats, just anticipation)
+  2. **Commits** - Animated commit counts with monthly breakdown and personalized insights
+  3. **Pull Requests** - PR statistics with engaging narratives and animated numbers
+  4. **Languages** - Top 7 programming languages with bar chart visualization (based on code bytes)
+  5. **Repositories** - Clickable repository cards showing commit percentages and stats
+  6. **Summary** - Dynamic status assignment, collage layout, and personalized narrative
+- **Animations** - Count-up animations for numbers, staggered card reveals
+- **Wrapped-Style Design** - Engaging, personalized narratives instead of dry statistics
+- **Stepper Navigation** - Easy navigation between slides with progress tracking
+- **Interactive Elements** - Clickable repository cards that open GitHub pages
+- **Responsive UI** - Clean, centered design with maximum width constraints
 
 ## Prerequisites
 
-- .NET 10.0 SDK
-- GitHub OAuth Application credentials
+1. **.NET 10.0 SDK** or later
+2. **Ivy Framework** - This project uses local project references to Ivy Framework
+   - Ensure you have the Ivy Framework cloned locally at: `C:\git\Ivy-Interactive\Ivy-Framework`
+3. **GitHub OAuth App** - You'll need to create a GitHub OAuth application (see setup below)
 
 ## Setup
 
@@ -38,32 +54,56 @@ A Spotify Wrapped-style application for GitHub that displays your 2025 coding ac
 ```bash
 cd project-demos/github-wrapped
 dotnet user-secrets init
-dotnet user-secrets set "Auth:GitHub:ClientId" "YOUR_CLIENT_ID"
-dotnet user-secrets set "Auth:GitHub:ClientSecret" "YOUR_CLIENT_SECRET"
+dotnet user-secrets set "GitHub:ClientId" "YOUR_CLIENT_ID"
+dotnet user-secrets set "GitHub:ClientSecret" "YOUR_CLIENT_SECRET"
+dotnet user-secrets set "GitHub:RedirectUri" "YOUR_REDIRECT_URI"
 ```
 
 ### 3. Run the Application
 
-```bash
-dotnet run
-```
+1. **Navigate to the project directory**:
+   ```bash
+   cd project-demos/github-wrapped
+   ```
 
-The application will open in your browser. Click the login button in the top right corner to authenticate with GitHub.
+2. **Restore dependencies**:
+   ```bash
+   dotnet restore
+   ```
+
+3. **Run the application**:
+   ```bash
+   dotnet watch
+   ```
+
+4. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5000`)
+
+5. **Authenticate**:
+   - Click the login button in the navigation bar
+   - You'll be redirected to GitHub for authorization
+   - After authorizing, you'll be redirected back to the app
+   - Your GitHub Wrapped 2025 will be displayed
 
 ## How It Works
 
 1. **Authentication**: Users log in with their GitHub account using OAuth
 2. **Data Fetching**: The app fetches data from GitHub API:
-   - User repositories
+   - User repositories with detailed language statistics (bytes per language)
    - Commits from 2025 (filtered by date)
-   - Pull requests created in 2025
-   - Language statistics
+   - Pull requests created and merged in 2025
+   - Language statistics based on actual code bytes (not just repository primary language)
 3. **Aggregation**: Statistics are calculated:
    - Monthly commit breakdown
-   - Top languages by commit count
-   - Most active repositories
-   - Contribution streak (longest consecutive days)
-4. **Display**: Results are shown in a beautiful slideshow interface using the Stepper widget
+   - Top 7 languages by code bytes (more accurate than commit-based counting)
+   - Most active repositories with commit percentages
+   - Contribution streak (longest consecutive days with commits)
+   - Dynamic user status based on activity patterns
+4. **Display**: Results are shown in a beautiful slideshow interface with:
+   - Animated number count-ups
+   - Personalized narratives and insights
+   - Dynamic status assignment (Code Master, Productivity Champion, etc.)
+   - Interactive elements (clickable repository cards)
+   - Wrapped-style storytelling instead of raw statistics
 
 ## Architecture
 
@@ -90,16 +130,45 @@ GitHubWrapped/
 
 - **Ivy Framework** - UI framework for building interactive applications
 - **Ivy.Auth.GitHub** - GitHub OAuth authentication
-- **GitHub REST API** - Data fetching
+- **Ivy.Charts** - Bar chart visualization for language statistics
+- **GitHub REST API** - Data fetching (repositories, commits, pull requests, languages)
+- **JobScheduler** - Coordinated animations for number count-ups
 - **.NET 10.0** - Runtime platform
+
+## Key Improvements
+
+- **Accurate Language Statistics**: Uses actual code bytes from GitHub API instead of repository primary language
+- **Top 7 Languages**: Shows more comprehensive language breakdown
+- **Animated Numbers**: Smooth count-up animations for all statistics
+- **Personalized Narratives**: Dynamic, engaging text based on user's actual activity patterns
+- **Dynamic Status System**: Assigns statuses like "Code Master", "Productivity Champion", "Collaboration Hero" based on metrics
+- **Interactive Repositories**: Clickable cards that open repository pages on GitHub
+- **Wrapped-Style Welcome**: Storytelling approach that builds anticipation instead of showing stats immediately
 
 ## API Rate Limits
 
 The GitHub API has rate limits. For authenticated requests, you get 5,000 requests per hour. The app is optimized to minimize API calls by:
-- Limiting repository fetching to the 50 most recent repos
-- Limiting commit fetching to 3 pages per repository
-- Caching fetched data during navigation
+- Fetching repositories with pagination (up to 10 pages, 100 repos per page)
+- Limiting commit fetching to repositories with activity in 2025
+- Fetching detailed language statistics only for active repositories
+- Caching fetched data during navigation between slides
+- Using efficient API endpoints (e.g., `/repos/{owner}/{repo}/languages` for language bytes)
 
-## License
+## Deploy
 
-Part of the Ivy-Examples repository.
+Deploy this application to Ivy's hosting platform:
+
+```bash
+cd project-demos/github-wrapped
+ivy deploy
+```
+
+## Learn More
+
+- **Ivy Framework**: [github.com/Ivy-Interactive/Ivy-Framework](https://github.com/Ivy-Interactive/Ivy-Framework)
+- **Ivy Documentation**: [docs.ivy.app](https://docs.ivy.app)
+
+## Tags
+
+GitHub, Wrapped, OAuth, Authentication, Statistics, Analytics, Data Visualization, Ivy Framework, C#, .NET
+
