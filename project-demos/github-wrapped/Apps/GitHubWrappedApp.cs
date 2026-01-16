@@ -3,6 +3,7 @@ namespace GitHubWrapped.Apps;
 using GitHubWrapped.Models;
 using GitHubWrapped.Services;
 using GitHubWrapped.Apps.Views;
+using Ivy.Helpers;
 
 [App(icon: Icons.Github, title: "GitHub Wrapped 2025")]
 public class GitHubWrappedApp : ViewBase
@@ -10,73 +11,36 @@ public class GitHubWrappedApp : ViewBase
     public override object? Build()
     {
         var auth = this.UseService<IAuthService>();
-        var statsService = this.UseService<GitHubStatsService>();
+        var apiClient = this.UseService<GitHubApiClient>();
         
         var stats = this.UseState<GitHubStats?>();
-        var loading = this.UseState<bool>(true);
-        var error = this.UseState<string?>();
         var selectedIndex = this.UseState(0);
+        var refresh = this.UseRefreshToken();
 
-        this.UseEffect(async () =>
+        var scheduler = this.UseMemo(() => BuildScheduler(auth, apiClient, stats));
+
+        this.UseEffect(() =>
         {
-            try
+            var sub = scheduler.Subscribe(_ => refresh.Refresh());
+            
+            // Auto-start if not already finished or running
+            if (stats.Value == null)
             {
-                loading.Set(true);
-                var userInfo = await auth.GetUserInfoAsync();
-                
-                if (userInfo != null)
-                {
-                    var fetchedStats = await statsService.FetchStatsAsync(auth);
-                    stats.Set(fetchedStats);
-                }
+                _ = scheduler.RunAsync();
             }
-            catch (Exception ex)
-            {
-                error.Set($"Failed to load GitHub stats: {ex.Message}");
-            }
-            finally
-            {
-                loading.Set(false);
-            }
+            
+            return sub;
         });
 
-        // Loading state
-        if (loading.Value)
-        {
-            return Layout.Vertical().Height(Size.Full()).Align(Align.TopCenter)
-
-                    | (Layout.Vertical().Width(Size.Fraction(0.7f)).Height(Size.Full())
-                        | new Skeleton().Height(Size.Units(30)).Width(Size.Full())
-                    | (Layout.Vertical().Height(Size.Full()).Align(Align.Center)
-                        | new Skeleton().Height(Size.Units(150)).Width(Size.Fraction(0.8f)))
-                    | (Layout.Vertical().Align(Align.BottomCenter)
-                        | (Layout.Horizontal().Gap(3)
-                            | (Layout.Vertical().Align(Align.Left)
-                                | new Skeleton().Height(Size.Units(15)).Width(Size.Units(50)))
-                            | (Layout.Vertical().Align(Align.Right)
-                                | new Skeleton().Height(Size.Units(15)).Width(Size.Units(70))))));
-        }
-
-        // Error state
-        if (error.Value != null)
-        {
-            return Layout.Center()
-                   | new Card(Layout.Vertical().Gap(3)
-                       | Text.H2("Error")
-                       | Text.Block(error.Value).Muted())
-                     .Width(Size.Fraction(0.5f));
-        }
-
-        // Not authenticated
+        // 1. Loading / Executing state
+        // When stats are null, the scheduler is either running or failed.
+        // We show the scheduler view which provides rich status feedback.
         if (stats.Value == null)
         {
-            return Layout.Center()
-                   | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
-                       | Icons.Github.ToIcon()
-                       | Text.H2("Welcome to GitHub Wrapped 2025")
-                       | Text.Block("Please login via the navigation bar to see your GitHub activity from 2025.")
-                       | Text.Small("Click the login button in the top right corner to authenticate with GitHub.").Muted())
-                     .Width(Size.Fraction(0.5f));
+             return Layout.Vertical().Height(Size.Full()).Align(Align.Center)
+                    | (Layout.Vertical().Width(Size.Fraction(0.4f)).Gap(2).Align(Align.Center)
+                        | Text.H2("Preparing your 2025 Wrap...")
+                        | scheduler.ToView());
         }
 
         // Main wrapped experience with stepper
@@ -135,6 +99,125 @@ public class GitHubWrappedApp : ViewBase
             5 => new SummarySlide(stats),
             _ => Text.Block("Unknown slide")
         };
+    }
+
+    private JobScheduler BuildScheduler(
+        IAuthService auth,
+        GitHubApiClient apiClient,
+        IState<GitHubStats?> statsState)
+    {
+        var scheduler = new JobScheduler(maxParallelJobs: 3);
+        
+        // Shared state for the jobs
+        var context = new ExtractionContext();
+        var options = new GitHubStatsOptions();
+
+        var authJob = scheduler.CreateJob("Authenticating")
+            .WithAction(async (_, _, progress, token) =>
+            {
+                progress.Report(0.2);
+                context.User = await auth.GetUserInfoAsync();
+                if (context.User == null) throw new Exception("Not authenticated");
+                
+                var authToken = auth.GetAuthSession().AuthToken?.AccessToken;
+                if (string.IsNullOrWhiteSpace(authToken)) throw new Exception("No access token");
+                context.Token = authToken;
+
+                progress.Report(0.6);
+                context.Username = await apiClient.GetUsernameAsync(context.Token);
+                if (string.IsNullOrWhiteSpace(context.Username)) throw new Exception("Could not find username");
+                
+                progress.Report(1.0);
+            })
+            .Build();
+
+        var reposJob = scheduler.CreateJob("Fetching Repositories")
+            .DependsOn(authJob)
+            .WithAction(async (_, _, progress, token) =>
+            {
+                context.Repositories = await apiClient.GetRepositoriesAsync(context.Token!, options, progress);
+                progress.Report(1.0);
+            })
+            .Build();
+
+        var commitsJob = scheduler.CreateJob("Fetching Commits")
+            .DependsOn(authJob)
+            .WithAction(async (_, _, progress, token) =>
+            {
+                context.Commits = await apiClient.GetCommitsAsync(context.Token!, context.Username!, options, progress);
+                progress.Report(1.0);
+            })
+            .Build();
+
+        var prsJob = scheduler.CreateJob("Fetching Pull Requests")
+            .DependsOn(authJob)
+            .WithAction(async (_, _, progress, token) =>
+            {
+                context.PullRequests = await apiClient.GetPullRequestsAsync(context.Token!, context.Username!, options, progress);
+                progress.Report(1.0);
+            })
+            .Build();
+            
+        var streakJob = scheduler.CreateJob("Calculating Streak")
+             .DependsOn(authJob)
+             .WithAction(async (_, _, progress, token) =>
+             {
+                 var (longest, current, total) = await apiClient.GetContributionStreakAsync(context.Token!, context.Username!, options, progress);
+                 context.LongestStreak = longest;
+                 context.CurrentStreak = current;
+                 context.TotalDays = total;
+                 progress.Report(1.0);
+             })
+             .Build();
+
+        scheduler.CreateJob("Analyzing Data")
+            .DependsOn(reposJob, commitsJob, prsJob, streakJob)
+            .WithAction(async (_, _, progress, token) =>
+            {
+                progress.Report(0.1);
+                var calculator = new GitHubStatsCalculator(options);
+                
+                var commitsByMonth = calculator.CalculateCommitsByMonth(context.Commits!);
+                var languageBreakdown = calculator.CalculateLanguageBreakdown(context.Repositories!);
+                var topRepos = calculator.CalculateTopRepos(context.Repositories!, context.Commits!);
+                var (prsCreated, prsMerged) = calculator.CalculatePullRequestStats(context.PullRequests!);
+                var starsReceived = calculator.CalculateStarsReceived(context.Repositories!);
+
+                progress.Report(0.8);
+
+                var finalStats = new GitHubStats(
+                    UserInfo: context.User!,
+                    TotalCommits: context.Commits!.Count,
+                    CommitsByMonth: commitsByMonth,
+                    LanguageBreakdown: languageBreakdown,
+                    TopRepos: topRepos,
+                    PullRequestsCreated: prsCreated,
+                    PullRequestsMerged: prsMerged,
+                    LongestStreak: context.LongestStreak,
+                    TotalContributionDays: context.TotalDays,
+                    StarsGiven: 0,
+                    StarsReceived: starsReceived
+                );
+
+                statsState.Set(finalStats);
+                progress.Report(1.0);
+            })
+            .Build();
+            
+        return scheduler;
+    }
+
+    private class ExtractionContext
+    {
+        public UserInfo? User { get; set; }
+        public string? Token { get; set; }
+        public string? Username { get; set; }
+        public List<GitHubRepository>? Repositories { get; set; }
+        public List<GitHubCommit>? Commits { get; set; }
+        public List<GitHubPullRequest>? PullRequests { get; set; }
+        public int LongestStreak { get; set; }
+        public int CurrentStreak { get; set; }
+        public int TotalDays { get; set; }
     }
 }
 
