@@ -71,7 +71,6 @@ public class GitHubApiClient
             var response = await httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[GitHubAPI] GraphQL streak request failed: {response.StatusCode}");
                 return (0, 0, 0);
             }
 
@@ -106,17 +105,10 @@ public class GitHubApiClient
             
             var (longestStreak, currentStreak) = CalculateStreakFromDays(contributionDays);
             
-            Console.WriteLine($"[GitHubAPI] GraphQL Streak (official GitHub calculation):");
-            Console.WriteLine($"[GitHubAPI]   Total contributions: {totalContributions}");
-            Console.WriteLine($"[GitHubAPI]   Total contribution days: {contributionDays.Count}");
-            Console.WriteLine($"[GitHubAPI]   Longest streak: {longestStreak} days");
-            Console.WriteLine($"[GitHubAPI]   Current streak: {currentStreak} days");
-            
             return (longestStreak, currentStreak, contributionDays.Count);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GitHubAPI] GraphQL streak error: {ex.Message}");
             return (0, 0, 0);
         }
     }
@@ -180,19 +172,15 @@ public class GitHubApiClient
         string username, 
         GitHubStatsOptions options)
     {
-        Console.WriteLine($"[GitHubAPI] Using GraphQL API to fetch contributions (official GitHub method)");
-        
         // Try GraphQL first (official GitHub way)
         var commits = await GetCommitsViaGraphQLAsync(accessToken, username, options);
         
         if (commits.Count > 0)
         {
-            Console.WriteLine($"[GitHubAPI] ✓ GraphQL: {commits.Count} commits found");
             return commits;
         }
 
         // Fallback to REST API if GraphQL fails
-        Console.WriteLine($"[GitHubAPI] GraphQL failed, falling back to REST API");
         return await GetCommitsViaRestAsync(accessToken, username, options);
     }
 
@@ -255,7 +243,6 @@ public class GitHubApiClient
             var response = await httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[GitHubAPI] GraphQL request failed: {response.StatusCode}");
                 return new List<GitHubCommit>();
             }
 
@@ -266,12 +253,10 @@ public class GitHubApiClient
                 !data.TryGetProperty("user", out var user) ||
                 !user.TryGetProperty("contributionsCollection", out var contributions))
             {
-                Console.WriteLine($"[GitHubAPI] GraphQL: No contribution data found");
                 return new List<GitHubCommit>();
             }
 
             var totalCommits = contributions.GetProperty("totalCommitContributions").GetInt32();
-            Console.WriteLine($"[GitHubAPI] GraphQL: GitHub reports {totalCommits} total commit contributions");
 
             // For detailed commit info, we still need to fetch from each repo
             var reposByType = contributions.GetProperty("commitContributionsByRepository").EnumerateArray()
@@ -288,34 +273,19 @@ public class GitHubApiClient
             var ownedCount = reposByType.Count(r => !r.IsFork);
             var forkCommits = reposByType.Where(r => r.IsFork).Sum(r => r.Count);
             var ownedCommits = reposByType.Where(r => !r.IsFork).Sum(r => r.Count);
-            
-            Console.WriteLine($"[GitHubAPI] GraphQL: {reposByType.Count} repositories ({ownedCount} owned with {ownedCommits} commits, {forkCount} forks with {forkCommits} commits)");
 
             // Filter out forks if needed
             var reposToFetch = options.IncludeForks 
                 ? reposByType 
                 : reposByType.Where(r => !r.IsFork).ToList();
 
-            if (!options.IncludeForks && forkCount > 0)
-            {
-                Console.WriteLine($"[GitHubAPI] GraphQL: Excluding {forkCount} forks with {forkCommits} commits (IncludeForks=false)");
-            }
-
             // Now fetch detailed commits from each repo
             var commits = await FetchCommitsFromRepositoriesAsync(httpClient, accessToken, username, reposToFetch.Select(r => r.Name).ToList(), options);
-            
-            // Explain the final count
-            Console.WriteLine($"[GitHubAPI] GraphQL Commits breakdown:");
-            Console.WriteLine($"[GitHubAPI]   GitHub total: {totalCommits}");
-            if (!options.IncludeForks && forkCommits > 0)
-                Console.WriteLine($"[GitHubAPI]   Filtered (forks): -{forkCommits} (IncludeForks=false)");
-            Console.WriteLine($"[GitHubAPI]   Final count: {commits.Count} (after deduplication and detailed fetch)");
             
             return commits;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GitHubAPI] GraphQL error: {ex.Message}");
             return new List<GitHubCommit>();
         }
     }
@@ -333,8 +303,6 @@ public class GitHubApiClient
 
         var startDate = options.StartDate.ToString("yyyy-MM-dd");
         var endDate = options.EndDate.ToString("yyyy-MM-dd");
-
-        Console.WriteLine($"[GitHubAPI] REST API: Fetching commits (⚠️ max 1000 limit)");
 
         for (var page = 1; page <= options.MaxPages; page++)
         {
@@ -357,7 +325,6 @@ public class GitHubApiClient
             if (pageCommits.Count < options.PerPage) break;
         }
 
-        Console.WriteLine($"[GitHubAPI] REST API: {commits.Count} commits found");
         return commits;
     }
 
@@ -447,15 +414,9 @@ public class GitHubApiClient
 
                 if (pageCommits.Count < 100) break;
             }
-
-            if (commits.Count > 0)
-            {
-                Console.WriteLine($"[GitHubAPI]   {repoFullName}: {commits.Count} commits");
-            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GitHubAPI]   {repoFullName}: Error - {ex.Message}");
         }
 
         return commits;
@@ -470,19 +431,15 @@ public class GitHubApiClient
         string username, 
         GitHubStatsOptions options)
     {
-        Console.WriteLine($"[GitHubAPI] Using GraphQL API to fetch PR contributions (official GitHub method)");
-        
         // Try GraphQL first (official GitHub way)
         var pullRequests = await GetPullRequestsViaGraphQLAsync(accessToken, username, options);
         
         if (pullRequests.Count > 0)
         {
-            Console.WriteLine($"[GitHubAPI] ✓ GraphQL: {pullRequests.Count} PRs found");
             return pullRequests;
         }
 
         // Fallback to REST API if GraphQL fails
-        Console.WriteLine($"[GitHubAPI] GraphQL failed, falling back to REST API for PRs");
         return await GetPullRequestsViaRestAsync(accessToken, username, options);
     }
 
@@ -551,7 +508,6 @@ public class GitHubApiClient
             var response = await httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[GitHubAPI] GraphQL PR request failed: {response.StatusCode}");
                 return new List<GitHubPullRequest>();
             }
 
@@ -562,12 +518,10 @@ public class GitHubApiClient
                 !data.TryGetProperty("user", out var user) ||
                 !user.TryGetProperty("contributionsCollection", out var contributions))
             {
-                Console.WriteLine($"[GitHubAPI] GraphQL: No PR contribution data found");
                 return new List<GitHubPullRequest>();
             }
 
             var totalPRs = contributions.GetProperty("totalPullRequestContributions").GetInt32();
-            Console.WriteLine($"[GitHubAPI] GraphQL: GitHub reports {totalPRs} total PR contributions");
 
             var pullRequests = new List<GitHubPullRequest>();
             var prsByRepo = contributions.GetProperty("pullRequestContributionsByRepository").EnumerateArray();
@@ -619,22 +573,10 @@ public class GitHubApiClient
                 }
             }
 
-            var mergedCount = pullRequests.Count(pr => pr.MergedAt.HasValue);
-            
-            // Explain the difference
-            Console.WriteLine($"[GitHubAPI] GraphQL PRs breakdown:");
-            Console.WriteLine($"[GitHubAPI]   GitHub total: {totalPRs}");
-            if (filteredByFork > 0)
-                Console.WriteLine($"[GitHubAPI]   Filtered (forks): -{filteredByFork} (IncludeForks=false)");
-            if (filteredByDate > 0)
-                Console.WriteLine($"[GitHubAPI]   Filtered (date range): -{filteredByDate}");
-            Console.WriteLine($"[GitHubAPI]   Final count: {pullRequests.Count} ({mergedCount} merged, {pullRequests.Count - mergedCount} open/closed)");
-            
             return pullRequests;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GitHubAPI] GraphQL PR error: {ex.Message}");
             return new List<GitHubPullRequest>();
         }
     }
@@ -652,8 +594,6 @@ public class GitHubApiClient
 
         var startDate = options.StartDate.ToString("yyyy-MM-dd");
         var endDate = options.EndDate.ToString("yyyy-MM-dd");
-
-        Console.WriteLine($"[GitHubAPI] REST API: Fetching PRs (⚠️ max 1000 limit)");
 
         for (var page = 1; page <= options.MaxPages; page++)
         {
@@ -673,7 +613,6 @@ public class GitHubApiClient
             if (pagePRs.Count < options.PerPage) break;
         }
 
-        Console.WriteLine($"[GitHubAPI] REST API: {pullRequests.Count} PRs found");
         return pullRequests;
     }
 

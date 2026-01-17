@@ -38,9 +38,12 @@ public class GitHubWrappedApp : ViewBase
         if (stats.Value == null)
         {
              return Layout.Vertical().Height(Size.Full()).Align(Align.Center)
-                    | (Layout.Vertical().Width(Size.Fraction(0.4f)).Gap(2).Align(Align.Center)
-                        | Text.H2("Preparing your 2025 Wrap...")
-                        | scheduler.ToView());
+                    | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
+                        | Icons.Github.ToIcon().Height(Size.Units(40)).Width(Size.Units(40))
+                        | Text.H2("Preparing your 2025 Wrap...").Bold()
+                        | Text.Small("Gathering your GitHub activity data").Muted()
+                        | scheduler.ToView())
+                      .Width(Size.Fraction(0.5f));
         }
 
         // Main wrapped experience with stepper
@@ -135,7 +138,8 @@ public class GitHubWrappedApp : ViewBase
             .DependsOn(authJob)
             .WithAction(async (_, _, progress, token) =>
             {
-                context.Repositories = await apiClient.GetRepositoriesAsync(context.Token!, options, progress);
+                progress.Report(0.1);
+                context.Repositories = await apiClient.GetRepositoriesAsync(context.Token!, options);
                 progress.Report(1.0);
             })
             .Build();
@@ -144,7 +148,8 @@ public class GitHubWrappedApp : ViewBase
             .DependsOn(authJob)
             .WithAction(async (_, _, progress, token) =>
             {
-                context.Commits = await apiClient.GetCommitsAsync(context.Token!, context.Username!, options, progress);
+                progress.Report(0.1);
+                context.Commits = await apiClient.GetCommitsAsync(context.Token!, context.Username!, options);
                 progress.Report(1.0);
             })
             .Build();
@@ -153,7 +158,8 @@ public class GitHubWrappedApp : ViewBase
             .DependsOn(authJob)
             .WithAction(async (_, _, progress, token) =>
             {
-                context.PullRequests = await apiClient.GetPullRequestsAsync(context.Token!, context.Username!, options, progress);
+                progress.Report(0.1);
+                context.PullRequests = await apiClient.GetPullRequestsAsync(context.Token!, context.Username!, options);
                 progress.Report(1.0);
             })
             .Build();
@@ -162,7 +168,8 @@ public class GitHubWrappedApp : ViewBase
              .DependsOn(authJob)
              .WithAction(async (_, _, progress, token) =>
              {
-                 var (longest, current, total) = await apiClient.GetContributionStreakAsync(context.Token!, context.Username!, options, progress);
+                 progress.Report(0.1);
+                 var (longest, current, total) = await apiClient.GetContributionStreakAsync(context.Token!, context.Username!, options);
                  context.LongestStreak = longest;
                  context.CurrentStreak = current;
                  context.TotalDays = total;
