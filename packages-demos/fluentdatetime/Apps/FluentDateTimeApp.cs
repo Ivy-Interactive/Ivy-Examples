@@ -46,7 +46,7 @@ public class FluentDateTimeApp : ViewBase
                           | (showResult.Value ? 
                               new Card(
                                   Layout.Vertical()
-                                  | Text.Large("Result")
+                                  | Text.H3("Result").Bold()
                                   | Text.Markdown($"**Computed date**: `{resultDate:yyyy-MM-dd HH:mm}`")
                                   | Text.Markdown($"**Difference**: `{(int)(resultDate - baseDateTime.Value).TotalDays} days`")
                               ) : 
