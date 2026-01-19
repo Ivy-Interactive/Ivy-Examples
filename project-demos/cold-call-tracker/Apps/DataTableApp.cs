@@ -715,7 +715,7 @@ public class DataTableApp : ViewBase
                             new Separator(),
                             new Button("View API Response", _ => showExampleData.Set(_ => true))
                                 .Variant(ButtonVariant.Ghost)
-                        ]) : new Spacer()
+                        ]) : new Empty()
                     ], gap: 12)
                 ).Width(Size.Units(140));
         }

@@ -100,6 +100,16 @@
       ]
     },
     {
+      "name": "GitHub Wrapped 2025",
+      "description": "",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/github-wrapped",
+      "deploymentLink": "ivy-projectdemos-github-wrapped.sliplane.app",
+      "tags": [
+        "Ivy.Auth.GitHub",
+        "demo"
+      ]
+    },
+    {
       "name": "Hello",
       "description": "Hello is a simple starter application demonstrating the basic structure and setup of an Ivy web application. Ivy is a web framework for building interactive web applications using C# and .NET.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/helloworld",

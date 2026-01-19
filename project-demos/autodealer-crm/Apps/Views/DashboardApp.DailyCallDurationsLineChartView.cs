@@ -47,10 +47,10 @@ public class DailyCallDurationsLineChartView(DateTime startDate, DateTime endDat
             return card | new ErrorTeaserView(exception.Value);
         }
 
-        // if (chart.Value == null)
-        // {
-        //     return card | new Skeleton();
-        // }
+        if (chart.Value == null)
+        {
+            return card | new Skeleton();
+        }
 
         return card | chart.Value;
     }

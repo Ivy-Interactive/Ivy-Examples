@@ -65,58 +65,85 @@ public class TestAuthApp : ViewBase
         }
 
         var client = this.UseService<IClientProvider>();
+        var isSheetOpen = this.UseState<bool>(false);
+        var searchText = this.UseState<string>("");
 
-        return Layout.Vertical().Align(Align.TopCenter).Gap(3)
-               | new Card(Layout.Vertical().Gap(4)
-                   | (Layout.Vertical().Gap(2).Align(Align.Center)
-                      | new Avatar(userInfo.Value.FullName ?? userInfo.Value.Id, userInfo.Value.AvatarUrl)
-                          .Height(60).Width(60)
-                      | Text.H3($"Welcome, {userInfo.Value.FullName ?? userInfo.Value.Id}!"))
-                   | (new
-                   {
-                       UserID = userInfo.Value.Id,
-                       Name = userInfo.Value.FullName ?? "N/A",
-                       Email = userInfo.Value.Email ?? "N/A"
-                   }).ToDetails()
-                   | BuildRepositories(repositories.Value, client))
-                   .Width(Size.Fraction(0.4f));
+        return new Fragment()
+               | (Layout.Center()
+                   | new Card(Layout.Vertical().Gap(4)
+                       | (Layout.Vertical().Gap(2).Align(Align.Center)
+                          | new Avatar(userInfo.Value.FullName ?? userInfo.Value.Id, userInfo.Value.AvatarUrl)
+                              .Height(60).Width(60)
+                          | Text.H3($"Welcome, {userInfo.Value.FullName ?? userInfo.Value.Id}!"))
+                       | (new
+                       {
+                           UserID = userInfo.Value.Id,
+                           Name = userInfo.Value.FullName ?? "N/A",
+                           Email = userInfo.Value.Email ?? "N/A"
+                       }).ToDetails()
+                       | BuildRepositoriesButton(repositories.Value, isSheetOpen))
+                       .Width(Size.Fraction(0.3f)))
+               | (isSheetOpen.Value ? BuildRepositoriesSheet(repositories.Value, isSheetOpen, searchText, client) : null);
     }
 
-    private object BuildRepositories(List<GitHubRepo>? repos, IClientProvider client)
+    private object BuildRepositoriesButton(List<GitHubRepo>? repos, IState<bool> isSheetOpen)
     {
-        if (repos == null || repos.Count == 0)
-        {
-            return new Expandable("Repositories", 
-                Text.Block("No repositories found."));
-        }
+        var count = repos?.Count ?? 0;
+        var buttonText = count == 0
+            ? "Repositories (No repositories found)"
+            : $"Repositories ({count})";
 
-        var repoCards = repos.Select(repo =>
-        {
-            var stats = Layout.Horizontal().Gap(4).Align(Align.Center)
-                | Text.Block($"Stars: {repo.StargazersCount}")
-                | Text.Block($"Forks: {repo.ForksCount}");
-            
-            if (repo.Language != null)
-            {
-                stats = stats | new Badge(repo.Language, variant: BadgeVariant.Outline);
-            }
+        return new Button(buttonText, variant: ButtonVariant.Outline)
+            .HandleClick(_ => isSheetOpen.Set(true))
+            .Disabled(count == 0)
+            .Width(Size.Full());
+    }
 
+    private object? BuildRepositoriesSheet(List<GitHubRepo>? repos, IState<bool> isSheetOpen, IState<string> searchText, IClientProvider client)
+    {
+        var filteredRepos = repos.Where(repo =>
+            string.IsNullOrWhiteSpace(searchText.Value) ||
+            repo.Name.Contains(searchText.Value, StringComparison.OrdinalIgnoreCase) ||
+            (repo.Language != null && repo.Language.Contains(searchText.Value, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+
+        var repoCards = filteredRepos.Select(repo =>
+        {
             var updatedText = repo.UpdatedAt.ToString("MMM dd, yyyy");
 
-            return new Card(Layout.Vertical().Gap(3)
-                | (Layout.Horizontal().Gap(2)
-                    | (Layout.Vertical().Gap(2)
-                       | new Button(repo.Name, variant: ButtonVariant.Link)
-                       .Url(repo.HtmlUrl))
-                    | (Layout.Vertical().Gap(2).Align(Align.Right)
-                       | Text.Block(updatedText).Muted()))
-                | stats)
+            var details = new
+            {
+                Language = repo.Language,
+                Stars = repo.StargazersCount == 0 ? (int?)null : repo.StargazersCount,
+                Forks = repo.ForksCount == 0 ? (int?)null : repo.ForksCount,
+                Updated = updatedText,
+            }.ToDetails()
+                .RemoveEmpty();
+            
+            var content = Layout.Vertical().Align(Align.Center)
+                | Text.Literal(repo.Name).Italic().Bold()
+                | details;
+            
+            return new Card(content)
                 .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
         });
 
-        return new Expandable($"Repositories ({repos.Count})",
-            Layout.Grid().Gap(2) | repoCards)
-            .Open();
+        var content = Layout.Vertical().Gap(3)
+            | searchText.ToTextInput(placeholder: "Search repositories...")
+            | (filteredRepos.Count == 0
+                ? new Card(Text.Block("No repositories match your search.")).Title("No Results")
+                : Layout.Grid().Gap(2) | repoCards);
+
+        return new Sheet(
+            async (Event<Sheet> _) =>
+            {
+                isSheetOpen.Set(false);
+                searchText.Set(""); // Reset search when closing
+            },
+            content,
+            title: "Repositories",
+            description: $"Found {filteredRepos.Count} of {repos.Count} repositories"
+        ).Width(Size.Fraction(0.25f));
     }
 
     private async Task<List<GitHubRepo>> FetchRepositoriesAsync(
