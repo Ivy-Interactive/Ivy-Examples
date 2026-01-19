@@ -37,7 +37,7 @@ public class GitHubWrappedApp : ViewBase
         // We show the scheduler view which provides rich status feedback.
         if (stats.Value == null)
         {
-             return Layout.Vertical().Height(Size.Full()).Align(Align.Center)
+             return Layout.Center()
                     | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
                         | Icons.Github.ToIcon().Height(Size.Units(40)).Width(Size.Units(40))
                         | Text.H2("Preparing your 2025 Wrap...").Bold()
@@ -58,13 +58,12 @@ public class GitHubWrappedApp : ViewBase
         };
 
         return Layout.Vertical().Height(Size.Full()).Align(Align.TopCenter)
-                    | (Layout.Vertical().Width(Size.Fraction(0.7f)).Height(Size.Full())
+                    | (Layout.Vertical().Height(Size.Fit()).Width(Size.Fraction(0.7f))
                         | new Stepper(OnSelect, selectedIndex.Value, stepperItems)
-                            .AllowSelectForward()
-                    | (Layout.Vertical().Height(Size.Full()).Align(Align.Center)
-                        | BuildCurrentSlide(selectedIndex.Value, stats.Value))
-                    | (Layout.Vertical().Align(Align.BottomCenter)
-                        | (Layout.Horizontal().Gap(3)
+                            .AllowSelectForward())
+                    | (Layout.Vertical().Height(Size.Full()).Width(Size.Fraction(0.7f))
+                    | new FooterLayout(
+                        footer: (Layout.Horizontal()
                             | (Layout.Vertical().Align(Align.Left)
                                 | new Button("Previous")
                                     .Icon(Icons.ChevronLeft)
@@ -81,7 +80,9 @@ public class GitHubWrappedApp : ViewBase
                                     {
                                         selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
                                     })
-                                    .Disabled(selectedIndex.Value == stepperItems.Length - 1)))));
+                                    .Disabled(selectedIndex.Value == stepperItems.Length - 1))),
+                        content: (Layout.Vertical().Align(Align.Center)
+                            | BuildCurrentSlide(selectedIndex.Value, stats.Value))));
 
         ValueTask OnSelect(Event<Stepper, int> e)
         {
