@@ -93,8 +93,8 @@ public class TestAuthApp : ViewBase
         var repoCards = repos.Select(repo =>
         {
             var stats = Layout.Horizontal().Gap(4).Align(Align.Center)
-                | Text.Small($"Stars: {repo.StargazersCount}")
-                | Text.Small($"Forks: {repo.ForksCount}");
+                | Text.Block($"Stars: {repo.StargazersCount}")
+                | Text.Block($"Forks: {repo.ForksCount}");
             
             if (repo.Language != null)
             {
@@ -109,7 +109,7 @@ public class TestAuthApp : ViewBase
                        | new Button(repo.Name, variant: ButtonVariant.Link)
                        .Url(repo.HtmlUrl))
                     | (Layout.Vertical().Gap(2).Align(Align.Right)
-                       | Text.Small(updatedText).Muted()))
+                       | Text.Block(updatedText).Muted()))
                 | stats)
                 .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
         });

@@ -141,18 +141,18 @@ public class AgentSettingsView : ViewBase
 
         var formContent = new Card(Layout.Vertical().Gap(3).Padding(2)
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Name").Bold()
+                | Text.Block("Name").Bold()
                 | nameState.ToTextInput(placeholder: "Agent name...")
                     .Disabled(isReadOnly))
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Description").Bold()
+                | Text.Block("Description").Bold()
                 | descState.ToTextInput(placeholder: "Short description...")
                     .Disabled(isReadOnly))
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Ollama Model").Bold()
+                | Text.Block("Ollama Model").Bold()
                 | modelInput)
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Instructions (System Prompt)").Bold()
+                | Text.Block("Instructions (System Prompt)").Bold()
                 | instState.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50))
                     .Disabled(isReadOnly))
@@ -164,7 +164,7 @@ public class AgentSettingsView : ViewBase
         var presetInfo = _agent.IsPreset && !_isNew
             ? new Card(
                 Layout.Vertical().Gap(1).Padding(2)
-                | Text.Small("This is a preset agent. Settings are read-only. Use 'Duplicate' from the list to create an editable copy.")
+                | Text.Block("This is a preset agent. Settings are read-only. Use 'Duplicate' from the list to create an editable copy.")
             )
             : null;
 

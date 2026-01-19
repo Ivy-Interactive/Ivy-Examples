@@ -84,7 +84,7 @@ public class ConstructsApp : ViewBase
                     maxLines.Set(MaxLines);
                 }).Icon(Icons.RefreshCw)
                 )
-                | Text.Small("This demo uses the AWS Constructs library to build composable configuration models.")
+                | Text.Block("This demo uses the AWS Constructs library to build composable configuration models.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [AWS Constructs](https://github.com/aws/constructs)")
             ;
 

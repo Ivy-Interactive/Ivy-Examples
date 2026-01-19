@@ -68,7 +68,7 @@ public class SimMetricsNetApp : ViewBase
                         .WithField()
                         .Label("Metric")
                     | new Spacer().Height(Size.Units(10))
-                    | Text.Small("This demo uses SimMetrics.Net library to calculate similarity scores between names.")
+                    | Text.Block("This demo uses SimMetrics.Net library to calculate similarity scores between names.")
                     | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [SimMetrics.Net](https://github.com/StefH/SimMetrics.Net)")
                 ).Height(Size.Fit().Min(Size.Full()))
             | new Card(Layout.Vertical()

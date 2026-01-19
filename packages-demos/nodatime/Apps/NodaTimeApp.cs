@@ -86,7 +86,7 @@ public class NodaTimeApp : ViewBase
                 // Display the structured time output
                 | new Card(timeState.Value)
                 | new Spacer()
-				| Text.Small("This demo uses NodaTime to handle timezones and display UTC and local times.")
+				| Text.Block("This demo uses NodaTime to handle timezones and display UTC and local times.")
 			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [NodaTime](https://github.com/nodatime/nodatime)")
             )
             .Width(Size.Fit().Min(100).Max(600)));

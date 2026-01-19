@@ -831,14 +831,14 @@ public class SnowflakeApp : ViewBase
             | (errorMessage.Value != null
                 ? new Card(
                     Layout.Vertical().Gap(2).Padding(2)
-                        | Text.Small($"Error: {errorMessage.Value}")
+                        | Text.Block($"Error: {errorMessage.Value}")
                 )
                 : new Spacer())
             | (Layout.Horizontal().Gap(4)
                 | leftSection
                 | rightSection)
             | (Layout.Vertical().Gap(4).Align(Align.TopCenter)
-            | Text.Small("This demo uses Snowflake to explore databases, schemas, and tables.")
+            | Text.Block("This demo uses Snowflake to explore databases, schemas, and tables.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Snowflake](https://www.snowflake.com/)"))
             ;
     }
@@ -909,7 +909,7 @@ public class SnowflakeApp : ViewBase
                     | pageHeader
                     | new Card(
                         Layout.Vertical().Gap(2).Padding(3)
-                            | Text.Small($"Error: {errorMessageBrands.Value}")
+                            | Text.Block($"Error: {errorMessageBrands.Value}")
                     )
             );
         }

@@ -109,7 +109,7 @@ public class XLParserApp : ViewBase
                 )
             )
             | Layout.Vertical(
-                Text.Small("This demo uses XLParser library to parse and analyze Excel formulas."),
+                Text.Block("This demo uses XLParser library to parse and analyze Excel formulas."),
                 Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [XLParser](https://github.com/spreadsheetlab/XLParser)")
             ));
     }

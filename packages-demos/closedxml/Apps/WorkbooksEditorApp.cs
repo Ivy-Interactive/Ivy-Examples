@@ -212,7 +212,7 @@ public class RowEditor(DataTable table, RefreshToken refreshToken, WorkbookRepos
 
         if (dataColumns.Count == 0)
         {
-            return Text.Small("Add columns first to start adding rows");
+            return Text.Block("Add columns first to start adding rows");
         }
 
         var inputFields = new List<object>();
@@ -265,7 +265,7 @@ public class WorksheetTableView(DataTable table) : ViewBase
     {
         if (table.Columns.Count == 0)
         {
-            return Text.Small("No columns defined yet");
+            return Text.Block("No columns defined yet");
         }
 
         var rows = table.AsEnumerable().ToList();

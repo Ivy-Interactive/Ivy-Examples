@@ -72,7 +72,7 @@ Next steps: Everyone should update their progress in the project management tool
                     | notesFromMeeting.ToTextAreaInput().Height(Size.Units(80))
                     | new Button("Update tasks").HandleClick(_ => triggerRefresh.Set(triggerRefresh.Value + 1))
                     | new Spacer()
-                    | Text.Small("This demo uses the Microsoft.SemanticKernel for intelligent text matching.")
+                    | Text.Block("This demo uses the Microsoft.SemanticKernel for intelligent text matching.")
                     | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Microsoft.SemanticKernel](https://github.com/microsoft/semantic-kernel)")
             ).Height(Size.Fit().Min(Size.Full()))
             | new Card(
@@ -86,7 +86,7 @@ Next steps: Everyone should update their progress in the project management tool
                             : tasks.Value.Length > 0
                                 ? Layout.Vertical()
                                     | tasks.Value
-                                    | Text.Small($"Total: {tasks.Value.Length} action item(s)").Muted()
+                                    | Text.Block($"Total: {tasks.Value.Length} action item(s)").Muted()
                                 : Text.Muted("No action items found in the text"))
             ).Height(Size.Fit().Min(Size.Full()));
     }

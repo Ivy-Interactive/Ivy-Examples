@@ -140,7 +140,7 @@ public class ExcelDataReaderApp : ViewBase
                         .Width(Size.Full()),
 
                     new Spacer(),
-                    Text.Small("This demo uses the ExcelDataReader NuGet package to read Excel and CSV files."),
+                    Text.Block("This demo uses the ExcelDataReader NuGet package to read Excel and CSV files."),
                     Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ExcelDataReader](https://github.com/ExcelDataReader/ExcelDataReader)"),
 
                     // Analysis indicator

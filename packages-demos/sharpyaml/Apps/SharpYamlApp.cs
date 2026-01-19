@@ -98,7 +98,7 @@ public class SharpYamlApp : ViewBase
 
         var footerSection = Layout.Vertical()
             .Gap(1)
-            | Text.Small("This demo uses SharpYaml library for converting JSON to YAML.")
+            | Text.Block("This demo uses SharpYaml library for converting JSON to YAML.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [SharpYaml](https://github.com/xoofx/SharpYaml)")
             ;       
         

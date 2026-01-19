@@ -185,7 +185,7 @@ public class RestSharpApp : ViewBase
                             .Height(Size.Fit().Max(70)))
                 | statusCallout
                 )
-            | Text.Small("This demo uses RestSharp library to send HTTP requests to a RESTful API.")
+            | Text.Block("This demo uses RestSharp library to send HTTP requests to a RESTful API.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [RestSharp](https://github.com/restsharp/RestSharp)")
         ).Width(Size.Fraction(0.45f));
 

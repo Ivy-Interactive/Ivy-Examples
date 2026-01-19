@@ -107,7 +107,7 @@ public class MainMenuBlade : ViewBase
                             .WithField()
                             .Label("Ollama URL"))
                        | (Layout.Vertical().Gap(3).Width(Size.Full())
-                           | Text.Small("Model")
+                           | Text.Block("Model")
                            | (isLoadingModels.Value
                                ? selectedModel.ToSelectInput(Array.Empty<Option<string>>(), placeholder: "Loading...").Disabled(true) as object
                                : selectedModel.ToSelectInput(availableModels.Value.Select(m => new Option<string>(m)).ToArray(), placeholder: "Select model...") as object))
@@ -122,7 +122,7 @@ public class MainMenuBlade : ViewBase
                             | new Icon(Icons.MessageSquare).Size(16))
                          | (Layout.Vertical().Gap(2)
                              | Text.Large("Simple Chat")
-                             | Text.Small("Basic conversation with streaming responses").Muted()
+                             | Text.Block("Basic conversation with streaming responses").Muted()
                              | new Button("Try It")
                                  .Variant(ButtonVariant.Primary)
                                  .Disabled(selectedModel.Value == null)
@@ -134,7 +134,7 @@ public class MainMenuBlade : ViewBase
                             | new Icon(Icons.Bot).Size(16))
                         | (Layout.Vertical().Gap(2)
                             | Text.Large("Agent with Tools")
-                            | Text.Small("Agent with function calling capabilities").Muted()
+                            | Text.Block("Agent with function calling capabilities").Muted()
                             | new Button("Try It")
                                 .Variant(ButtonVariant.Primary)
                                 .Disabled(selectedModel.Value == null)

@@ -142,7 +142,7 @@ public class GitHubExampleApp : ViewBase
 					error.Set((string?)null);
 				}).Secondary().Icon(Icons.Trash))
 				| new Spacer().Height(Size.Units(5))
-				| Text.Small("This demo integrates with the GitHub REST API to fetch user statistics and profile information.")
+				| Text.Block("This demo integrates with the GitHub REST API to fetch user statistics and profile information.")
 			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [GitHub REST API](https://docs.github.com/en/rest)")
 				).Width(Size.Fraction(0.35f)).Height(Size.Fit());
 

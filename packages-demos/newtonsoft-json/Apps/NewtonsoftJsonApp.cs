@@ -121,7 +121,7 @@
                             .Disabled(!isSerialized.Value)
                             .Icon(Icons.ArrowRight, Align.Right)
                         | new Spacer()
-                        | Text.Small("This demo uses Newtonsoft.Json library to serialize and deserialize JSON data.")
+                        |   ("This demo uses Newtonsoft.Json library to serialize and deserialize JSON data.")
                         | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json)")
                         )
                         .Width(Size.Half()).Height(Size.Fit().Min(Size.Full()))

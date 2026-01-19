@@ -288,7 +288,7 @@ public class MiniExcelViewApp : ViewBase
                 | actionMode.ToSelectInput(new[] { "Export", "Import" }.ToOptions())
                 | actionWidget
                 | new Spacer().Height(Size.Units(5))
-                | Text.Small("This demo uses MiniExcel to manage students data.")
+                | Text.Block("This demo uses MiniExcel to manage students data.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MiniExcel](https://github.com/mini-software/MiniExcel)")
             ).Width(Size.Fraction(0.4f))
             | new Card(

@@ -68,7 +68,7 @@ public class MimeMappingApp : ViewBase
             ).Variant(TabsVariant.Tabs)
 
             | new Spacer()
-            | Text.Small("This demo uses MimeMapping library for detecting MIME types from file extensions.")
+            | Text.Block("This demo uses MimeMapping library for detecting MIME types from file extensions.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MimeMapping](https://github.com/zone117x/MimeMapping)")
             ;
     }

@@ -53,7 +53,7 @@ public class FluentDateTimeApp : ViewBase
                               Text.Muted("Click 'Calculate' to see the result")
                             )
                          | new Spacer()
-                         | Text.Small("This demo uses the FluentDateTime NuGet package for cleaner DateTime operations.")
+                         | Text.Block("This demo uses the FluentDateTime NuGet package for cleaner DateTime operations.")
                          | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FluentDateTime](https://github.com/FluentDateTime/FluentDateTime)")
                   ).Width(Size.Fraction(0.4f))
                );
