@@ -59,10 +59,13 @@ public class SummarySlide : ViewBase
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
         
-        return Layout.Vertical().Gap(4).Align(Align.Center).Width(Size.Fraction(0.8f))
-               | Text.H1("My2025").Bold()
-               | BuildStatusCard(userStatus)
-               | BuildCollageGrid(userStatus, topLanguage, animatedCommits.Value, animatedPRs.Value, animatedStreak.Value, animatedDays.Value);
+        return Layout.Vertical().Gap(4).Align(Align.Center)
+                | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
+                | (Layout.Horizontal().Gap(4).Align(Align.Stretch).Width(Size.Fraction(0.8f)).Height(Size.Full())
+                    | BuildStatsCard(animatedCommits.Value, animatedPRs.Value, animatedDays.Value)
+                    | (Layout.Vertical().Gap(3).Height(Size.Full())
+                        | BuildStatusCard(userStatus)
+                        | BuildTopLanguageCard(topLanguage)));
     }
 
     private (string Title, string MainText, string SubText, string Narrative) DetermineUserStatus()
@@ -155,9 +158,9 @@ public class SummarySlide : ViewBase
 
     private object BuildStatusCard((string Title, string MainText, string SubText, string Narrative) userStatus)
     {
-        return new Card(Layout.Horizontal().Gap(3).Align(Align.Center)
-            | (Layout.Vertical().Gap(3).Align(Align.Center)
-                | Icons.Trophy.ToIcon().Height(50).Width(50))
+        return new Card(Layout.Horizontal().Gap(3).Height(Size.Full())
+            | (Layout.Vertical().Gap(3).Align(Align.Center).Width(Size.Fit()).Padding(3)
+                | Icons.Trophy.ToIcon().Height(40).Width(40))
             | (Layout.Vertical().Gap(3).Align(Align.Center)
                 | Text.Small("Your Developer Status — 2025").Muted()
                 | Text.H1(userStatus.Title.ToUpper()).Bold()
@@ -166,42 +169,44 @@ public class SummarySlide : ViewBase
             .Width(Size.Full());
     }
 
-    private object BuildCollageGrid((string Title, string MainText, string SubText, string Narrative) userStatus, 
-                                     KeyValuePair<string, long> topLanguage,
-                                     int animatedCommits,
-                                     int animatedPRs,
-                                     int animatedStreak,
-                                     int animatedDays)
+    private object BuildStatsCard(int animatedCommits, int animatedPRs, int animatedDays)
+    {
+        return new Card(Layout.Vertical()
+            | (Layout.Vertical().Align(Align.Center)
+                | Text.H2($"{animatedDays.ToString()} days").Bold()
+                | Text.Small("You showed up again and again").Muted())
+            | (Layout.Vertical().Gap(2).Align(Align.Center)
+                | Text.H2($"{animatedCommits.ToString()} commits").Bold()
+                | Text.Small("Progress in small steps").Muted())
+            | (Layout.Vertical().Gap(2).Align(Align.Center)
+                | Text.H2($"{animatedPRs.ToString()} PRs").Bold()
+                | Text.Small("You didn't just code — you shipped").Muted())).Width(Size.Fraction(0.5f));
+    }
+
+    private object BuildTopLanguageCard(KeyValuePair<string, long> topLanguage)
     {
         var totalBytes = _stats.LanguageBreakdown.Values.Sum();
-        var languagePercentage = totalBytes > 0 
-            ? Math.Round((topLanguage.Value / (double)totalBytes) * 100, 0) 
+        var languagePercentage = totalBytes > 0
+            ? Math.Round((topLanguage.Value / (double)totalBytes) * 100, 0)
             : 0;
         
-        return Layout.Vertical().Gap(3)
-               // First row: Top Language + Streak (2 cards)
-               | (Layout.Grid().Columns(2).Gap(3)
-                  | new Card(Layout.Vertical()
-                      | Text.H1($"{topLanguage.Key ?? "N/A"}").Bold()
-                      | Text.Small("Your comfort zone & power tool").Muted())
-                      .Title("Top Language").Icon(Icons.Code)
-                  | new Card(Layout.Vertical()
-                      | Text.H1($"{animatedStreak} days").Bold()
-                      | Text.Small("No excuses. Just code.").Muted())
-                      .Title("Longest Streak").Icon(Icons.Zap))
-               // Second row: 3 cards (Commits, PRs, Active Days)
-               | (Layout.Grid().Columns(3).Gap(3)
-                  | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                      | Text.H2($"{animatedCommits.ToString()} commits").Bold()
-                      | Text.Small("Progress in small steps").Muted())
-                      .Title("Commits").Icon(Icons.GitCommitVertical)
-                  | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                      | Text.H2($"{animatedPRs.ToString()} PRs").Bold()
-                      | Text.Small("You didn't just code — you shipped").Muted())
-                      .Title("Pull Requests").Icon(Icons.GitPullRequestCreate)
-                  | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
-                      | Text.H2($"{animatedDays.ToString()} days").Bold()
-                      | Text.Small("You showed up again and again").Muted())
-                      .Title("Active Days").Icon(Icons.Activity));
+        var languageName = topLanguage.Key ?? "N/A";
+        var mainText = languagePercentage > 0
+            ? "THIS WAS YOUR LANGUAGE"
+            : "Your main programming language";
+        var subText = languagePercentage > 0
+            ? $"{languagePercentage}% of your code was written in {languageName}"
+            : $"{languageName} — your comfort zone and powerful tool";
+        var motivationalText = languagePercentage >= 70
+            ? "This is your superpower! You created most of your code with it."
+            : languagePercentage >= 50
+                ? "More than half of your code was written in this language. You know what you're doing!"
+                : "This language helped you realize most of your ideas this year. Keep it up!";
+
+        return new Card(Layout.Vertical().Gap(4).Align(Align.Center).Height(Size.Full())
+            | Text.H1($"{languageName.ToUpper()} - {mainText} ").Bold()
+            | Text.Block(subText).Muted()
+            | Text.Block(motivationalText).Muted())
+            .Width(Size.Full());
     }
 }
