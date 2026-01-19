@@ -37,7 +37,7 @@ public class ImageToTextApp : ViewBase
                         outputText.Value = results.Count > 0 ? results[0].RecognitionText : string.Empty;
                     }
                 })
-            | Text.Small("This demo uses Aspose.OCR for .NET to recognize text.")
+            | Text.Block("This demo uses Aspose.OCR for .NET to recognize text.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.OCR for .NET](https://products.aspose.com/ocr/net/)")
         ).Width(Size.Fraction(0.45f)).Height(130);
 
