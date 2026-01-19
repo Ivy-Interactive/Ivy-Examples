@@ -107,7 +107,7 @@ public class GitHubApiClient
             
             return (longestStreak, currentStreak, contributionDays.Count);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return (0, 0, 0);
         }
@@ -284,7 +284,7 @@ public class GitHubApiClient
             
             return commits;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return new List<GitHubCommit>();
         }
@@ -415,7 +415,7 @@ public class GitHubApiClient
                 if (pageCommits.Count < 100) break;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
         }
 
@@ -575,7 +575,7 @@ public class GitHubApiClient
 
             return pullRequests;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return new List<GitHubPullRequest>();
         }

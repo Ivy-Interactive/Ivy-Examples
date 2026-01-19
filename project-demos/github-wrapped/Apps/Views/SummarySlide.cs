@@ -63,12 +63,16 @@ public class SummarySlide : ViewBase
         var downloadUrl = this.UseDownload(() => GenerateSummaryImage(userStatus, topLanguage), "image/png", "github-wrapped-2025.png");
         var client = this.UseService<IClientProvider>();
         
+        var shareButton = new Button("Share").Icon(Icons.Share2).Variant(ButtonVariant.Secondary);
+        if (!string.IsNullOrEmpty(downloadUrl.Value))
+        {
+            shareButton = shareButton.Url(downloadUrl.Value);
+        }
+        
         return Layout.Vertical().Gap(4).Align(Align.Center)
                 | (Layout.Horizontal().Gap(2).Align(Align.Center)
                     | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
-                    | new Button("Share").Icon(Icons.Share2)
-                        .Variant(ButtonVariant.Secondary)
-                        .Url(downloadUrl.Value ?? ""))
+                    | shareButton)
                 | (Layout.Horizontal().Gap(4).Align(Align.Stretch).Width(Size.Fraction(0.8f)).Height(Size.Full())
                     | BuildStatsCard(animatedCommits.Value, animatedPRs.Value, animatedDays.Value)
                     | (Layout.Vertical().Gap(3).Height(Size.Full())
