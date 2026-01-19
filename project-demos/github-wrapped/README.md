@@ -22,10 +22,12 @@ Click the badge above to open Ivy Examples repository in GitHub Codespaces with:
   3. **Pull Requests** - PR statistics with engaging narratives and animated numbers
   4. **Languages** - Top 7 programming languages with bar chart visualization (based on code bytes)
   5. **Repositories** - Clickable repository cards showing commit percentages and stats
-  6. **Summary** - Dynamic status assignment, collage layout, and personalized narrative
+  6. **Summary** - Dynamic status assignment, two-column layout with statistics, developer status, and top language cards
 - **Animations** - Count-up animations for numbers, staggered card reveals
 - **Wrapped-Style Design** - Engaging, personalized narratives instead of dry statistics
 - **Stepper Navigation** - Easy navigation between slides with progress tracking
+- **Footer Navigation** - Previous/Next buttons in footer with Share button on the last slide
+- **Share Functionality** - Download and share your GitHub Wrapped summary as a PNG image
 - **Interactive Elements** - Clickable repository cards that open GitHub pages
 - **Responsive UI** - Clean, centered design with maximum width constraints
 
@@ -104,6 +106,8 @@ dotnet user-secrets set "GitHub:RedirectUri" "YOUR_REDIRECT_URI"
    - Dynamic status assignment (Code Master, Productivity Champion, etc.)
    - Interactive elements (clickable repository cards)
    - Wrapped-style storytelling instead of raw statistics
+   - Footer navigation with Previous/Next buttons
+   - Share functionality to download summary as PNG image
 
 ## Architecture
 
@@ -132,11 +136,16 @@ GitHubWrapped/
 - **Ivy.Auth.GitHub** - GitHub OAuth authentication
 - **Ivy.Charts** - Bar chart visualization for language statistics
 - **GitHub REST API** - Data fetching (repositories, commits, pull requests, languages)
+- **SkiaSharp** - Server-side image generation for shareable summary images
+- **SkiaSharp.Extended.Svg** - SVG rendering in generated images
 - **JobScheduler** - Coordinated animations for number count-ups
 - **.NET 10.0** - Runtime platform
 
 ## Key Improvements
 
+- **Better UI Structure**: Improved layout with footer navigation and enhanced visual hierarchy
+- **Share Functionality**: Generate and download your GitHub Wrapped summary as a beautiful PNG image
+- **Enhanced Summary Slide**: Redesigned two-column layout with statistics card, developer status card with trophy icon, and top language card
 - **Accurate Language Statistics**: Uses actual code bytes from GitHub API instead of repository primary language
 - **Top 7 Languages**: Shows more comprehensive language breakdown
 - **Animated Numbers**: Smooth count-up animations for all statistics
@@ -144,6 +153,7 @@ GitHubWrapped/
 - **Dynamic Status System**: Assigns statuses like "Code Master", "Productivity Champion", "Collaboration Hero" based on metrics
 - **Interactive Repositories**: Clickable cards that open repository pages on GitHub
 - **Wrapped-Style Welcome**: Storytelling approach that builds anticipation instead of showing stats immediately
+- **GitHub API Optimizations**: Improved data fetching for commits, pull requests, and contribution days
 
 ## API Rate Limits
 
