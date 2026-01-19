@@ -16,7 +16,7 @@ public class SummarySlide : ViewBase
     public override object? Build()
     {
         var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
-        var userStatus = DetermineUserStatus();
+        var userStatus = DetermineUserStatus(_stats);
         var topLanguage = _stats.LanguageBreakdown
             .OrderByDescending(kvp => kvp.Value)
             .FirstOrDefault();
@@ -60,19 +60,8 @@ public class SummarySlide : ViewBase
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
         
-        var downloadUrl = this.UseDownload(() => GenerateSummaryImage(userStatus, topLanguage), "image/png", "github-wrapped-2025.png");
-        var client = this.UseService<IClientProvider>();
-        
-        var shareButton = new Button("Share").Icon(Icons.Share2).Variant(ButtonVariant.Secondary);
-        if (!string.IsNullOrEmpty(downloadUrl.Value))
-        {
-            shareButton = shareButton.Url(downloadUrl.Value);
-        }
-        
         return Layout.Vertical().Gap(4).Align(Align.Center)
-                | (Layout.Horizontal().Gap(2).Align(Align.Center)
-                    | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
-                    | shareButton)
+                | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
                 | (Layout.Horizontal().Gap(4).Align(Align.Stretch).Width(Size.Fraction(0.8f)).Height(Size.Full())
                     | BuildStatsCard(animatedCommits.Value, animatedPRs.Value, animatedDays.Value)
                     | (Layout.Vertical().Gap(3).Height(Size.Full())
@@ -80,9 +69,19 @@ public class SummarySlide : ViewBase
                         | BuildTopLanguageCard(topLanguage)));
     }
     
-    private byte[] GenerateSummaryImage(
+    public static byte[] GenerateSummaryImage(GitHubStats stats)
+    {
+        var userStatus = DetermineUserStatus(stats);
+        var topLanguage = stats.LanguageBreakdown
+            .OrderByDescending(kvp => kvp.Value)
+            .FirstOrDefault();
+        return GenerateSummaryImageInternal(userStatus, topLanguage, stats);
+    }
+    
+    private static byte[] GenerateSummaryImageInternal(
         (string Title, string MainText, string SubText, string Narrative) userStatus,
-        KeyValuePair<string, long> topLanguage)
+        KeyValuePair<string, long> topLanguage,
+        GitHubStats stats)
     {
         const int width = 1200;
         const int height = 800;
@@ -215,17 +214,17 @@ public class SummarySlide : ViewBase
         
         // Section 1: Active Days
         var section1Y = cardY + cardPadding + sectionHeight / 2f - 10;
-        canvas.DrawText($"{_stats.TotalContributionDays} days", leftCardTextX, section1Y, statsHeadingPaint);
+        canvas.DrawText($"{stats.TotalContributionDays} days", leftCardTextX, section1Y, statsHeadingPaint);
         canvas.DrawText("You showed up again and again", leftCardTextX, section1Y + 35, statsBodyPaint);
         
         // Section 2: Commits
         var section2Y = cardY + cardPadding + sectionHeight + sectionHeight / 2f - 10;
-        canvas.DrawText($"{_stats.TotalCommits} commits", leftCardTextX, section2Y, statsHeadingPaint);
+        canvas.DrawText($"{stats.TotalCommits} commits", leftCardTextX, section2Y, statsHeadingPaint);
         canvas.DrawText("Progress in small steps", leftCardTextX, section2Y + 35, statsBodyPaint);
         
         // Section 3: PRs
         var section3Y = cardY + cardPadding + sectionHeight * 2f + sectionHeight / 2f - 10;
-        canvas.DrawText($"{_stats.PullRequestsCreated} PRs", leftCardTextX, section3Y, statsHeadingPaint);
+        canvas.DrawText($"{stats.PullRequestsCreated} PRs", leftCardTextX, section3Y, statsHeadingPaint);
         canvas.DrawText("You didn't just code — you shipped", leftCardTextX, section3Y + 35, statsBodyPaint);
         
         // Status card content
@@ -263,7 +262,7 @@ public class SummarySlide : ViewBase
         var iconSize = statusCardHeight - 120f; // Full height minus padding
         var iconX = rightCardX + 40f;
         var iconY = cardY + (statusCardHeight - iconSize) / 2f; // Center vertically
-        DrawTrophyIcon(canvas, iconX, iconY, iconSize);
+        DrawTrophyIconStatic(canvas, iconX, iconY, iconSize);
         
         // Calculate text area (to the right of icon)
         var iconRight = iconX + iconSize;
@@ -277,7 +276,7 @@ public class SummarySlide : ViewBase
         statusTextY += 70;
         
         // Draw main text with wrapping
-        var mainTextLines = WrapText(userStatus.MainText, textAreaWidth, mainTextPaint);
+        var mainTextLines = WrapTextStatic(userStatus.MainText, textAreaWidth, mainTextPaint);
         foreach (var line in mainTextLines)
         {
             canvas.DrawText(line, textCenterX, statusTextY, mainTextPaint);
@@ -287,7 +286,7 @@ public class SummarySlide : ViewBase
         statusTextY += 20;
         
         // Draw sub text with wrapping
-        var subTextLines = WrapText(userStatus.SubText, textAreaWidth, subTextPaint);
+        var subTextLines = WrapTextStatic(userStatus.SubText, textAreaWidth, subTextPaint);
         foreach (var line in subTextLines)
         {
             canvas.DrawText(line, textCenterX, statusTextY, subTextPaint);
@@ -295,7 +294,7 @@ public class SummarySlide : ViewBase
         }
         
         // Language card content
-        var totalBytes = _stats.LanguageBreakdown.Values.Sum();
+        var totalBytes = stats.LanguageBreakdown.Values.Sum();
         var languagePercentage = totalBytes > 0
             ? Math.Round((topLanguage.Value / (double)totalBytes) * 100, 0) 
             : 0;
@@ -337,7 +336,7 @@ public class SummarySlide : ViewBase
         return data.ToArray();
     }
     
-    private List<string> WrapText(string text, float maxWidth, SKPaint paint)
+    private static List<string> WrapTextStatic(string text, float maxWidth, SKPaint paint)
     {
         var words = text.Split(' ');
         var lines = new List<string>();
@@ -370,7 +369,7 @@ public class SummarySlide : ViewBase
         return lines.Count > 0 ? lines : new List<string> { text };
     }
     
-    private void DrawTrophyIcon(SKCanvas canvas, float x, float y, float size)
+    private static void DrawTrophyIconStatic(SKCanvas canvas, float x, float y, float size)
     {
         try
         {
@@ -418,14 +417,14 @@ public class SummarySlide : ViewBase
         }
     }
 
-    private (string Title, string MainText, string SubText, string Narrative) DetermineUserStatus()
+    private static (string Title, string MainText, string SubText, string Narrative) DetermineUserStatus(GitHubStats stats)
     {
-        var commits = _stats.TotalCommits;
-        var prs = _stats.PullRequestsCreated;
-        var prMerged = _stats.PullRequestsMerged;
-        var streak = _stats.LongestStreak;
-        var activeDays = _stats.TotalContributionDays;
-        var languages = _stats.LanguageBreakdown.Count;
+        var commits = stats.TotalCommits;
+        var prs = stats.PullRequestsCreated;
+        var prMerged = stats.PullRequestsMerged;
+        var streak = stats.LongestStreak;
+        var activeDays = stats.TotalContributionDays;
+        var languages = stats.LanguageBreakdown.Count;
         
         // Code Master
         if (commits >= 300 && activeDays >= 100 && prs >= 50)

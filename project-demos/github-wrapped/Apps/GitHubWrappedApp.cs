@@ -74,13 +74,14 @@ public class GitHubWrappedApp : ViewBase
                                         selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
                                     }))
                             | (Layout.Vertical().Align(Align.Right)
-                                | new Button(selectedIndex.Value == 0 ? "Start the recap" : "Show me more")
-                                    .Icon(Icons.ChevronRight, Align.Right)
-                                    .HandleClick(() =>
-                                    {
-                                        selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
-                                    })
-                                    .Disabled(selectedIndex.Value == stepperItems.Length - 1))),
+                                | (selectedIndex.Value == stepperItems.Length - 1 
+                                    ? BuildShareButton(stats.Value)
+                                    : new Button(selectedIndex.Value == 0 ? "Start the recap" : "Show me more")
+                                        .Icon(Icons.ChevronRight, Align.Right)
+                                        .HandleClick(() =>
+                                        {
+                                            selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
+                                        })))),
                         content: (Layout.Vertical().Align(Align.Center)
                             | BuildCurrentSlide(selectedIndex.Value, stats.Value))));
 
@@ -91,6 +92,18 @@ public class GitHubWrappedApp : ViewBase
         }
     }
 
+    private object BuildShareButton(GitHubStats stats)
+    {
+        var downloadUrl = this.UseDownload(() => SummarySlide.GenerateSummaryImage(stats), "image/png", "github-wrapped-2025.png");
+        
+        var shareButton = new Button("Share").Icon(Icons.Share2);
+        if (!string.IsNullOrEmpty(downloadUrl.Value))
+        {
+            shareButton = shareButton.Url(downloadUrl.Value);
+        }
+        return shareButton;
+    }
+    
     private object BuildCurrentSlide(int index, GitHubStats stats)
     {
         return index switch
