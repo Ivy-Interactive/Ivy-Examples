@@ -159,10 +159,10 @@ public class SummarySlide : ViewBase
             | (Layout.Vertical().Gap(3).Align(Align.Center)
                 | Icons.Trophy.ToIcon().Height(50).Width(50))
             | (Layout.Vertical().Gap(3).Align(Align.Center)
-                | Text.Small("Your Developer Status — 2025").Muted()
+                | Text.Block("Your Developer Status — 2025").Muted()
                 | Text.H1(userStatus.Title.ToUpper()).Bold()
                 | Text.Block(userStatus.MainText)
-                | Text.Small(userStatus.SubText).Muted()))
+                | Text.Block(userStatus.SubText).Muted()))
             .Width(Size.Full());
     }
 
@@ -183,25 +183,25 @@ public class SummarySlide : ViewBase
                | (Layout.Grid().Columns(2).Gap(3)
                   | new Card(Layout.Vertical()
                       | Text.H1($"{topLanguage.Key ?? "N/A"}").Bold()
-                      | Text.Small("Your comfort zone & power tool").Muted())
+                      | Text.Block("Your comfort zone & power tool").Muted())
                       .Title("Top Language").Icon(Icons.Code)
                   | new Card(Layout.Vertical()
                       | Text.H1($"{animatedStreak} days").Bold()
-                      | Text.Small("No excuses. Just code.").Muted())
+                      | Text.Block("No excuses. Just code.").Muted())
                       .Title("Longest Streak").Icon(Icons.Zap))
                // Second row: 3 cards (Commits, PRs, Active Days)
                | (Layout.Grid().Columns(3).Gap(3)
                   | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                       | Text.H2($"{animatedCommits.ToString()} commits").Bold()
-                      | Text.Small("Progress in small steps").Muted())
+                      | Text.Block("Progress in small steps").Muted())
                       .Title("Commits").Icon(Icons.GitCommitVertical)
                   | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                       | Text.H2($"{animatedPRs.ToString()} PRs").Bold()
-                      | Text.Small("You didn't just code — you shipped").Muted())
+                      | Text.Block("You didn't just code — you shipped").Muted())
                       .Title("Pull Requests").Icon(Icons.GitPullRequestCreate)
                   | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                       | Text.H2($"{animatedDays.ToString()} days").Bold()
-                      | Text.Small("You showed up again and again").Muted())
+                      | Text.Block("You showed up again and again").Muted())
                       .Title("Active Days").Icon(Icons.Activity));
     }
 }
