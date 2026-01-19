@@ -13,7 +13,7 @@
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.10" />
+    <PackageReference Include="Ivy" Version="1.2.11" />
     <PackageReference Include="Ulid" Version="1.4.1" />
   </ItemGroup>
   <ItemGroup>

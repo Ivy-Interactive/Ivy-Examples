@@ -15,7 +15,7 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="Ivy" Version="1.2.10" />
+    <PackageReference Include="Ivy" Version="1.2.11" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Apps" />
