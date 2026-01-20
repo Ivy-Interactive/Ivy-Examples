@@ -41,7 +41,7 @@ public class GitHubWrappedApp : ViewBase
                    | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
                        | Icons.Github.ToIcon().Height(Size.Units(40)).Width(Size.Units(40))
                        | Text.H2("Preparing your 2025 Wrap...").Bold()
-                       | Text.Small("Gathering your GitHub activity data").Muted()
+                       | Text.Block("Gathering your GitHub activity data").Muted()
                        | scheduler.ToView())
                      .Width(Size.Fraction(0.5f));
         }

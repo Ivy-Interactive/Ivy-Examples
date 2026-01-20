@@ -523,13 +523,13 @@ public class SummarySlide : ViewBase
         return new Card(Layout.Vertical()
             | (Layout.Vertical().Align(Align.Center)
                 | Text.H2($"{animatedDays.ToString()} days").Bold()
-                | Text.Small("You showed up again and again").Muted())
+                | Text.Block("You showed up again and again").Muted())
             | (Layout.Vertical().Gap(2).Align(Align.Center)
                 | Text.H2($"{animatedCommits.ToString()} commits").Bold()
-                | Text.Small("Progress in small steps").Muted())
+                | Text.Block("Progress in small steps").Muted())
             | (Layout.Vertical().Gap(2).Align(Align.Center)
                 | Text.H2($"{animatedPRs.ToString()} PRs").Bold()
-                | Text.Small("You didn't just code — you shipped").Muted())).Width(Size.Fraction(0.5f));
+                | Text.Block("You didn't just code — you shipped").Muted())).Width(Size.Fraction(0.5f));
     }
 
     private object BuildTopLanguageCard(KeyValuePair<string, long> topLanguage)
