@@ -15,7 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="8.4.0" />
-    <PackageReference Include="Ivy" Version="1.2.11" />
+    <PackageReference Include="Ivy" Version="1.2.12" />
   </ItemGroup>
   
 
