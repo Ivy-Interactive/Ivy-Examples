@@ -1,3 +1,5 @@
+using GitHubWrapped.Services;
+
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
 var server = new Server();
@@ -13,8 +15,9 @@ server.Services.AddHttpClient("GitHubAuth", client =>
 // Ensure IConfiguration is registered
 server.Services.AddSingleton(server.Configuration);
 
-// Register GitHubStatsService
-server.Services.AddScoped<GitHubWrapped.Services.GitHubStatsService>();
+// Register GitHub Services
+server.Services.AddScoped<GitHubApiClient>();
+server.Services.AddScoped<GitHubStatsService>();
 
 #if DEBUG
 server.UseHotReload();
