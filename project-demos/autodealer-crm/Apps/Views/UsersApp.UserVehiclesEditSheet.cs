@@ -23,35 +23,40 @@ public class UserVehiclesEditSheet(IState<bool> isOpen, RefreshToken refreshToke
             .Builder(e => e.Year, e => e.ToNumberInput())
             .Builder(e => e.Vin, e => e.ToTextInput())
             .Builder(e => e.Price, e => e.ToMoneyInput().Currency("USD"))
-            .Builder(e => e.VehicleStatusId, e => e.ToAsyncSelectInput(QueryVehicleStatuses(factory), LookupVehicleStatus(factory), placeholder: "Select Status"))
+            .Builder(e => e.VehicleStatusId, e => e.ToAsyncSelectInput<int>(QueryVehicleStatuses, LookupVehicleStatus, placeholder: "Select Status"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt, e => e.ManagerId, e => e.ErpSyncId)
             .ToSheet(isOpen, "Edit Vehicle");
     }
 
-    private static AsyncSelectQueryDelegate<int?> QueryVehicleStatuses(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QueryVehicleStatuses(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.VehicleStatuses
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int?>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QueryVehicleStatuses), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.VehicleStatuses
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int?> LookupVehicleStatus(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupVehicleStatus(IViewContext context, int id)
     {
-        return async id =>
-        {
-            if (id == null) return null;
-            await using var db = factory.CreateDbContext();
-            var status = await db.VehicleStatuses.FirstOrDefaultAsync(e => e.Id == id);
-            if (status == null) return null;
-            return new Option<int?>(status.DescriptionText, status.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupVehicleStatus), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var status = await db.VehicleStatuses.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (status == null) return null;
+                return new Option<int>(status.DescriptionText, status.Id);
+            });
     }
 }

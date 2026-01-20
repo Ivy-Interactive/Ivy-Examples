@@ -37,7 +37,7 @@ public class UnitsNetApp : ViewBase
         );
         var footerCard = new Card(
             Layout.Vertical().Gap(1)
-            | Text.Small("This demo uses UnitsNet library to convert between different units of measurement.")
+            | Text.Block("This demo uses UnitsNet library to convert between different units of measurement.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [UnitsNet](https://github.com/angularsen/UnitsNet)")
                 
         );

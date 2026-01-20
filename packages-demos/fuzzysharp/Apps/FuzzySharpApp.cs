@@ -63,7 +63,7 @@ public class FuzzySharpApp : ViewBase
                 .Placeholder("Try: 'aple', 'bana', 'berry'...")
                 .Variant(TextInputs.Search)
             | new Spacer()
-            | Text.Small("This demo uses the FuzzySharp NuGet package for intelligent text matching.")
+            | Text.Block("This demo uses the FuzzySharp NuGet package for intelligent text matching.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FuzzySharp](https://github.com/JakeBayer/FuzzySharp)")
         ).Width(Size.Fraction(0.45f)).Height(110);
 

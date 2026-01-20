@@ -58,7 +58,7 @@ public sealed class VcContextFactory : IDbContextFactory<VcContext>
 
             Directory.CreateDirectory(Path.GetDirectoryName(_absolutePath)!);
 
-            var appDir = AppContext.BaseDirectory;
+            var appDir = System.AppContext.BaseDirectory;
             var templatePath = Path.Combine(appDir, _relativePath);
 
             if (!File.Exists(templatePath))

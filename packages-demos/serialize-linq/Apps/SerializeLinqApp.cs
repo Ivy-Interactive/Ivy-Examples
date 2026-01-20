@@ -98,7 +98,7 @@ public class SerializeLinqApp : ViewBase
                 catch { }
             }).Secondary().Width(Size.Full()).Disabled(string.IsNullOrEmpty(jsonState.Value))
             | new Spacer().Height(Size.Units(5))
-            | Text.Small("This demo demonstrates the use of Serialize.Linq to serialize and deserialize LINQ expressions.")
+            | Text.Block("This demo demonstrates the use of Serialize.Linq to serialize and deserialize LINQ expressions.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Serialize.Linq](https://github.com/esskar/Serialize.Linq)")
              
         ).Title("Input Data").Width(Size.Fraction(0.4f));
@@ -107,7 +107,7 @@ public class SerializeLinqApp : ViewBase
         var rightCard = new Card(
             Layout.Vertical()
             | Text.H4("Comparison Result")
-            | Text.Small("The result of evaluating the deserialized expression with Value 2:")
+            | Text.Block("The result of evaluating the deserialized expression with Value 2:")
             | (string.IsNullOrEmpty(comparisonResultState.Value)
                 ? Text.Muted("Click 'Deserialize' to see the comparison result...")
                 : (comparisonResultState.Value == "true"
@@ -117,7 +117,7 @@ public class SerializeLinqApp : ViewBase
                 ? null
                 : Callout.Info(expressionState.Value, "Expression Definition"))
             | Text.H4("Serialized JSON")
-            | Text.Small("The LINQ expression serialized as JSON:")
+            | Text.Block("The LINQ expression serialized as JSON:")
             | (string.IsNullOrEmpty(jsonState.Value)
                 ? Text.Muted("Click 'Serialize' to generate the JSON representation of the expression...")
                 : new Code(jsonState.Value, Languages.Json)
@@ -129,7 +129,7 @@ public class SerializeLinqApp : ViewBase
 
         return Layout.Vertical()
             | Text.H2("Serialize.Linq Example")
-            | Text.Small("Create comparison expressions with two values and an operator. Serialize them to JSON format and deserialize back to evaluate the comparison result.")
+            | Text.Block("Create comparison expressions with two values and an operator. Serialize them to JSON format and deserialize back to evaluate the comparison result.")
             | (Layout.Horizontal().Gap(8)
                 | leftCard
                 | rightCard);

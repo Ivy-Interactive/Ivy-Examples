@@ -117,7 +117,7 @@ public class EPPlusApp : ViewBase
                     .Disabled(loading)
             | validationView
             | new Spacer()
-            | Text.Small("This demo uses the EPPlus NuGet package to read/write Excel files.")
+            | Text.Block("This demo uses the EPPlus NuGet package to read/write Excel files.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [EPPlus](https://github.com/EPPlusSoftware/EPPlus)")
         ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(Size.Full()));
 

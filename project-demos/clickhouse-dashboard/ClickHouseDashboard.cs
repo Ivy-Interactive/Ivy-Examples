@@ -404,8 +404,8 @@ public class DashboardApp : ViewBase
                 | Layout.Center() | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3("Connection Error")
-                        | Text.Small(errorMessage.Value).Color(Colors.Red)
-                        | Text.Small("Make sure ClickHouse is running on localhost:8123").Muted()
+                        | Text.Block(errorMessage.Value).Color(Colors.Red)
+                        | Text.Block("Make sure ClickHouse is running on localhost:8123").Muted()
                 ).Width(Size.Fraction(0.6f));
         }
 
@@ -416,7 +416,7 @@ public class DashboardApp : ViewBase
                 | Layout.Center() | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3("No Data")
-                        | Text.Small("No tables found in the database").Muted()
+                        | Text.Block("No tables found in the database").Muted()
                 ).Width(Size.Fraction(0.6f));
         }
 

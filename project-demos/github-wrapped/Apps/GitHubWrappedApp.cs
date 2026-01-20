@@ -37,13 +37,13 @@ public class GitHubWrappedApp : ViewBase
         // We show the scheduler view which provides rich status feedback.
         if (stats.Value == null)
         {
-             return Layout.Center()
-                    | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
-                        | Icons.Github.ToIcon().Height(Size.Units(40)).Width(Size.Units(40))
-                        | Text.H2("Preparing your 2025 Wrap...").Bold()
-                        | Text.Small("Gathering your GitHub activity data").Muted()
-                        | scheduler.ToView())
-                      .Width(Size.Fraction(0.5f));
+            return Layout.Center()
+                   | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
+                       | Icons.Github.ToIcon().Height(Size.Units(40)).Width(Size.Units(40))
+                       | Text.H2("Preparing your 2025 Wrap...").Bold()
+                       | Text.Small("Gathering your GitHub activity data").Muted()
+                       | scheduler.ToView())
+                     .Width(Size.Fraction(0.5f));
         }
 
         // Main wrapped experience with stepper

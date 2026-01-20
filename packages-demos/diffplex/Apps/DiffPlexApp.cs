@@ -101,7 +101,7 @@ public class DiffPlexApp : ViewBase
                 | new Card(resultsCard).Width(Size.Fraction(0.33f)))
             | controls
             | new Spacer()
-            | Text.Small("This demo uses the DiffPlex NuGet package for text comparison.")
+            | Text.Block("This demo uses the DiffPlex NuGet package for text comparison.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffPlex](https://github.com/mmanela/diffplex)");
                 
 

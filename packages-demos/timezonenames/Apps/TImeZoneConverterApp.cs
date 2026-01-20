@@ -198,7 +198,7 @@ public class TimeZoneConverterApp : ViewBase
             | (Layout.Horizontal().Gap(4)
                 | searchCard
                 | resultCard)
-            | Text.Small("This demo uses TimeZoneNames library to convert between IANA, Windows, and Rails time zone formats.")
+            | Text.Block("This demo uses TimeZoneNames library to convert between IANA, Windows, and Rails time zone formats.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [TimeZoneNames](https://github.com/mattjohnsonpint/TimeZoneNames)")
         
         ;

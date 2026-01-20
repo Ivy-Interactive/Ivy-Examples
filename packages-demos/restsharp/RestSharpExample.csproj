@@ -15,7 +15,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ivy" Version="1.2.10" />
+		<PackageReference Include="Ivy" Version="1.2.12" />
 		<PackageReference Include="RestSharp" Version="113.0.0" />
 	</ItemGroup>
 

@@ -115,7 +115,7 @@ foreach (var product in products)
                 new Tab("Demonstrations", BuildDemosTab(selectedDemo, resultState)),
                 new Tab("Performance", BuildBenchmarkTab(results => benchmarkResult.Set(results), benchmarkResult, RunPerformanceBenchmark))
             ).Variant(TabsVariant.Tabs)
-            | Text.Small("This demo uses FastMember library for accessing properties of objects at runtime.")
+            | Text.Block("This demo uses FastMember library for accessing properties of objects at runtime.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FastMember](https://github.com/mgravell/fast-member)")
             ;
     }

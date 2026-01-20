@@ -88,7 +88,7 @@ namespace BogusExample.Apps
                    .Variant(ButtonVariant.Outline)
               )
               | new Spacer()
-              | Text.Small("This demo uses Bogus library to generate fake data.")
+              | Text.Block("This demo uses Bogus library to generate fake data.")
               | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Bogus](https://github.com/bchavez/Bogus)");
 
             var leftCard = new Card(leftCardBody).Width(Size.Fraction(LeftCardWidth)).Height(Size.Fit().Min(Size.Full()));

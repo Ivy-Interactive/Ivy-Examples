@@ -99,7 +99,7 @@ public class ScribanApp : ViewBase
             | Text.Muted("Enter the model in JSON format. This will be used to generate the output.")
             | modelEditor
             | generateBtn
-            | Text.Small("This demo uses Scriban to generate the output.")
+            | Text.Block("This demo uses Scriban to generate the output.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Scriban](https://github.com/scriban/scriban)")
         ;
 			

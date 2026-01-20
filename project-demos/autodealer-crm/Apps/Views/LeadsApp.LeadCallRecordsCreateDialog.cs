@@ -38,8 +38,8 @@ public class LeadCallRecordsCreateDialog(IState<bool> isOpen, RefreshToken refre
 
         return callRecord
             .ToForm()
-            .Builder(e => e.CustomerId, e => e.ToAsyncSelectInput(QueryCustomers(factory), LookupCustomer(factory), placeholder: "Select Customer"))
-            .Builder(e => e.CallDirectionId, e => e.ToAsyncSelectInput(QueryCallDirections(factory), LookupCallDirection(factory), placeholder: "Select Call Direction"))
+            .Builder(e => e.CustomerId, e => e.ToAsyncSelectInput<int>(QueryCustomers, LookupCustomer, placeholder: "Select Customer"))
+            .Builder(e => e.CallDirectionId, e => e.ToAsyncSelectInput<int>(QueryCallDirections, LookupCallDirection, placeholder: "Select Call Direction"))
             .Builder(e => e.StartTime, e => e.ToDateTimeInput())
             .Builder(e => e.EndTime, e => e.ToDateTimeInput())
             .ToDialog(isOpen, title: "Create Call Record", submitTitle: "Create");
@@ -70,55 +70,67 @@ public class LeadCallRecordsCreateDialog(IState<bool> isOpen, RefreshToken refre
         return callRecord.Id;
     }
 
-    private static AsyncSelectQueryDelegate<int> QueryCustomers(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QueryCustomers(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.Customers
-                    .Where(e => e.FirstName.Contains(query) || e.LastName.Contains(query))
-                    .Select(e => new { e.Id, Name = $"{e.FirstName} {e.LastName}" })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int>(e.Name, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QueryCustomers), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.Customers
+                        .Where(e => e.FirstName.Contains(query) || e.LastName.Contains(query))
+                        .Select(e => new { e.Id, Name = $"{e.FirstName} {e.LastName}" })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.Name, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int> LookupCustomer(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupCustomer(IViewContext context, int id)
     {
-        return async id =>
-        {
-            await using var db = factory.CreateDbContext();
-            var customer = await db.Customers.FirstOrDefaultAsync(e => e.Id == id);
-            if (customer == null) return null;
-            return new Option<int>($"{customer.FirstName} {customer.LastName}", customer.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupCustomer), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var customer = await db.Customers.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (customer == null) return null;
+                return new Option<int>($"{customer.FirstName} {customer.LastName}", customer.Id);
+            });
     }
 
-    private static AsyncSelectQueryDelegate<int> QueryCallDirections(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QueryCallDirections(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.CallDirections
-                    .Where(e => e.DescriptionText.Contains(query))
-                    .Select(e => new { e.Id, e.DescriptionText })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int>(e.DescriptionText, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QueryCallDirections), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.CallDirections
+                        .Where(e => e.DescriptionText.Contains(query))
+                        .Select(e => new { e.Id, e.DescriptionText })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.DescriptionText, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int> LookupCallDirection(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupCallDirection(IViewContext context, int id)
     {
-        return async id =>
-        {
-            await using var db = factory.CreateDbContext();
-            var callDirection = await db.CallDirections.FirstOrDefaultAsync(e => e.Id == id);
-            if (callDirection == null) return null;
-            return new Option<int>(callDirection.DescriptionText, callDirection.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupCallDirection), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var callDirection = await db.CallDirections.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (callDirection == null) return null;
+                return new Option<int>(callDirection.DescriptionText, callDirection.Id);
+            });
     }
 }

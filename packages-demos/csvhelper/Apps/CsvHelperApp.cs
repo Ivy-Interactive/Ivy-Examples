@@ -135,7 +135,7 @@ public class CsvHelperApp : ViewBase
         var leftCard = new Card(
             Layout.Vertical().Gap(6)
             | Text.H3("Controls")
-            | Text.Small($"Total: {products.Value.Count} products")
+            | Text.Block($"Total: {products.Value.Count} products")
 
             // Add Product button - opens dialog
             | new Button("Add Product")
@@ -166,12 +166,12 @@ public class CsvHelperApp : ViewBase
                 .Width(Size.Full())
 
             | new Separator()
-            | Text.Small("Import CSV File:")
+            | Text.Block("Import CSV File:")
 
             // Import CSV file input
             | uploadState.ToFileInput(uploadContext).Placeholder("Choose File")
             | new Spacer()
-            | Text.Small("This demo uses CsvHelper library for reading and writing CSV files with custom class objects.")
+            | Text.Block("This demo uses CsvHelper library for reading and writing CSV files with custom class objects.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [CsvHelper](https://github.com/JoshClose/CsvHelper)")
         ).Title("Management").Height(Size.Fit().Min(Size.Full()));
 

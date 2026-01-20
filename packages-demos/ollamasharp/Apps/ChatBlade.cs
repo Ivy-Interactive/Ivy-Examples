@@ -35,13 +35,14 @@ public class ChatBlade : ViewBase
                     _ollamaApiClient = null;
                 }
             }
-        }, EffectTrigger.AfterInit());
+        }, EffectTrigger.OnMount());
 
-        return BladeHelper.WithHeader(
-            Text.H4(_modelName),
-            Layout.Vertical().Width(Size.Units(200).Max(Size.Units(350)))
-                | new Chat(_messages.Value.ToArray(), OnSendMessage)
-        );
+        var chatContent = Layout.Vertical().Width(Size.Units(200).Max(Size.Units(350)))
+                | new Chat(_messages.Value.ToArray(), OnSendMessage);
+
+        return new Fragment()
+               | new BladeHeader(Text.H4(_modelName))
+               | chatContent;
     }
 
     private void OnSendMessage(Event<Chat, string> @event)

@@ -50,7 +50,7 @@ addresses:
                     .HandleClick(() => DeserializeToPerson(yamlInput.Value, personOutput, errorMessage, resultOutput))
                 )
 
-            | Text.Small("This demo uses YamlDotNet library to deserialize YAML into Person objects.")
+            | Text.Block("This demo uses YamlDotNet library to deserialize YAML into Person objects.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)"));
     }
 

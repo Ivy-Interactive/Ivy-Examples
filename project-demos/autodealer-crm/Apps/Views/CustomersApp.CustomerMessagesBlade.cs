@@ -13,7 +13,7 @@ public class CustomerMessagesBlade(int customerId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             messages.Set(await db.Messages.Include(e => e.Media).Where(e => e.CustomerId == customerId).ToArrayAsync());
-        }, [ EffectTrigger.AfterInit(), refreshToken ]);
+        }, [ EffectTrigger.OnMount(), refreshToken ]);
         
         Action OnDelete(int id)  
         {
@@ -56,7 +56,8 @@ public class CustomerMessagesBlade(int customerId) : ViewBase
             .ToTrigger((isOpen) => new CustomerMessagesCreateDialog(isOpen, refreshToken, customerId));
 
         return new Fragment()
-               | BladeHelper.WithHeader(addBtn, table)
+               | new BladeHeader(addBtn)
+               | table
                | alertView;
     }
 

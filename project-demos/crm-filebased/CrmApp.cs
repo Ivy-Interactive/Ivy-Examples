@@ -264,22 +264,22 @@ public class DashboardApp : ViewBase
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3(totalTasks.ToString())
-                        | Text.Small($"{completedTasks} completed, {pendingTasks} pending").Muted()
+                        | Text.Block($"{completedTasks} completed, {pendingTasks} pending").Muted()
                 ).Title("Total Tasks").Icon(Icons.ListTodo)
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3(completionRate.ToString("F1") + "%")
-                        | Text.Small($"{completedTasks} of {totalTasks} tasks").Muted()
+                        | Text.Block($"{completedTasks} of {totalTasks} tasks").Muted()
                 ).Title("Completion Rate").Icon(Icons.Check)
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3(notes.Value.Count.ToString())
-                        | Text.Small($"{recentNotes} in last 7 days").Muted()
+                        | Text.Block($"{recentNotes} in last 7 days").Muted()
                 ).Title("Total Notes").Icon(Icons.FileText)
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3(contacts.Value.Count.ToString())
-                        | Text.Small($"{recentContacts} in last 7 days").Muted()
+                        | Text.Block($"{recentContacts} in last 7 days").Muted()
                 ).Title("Total Contacts").Icon(Icons.Users))
             | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(CONTENT_WIDTH))
                 | new Card(taskStatusPieChart!).Title("Task Status")

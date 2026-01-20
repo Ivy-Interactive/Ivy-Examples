@@ -70,7 +70,7 @@
                     .Loading(parsingState.Value)
                     .Variant(ButtonVariant.Primary)
                     .Width("100%")
-                | Text.Small("This demo uses Superpower  to parse the JSON.")
+                | Text.Block("This demo uses Superpower library to parse the JSON.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Superpower](https://github.com/datalust/superpower)")
             );
 

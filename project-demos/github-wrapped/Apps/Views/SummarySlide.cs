@@ -511,10 +511,10 @@ public class SummarySlide : ViewBase
             | (Layout.Vertical().Gap(3).Align(Align.Center).Width(Size.Fit()).Padding(3)
                 | Icons.Trophy.ToIcon().Height(40).Width(40))
             | (Layout.Vertical().Gap(3).Align(Align.Center)
-                | Text.Small("Your Developer Status — 2025").Muted()
+                | Text.Block("Your Developer Status — 2025").Muted()
                 | Text.H1(userStatus.Title.ToUpper()).Bold()
                 | Text.Block(userStatus.MainText)
-                | Text.Small(userStatus.SubText).Muted()))
+                | Text.Block(userStatus.SubText).Muted()))
             .Width(Size.Full());
     }
 

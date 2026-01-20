@@ -86,7 +86,7 @@ public class TextGeneratorApp : ViewBase
                         .Url(downloadUrl.Value)
                     : null!)
                 | new Spacer()
-                | Text.Small("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents.")
+                | Text.Block("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)")
             )
             .Width(Size.Units(120).Max(600)));

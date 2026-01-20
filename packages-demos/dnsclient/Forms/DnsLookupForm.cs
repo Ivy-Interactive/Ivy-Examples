@@ -54,7 +54,7 @@ public class DnsLookupForm : ViewBase
                     loading ? Text.Muted("Querying...") : null
                 ),
                 new Spacer(),
-                Text.Small("This demo uses the DnsClient.NET library for DNS lookups."),
+                Text.Block("This demo uses the DnsClient.NET library for DNS lookups."),
                 Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DnsClient.NET](https://github.com/MichaCo/DnsClient.NET)")
             );
     }

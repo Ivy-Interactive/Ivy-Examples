@@ -24,7 +24,7 @@ public class AgentSettingsView : ViewBase
 
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
 
         var form = UseState(AgentFormModel.FromConfiguration(_agent));
@@ -53,26 +53,33 @@ public class AgentSettingsView : ViewBase
             }
         }
         
-        UseEffect(async () => await LoadModels(), EffectTrigger.AfterInit());
+        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
         
         // Query function for AsyncSelectInput
-        Task<Option<string>[]> QueryModels(string query)
+        QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
         {
-            var models = availableModels.Value;
-            if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
-            
-            var filtered = string.IsNullOrEmpty(query) 
-                ? models.Take(10) 
-                : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
-            
-            return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
+            return context.UseQuery<Option<string>[], (string, string)>(
+                key: (nameof(QueryModels), query),
+                fetcher: ct =>
+                {
+                    var models = availableModels.Value;
+                    if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
+                    
+                    var filtered = string.IsNullOrEmpty(query) 
+                        ? models.Take(10) 
+                        : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
+                    
+                    return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
+                });
         }
 
         // Lookup function for AsyncSelectInput
-        Task<Option<string>?> LookupModel(string? model)
+        QueryResult<Option<string>?> LookupModel(IViewContext context, string? model)
         {
-            if (string.IsNullOrEmpty(model)) return Task.FromResult<Option<string>?>(null);
-            return Task.FromResult<Option<string>?>(new Option<string>(model));
+            return context.UseQuery<Option<string>?, (string, string?)>(
+                key: (nameof(LookupModel), model),
+                fetcher: ct => Task.FromResult<Option<string>?>(
+                    string.IsNullOrEmpty(model) ? null : new Option<string>(model)));
         }
 
         UseEffect(() =>
@@ -129,23 +136,23 @@ public class AgentSettingsView : ViewBase
                 | new Button(_isNew ? "Create" : "Save", onClick: _ => SaveAgent());
 
         // Model selector using AsyncSelectInput or TextInput as fallback
-        var modelInput = modelState.ToAsyncSelectInput(QueryModels, LookupModel, placeholder: "Search models...").Disabled(isReadOnly);
+        var modelInput = modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models...").Disabled(isReadOnly);
         
 
         var formContent = new Card(Layout.Vertical().Gap(3).Padding(2)
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Name").Bold()
+                | Text.Block("Name").Bold()
                 | nameState.ToTextInput(placeholder: "Agent name...")
                     .Disabled(isReadOnly))
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Description").Bold()
+                | Text.Block("Description").Bold()
                 | descState.ToTextInput(placeholder: "Short description...")
                     .Disabled(isReadOnly))
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Ollama Model").Bold()
+                | Text.Block("Ollama Model").Bold()
                 | modelInput)
             | (Layout.Vertical().Gap(1)
-                | Text.Small("Instructions (System Prompt)").Bold()
+                | Text.Block("Instructions (System Prompt)").Bold()
                 | instState.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50))
                     .Disabled(isReadOnly))
@@ -157,7 +164,7 @@ public class AgentSettingsView : ViewBase
         var presetInfo = _agent.IsPreset && !_isNew
             ? new Card(
                 Layout.Vertical().Gap(1).Padding(2)
-                | Text.Small("This is a preset agent. Settings are read-only. Use 'Duplicate' from the list to create an editable copy.")
+                | Text.Block("This is a preset agent. Settings are read-only. Use 'Duplicate' from the list to create an editable copy.")
             )
             : null;
 

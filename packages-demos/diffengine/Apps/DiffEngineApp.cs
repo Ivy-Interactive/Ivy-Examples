@@ -107,7 +107,7 @@ public class DiffEngineApp : ViewBase
             | Layout.Horizontal().Gap(2)
                 | Text.Markdown(string.IsNullOrEmpty(lastLeft.Value) ? "" : $"**Temp:** `{lastLeft.Value}` vs `{lastRight.Value}`")
                 | new Spacer()
-                | Text.Small("This demo uses the DiffEngine NuGet package to launch diff tools.")
+                | Text.Block("This demo uses the DiffEngine NuGet package to launch diff tools.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy) and [DiffEngine](https://github.com/VerifyTests/DiffEngine)");
 
         // file diff tab content
@@ -144,7 +144,7 @@ public class DiffEngineApp : ViewBase
                 | new Button("Kill Last Diff", onClick: () => kill()))
             | Layout.Horizontal().Gap(2)
                 | new Spacer()
-                | Text.Small("This demo uses the DiffEngine NuGet package to launch diff tools.")
+                | Text.Block("This demo uses the DiffEngine NuGet package to launch diff tools.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy) and [DiffEngine](https://github.com/VerifyTests/DiffEngine)");
 
         // tabs layout
