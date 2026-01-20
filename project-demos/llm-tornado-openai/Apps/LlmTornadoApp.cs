@@ -13,7 +13,7 @@ public class MainMenuBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
         var configuration = UseService<IConfiguration>();
         
@@ -21,16 +21,14 @@ public class MainMenuBlade : ViewBase
         var openAiApiKey = UseState(configuration["OpenAI:ApiKey"] ?? "");
         var selectedModel = UseState<string>(configuration["OpenAI:Model"] ?? "");
 
-        return BladeHelper.WithHeader(
-            Text.H4("LlmTornado Examples"),
-            Layout.Vertical()
+        var content = Layout.Vertical()
                 | new Card(
                     Layout.Horizontal().Gap(3)
                     | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                     | new Icon(Icons.MessageSquare).Size(16))
                     | (Layout.Vertical().Gap(2)
-                        | Text.Large("Simple Chat")
-                        | Text.Small("Basic conversation with streaming responses").Muted()
+                        | Text.H3("Simple Chat").Bold()
+                        | Text.Block("Basic conversation with streaming responses").Muted()
                         | new Button("Try It")
                             .Variant(ButtonVariant.Primary)
                             .Disabled(string.IsNullOrWhiteSpace(selectedModel.Value) || string.IsNullOrWhiteSpace(openAiApiKey.Value))
@@ -41,14 +39,17 @@ public class MainMenuBlade : ViewBase
                     | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                         | new Icon(Icons.Bot).Size(16))
                     | (Layout.Vertical().Gap(2)
-                        | Text.Large("Agent with Tools")
-                        | Text.Small("Agent with function calling capabilities").Muted()
+                        | Text.H3("Agent with Tools").Bold()
+                        | Text.Block("Agent with function calling capabilities").Muted()
                         | new Button("Try It")
                             .Variant(ButtonVariant.Primary)
                             .Disabled(string.IsNullOrWhiteSpace(selectedModel.Value) || string.IsNullOrWhiteSpace(openAiApiKey.Value))
                             .HandleClick(_ => blades.Push(this, new AgentChatBlade(openAiApiKey.Value, selectedModel.Value), "Agent Chat")))
-                )
-        );
+                );
+
+        return new Fragment()
+               | new BladeHeader(Text.H4("LlmTornado Examples"))
+               | content;
     }
 }
 

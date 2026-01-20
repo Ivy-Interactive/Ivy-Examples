@@ -38,17 +38,20 @@ public class SimpleChatBlade : ViewBase
                     client.Toast($"Failed to connect to OpenAI: {ex.Message}", "Connection Error");
                 }
             }
-        }, EffectTrigger.AfterInit());
+        }, EffectTrigger.OnMount());
 
-        return BladeHelper.WithHeader(
-            Layout.Horizontal().Gap(2)
+        var header = Layout.Horizontal().Gap(2)
                 | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                     | new Icon(Icons.MessageSquare).Size(8))
-                | Text.H4($"Simple Chat - {_modelName}"),
-            Layout.Horizontal()
+                | Text.H4($"Simple Chat - {_modelName}");
+
+        var chatContent = Layout.Horizontal()
                 | (Layout.Vertical().Width(Size.Units(200).Max(Size.Units(400))).Height(Size.Auto())
-                    | new Chat(_messages.Value.ToArray(), OnSendMessage))
-        );
+                    | new Chat(_messages.Value.ToArray(), OnSendMessage));
+
+        return new Fragment()
+               | new BladeHeader(header)
+               | chatContent;
     }
 
     private void OnSendMessage(Event<Chat, string> @event)

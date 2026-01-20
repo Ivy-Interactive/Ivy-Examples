@@ -55,7 +55,7 @@ Addresses = new Dictionary<string, Address> {
                     .HandleClick(() => ConvertToYaml(personCode.Value, yamlOutput, errorMessage, resultOutput))
             )
 
-            | Text.Small("This demo uses YamlDotNet library to serialize Person objects to YAML format.")
+            | Text.Block("This demo uses YamlDotNet library to serialize Person objects to YAML format.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [YamlDotNet](https://github.com/aaubry/YamlDotNet)"));
     }
 

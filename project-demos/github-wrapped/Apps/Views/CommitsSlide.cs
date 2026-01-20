@@ -94,7 +94,7 @@ public class CommitsSlide : ViewBase
                | (Layout.Vertical().Gap(4).Align(Align.Center)
                   | Text.H2($"{animatedCommits.Value} Commits").Bold().Italic()
                   | Text.Block("shipped in 2025").Muted()
-                  | Text.Small($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
+                  | Text.Block($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
                    | new Spacer().Height(10)
@@ -147,17 +147,17 @@ public class CommitsSlide : ViewBase
             if (count == 0)
             {
                 return Layout.Horizontal().Gap(2).Align(Align.Center)
-                       | Text.Small(month).Width(10).Muted()
+                       | Text.Block(month).Width(10).Muted()
                        | new Progress(progressState)
                            .Height(Size.Units(4))
-                       | Text.Small("0").Width(10).Muted();
+                       | Text.Block("0").Width(10).Muted();
             }
             
             return Layout.Horizontal().Gap(2).Align(Align.Center)
-                   | Text.Small(month).Width(10).Bold(isPeak)
+                   | Text.Block(month).Width(10).Bold(isPeak)
                    | new Progress(progressState)
                        .Goal(count > 0 ? count.ToString() : null)
-                   | Text.Small(count.ToString()).Width(10).Bold(isPeak);
+                   | Text.Block(count.ToString()).Width(10).Bold(isPeak);
         });
 
         return Layout.Vertical().Gap(2) | rows;
@@ -214,7 +214,7 @@ public class CommitsSlide : ViewBase
             | (Layout.Horizontal().Align(Align.Center)
                 | Icons.Activity.ToIcon()
                 | Text.Block(mainInsight).Bold())
-            | Text.Small(subInsight).Muted();
+            | Text.Block(subInsight).Muted();
     }
     
     private string GetFullMonthName(string monthAbbr)

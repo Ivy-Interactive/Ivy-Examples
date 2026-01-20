@@ -119,7 +119,7 @@
                             .Icon(Icons.Play)
                             .Disabled(isCreatingCheckout.Value)
                 )
-                | Text.Small("This demo uses Stripe.Net library for creating checkout sessions.")
+                | Text.Block("This demo uses Stripe.Net library for creating checkout sessions.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Stripe.Net](https://github.com/stripe/stripe-dotnet)")
             );
         }

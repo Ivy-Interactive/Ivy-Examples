@@ -75,7 +75,7 @@ public class GitHubWrappedApp : ViewBase
                        | Icons.Github.ToIcon()
                        | Text.H2("Welcome to GitHub Wrapped 2025")
                        | Text.Block("Please login via the navigation bar to see your GitHub activity from 2025.")
-                       | Text.Small("Click the login button in the top right corner to authenticate with GitHub.").Muted())
+                       | Text.Block("Click the login button in the top right corner to authenticate with GitHub.").Muted())
                      .Width(Size.Fraction(0.5f));
         }
 

@@ -7,7 +7,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<AutodealerCrmContextFactory>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var task = UseState<Task?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();
@@ -19,7 +19,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
                 .Include(e => e.Lead)
                 .Include(e => e.Manager)
                 .SingleOrDefaultAsync(e => e.Id == taskId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (task.Value == null) return null;
 

@@ -5,7 +5,7 @@ public class VehicleDetailsBlade(int vehicleId) : ViewBase
     public override object? Build()
     {
         var factory = this.UseService<AutodealerCrmContextFactory>();
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var vehicle = this.UseState<Vehicle?>();
         var mediaCount = this.UseState<int>();
@@ -19,7 +19,7 @@ public class VehicleDetailsBlade(int vehicleId) : ViewBase
                 .Include(e => e.Manager)
                 .SingleOrDefaultAsync(e => e.Id == vehicleId));
             mediaCount.Set(await db.Media.CountAsync(e => e.VehicleId == vehicleId));
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         if (vehicle.Value == null) return null;
 

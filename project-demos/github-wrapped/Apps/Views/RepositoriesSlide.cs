@@ -102,7 +102,7 @@ public class RepositoriesSlide : ViewBase
                | (Layout.Vertical().Gap(4).Align(Align.Center)
                   | Text.H2($"{repoName} Repository").Bold().Italic()
                   | Text.Block(headline).Muted()
-                  | Text.Small(subheadline).Muted())
+                  | Text.Block(subheadline).Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
                    | new Spacer().Height(5)
@@ -235,6 +235,6 @@ public class RepositoriesSlide : ViewBase
             | (Layout.Horizontal().Align(Align.Center)
                 | Icons.Folder.ToIcon()
                 | Text.Block(mainInsight).Bold())
-            | Text.Small(subInsight).Muted();
+            | Text.Block(subInsight).Muted();
     }
 }

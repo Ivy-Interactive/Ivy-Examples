@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.10" />
+    <PackageReference Include="Ivy" Version="1.2.11" />
   </ItemGroup>
 
   <ItemGroup>

@@ -13,7 +13,7 @@ public class StudentsListBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var searchTerm = this.UseState("");
         var students = this.UseState(() => StudentService.GetStudents());
@@ -55,19 +55,19 @@ public class StudentsListBlade : ViewBase
             .Primary()
             .ToTrigger((isOpen) => new StudentCreateDialog(isOpen, refreshToken, students));
 
-        return BladeHelper.WithHeader(
-            Layout.Horizontal().Gap(2)
-                | searchTerm.ToTextInput().Placeholder("Search students...").Width(Size.Grow())
-                | addButton
-            ,
-            filteredStudents.Count > 0
+        return new Fragment()
+            | new BladeHeader(
+                Layout.Horizontal().Gap(2)
+                    | searchTerm.ToTextInput().Placeholder("Search students...").Width(Size.Grow())
+                    | addButton
+            )
+            | (filteredStudents.Count > 0
                 ? new List(items)
                 : students.Value.Count > 0
                     ? Layout.Center()
                         | Text.Muted($"No students found matching '{searchTerm.Value}'")
                     : Layout.Center()
-                        | Text.Muted("No students. Add the first record.")
-        );
+                        | Text.Muted("No students. Add the first record."));
     }
 }
 
@@ -75,7 +75,7 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
 
@@ -133,26 +133,23 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
         });
 
         return new Fragment()
-            | BladeHelper.WithHeader(
-                Text.H4(studentValue.Name)
-                ,
-                Layout.Vertical().Gap(4)
-                    | new Card(
-                        Layout.Vertical().Gap(3)
-                        | new {
-                            Email = studentValue.Email,
-                            Age = studentValue.Age,
-                            Course = studentValue.Course,
-                            Grade = studentValue.Grade
-                        }.ToDetails(),
-                        Layout.Horizontal()
-                        | editButton
-                        | new Button("Delete")
-                            .Icon(Icons.Trash)
-                            .Destructive()
-                            .HandleClick(onDelete)
-                    )
-            )
+            | new BladeHeader(Text.H4(studentValue.Name))
+            | Layout.Vertical().Gap(4)
+                | new Card(
+                    Layout.Vertical().Gap(3)
+                    | new {
+                        Email = studentValue.Email,
+                        Age = studentValue.Age,
+                        Course = studentValue.Course,
+                        Grade = studentValue.Grade
+                    }.ToDetails(),
+                    Layout.Horizontal()
+                    | editButton
+                    | new Button("Delete")
+                        .Icon(Icons.Trash)
+                        .Destructive()
+                        .HandleClick(onDelete)
+                )
             | alertView;
     }
 }
@@ -291,7 +288,7 @@ public class MiniExcelViewApp : ViewBase
                 | actionMode.ToSelectInput(new[] { "Export", "Import" }.ToOptions())
                 | actionWidget
                 | new Spacer().Height(Size.Units(5))
-                | Text.Small("This demo uses MiniExcel to manage students data.")
+                | Text.Block("This demo uses MiniExcel to manage students data.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [MiniExcel](https://github.com/mini-software/MiniExcel)")
             ).Width(Size.Fraction(0.4f))
             | new Card(

@@ -80,7 +80,7 @@ namespace BarcodeLibExample.Apps
                 | Text.Muted("Enter barcode value and options")
                 | text.ToInput(placeholder: "Enter the barcode value …")
                 | controls
-                | Text.Small("This demo uses the BarcodeLib NuGet package to generate barcodes.")
+                | Text.Block("This demo uses the BarcodeLib NuGet package to generate barcodes.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [BarcodeLib](https://github.com/barnhill/barcodelib)")
             ).Width(Size.Fraction(0.45f)).Height(110);
 

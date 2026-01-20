@@ -830,14 +830,14 @@ public class SnowflakeApp : ViewBase
             | (errorMessage.Value != null
                 ? new Card(
                     Layout.Vertical().Gap(2).Padding(2)
-                        | Text.Small($"Error: {errorMessage.Value}")
+                        | Text.Block($"Error: {errorMessage.Value}")
                 )
                 : new Spacer())
             | (Layout.Horizontal().Gap(4)
                 | leftSection
                 | rightSection)
             | (Layout.Vertical().Gap(4).Align(Align.TopCenter)
-            | Text.Small("This demo uses Snowflake to explore databases, schemas, and tables.")
+            | Text.Block("This demo uses Snowflake to explore databases, schemas, and tables.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Snowflake](https://www.snowflake.com/)"))
             ;
     }
@@ -908,7 +908,7 @@ public class SnowflakeApp : ViewBase
                     | pageHeader
                     | new Card(
                         Layout.Vertical().Gap(2).Padding(3)
-                            | Text.Small($"Error: {errorMessageBrands.Value}")
+                            | Text.Block($"Error: {errorMessageBrands.Value}")
                     )
             );
         }
@@ -993,33 +993,41 @@ public class SnowflakeApp : ViewBase
                         | Text.H3(totalValue.ToString("C0"))
             ).Title("Total Inventory Value").Icon(Icons.DollarSign)
             | new MetricView("Avg Price", Icons.CreditCard,
-                () => Task.FromResult(new MetricRecord(
-                    avgPrice.ToString("C2"),
-                    avgPriceTrend,
-                    totalAvgPrice.Value > 0 ? avgPrice / (totalAvgPrice.Value + totalAvgPrice.Value/2) : null,
-                    $"{avgPrice:C2} loaded"
-                )))
+                (ctx) => ctx.UseQuery<MetricRecord, string>(
+                    key: "avgPrice",
+                    fetcher: async (key, ct) => new MetricRecord(
+                        avgPrice.ToString("C2"),
+                        avgPriceTrend,
+                        totalAvgPrice.Value > 0 ? avgPrice / (totalAvgPrice.Value + totalAvgPrice.Value/2) : null,
+                        $"{avgPrice:C2} loaded"
+                    )))
             | new MetricView("Brands Analyzed", Icons.Tag,
-                () => Task.FromResult(new MetricRecord(
-                    brandData.Value.Count.ToString(),
-                    null,
-                    totalBrandsCount.Value > 0 ? (double)brandData.Value.Count / totalBrandsCount.Value : null,
-                    $"{brandData.Value.Count} loaded of {totalBrandsCount.Value} total"
-                )))
+                (ctx) => ctx.UseQuery<MetricRecord, string>(
+                    key: "brandsAnalyzed",
+                    fetcher: async (key, ct) => new MetricRecord(
+                        brandData.Value.Count.ToString(),
+                        null,
+                        totalBrandsCount.Value > 0 ? (double)brandData.Value.Count / totalBrandsCount.Value : null,
+                        $"{brandData.Value.Count} loaded of {totalBrandsCount.Value} total"
+                    )))
             | new MetricView("Avg Items/Brand", Icons.ChartBar,
-                () => Task.FromResult(new MetricRecord(
-                    avgItemsPerBrand.ToString("N0"),
-                    avgItemsPerBrandTrend,
-                    totalAvgItemsPerBrand.Value > 0 ? (double)avgItemsPerBrand / totalAvgItemsPerBrand.Value : null,
-                    $"{avgItemsPerBrand:N0} loaded"
-                )))
+                (ctx) => ctx.UseQuery<MetricRecord, string>(
+                    key: "avgItemsPerBrand",
+                    fetcher: async (key, ct) => new MetricRecord(
+                        avgItemsPerBrand.ToString("N0"),
+                        avgItemsPerBrandTrend,
+                        totalAvgItemsPerBrand.Value > 0 ? (double)avgItemsPerBrand / totalAvgItemsPerBrand.Value : null,
+                        $"{avgItemsPerBrand:N0} loaded"
+                    )))
             | new MetricView("Total Size", Icons.Box,
-                () => Task.FromResult(new MetricRecord(
-                    totalSize.ToString("N0"),
-                    totalSizeTrend,
-                    totalTotalSize.Value > 0 ? (double)totalSize / totalTotalSize.Value : null,
-                    $"{totalSize:N0} loaded"
-                )));
+                (ctx) => ctx.UseQuery<MetricRecord, string>(
+                    key: "totalSize",
+                    fetcher: async (key, ct) => new MetricRecord(
+                        totalSize.ToString("N0"),
+                        totalSizeTrend,
+                        totalTotalSize.Value > 0 ? (double)totalSize / totalTotalSize.Value : null,
+                        $"{totalSize:N0} loaded"
+                    )));
 
         var pieChart = filteredBrands.ToPieChart(
             dimension: b => b.Brand,

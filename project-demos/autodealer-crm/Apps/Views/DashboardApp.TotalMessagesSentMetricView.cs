@@ -8,48 +8,58 @@ public class TotalMessagesSentMetricView(DateTime fromDate, DateTime toDate) : V
 {
     public override object? Build()
     {
-        var factory = UseService<AutodealerCrmContextFactory>();
-        
-        async Task<MetricRecord> CalculateTotalMessagesSent()
+        QueryResult<MetricRecord> CalculateTotalMessagesSent(IViewContext ctx)
         {
-            await using var db = factory.CreateDbContext();
-            
-            var outboundDirectionId = await db.MessageDirections
-                .Where(md => md.DescriptionText == "Outgoing")
-                .Select(md => md.Id)
-                .FirstOrDefaultAsync();
+            var factory = ctx.UseService<AutodealerCrmContextFactory>();
+            return ctx.UseQuery<MetricRecord, (DateTime, DateTime)>(
+                key: (fromDate, toDate),
+                fetcher: async (key, ct) =>
+                {
+                    var (fd, td) = key;
+                    await using var db = factory.CreateDbContext();
+                    
+                    var outboundDirectionId = await db.MessageDirections
+                        .Where(md => md.DescriptionText == "Outgoing")
+                        .Select(md => md.Id)
+                        .FirstOrDefaultAsync(ct);
 
-            // SentAt is now DateTime, so we can compare directly
-            var currentPeriodMessagesSent = await db.Messages
-                .Where(m => m.MessageDirectionId == outboundDirectionId && 
-                            m.SentAt >= fromDate && m.SentAt <= toDate)
-                .CountAsync();
+                    // SentAt is now DateTime, so we can compare directly
+                    var currentPeriodMessagesSent = await db.Messages
+                        .Where(m => m.MessageDirectionId == outboundDirectionId && 
+                                    m.SentAt >= fd && m.SentAt <= td)
+                        .CountAsync(ct);
 
-            var previousPeriodMessagesSent = await db.Messages
-                .Where(m => m.SentAt >= fromDate && m.SentAt <= toDate)
-                .CountAsync();
+                    var periodLength = td - fd;
+                    var previousFromDate = fd.AddDays(-periodLength.TotalDays);
+                    var previousToDate = fd.AddDays(-1);
 
-            if (previousPeriodMessagesSent == 0)
-            {
-                return new MetricRecord(
-                    MetricFormatted: currentPeriodMessagesSent.ToString("N0"),
-                    TrendComparedToPreviousPeriod: null,
-                    GoalAchieved: null,
-                    GoalFormatted: null
-                );
-            }
+                    var previousPeriodMessagesSent = await db.Messages
+                        .Where(m => m.MessageDirectionId == outboundDirectionId && 
+                                    m.SentAt >= previousFromDate && m.SentAt <= previousToDate)
+                        .CountAsync(ct);
 
-            double? trend = ((double)currentPeriodMessagesSent - previousPeriodMessagesSent) / previousPeriodMessagesSent;
+                    if (previousPeriodMessagesSent == 0)
+                    {
+                        return new MetricRecord(
+                            MetricFormatted: currentPeriodMessagesSent.ToString("N0"),
+                            TrendComparedToPreviousPeriod: null,
+                            GoalAchieved: null,
+                            GoalFormatted: null
+                        );
+                    }
 
-            var goal = previousPeriodMessagesSent * 1.1;
-            double? goalAchievement = goal > 0 ? (double?)(currentPeriodMessagesSent / goal ): null;
+                    double? trend = ((double)currentPeriodMessagesSent - previousPeriodMessagesSent) / previousPeriodMessagesSent;
 
-            return new MetricRecord(
-                MetricFormatted: currentPeriodMessagesSent.ToString("N0"),
-                TrendComparedToPreviousPeriod: trend,
-                GoalAchieved: goalAchievement,
-                GoalFormatted: goal.ToString("N0")
-            );
+                    var goal = previousPeriodMessagesSent * 1.1;
+                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodMessagesSent / goal ): null;
+
+                    return new MetricRecord(
+                        MetricFormatted: currentPeriodMessagesSent.ToString("N0"),
+                        TrendComparedToPreviousPeriod: trend,
+                        GoalAchieved: goalAchievement,
+                        GoalFormatted: goal.ToString("N0")
+                    );
+                });
         }
 
         return new MetricView(

@@ -25,7 +25,7 @@ public class OllamaSharpIntroductionApp : ViewBase
                        .ShowCopyButton()
                    | Text.Markdown("**3. Default Configuration** Ollama runs on `http://localhost:11434` by default"))
                    | new Separator()
-                   | Text.Small("This demo uses OllamaSharp library for interacting with Ollama API.")
+                   | Text.Block("This demo uses OllamaSharp library for interacting with Ollama API.")
                    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [OllamaSharp](https://github.com/awaescher/OllamaSharp)")
                    ).Width(Size.Fit());
     }

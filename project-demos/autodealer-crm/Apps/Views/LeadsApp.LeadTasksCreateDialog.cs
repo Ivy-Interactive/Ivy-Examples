@@ -30,7 +30,7 @@ public class LeadTasksCreateDialog(IState<bool> isOpen, RefreshToken refreshToke
 
         return taskState
             .ToForm()
-            .Builder(e => e.ManagerId, e => e.ToAsyncSelectInput(QueryManagers(factory), LookupManager(factory), placeholder: "Select Manager"))
+            .Builder(e => e.ManagerId, e => e.ToAsyncSelectInput<int>(QueryManagers, LookupManager, placeholder: "Select Manager"))
             .Builder(e => e.DueDate, e => e.ToDateInput())
             .ToDialog(isOpen, title: "Create Task", submitTitle: "Create");
     }
@@ -56,29 +56,35 @@ public class LeadTasksCreateDialog(IState<bool> isOpen, RefreshToken refreshToke
         return task.Id;
     }
 
-    private static AsyncSelectQueryDelegate<int> QueryManagers(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>[]> QueryManagers(IViewContext context, string query)
     {
-        return async query =>
-        {
-            await using var db = factory.CreateDbContext();
-            return (await db.Users
-                    .Where(e => e.Name.Contains(query))
-                    .Select(e => new { e.Id, e.Name })
-                    .Take(50)
-                    .ToArrayAsync())
-                .Select(e => new Option<int>(e.Name, e.Id))
-                .ToArray();
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>[], (string, string)>(
+            key: (nameof(QueryManagers), query),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return (await db.Users
+                        .Where(e => e.Name.Contains(query))
+                        .Select(e => new { e.Id, e.Name })
+                        .Take(50)
+                        .ToArrayAsync(ct))
+                    .Select(e => new Option<int>(e.Name, e.Id))
+                    .ToArray();
+            });
     }
 
-    private static AsyncSelectLookupDelegate<int> LookupManager(AutodealerCrmContextFactory factory)
+    private static QueryResult<Option<int>?> LookupManager(IViewContext context, int id)
     {
-        return async id =>
-        {
-            await using var db = factory.CreateDbContext();
-            var manager = await db.Users.FirstOrDefaultAsync(e => e.Id == id);
-            if (manager == null) return null;
-            return new Option<int>(manager.Name, manager.Id);
-        };
+        var factory = context.UseService<AutodealerCrmContextFactory>();
+        return context.UseQuery<Option<int>?, (string, int)>(
+            key: (nameof(LookupManager), id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                var manager = await db.Users.FirstOrDefaultAsync(e => e.Id == id, ct);
+                if (manager == null) return null;
+                return new Option<int>(manager.Name, manager.Id);
+            });
     }
 }

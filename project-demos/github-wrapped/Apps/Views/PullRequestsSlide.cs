@@ -106,11 +106,11 @@ public class PullRequestsSlide : ViewBase
                | (Layout.Grid().Gap(3).Columns(2).Width(Size.Fraction(0.8f))
                    | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                        | Text.H2(animatedMerged.Value.ToString()).Bold().Italic()
-                       | Text.Small("Pull Requests successfully merged").Muted())
+                       | Text.Block("Pull Requests successfully merged").Muted())
                        .Title("Merged").Icon(Icons.GitPullRequestArrow)
                    | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                        | Text.H2($"{animatedRate.Value}%").Bold().Italic()
-                       | Text.Small("Merge success rate").Muted())
+                       | Text.Block("Merge success rate").Muted())
                        .Title("Success Rate").Icon(Icons.TrendingUp))
                | new Spacer().Height(10)
                | insight;
@@ -151,6 +151,6 @@ public class PullRequestsSlide : ViewBase
             | (Layout.Horizontal().Align(Align.Center)
                 | Icons.GitPullRequestCreate.ToIcon()
                 | Text.Block(mainInsight).Bold())
-            | Text.Small(subInsight).Muted();
+            | Text.Block(subInsight).Muted();
     }
 }

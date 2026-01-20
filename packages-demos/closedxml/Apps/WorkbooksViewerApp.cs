@@ -59,7 +59,7 @@ public class WorkbooksViewerApp : ViewBase
                 | fileDropDown
                 | refreshButton)
             | new Spacer()
-            | Text.Small("This demo uses the ClosedXML NuGet package to work with Excel files.")
+            | Text.Block("This demo uses the ClosedXML NuGet package to work with Excel files.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ClosedXML](https://github.com/ClosedXML/ClosedXML)")
         ).Width(Size.Fraction(0.45f)).Height(110);
         
@@ -109,7 +109,7 @@ public class WorkbooksViewerApp : ViewBase
         {
             return Layout.Vertical().Gap(2)
                 | tableView
-                | Text.Small($"Showing first 50 of {rows.Count} rows");
+                | Text.Block($"Showing first 50 of {rows.Count} rows");
         }
         
         return tableView;

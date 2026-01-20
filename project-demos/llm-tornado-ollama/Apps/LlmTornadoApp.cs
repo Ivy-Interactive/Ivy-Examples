@@ -13,7 +13,7 @@ public class MainMenuBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
         var ollamaUrl = UseState("http://localhost:11434");
         var selectedModel = UseState<string?>(() => null);
@@ -88,12 +88,10 @@ public class MainMenuBlade : ViewBase
         }
         
         // Load models on initialization and when URL changes
-        UseEffect(async () => await LoadModels(), EffectTrigger.AfterInit());
+        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
         UseEffect(async () => await LoadModels(), [ollamaUrl]);
 
-        return BladeHelper.WithHeader(
-            Text.H4("LlmTornado Examples"),
-            Layout.Vertical()
+        var content = Layout.Vertical()
                 | new Card(
                     Layout.Vertical().Gap(3)
                     | Text.H3("Getting Started")
@@ -109,7 +107,7 @@ public class MainMenuBlade : ViewBase
                             .WithField()
                             .Label("Ollama URL"))
                        | (Layout.Vertical().Gap(3).Width(Size.Full())
-                           | Text.Small("Model")
+                           | Text.Block("Model")
                            | (isLoadingModels.Value
                                ? selectedModel.ToSelectInput(Array.Empty<Option<string>>(), placeholder: "Loading...").Disabled(true) as object
                                : selectedModel.ToSelectInput(availableModels.Value.Select(m => new Option<string>(m)).ToArray(), placeholder: "Select model...") as object))
@@ -123,8 +121,8 @@ public class MainMenuBlade : ViewBase
                          | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                             | new Icon(Icons.MessageSquare).Size(16))
                          | (Layout.Vertical().Gap(2)
-                             | Text.Large("Simple Chat")
-                             | Text.Small("Basic conversation with streaming responses").Muted()
+                             | Text.H3("Simple Chat").Bold()
+                             | Text.Block("Basic conversation with streaming responses").Muted()
                              | new Button("Try It")
                                  .Variant(ButtonVariant.Primary)
                                  .Disabled(selectedModel.Value == null)
@@ -135,14 +133,17 @@ public class MainMenuBlade : ViewBase
                         | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                             | new Icon(Icons.Bot).Size(16))
                         | (Layout.Vertical().Gap(2)
-                            | Text.Large("Agent with Tools")
-                            | Text.Small("Agent with function calling capabilities").Muted()
+                            | Text.H3("Agent with Tools").Bold()
+                            | Text.Block("Agent with function calling capabilities").Muted()
                             | new Button("Try It")
                                 .Variant(ButtonVariant.Primary)
                                 .Disabled(selectedModel.Value == null)
                                 .HandleClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
-                    )
-        );
+                    );
+
+        return new Fragment()
+               | new BladeHeader(Text.H4("LlmTornado Examples"))
+               | content;
     }
 }
 

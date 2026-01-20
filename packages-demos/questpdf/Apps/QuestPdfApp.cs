@@ -104,7 +104,7 @@ public class QuestPdfApp : ViewBase
             )
           | body.ToCodeInput().Language(Languages.Markdown).Width(Ivy.Shared.Size.Full()).Height(Ivy.Shared.Size.Units(90)).Placeholder("Body (Markdown)")
           | new Spacer()
-          | Text.Small("This demo uses the QuestPDF NuGet package to generate PDFs.")
+          | Text.Block("This demo uses the QuestPDF NuGet package to generate PDFs.")
           | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [QuestPDF](https://github.com/QuestPDF/QuestPDF)")
         ).Height(Ivy.Shared.Size.Full());
     

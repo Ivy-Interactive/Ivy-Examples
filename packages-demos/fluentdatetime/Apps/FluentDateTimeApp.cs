@@ -46,14 +46,14 @@ public class FluentDateTimeApp : ViewBase
                           | (showResult.Value ? 
                               new Card(
                                   Layout.Vertical()
-                                  | Text.Large("Result")
+                                  | Text.H3("Result").Bold()
                                   | Text.Markdown($"**Computed date**: `{resultDate:yyyy-MM-dd HH:mm}`")
                                   | Text.Markdown($"**Difference**: `{(int)(resultDate - baseDateTime.Value).TotalDays} days`")
                               ) : 
                               Text.Muted("Click 'Calculate' to see the result")
                             )
                          | new Spacer()
-                         | Text.Small("This demo uses the FluentDateTime NuGet package for cleaner DateTime operations.")
+                         | Text.Block("This demo uses the FluentDateTime NuGet package for cleaner DateTime operations.")
                          | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FluentDateTime](https://github.com/FluentDateTime/FluentDateTime)")
                   ).Width(Size.Fraction(0.4f))
                );

@@ -94,7 +94,7 @@ public class SmartFormatNetApp : ViewBase
                         .ShowCopyButton()
                     )
                 | new Separator()
-                | Text.Small("This demo uses SmartFormat.NET library to format strings.")
+                | Text.Block("This demo uses SmartFormat.NET library to format strings.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [SmartFormat.NET](https://github.com/axuno/SmartFormat)")
             ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()));
     }

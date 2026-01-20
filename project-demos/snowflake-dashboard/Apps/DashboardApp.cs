@@ -63,7 +63,7 @@ public class DashboardApp : ViewBase
             {
                 isLoading.Value = false;
             }
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         if (errorMessage.Value != null)
         {
@@ -71,7 +71,7 @@ public class DashboardApp : ViewBase
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3("Error")
-                        | Text.Small(errorMessage.Value)
+                        | Text.Block(errorMessage.Value)
                 ).Width(Size.Fraction(0.5f));
         }
 

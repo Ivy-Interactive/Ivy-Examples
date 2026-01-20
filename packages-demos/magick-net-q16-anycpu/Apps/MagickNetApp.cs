@@ -309,7 +309,7 @@ public class MagickNetApp : ViewBase
                            .Url(downloadUrl.Value)
                            .Disabled(processedImageBytes.Value == null))
                         | new Spacer().Height(Size.Units(5))
-                        | Text.Small("This demo uses Magick.NET to process images with powerful effects and filters.")
+                        | Text.Block("This demo uses Magick.NET to process images with powerful effects and filters.")
                         | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Magick.NET](https://github.com/dlemstra/Magick.NET)")
                      );
 
