@@ -9,7 +9,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ivy" Version="1.2.12" />
+		<PackageReference Include="Ivy" Version="1.2.13" />
 		<PackageReference Include="BarcodeLib" Version="3.1.5" />
 	</ItemGroup>
 </Project>
