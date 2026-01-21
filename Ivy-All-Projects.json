@@ -101,12 +101,20 @@
     },
     {
       "name": "GitHub Wrapped 2025",
-      "description": "",
+      "description": "GitHub Wrapped 2025 is a web application for visualizing and analyzing your GitHub coding activity from 2025. It displays your commits, pull requests, languages, repositories, and contribution statistics in an engaging, personalized slideshow format with animated visualizations and dynamic insights.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/github-wrapped",
       "deploymentLink": "ivy-projectdemos-github-wrapped.sliplane.app",
       "tags": [
-        "Ivy.Auth.GitHub",
-        "demo"
+        "GitHub",
+        "Wrapped",
+        "OAuth",
+        "Authentication",
+        "Statistics",
+        "Analytics",
+        "Data Visualization",
+        "Ivy Framework",
+        "C#",
+        ".NET"
       ]
     },
     {
