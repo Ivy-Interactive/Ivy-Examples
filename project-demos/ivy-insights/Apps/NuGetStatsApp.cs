@@ -1,5 +1,6 @@
 using IvyInsights.Models;
 using IvyInsights.Services;
+using Ivy.Helpers;
 
 namespace IvyInsights.Apps;
 
@@ -10,26 +11,30 @@ public class NuGetStatsApp : ViewBase
 
     public override object? Build()
     {
-        var loading = this.UseState(false);
-        var stats = this.UseState<PackageStatistics?>();
-        var error = this.UseState<string?>();
         var client = UseService<IClientProvider>();
         var nugetProvider = UseService<INuGetStatisticsProvider>();
-
-        async Task LoadStatisticsAsync()
-        {
-            if (loading.Value) return; // Prevent concurrent loads
-            
-            loading.Set(true);
-            error.Set((string?)null);
-            try
+        
+        // ============================================================================
+        // UseQuery Hook - Automatic Data Fetching, Caching, and State Management
+        // ============================================================================
+        // Benefits of UseQuery over manual state management:
+        // 1. Automatic caching: Data is cached and shared across components/users
+        // 2. Stale-while-revalidate: Shows cached data immediately while fetching fresh data
+        // 3. Built-in loading/error states: No need for manual loading/error state management
+        // 4. Background revalidation: Automatically keeps data fresh
+        // 5. Optimistic updates: Can update UI immediately, then sync with server
+        // 6. Request deduplication: Multiple components requesting same data = single request
+        // 7. Automatic retry: Built-in error handling and retry logic
+        // ============================================================================
+        var statsQuery = this.UseQuery(
+            key: $"nuget-stats/{PackageId}", // Unique cache key - changing this invalidates cache
+            fetcher: async (CancellationToken ct) =>
             {
-                // Use CancellationToken.None for long-running operations that shouldn't be cancelled
-                // when HTTP request completes. NuGet API calls can take 10-30 seconds.
-                var statistics = await nugetProvider.GetPackageStatisticsAsync(PackageId, CancellationToken.None);
-                stats.Set(statistics);
+                // NuGet API calls can take 10-30 seconds, so we use the provided cancellation token
+                // UseQuery automatically cancels this if component unmounts or key changes
+                var statistics = await nugetProvider.GetPackageStatisticsAsync(PackageId, ct);
                 
-                // Toast is safe to call - it doesn't use CancellationToken from request lifecycle
+                // Show success toast (safe to call, doesn't use request lifecycle token)
                 try
                 {
                     client.Toast($"Successfully loaded statistics for {PackageId}!");
@@ -38,47 +43,91 @@ public class NuGetStatsApp : ViewBase
                 {
                     // Ignore toast errors (e.g., if client is disposed)
                 }
-            }
-            catch (Exception ex)
+                
+                return statistics;
+            },
+            options: new QueryOptions
             {
-                error.Set(ex.Message);
-                try
+                Scope = QueryScope.Server,              // Cache shared across all users on server
+                Expiration = TimeSpan.FromMinutes(15),  // Cache TTL: 15 minutes (matches provider cache)
+                KeepPrevious = true,                     // Show old data while fetching new (smooth UX)
+                RevalidateOnMount = true                 // Fetch on component mount (first load)
+            },
+            tags: ["nuget", "statistics"]); // Tags allow bulk invalidation: queryService.InvalidateByTag("nuget")
+        
+        // Animated values for count-up effect
+        var animatedDownloads = this.UseState(0L);
+        var animatedVersions = this.UseState(0);
+        var animatedAdoptionRate = this.UseState(0.0);
+        var refresh = this.UseRefreshToken();
+        var hasAnimated = this.UseState(false);
+
+        // Animate numbers when data is loaded
+        if (statsQuery.Value != null && !hasAnimated.Value)
+        {
+            var animStats = statsQuery.Value;
+            var animTotalDownloads = animStats.TotalDownloads ?? 0;
+            var animTotalVersions = animStats.TotalVersions;
+            
+            // Calculate adoption rate (percentage of users on recent versions)
+            var animRecentVersions = animStats.Versions
+                .Where(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-6))
+                .ToList();
+            var animRecentDownloads = animRecentVersions
+                .Where(v => v.Downloads.HasValue)
+                .Sum(v => v.Downloads!.Value);
+            var animTotalDownloadsWithData = animStats.Versions
+                .Where(v => v.Downloads.HasValue)
+                .Sum(v => v.Downloads!.Value);
+            var animAdoptionRate = animTotalDownloadsWithData > 0 
+                ? Math.Round((animRecentDownloads / (double)animTotalDownloadsWithData) * 100, 1)
+                : 0.0;
+
+            var scheduler = new JobScheduler(maxParallelJobs: 3);
+            var steps = 60;
+            var delayMs = 15;
+
+            scheduler.CreateJob("Animate Metrics")
+                .WithAction(async (_, _, progress, token) =>
                 {
-                    client.Toast(ex);
-                }
-                catch
-                {
-                    // Ignore toast errors (e.g., if client is disposed)
-                }
-            }
-            finally
-            {
-                loading.Set(false);
-            }
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        if (token.IsCancellationRequested) break;
+                        var currentProgress = i / (double)steps;
+                        animatedDownloads.Set((long)(animTotalDownloads * currentProgress));
+                        animatedVersions.Set((int)(animTotalVersions * currentProgress));
+                        animatedAdoptionRate.Set(animAdoptionRate * currentProgress);
+                        refresh.Refresh();
+                        progress.Report(currentProgress);
+                        await Task.Delay(delayMs, token);
+                    }
+                    animatedDownloads.Set(animTotalDownloads);
+                    animatedVersions.Set(animTotalVersions);
+                    animatedAdoptionRate.Set(animAdoptionRate);
+                    refresh.Refresh();
+                })
+                .Build();
+
+            _ = Task.Run(async () => await scheduler.RunAsync());
+            hasAnimated.Set(true);
         }
 
-        // Auto-load on startup
-        this.UseEffect(async () =>
-        {
-            if (stats.Value == null && !loading.Value)
-            {
-                await LoadStatisticsAsync();
-            }
-        }, [EffectTrigger.OnMount()]);
-
-        if (error.Value != null)
+        // Handle error state using UseQuery's built-in error handling
+        if (statsQuery.Error is { } error)
         {
             return Layout.Center()
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3("Error")
-                        | Text.Block(error.Value)
-                        | new Button("Retry", onClick: async () => { await LoadStatisticsAsync(); })
+                        | Text.Block(error.Message)
+                        | new Button("Retry", onClick: _ => statsQuery.Mutator.Revalidate())
                             .Icon(Icons.RefreshCcw)
                 ).Width(Size.Fraction(0.5f));
         }
 
-        if (loading.Value || stats.Value == null)
+        // Handle loading state - UseQuery shows loading during initial fetch
+        // KeepPrevious option shows previous data during revalidation
+        if (statsQuery.Loading && statsQuery.Value == null)
         {
             return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
                 | Text.H1("NuGet Statistics")
@@ -93,7 +142,7 @@ public class NuGetStatsApp : ViewBase
                     | new Skeleton().Height(Size.Units(200)));
         }
 
-        var s = stats.Value!;
+        var s = statsQuery.Value!;
 
         // Calculate metrics
         var totalDownloads = s.TotalDownloads ?? 0;
@@ -113,30 +162,79 @@ public class NuGetStatsApp : ViewBase
                 .FirstOrDefault();
         }
 
-        // Enhanced KPI cards
+        // Calculate adoption rate
+        var recentVersions = s.Versions
+            .Where(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-6))
+            .ToList();
+        var recentDownloads = recentVersions
+            .Where(v => v.Downloads.HasValue)
+            .Sum(v => v.Downloads!.Value);
+        var totalDownloadsWithData = s.Versions
+            .Where(v => v.Downloads.HasValue)
+            .Sum(v => v.Downloads!.Value);
+        var adoptionRate = totalDownloadsWithData > 0 
+            ? Math.Round((recentDownloads / (double)totalDownloadsWithData) * 100, 1)
+            : 0.0;
+
+        // Calculate growth metrics
+        var versionsLastMonth = s.Versions
+            .Count(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-1));
+        var versionsLast3Months = s.Versions
+            .Count(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-3));
+        var avgReleasesPerMonth = versionsLast3Months / 3.0;
+
+        // Smart Insights generation
+        var insights = new List<string>();
+        if (adoptionRate > 50)
+            insights.Add($"Strong adoption: {adoptionRate}% of users are on recent versions (last 6 months)");
+        else if (adoptionRate > 30)
+            insights.Add($"Growing adoption: {adoptionRate}% of users migrated to recent versions");
+        else
+            insights.Add($"Opportunity: Only {adoptionRate}% on recent versions - consider migration incentives");
+
+        if (avgReleasesPerMonth > 2)
+            insights.Add($"Active development: {avgReleasesPerMonth:F1} releases per month on average");
+        else if (avgReleasesPerMonth > 0.5)
+            insights.Add($"Steady releases: Consistent updates every ~{Math.Round(1 / avgReleasesPerMonth, 1)} months");
+        else
+            insights.Add($"Stable package: Focused on quality over frequency");
+
+        if (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue)
+        {
+            var mostPopularShare = totalDownloadsWithData > 0
+                ? Math.Round((mostDownloadedVersion.Downloads.Value / (double)totalDownloadsWithData) * 100, 1)
+                : 0;
+            if (mostPopularShare > 30)
+                insights.Add($"Version {mostDownloadedVersion.Version} dominates with {mostPopularShare}% of all downloads");
+        }
+
+        // Enhanced KPI cards with animated values
         var metrics = Layout.Grid().Columns(4).Gap(3)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(totalDownloads.ToString("N0"))
+                    | Text.H3(animatedDownloads.Value.ToString("N0")).Bold()
                     | Text.Muted("Total Downloads")
             ).Title("Total Downloads").Icon(Icons.Download)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(s.TotalVersions.ToString("N0"))
-                    | Text.Muted("Versions")
+                    | Text.H3($"{animatedVersions.Value.ToString("N0")} (+{versionsLastMonth} this month)").Bold()
+                    | Text.Muted("Total Versions")
             ).Title("Total Versions").Icon(Icons.Tag)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(s.LatestVersion)
+                    | Text.H3(s.LatestVersion).Bold()
                     | Text.Muted(s.LatestVersionPublished.HasValue 
                         ? s.LatestVersionPublished.Value.ToString("MMM dd, yyyy")
                         : "N/A")
+                    | (avgReleasesPerMonth > 0
+                        ? Text.Block($"{avgReleasesPerMonth:F1} releases/month avg").Muted()
+                        : null)
             ).Title("Latest Version").Icon(Icons.ArrowUp)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
                     | Text.H3(mostDownloadedVersion != null 
                         ? mostDownloadedVersion.Version 
-                        : "N/A")
+                        : "N/A").Bold()
                     | Text.Muted(mostDownloadedVersion != null
                         ? (mostDownloadedVersion.Downloads.HasValue && mostDownloadedVersion.Downloads.Value > 0
                             ? $"{mostDownloadedVersion.Downloads.Value:N0} downloads"
@@ -145,6 +243,31 @@ public class NuGetStatsApp : ViewBase
                                 : "Latest version")
                         : "")
             ).Title("Most Popular").Icon(Icons.Star);
+
+        // Smart Insights card
+        var insightsCard = new Card(
+            Layout.Vertical().Gap(2).Padding(3)
+                | Text.H4("Smart Insights").Bold()
+                | Layout.Vertical().Gap(2)
+                    | insights.Select(insight => 
+                        Layout.Horizontal().Gap(2).Align(Align.TopLeft)
+                            | Text.Block("•").Muted()
+                            | Text.Block(insight).Width(Size.Fraction(0.95f))
+                    )
+        ).Width(Size.Fraction(0.35f));
+
+        // Adoption Rate card
+        var adoptionCard = new Card(
+            Layout.Vertical().Gap(3).Padding(3).Align(Align.Center)
+                | Text.H3($"{animatedAdoptionRate.Value:F1}%").Bold()
+                | Text.Muted("Adoption Rate")
+                | Text.Block("Users on versions from last 6 months").Muted()
+                | (adoptionRate > 50
+                    ? Text.Block("Excellent adoption")
+                    : adoptionRate > 30
+                        ? Text.Block("Good momentum")
+                        : Text.Block("Growth opportunity"))
+        ).Title("Adoption Velocity").Icon(Icons.TrendingUp).Width(Size.Fraction(0.3f));
 
         // Package info card
         var packageInfo = new Card(
@@ -158,7 +281,7 @@ public class NuGetStatsApp : ViewBase
                 | Text.Block($"First Published: {(s.FirstVersionPublished.HasValue ? s.FirstVersionPublished.Value.ToString("MMM dd, yyyy") : "N/A")}")
         ).Width(Size.Fraction(0.35f));
 
-        // Version distribution chart
+        // Version distribution chart - enhanced with top version highlight
         var versionChartData = s.Versions
             .OrderByDescending(v => v.Published ?? DateTime.MinValue)
             .Take(20)
@@ -166,7 +289,8 @@ public class NuGetStatsApp : ViewBase
             { 
                 Version = v.Version, 
                 Downloads = (double)(v.Downloads ?? 0),
-                HasDownloads = v.Downloads.HasValue && v.Downloads.Value > 0
+                HasDownloads = v.Downloads.HasValue && v.Downloads.Value > 0,
+                IsTopVersion = mostDownloadedVersion != null && v.Version == mostDownloadedVersion.Version
             })
             .ToList();
 
@@ -176,9 +300,16 @@ public class NuGetStatsApp : ViewBase
 
         var versionChartCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
-                | Text.H4("Recent Versions Distribution")
+                | Layout.Horizontal().Gap(2)
+                    | Text.H4("Recent Versions Distribution")
+                    | (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue
+                        ? Layout.Horizontal().Gap(1).Align(Align.Center)
+                            | Text.Block("Top: ").Muted()
+                            | Text.Block(mostDownloadedVersion.Version).Bold()
+                            | Text.Block($" ({mostDownloadedVersion.Downloads.Value:N0})").Muted()
+                        : null)
                 | Text.Muted(versionsWithDownloads > 0 
-                    ? "Showing downloads per version" 
+                    ? "Showing downloads per version (hover for details)" 
                     : "Showing version count (download data not available)")
                 | versionChart
         ).Width(Size.Fraction(0.65f));
@@ -239,25 +370,17 @@ public class NuGetStatsApp : ViewBase
                 | versionsTable
         ).Width(Size.Fraction(0.35f));
 
-        // Header
-        var header = Layout.Horizontal().Gap(2).Align(Align.Right)
-            | Text.H1($"NuGet Statistics: {PackageId}")
-            | new Spacer()
-            | new Button("Refresh", onClick: async () => { await LoadStatisticsAsync(); })
-                .Icon(Icons.RefreshCcw)
-                .Loading(loading.Value)
-                .Disabled(loading.Value);
-
-        return new HeaderLayout(
-            header: header,
-            content: Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
-                | metrics.Width(Size.Fraction(0.9f))
-                | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
-                    | packageInfo
-                    | versionChartCard)
-                | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
-                    | versionsTableCard
-                    | timelineChartCard)
-        );
+        return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
+            | metrics.Width(Size.Fraction(0.9f))
+            | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
+                | adoptionCard
+                | insightsCard
+                | packageInfo)
+            | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
+                | versionChartCard
+                | timelineChartCard)
+            | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
+                | versionsTableCard
+                | new Spacer());
     }
 }
