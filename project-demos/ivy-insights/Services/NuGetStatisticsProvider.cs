@@ -18,7 +18,7 @@ public class NuGetStatisticsProvider : INuGetStatisticsProvider
     {
         var cacheKey = $"stats_{packageId.ToLowerInvariant()}";
 
-        if (_cache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.CachedAt < CacheExpiration)
+        if (CacheExpiration > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.CachedAt < CacheExpiration)
             return cached.Data;
 
         var versions = await _apiClient.GetAllVersionsFromRegistrationAsync(packageId, cancellationToken);
@@ -27,15 +27,46 @@ public class NuGetStatisticsProvider : INuGetStatisticsProvider
 
         var normalizedVersions = versions
             .Where(v => v.Published == null || v.Published.Value.Year >= 2000)
+            .OrderByDescending(v => v.Published ?? DateTime.MinValue)
             .ToList();
 
         var metadata = await _apiClient.GetPackageMetadataAsync(packageId, cancellationToken);
-        var downloadsByVersion = metadata?.Versions?.ToDictionary(v => v.Version, v => (long?)v.Downloads) ?? new();
+        
+        var downloadsByVersion = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+        if (metadata?.Versions != null)
+        {
+            foreach (var searchVersion in metadata.Versions)
+            {
+                var normalizedKey = NuGetApiClient.NormalizeVersion(searchVersion.Version);
+                downloadsByVersion[normalizedKey] = (long?)searchVersion.Downloads;
+            }
+        }
 
         foreach (var version in normalizedVersions)
         {
-            if (downloadsByVersion.TryGetValue(version.Version, out var downloads))
+            var normalizedKey = NuGetApiClient.NormalizeVersion(version.Version);
+            if (downloadsByVersion.TryGetValue(normalizedKey, out var downloads))
+            {
                 version.Downloads = downloads;
+            }
+        }
+
+        var unmatchedVersions = normalizedVersions
+            .Where(v => !v.Downloads.HasValue)
+            .Select(v => v.Version)
+            .ToList();
+        
+        if (unmatchedVersions.Count > 0)
+        {
+            var additionalDownloads = await _apiClient.GetAdditionalVersionDownloadsAsync(packageId, unmatchedVersions, cancellationToken);
+            foreach (var version in normalizedVersions.Where(v => !v.Downloads.HasValue))
+            {
+                var normalizedKey = NuGetApiClient.NormalizeVersion(version.Version);
+                if (additionalDownloads.TryGetValue(normalizedKey, out var downloads))
+                {
+                    version.Downloads = downloads;
+                }
+            }
         }
 
         var latest = normalizedVersions.First();

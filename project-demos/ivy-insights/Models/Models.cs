@@ -9,6 +9,9 @@ public sealed class NuGetSearchResponse
 
 public sealed class NuGetSearchResult
 {
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
