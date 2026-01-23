@@ -18,18 +18,38 @@ public class NuGetStatsApp : ViewBase
 
         async Task LoadStatisticsAsync()
         {
+            if (loading.Value) return; // Prevent concurrent loads
+            
             loading.Set(true);
             error.Set((string?)null);
             try
             {
-                var statistics = await nugetProvider.GetPackageStatisticsAsync(PackageId);
+                // Use CancellationToken.None for long-running operations that shouldn't be cancelled
+                // when HTTP request completes. NuGet API calls can take 10-30 seconds.
+                var statistics = await nugetProvider.GetPackageStatisticsAsync(PackageId, CancellationToken.None);
                 stats.Set(statistics);
-                client.Toast($"Successfully loaded statistics for {PackageId}!");
+                
+                // Toast is safe to call - it doesn't use CancellationToken from request lifecycle
+                try
+                {
+                    client.Toast($"Successfully loaded statistics for {PackageId}!");
+                }
+                catch
+                {
+                    // Ignore toast errors (e.g., if client is disposed)
+                }
             }
             catch (Exception ex)
             {
                 error.Set(ex.Message);
-                client.Toast(ex);
+                try
+                {
+                    client.Toast(ex);
+                }
+                catch
+                {
+                    // Ignore toast errors (e.g., if client is disposed)
+                }
             }
             finally
             {
@@ -53,7 +73,7 @@ public class NuGetStatsApp : ViewBase
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3("Error")
                         | Text.Block(error.Value)
-                        | new Button("Retry", onClick: () => { _ = LoadStatisticsAsync(); })
+                        | new Button("Retry", onClick: async () => { await LoadStatisticsAsync(); })
                             .Icon(Icons.RefreshCcw)
                 ).Width(Size.Fraction(0.5f));
         }
@@ -223,7 +243,7 @@ public class NuGetStatsApp : ViewBase
         var header = Layout.Horizontal().Gap(2).Align(Align.Right)
             | Text.H1($"NuGet Statistics: {PackageId}")
             | new Spacer()
-            | new Button("Refresh", onClick: () => { _ = LoadStatisticsAsync(); })
+            | new Button("Refresh", onClick: async () => { await LoadStatisticsAsync(); })
                 .Icon(Icons.RefreshCcw)
                 .Loading(loading.Value)
                 .Disabled(loading.Value);

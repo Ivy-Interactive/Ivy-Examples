@@ -5,21 +5,21 @@ CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICult
 
 var server = new Server();
 
-// Register HttpClient for NuGet API
-server.Services.AddHttpClient("NuGet", client =>
+server.Services.AddHttpClient<NuGetApiClient>(client =>
 {
+    // Timeout: NuGet API can be slow, especially registration pages (10-30 seconds recommended)
+    client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("IvyInsights", "1.0"));
     client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+    client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("gzip"));
+    client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AutomaticDecompression = System.Net.DecompressionMethods.All
 });
 
-// Register NuGet Services
-server.Services.AddScoped<NuGetApiClient>(sp =>
-{
-    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-    var httpClient = httpClientFactory.CreateClient("NuGet");
-    return new NuGetApiClient(httpClient);
-});
-server.Services.AddScoped<INuGetStatisticsProvider, NuGetStatisticsProvider>();
+server.Services.AddSingleton<INuGetStatisticsProvider, NuGetStatisticsProvider>();
 
 #if DEBUG
 server.UseHotReload();
@@ -29,8 +29,7 @@ server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
 var chromeSettings = new ChromeSettings()
-    .DefaultApp<NuGetStatsApp>()
-    .UseTabs(preventDuplicates: true);
+    .DefaultApp<NuGetStatsApp>();
 server.UseChrome(chromeSettings);
 
 await server.RunAsync();

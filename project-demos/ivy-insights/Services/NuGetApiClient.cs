@@ -16,48 +16,16 @@ public class NuGetApiClient
         };
     }
 
-    public async Task<NuGetPackageIndex> GetPackageIndexAsync(string packageId, CancellationToken cancellationToken = default)
-    {
-        var url = $"https://api.nuget.org/v3-flatcontainer/{packageId.ToLowerInvariant()}/index.json";
-        var response = await _httpClient.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        
-        var index = await response.Content.ReadFromJsonAsync<NuGetPackageIndex>(_jsonOptions, cancellationToken);
-        if (index == null)
-        {
-            throw new Exception($"Failed to parse package index for {packageId}");
-        }
-        
-        return index;
-    }
-
-    public async Task<NuGetRegistrationIndex> GetPackageRegistrationAsync(string packageId, CancellationToken cancellationToken = default)
-    {
-        var url = $"https://api.nuget.org/v3/registration5-semver1/{packageId.ToLowerInvariant()}/index.json";
-        var response = await _httpClient.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        
-        var registration = await response.Content.ReadFromJsonAsync<NuGetRegistrationIndex>(_jsonOptions, cancellationToken);
-        if (registration == null)
-        {
-            throw new Exception($"Failed to parse package registration for {packageId}");
-        }
-        
-        return registration;
-    }
-
     public async Task<List<VersionInfo>> GetAllVersionsFromRegistrationAsync(string packageId, CancellationToken cancellationToken = default)
     {
         var registration = await GetPackageRegistrationAsync(packageId, cancellationToken);
         var allVersions = new List<VersionInfo>();
 
-        // Registration API returns pages, need to fetch all pages recursively
         foreach (var page in registration.Items)
         {
             await FetchPageVersionsAsync(page, allVersions, cancellationToken);
         }
 
-        // Deduplicate versions and sort by published date
         return allVersions
             .GroupBy(v => v.Version)
             .Select(g => g.First())
@@ -65,74 +33,18 @@ public class NuGetApiClient
             .ToList();
     }
 
-    private async Task FetchPageVersionsAsync(NuGetRegistrationPage page, List<VersionInfo> allVersions, CancellationToken cancellationToken)
-    {
-        // If page has direct items, use them
-        if (page.Items != null && page.Items.Count > 0)
-        {
-            foreach (var item in page.Items)
-            {
-                if (item.CatalogEntry != null)
-                {
-                    // CatalogEntry.Published is the authoritative source for publish date
-                    // Handle both DateTime and DateTimeOffset
-                    DateTime? publishedDate = null;
-                    if (item.CatalogEntry.Published.HasValue)
-                    {
-                        publishedDate = item.CatalogEntry.Published.Value.Kind == DateTimeKind.Utc
-                            ? item.CatalogEntry.Published.Value
-                            : item.CatalogEntry.Published.Value.ToUniversalTime();
-                    }
-
-                    allVersions.Add(new VersionInfo
-                    {
-                        Version = item.CatalogEntry.Version,
-                        Published = publishedDate,
-                        Downloads = item.CatalogEntry.TotalDownloads
-                    });
-                }
-            }
-            return; // We got items, no need to fetch page URL
-        }
-
-        // If page doesn't have items, it's a link to another page - fetch it
-        if (!string.IsNullOrEmpty(page.Id))
-        {
-            try
-            {
-                var pageResponse = await _httpClient.GetAsync(page.Id, cancellationToken);
-                if (pageResponse.IsSuccessStatusCode)
-                {
-                    var pageData = await pageResponse.Content.ReadFromJsonAsync<NuGetRegistrationPage>(_jsonOptions, cancellationToken);
-                    if (pageData != null)
-                    {
-                        // Recursively process this page (it might have items or more nested pages)
-                        await FetchPageVersionsAsync(pageData, allVersions, cancellationToken);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error but continue
-                Console.WriteLine($"Error fetching registration page {page.Id}: {ex.Message}");
-            }
-        }
-    }
-
     public async Task<NuGetSearchResult?> GetPackageMetadataAsync(string packageId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var searchUrl = $"https://api.nuget.org/v3/query?q={Uri.EscapeDataString(packageId)}&take=1";
-            var response = await _httpClient.GetAsync(searchUrl, cancellationToken);
+            var url = $"https://api.nuget.org/v3/query?q=packageid:{Uri.EscapeDataString(packageId)}&take=1&includePrerelease=true&semVerLevel=2.0.0";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
-            {
                 return null;
-            }
 
-            var searchData = await response.Content.ReadFromJsonAsync<NuGetSearchResponse>(_jsonOptions, cancellationToken);
-            return searchData?.Data?.FirstOrDefault();
+            var data = await response.Content.ReadFromJsonAsync<NuGetSearchResponse>(_jsonOptions, cancellationToken);
+            return data?.Data?.FirstOrDefault();
         }
         catch
         {
@@ -140,5 +52,89 @@ public class NuGetApiClient
         }
     }
 
+    private async Task<NuGetRegistrationIndex> GetPackageRegistrationAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        var url = $"https://api.nuget.org/v3/registration5-gz-semver2/{packageId.ToLowerInvariant()}/index.json";
+        var response = await _httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        
+        var registration = await response.Content.ReadFromJsonAsync<NuGetRegistrationIndex>(_jsonOptions, cancellationToken);
+        return registration ?? throw new Exception($"Failed to parse package registration for {packageId}");
+    }
+
+    private async Task FetchPageVersionsAsync(NuGetRegistrationPage page, List<VersionInfo> allVersions, CancellationToken cancellationToken)
+    {
+        // Direct versions: page has items with CatalogEntry
+        if (page.Items?.Count > 0 && page.Items[0].CatalogEntry != null)
+        {
+            foreach (var item in page.Items)
+            {
+                if (item.CatalogEntry == null) continue;
+
+                var published = item.CatalogEntry.Published;
+                if (published.HasValue && published.Value.Kind != DateTimeKind.Utc)
+                    published = published.Value.ToUniversalTime();
+
+                allVersions.Add(new VersionInfo
+                {
+                    Version = item.CatalogEntry.Version,
+                    Published = published,
+                    Downloads = null
+                });
+            }
+            return;
+        }
+
+        // Nested pages: fetch sub-pages recursively
+        if (page.Items != null)
+        {
+            foreach (var item in page.Items)
+            {
+                if (string.IsNullOrEmpty(item.Id)) continue;
+
+                try
+                {
+                    var response = await _httpClient.GetAsync(item.Id, cancellationToken);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var subPage = await response.Content.ReadFromJsonAsync<NuGetRegistrationPage>(_jsonOptions, cancellationToken);
+                        if (subPage != null)
+                            await FetchPageVersionsAsync(subPage, allVersions, cancellationToken);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error fetching sub-page {item.Id}: {ex.Message}");
+                }
+            }
+        }
+
+        // Fallback: page has @id but no items
+        if (!string.IsNullOrEmpty(page.Id) && (page.Items == null || page.Items.Count == 0))
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(page.Id, cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    var pageData = await response.Content.ReadFromJsonAsync<NuGetRegistrationPage>(_jsonOptions, cancellationToken);
+                    if (pageData != null)
+                        await FetchPageVersionsAsync(pageData, allVersions, cancellationToken);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching page {page.Id}: {ex.Message}");
+            }
+        }
+    }
 }
 

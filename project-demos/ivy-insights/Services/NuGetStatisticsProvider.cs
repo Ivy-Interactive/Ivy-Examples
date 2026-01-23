@@ -18,38 +18,28 @@ public class NuGetStatisticsProvider : INuGetStatisticsProvider
     {
         var cacheKey = $"stats_{packageId.ToLowerInvariant()}";
 
-        // Check cache
-        if (_cache.TryGetValue(cacheKey, out var cached) &&
-            DateTime.UtcNow - cached.CachedAt < CacheExpiration)
-        {
+        if (_cache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.CachedAt < CacheExpiration)
             return cached.Data;
-        }
 
-        // 1. Registration API - source of truth for versions, published dates, and downloads
         var versions = await _apiClient.GetAllVersionsFromRegistrationAsync(packageId, cancellationToken);
-
         if (versions.Count == 0)
-        {
             throw new Exception($"Package {packageId} not found or has no versions");
-        }
 
-        // Normalize: filter invalid dates and deduplicate
         var normalizedVersions = versions
             .Where(v => v.Published == null || v.Published.Value.Year >= 2000)
-            .GroupBy(v => v.Version)
-            .Select(g => g.First())
-            .OrderByDescending(v => v.Published ?? DateTime.MinValue)
             .ToList();
 
-        // 2. Get metadata from Search API
         var metadata = await _apiClient.GetPackageMetadataAsync(packageId, cancellationToken);
+        var downloadsByVersion = metadata?.Versions?.ToDictionary(v => v.Version, v => (long?)v.Downloads) ?? new();
 
-        // Calculate statistics
+        foreach (var version in normalizedVersions)
+        {
+            if (downloadsByVersion.TryGetValue(version.Version, out var downloads))
+                version.Downloads = downloads;
+        }
+
         var latest = normalizedVersions.First();
-        var publishedDates = normalizedVersions
-            .Where(v => v.Published.HasValue)
-            .Select(v => v.Published!.Value)
-            .ToList();
+        var publishedDates = normalizedVersions.Where(v => v.Published.HasValue).Select(v => v.Published!.Value).ToList();
 
         var statistics = new PackageStatistics
         {
@@ -61,15 +51,12 @@ public class NuGetStatisticsProvider : INuGetStatisticsProvider
             TotalVersions = normalizedVersions.Count,
             LatestVersion = latest.Version,
             LatestVersionPublished = latest.Published,
-            FirstVersionPublished = publishedDates.Any()
-                ? publishedDates.Min()
-                : null,
+            FirstVersionPublished = publishedDates.Any() ? publishedDates.Min() : null,
             Versions = normalizedVersions
         };
 
-        // Update cache
-        _cache.AddOrUpdate(cacheKey, (statistics, DateTime.UtcNow), (key, old) => (statistics, DateTime.UtcNow));
-
+        _cache.AddOrUpdate(cacheKey, (statistics, DateTime.UtcNow), (_, _) => (statistics, DateTime.UtcNow));
         return statistics;
     }
 }
+

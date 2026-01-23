@@ -6,3 +6,4 @@ public interface INuGetStatisticsProvider
 {
     Task<PackageStatistics> GetPackageStatisticsAsync(string packageId, CancellationToken cancellationToken = default);
 }
+
