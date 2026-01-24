@@ -11,7 +11,7 @@ internal class VersionChartDataItem
 }
 
 [App(icon: Icons.ChartBar, title: "Ivy Statistics")]
-public class NuGetStatsApp : ViewBase
+public class IvyInsightsApp : ViewBase
 {
     private const string PackageId = "Ivy";
 

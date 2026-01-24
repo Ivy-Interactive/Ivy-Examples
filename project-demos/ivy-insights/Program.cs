@@ -28,8 +28,4 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = new ChromeSettings()
-    .DefaultApp<NuGetStatsApp>();
-server.UseChrome(chromeSettings);
-
 await server.RunAsync();
