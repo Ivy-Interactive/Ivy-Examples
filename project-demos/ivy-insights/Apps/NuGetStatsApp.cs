@@ -69,7 +69,6 @@ public class NuGetStatsApp : ViewBase
         // Animated values for count-up effect
         var animatedDownloads = this.UseState(0L);
         var animatedVersions = this.UseState(0);
-        var animatedAdoptionRate = this.UseState(0.0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
 
@@ -80,19 +79,6 @@ public class NuGetStatsApp : ViewBase
             var animTotalDownloads = animStats.TotalDownloads ?? 0;
             var animTotalVersions = animStats.TotalVersions;
             
-            // Calculate adoption rate (percentage of users on recent versions)
-            var animRecentVersions = animStats.Versions
-                .Where(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-6))
-                .ToList();
-            var animRecentDownloads = animRecentVersions
-                .Where(v => v.Downloads.HasValue)
-                .Sum(v => v.Downloads!.Value);
-            var animTotalDownloadsWithData = animStats.Versions
-                .Where(v => v.Downloads.HasValue)
-                .Sum(v => v.Downloads!.Value);
-            var animAdoptionRate = animTotalDownloadsWithData > 0 
-                ? Math.Round((animRecentDownloads / (double)animTotalDownloadsWithData) * 100, 1)
-                : 0.0;
 
             var scheduler = new JobScheduler(maxParallelJobs: 3);
             var steps = 60;
@@ -107,14 +93,12 @@ public class NuGetStatsApp : ViewBase
                         var currentProgress = i / (double)steps;
                         animatedDownloads.Set((long)(animTotalDownloads * currentProgress));
                         animatedVersions.Set((int)(animTotalVersions * currentProgress));
-                        animatedAdoptionRate.Set(animAdoptionRate * currentProgress);
                         refresh.Refresh();
                         progress.Report(currentProgress);
                         await Task.Delay(delayMs, token);
                     }
                     animatedDownloads.Set(animTotalDownloads);
                     animatedVersions.Set(animTotalVersions);
-                    animatedAdoptionRate.Set(animAdoptionRate);
                     refresh.Refresh();
                 })
                 .Build();
@@ -173,26 +157,12 @@ public class NuGetStatsApp : ViewBase
                 .FirstOrDefault();
         }
 
-        // Calculate adoption rate
-        var recentVersions = s.Versions
-            .Where(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-6))
-            .ToList();
-        var recentDownloads = recentVersions
-            .Where(v => v.Downloads.HasValue)
-            .Sum(v => v.Downloads!.Value);
-        var totalDownloadsWithData = s.Versions
-            .Where(v => v.Downloads.HasValue)
-            .Sum(v => v.Downloads!.Value);
-        var adoptionRate = totalDownloadsWithData > 0 
-            ? Math.Round((recentDownloads / (double)totalDownloadsWithData) * 100, 1)
-            : 0.0;
 
         // Calculate growth metrics using calendar months for consistency
         var now = DateTime.UtcNow;
         var thisMonthStart = new DateTime(now.Year, now.Month, 1);
         var lastMonthStart = thisMonthStart.AddMonths(-1);
         var lastMonthEnd = thisMonthStart;
-        var threeMonthsAgoStart = thisMonthStart.AddMonths(-3);
         
         var versionsLastMonth = s.Versions
             .Count(v => v.Published.HasValue && 
@@ -202,11 +172,6 @@ public class NuGetStatsApp : ViewBase
             .Count(v => v.Published.HasValue && 
                        v.Published.Value >= thisMonthStart && 
                        v.Published.Value < now);
-        var versionsLast3Months = s.Versions
-            .Count(v => v.Published.HasValue && 
-                       v.Published.Value >= threeMonthsAgoStart && 
-                       v.Published.Value < now);
-        var avgReleasesPerMonth = versionsLast3Months / 3.0;
         
         // Downloads for versions published in the last calendar month
         var downloadsLastMonth = s.Versions
@@ -270,31 +235,6 @@ public class NuGetStatsApp : ViewBase
             })
             .ToList();
 
-        // Smart Insights generation
-        var insights = new List<string>();
-        if (adoptionRate > 50)
-            insights.Add($"Strong adoption: {adoptionRate}% of users are on recent versions (last 6 months)");
-        else if (adoptionRate > 30)
-            insights.Add($"Growing adoption: {adoptionRate}% of users migrated to recent versions");
-        else
-            insights.Add($"Opportunity: Only {adoptionRate}% on recent versions - consider migration incentives");
-
-        if (avgReleasesPerMonth > 2)
-            insights.Add($"Active development: {avgReleasesPerMonth:F1} releases per month on average");
-        else if (avgReleasesPerMonth > 0.5)
-            insights.Add($"Steady releases: Consistent updates every ~{Math.Round(1 / avgReleasesPerMonth, 1)} months");
-        else
-            insights.Add($"Stable package: Focused on quality over frequency");
-
-        if (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue)
-        {
-            var mostPopularShare = totalDownloadsWithData > 0
-                ? Math.Round((mostDownloadedVersion.Downloads.Value / (double)totalDownloadsWithData) * 100, 1)
-                : 0;
-            if (mostPopularShare > 30)
-                insights.Add($"Version {mostDownloadedVersion.Version} dominates with {mostPopularShare}% of all downloads");
-        }
-
         // Find latest version with downloads
         var latestVersionInfo = s.Versions.FirstOrDefault(v => v.Version == s.LatestVersion);
         
@@ -330,18 +270,6 @@ public class NuGetStatsApp : ViewBase
                         ? Text.Block($"{mostDownloadedVersion.Downloads.Value:N0} downloads").Muted()
                         : null)
             ).Title("Most Popular").Icon(Icons.Star);
-
-        // Smart Insights card
-        var insightsCard = new Card(
-            Layout.Vertical().Gap(2).Padding(3)
-                | Text.H4("Smart Insights").Bold()
-                | Layout.Vertical().Gap(2)
-                    | insights.Select(insight => 
-                        Layout.Horizontal().Gap(2).Align(Align.TopLeft)
-                            | Text.Block("•").Muted()
-                            | Text.Block(insight).Width(Size.Fraction(0.95f))
-                    )
-        ).Width(Size.Fraction(0.35f));
 
         // Top 3 Popular Versions bar chart
         var topVersionsData = s.Versions
