@@ -63,10 +63,9 @@ public class IvyInsightsApp : ViewBase
         var versionChartCount = this.UseState(7);
 
         var filteredVersionChartQuery = this.UseQuery(
-            key: $"version-chart-filtered/{PackageId}/{versionChartFromDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartToDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
+            key: $"version-chart-filtered/{PackageId}/{statsQuery.Value != null}/{versionChartFromDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartToDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
             fetcher: async (CancellationToken ct) =>
             {
-                await Task.Yield();
                 if (statsQuery.Value == null)
                     return new List<VersionChartDataItem>();
 
