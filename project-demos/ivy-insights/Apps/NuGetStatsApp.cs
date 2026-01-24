@@ -8,11 +8,9 @@ internal class VersionChartDataItem
 {
     public string Version { get; set; } = string.Empty;
     public double Downloads { get; set; }
-    public bool HasDownloads { get; set; }
-    public bool IsTopVersion { get; set; }
 }
 
-[App(icon: Icons.ChartBar, title: "NuGet Statistics")]
+[App(icon: Icons.ChartBar, title: "Ivy Statistics")]
 public class NuGetStatsApp : ViewBase
 {
     private const string PackageId = "Ivy";
@@ -22,8 +20,6 @@ public class NuGetStatsApp : ViewBase
         if (string.IsNullOrWhiteSpace(version))
             return false;
         
-        // Pre-releases in NuGet have a hyphen after the version number
-        // Examples: "1.0.0-alpha", "1.0.0-beta.1", "1.0.0-rc.1", "1.0.0-preview"
         var parts = version.Split('-');
         return parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]);
     }
@@ -33,67 +29,44 @@ public class NuGetStatsApp : ViewBase
         var client = UseService<IClientProvider>();
         var nugetProvider = UseService<INuGetStatisticsProvider>();
         
-        // ============================================================================
-        // UseQuery Hook - Automatic Data Fetching, Caching, and State Management
-        // ============================================================================
-        // Benefits of UseQuery over manual state management:
-        // 1. Automatic caching: Data is cached and shared across components/users
-        // 2. Stale-while-revalidate: Shows cached data immediately while fetching fresh data
-        // 3. Built-in loading/error states: No need for manual loading/error state management
-        // 4. Background revalidation: Automatically keeps data fresh
-        // 5. Optimistic updates: Can update UI immediately, then sync with server
-        // 6. Request deduplication: Multiple components requesting same data = single request
-        // 7. Automatic retry: Built-in error handling and retry logic
-        // ============================================================================
         var statsQuery = this.UseQuery(
-            key: $"nuget-stats/{PackageId}", // Unique cache key - changing this invalidates cache
+            key: $"nuget-stats/{PackageId}",
             fetcher: async (CancellationToken ct) =>
             {
-                // NuGet API calls can take 10-30 seconds, so we use the provided cancellation token
-                // UseQuery automatically cancels this if component unmounts or key changes
                 var statistics = await nugetProvider.GetPackageStatisticsAsync(PackageId, ct);
                 
-                // Show success toast (safe to call, doesn't use request lifecycle token)
                 try
                 {
                     client.Toast($"Successfully loaded statistics for {PackageId}!");
                 }
-                catch
-                {
-                    // Ignore toast errors (e.g., if client is disposed)
-                }
+                catch { }
                 
                 return statistics;
             },
             options: new QueryOptions
             {
-                Scope = QueryScope.Server,              // Cache shared across all users on server
-                Expiration = TimeSpan.FromMinutes(15),  // Cache TTL: 15 minutes (matches provider cache)
-                KeepPrevious = true,                     // Show old data while fetching new (smooth UX)
-                RevalidateOnMount = true                 // Fetch on component mount (first load)
+                Scope = QueryScope.Server,
+                Expiration = TimeSpan.FromMinutes(15),
+                KeepPrevious = true,
+                RevalidateOnMount = true
             },
-            tags: ["nuget", "statistics"]); // Tags allow bulk invalidation: queryService.InvalidateByTag("nuget")
+            tags: ["nuget", "statistics"]);
         
-        // Animated values for count-up effect
         var animatedDownloads = this.UseState(0L);
         var animatedVersions = this.UseState(0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
 
-        // Version chart filters
         var versionChartFromDate = this.UseState<DateTime?>(() => null);
         var versionChartToDate = this.UseState<DateTime?>(() => null);
         var versionChartShowPreReleases = this.UseState(true);
         var versionChartCount = this.UseState(7);
 
-        // UseQuery for filtered version chart data - automatically updates when filters change
-        // Key includes filter values, so changing filters will automatically trigger re-fetch
         var filteredVersionChartQuery = this.UseQuery(
             key: $"version-chart-filtered/{PackageId}/{versionChartFromDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartToDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
             fetcher: async (CancellationToken ct) =>
             {
-                // Wait for main stats query to be ready
-                await Task.Yield(); // Ensure async
+                await Task.Yield();
                 if (statsQuery.Value == null)
                     return new List<VersionChartDataItem>();
 
@@ -101,7 +74,6 @@ public class NuGetStatsApp : ViewBase
                 var count = Math.Clamp(versionChartCount.Value, 2, 20);
                 var filteredVersions = s.Versions.AsEnumerable();
                 
-                // Filter by date range
                 if (versionChartFromDate.Value.HasValue)
                 {
                     var fromDate = versionChartFromDate.Value.Value.Date;
@@ -115,26 +87,20 @@ public class NuGetStatsApp : ViewBase
                         v.Published.HasValue && v.Published.Value.Date < toDate);
                 }
                 
-                // Filter pre-releases
                 if (!versionChartShowPreReleases.Value)
                 {
                     filteredVersions = filteredVersions.Where(v => !IsPreRelease(v.Version));
                 }
                 
-                // Filter versions with downloads (same as Top Popular Versions)
-                // Only show versions that have download data
                 filteredVersions = filteredVersions.Where(v => v.Downloads.HasValue && v.Downloads.Value > 0);
                 
-                // Order by downloads (most downloaded first) - same as Top Popular Versions
                 var versionChartData = filteredVersions
                     .OrderByDescending(v => v.Downloads)
                     .Take(count)
                     .Select(v => new VersionChartDataItem
                     { 
                         Version = v.Version, 
-                        Downloads = (double)v.Downloads!.Value,
-                        HasDownloads = true, // All versions here have downloads
-                        IsTopVersion = false // Will be set later if needed
+                        Downloads = (double)v.Downloads!.Value
                     })
                     .ToList();
 
@@ -142,19 +108,17 @@ public class NuGetStatsApp : ViewBase
             },
             options: new QueryOptions
             {
-                Scope = QueryScope.Server, // Server scope, but with zero expiration for immediate recalculation
-                Expiration = TimeSpan.Zero, // No caching for filtered data - always recalculate
-                KeepPrevious = false, // Don't keep previous data when filters change
-                RevalidateOnMount = false // Don't revalidate on mount, only when key changes
+                Scope = QueryScope.Server,
+                Expiration = TimeSpan.Zero,
+                KeepPrevious = false,
+                RevalidateOnMount = false
             });
 
-        // Animate numbers when data is loaded
         if (statsQuery.Value != null && !hasAnimated.Value)
         {
             var animStats = statsQuery.Value;
             var animTotalDownloads = animStats.TotalDownloads ?? 0;
             var animTotalVersions = animStats.TotalVersions;
-            
 
             var scheduler = new JobScheduler(maxParallelJobs: 3);
             var steps = 60;
@@ -183,7 +147,6 @@ public class NuGetStatsApp : ViewBase
             hasAnimated.Set(true);
         }
 
-        // Handle error state using UseQuery's built-in error handling
         if (statsQuery.Error is { } error)
         {
             return Layout.Center()
@@ -196,8 +159,6 @@ public class NuGetStatsApp : ViewBase
                 ).Width(Size.Fraction(0.5f));
         }
 
-        // Handle loading state - UseQuery shows loading during initial fetch
-        // KeepPrevious option shows previous data during revalidation
         if (statsQuery.Loading && statsQuery.Value == null)
         {
             return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
@@ -221,17 +182,11 @@ public class NuGetStatsApp : ViewBase
 
         var s = statsQuery.Value!;
 
-        // Calculate metrics
-        var totalDownloads = s.TotalDownloads ?? 0;
-        var versionsWithDownloads = s.Versions.Count(v => v.Downloads.HasValue && v.Downloads.Value > 0);
-        
-        // Most popular version: use version with downloads if available, otherwise use latest version
         var mostDownloadedVersion = s.Versions
             .Where(v => v.Downloads.HasValue && v.Downloads.Value > 0)
             .OrderByDescending(v => v.Downloads)
             .FirstOrDefault();
         
-        // Fallback to latest version if no download data available
         if (mostDownloadedVersion == null)
         {
             mostDownloadedVersion = s.Versions
@@ -240,7 +195,6 @@ public class NuGetStatsApp : ViewBase
         }
 
 
-        // Calculate growth metrics using calendar months for consistency
         var now = DateTime.UtcNow;
         var thisMonthStart = new DateTime(now.Year, now.Month, 1);
         var lastMonthStart = thisMonthStart.AddMonths(-1);
@@ -255,7 +209,6 @@ public class NuGetStatsApp : ViewBase
                        v.Published.Value >= thisMonthStart && 
                        v.Published.Value < now);
         
-        // Downloads for versions published in the last calendar month
         var downloadsLastMonth = s.Versions
             .Where(v => v.Published.HasValue && 
                        v.Published.Value >= lastMonthStart && 
@@ -263,7 +216,6 @@ public class NuGetStatsApp : ViewBase
                        v.Downloads.HasValue)
             .Sum(v => v.Downloads!.Value);
         
-        // Downloads this month (versions published this calendar month)
         var downloadsThisMonth = s.Versions
             .Where(v => v.Published.HasValue && 
                        v.Published.Value >= thisMonthStart && 
@@ -271,7 +223,6 @@ public class NuGetStatsApp : ViewBase
                        v.Downloads.HasValue)
             .Sum(v => v.Downloads!.Value);
 
-        // Calculate average monthly downloads over last 6 months (excluding current month)
         var monthlyDownloads = new List<long>();
         for (int i = 1; i <= 6; i++)
         {
@@ -290,7 +241,6 @@ public class NuGetStatsApp : ViewBase
             ? monthlyDownloads.Average() 
             : 0.0;
 
-        // Prepare monthly downloads data for chart - all months with versions
         var monthlyChartData = s.Versions
             .Where(v => v.Published.HasValue && v.Downloads.HasValue)
             .GroupBy(v => new DateTime(v.Published!.Value.Year, v.Published.Value.Month, 1))
@@ -302,12 +252,10 @@ public class NuGetStatsApp : ViewBase
             })
             .ToList();
 
-        // Calculate average downloads per month (stable value for all months)
         var averageDownloads = monthlyChartData.Count > 0
             ? Math.Round(monthlyChartData.Average(m => m.Downloads))
             : 0.0;
 
-        // Add average to each month
         var monthlyChartDataWithAverage = monthlyChartData
             .Select(m => new
             {
@@ -317,10 +265,8 @@ public class NuGetStatsApp : ViewBase
             })
             .ToList();
 
-        // Find latest version with downloads
         var latestVersionInfo = s.Versions.FirstOrDefault(v => v.Version == s.LatestVersion);
         
-        // Enhanced KPI cards with animated values
         var metrics = Layout.Grid().Columns(4).Gap(3)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
@@ -353,7 +299,6 @@ public class NuGetStatsApp : ViewBase
                         : null)
             ).Title("Most Popular").Icon(Icons.Star);
 
-        // Top 3 Popular Versions bar chart
         var topVersionsData = s.Versions
             .Where(v => v.Downloads.HasValue && v.Downloads.Value > 0)
             .OrderByDescending(v => v.Downloads)
@@ -381,19 +326,12 @@ public class NuGetStatsApp : ViewBase
                     | Text.Block("No download data available").Muted()
             ).Title("Top Popular Versions").Icon(Icons.Star).Height(Size.Full());
 
-        // Monthly Downloads Card - compares this month with average
         var percentDiff = avgMonthlyDownloads > 0
             ? Math.Round(((downloadsThisMonth - avgMonthlyDownloads) / avgMonthlyDownloads) * 100, 1)
             : 0.0;
 
         var isGrowing = downloadsThisMonth > avgMonthlyDownloads;
-        var trendText = percentDiff == 0 
-            ? "On track"
-            : isGrowing 
-                ? $"+{Math.Abs(percentDiff):F1}% vs avg"
-                : $"{percentDiff:F1}% vs avg";
 
-        // Monthly downloads line chart with average line
         var monthlyDownloadsChart = monthlyChartDataWithAverage
             .ToLineChart(
                 dimension: m => m.Month,
@@ -411,20 +349,10 @@ public class NuGetStatsApp : ViewBase
          .Height(Size.Full());
 
 
-        // Version distribution chart - enhanced with filters
-        // Use filtered data from UseQuery which automatically updates when filters change
-        // Shows versions with most downloads (same approach as Top Popular Versions)
         var versionChartData = filteredVersionChartQuery.Value ?? new List<VersionChartDataItem>();
-        var versionChartDataForChart = versionChartData
-            .Select(v => new 
-            { 
-                Version = v.Version, 
-                Downloads = v.Downloads
-            })
-            .ToList();
 
-        var versionChart = versionChartDataForChart.Count > 0
-            ? versionChartDataForChart.ToBarChart()
+        var versionChart = versionChartData.Count > 0
+            ? versionChartData.ToBarChart()
                 .Dimension("Version", e => e.Version)
                 .Measure("Downloads", e => e.Sum(f => f.Downloads))
             : null;
@@ -452,15 +380,9 @@ public class NuGetStatsApp : ViewBase
                     : Text.Block("No versions found").Muted())
         );
 
-        // Version timeline chart - group by month to show all releases
-        // Include ALL versions with valid dates (filter only invalid dates, not by year range)
         var timelineData = s.Versions
             .Where(v => v.Published.HasValue && v.Published.Value.Year >= 2000)
-            .Select(v => new { 
-                YearMonth = new DateTime(v.Published!.Value.Year, v.Published.Value.Month, 1),
-                OriginalDate = v.Published.Value
-            })
-            .GroupBy(v => v.YearMonth)
+            .GroupBy(v => new DateTime(v.Published!.Value.Year, v.Published.Value.Month, 1))
             .Select(g => new { 
                 Date = g.Key, 
                 Releases = (double)g.Count() 
@@ -479,7 +401,6 @@ public class NuGetStatsApp : ViewBase
                 | timelineChart
         );
 
-        // Releases vs Pre-releases pie chart
         var releasesCount = s.Versions.Count(v => !IsPreRelease(v.Version));
         var preReleasesCount = s.Versions.Count(v => IsPreRelease(v.Version));
         
@@ -501,7 +422,6 @@ public class NuGetStatsApp : ViewBase
                 | (releaseTypePieChart ?? (object)Text.Block("No data available").Muted())
             ).Title("Releases vs Pre-releases");
 
-        // All versions table - use ALL versions from service (no filtering)
         var allVersionsTable = s.Versions
             .Select(v => new
             {
