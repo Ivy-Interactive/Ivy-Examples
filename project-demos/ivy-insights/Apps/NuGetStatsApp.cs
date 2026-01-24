@@ -182,6 +182,11 @@ public class NuGetStatsApp : ViewBase
         var versionsLast3Months = s.Versions
             .Count(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-3));
         var avgReleasesPerMonth = versionsLast3Months / 3.0;
+        
+        // Calculate downloads for versions published in the last month
+        var downloadsLastMonth = s.Versions
+            .Where(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-1) && v.Downloads.HasValue)
+            .Sum(v => v.Downloads!.Value);
 
         // Smart Insights generation
         var insights = new List<string>();
@@ -208,40 +213,40 @@ public class NuGetStatsApp : ViewBase
                 insights.Add($"Version {mostDownloadedVersion.Version} dominates with {mostPopularShare}% of all downloads");
         }
 
+        // Find latest version with downloads
+        var latestVersionInfo = s.Versions.FirstOrDefault(v => v.Version == s.LatestVersion);
+        
         // Enhanced KPI cards with animated values
         var metrics = Layout.Grid().Columns(4).Gap(3)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(animatedDownloads.Value.ToString("N0")).Bold()
-                    | Text.Muted("Total Downloads")
+                Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
+                    | Text.H2(animatedDownloads.Value.ToString("N0")).Bold()
+                    | (downloadsLastMonth > 0
+                        ? Text.Block($"+{downloadsLastMonth:N0} this month").Muted()
+                        : null)
             ).Title("Total Downloads").Icon(Icons.Download)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3($"{animatedVersions.Value.ToString("N0")} (+{versionsLastMonth} this month)").Bold()
-                    | Text.Muted("Total Versions")
+                Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
+                    | Text.H2(animatedVersions.Value.ToString("N0")).Bold()
+                    | (versionsLastMonth > 0
+                        ? Text.Block($"+{versionsLastMonth} this month").Muted()
+                        : null)
             ).Title("Total Versions").Icon(Icons.Tag)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(s.LatestVersion).Bold()
-                    | Text.Muted(s.LatestVersionPublished.HasValue 
-                        ? s.LatestVersionPublished.Value.ToString("MMM dd, yyyy")
-                        : "N/A")
-                    | (avgReleasesPerMonth > 0
-                        ? Text.Block($"{avgReleasesPerMonth:F1} releases/month avg").Muted()
+                Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
+                    | Text.H2(s.LatestVersion).Bold()
+                    | (latestVersionInfo != null && latestVersionInfo.Downloads.HasValue && latestVersionInfo.Downloads.Value > 0
+                        ? Text.Block($"{latestVersionInfo.Downloads.Value:N0} downloads").Muted()
                         : null)
             ).Title("Latest Version").Icon(Icons.ArrowUp)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(mostDownloadedVersion != null 
+                Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
+                    | Text.H2(mostDownloadedVersion != null 
                         ? mostDownloadedVersion.Version 
                         : "N/A").Bold()
-                    | Text.Muted(mostDownloadedVersion != null
-                        ? (mostDownloadedVersion.Downloads.HasValue && mostDownloadedVersion.Downloads.Value > 0
-                            ? $"{mostDownloadedVersion.Downloads.Value:N0} downloads"
-                            : mostDownloadedVersion.Published.HasValue
-                                ? $"Published {mostDownloadedVersion.Published.Value:MMM dd, yyyy}"
-                                : "Latest version")
-                        : "")
+                    | (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue && mostDownloadedVersion.Downloads.Value > 0
+                        ? Text.Block($"{mostDownloadedVersion.Downloads.Value:N0} downloads").Muted()
+                        : null)
             ).Title("Most Popular").Icon(Icons.Star);
 
         // Smart Insights card
