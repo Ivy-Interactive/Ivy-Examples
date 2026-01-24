@@ -360,7 +360,7 @@ public class NuGetStatsApp : ViewBase
                     ? "Showing downloads per version (hover for details)" 
                     : "Showing version count (download data not available)")
                 | versionChart
-        ).Width(Size.Fraction(0.65f));
+        );
 
         // Version timeline chart - group by month to show all releases
         // Include ALL versions with valid dates (filter only invalid dates, not by year range)
@@ -387,7 +387,7 @@ public class NuGetStatsApp : ViewBase
             Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Version Releases Over Time")
                 | timelineChart
-        ).Width(Size.Fraction(0.65f));
+        );
 
         // Releases vs Pre-releases pie chart
         var releasesCount = s.Versions.Count(v => !IsPreRelease(v.Version));
@@ -406,11 +406,10 @@ public class NuGetStatsApp : ViewBase
                 PieChartStyles.Dashboard,
                 new PieChartTotal(s.Versions.Count.ToString("N0"), "Total Versions"))
             : null;
-
         var releaseTypeChartCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
                 | (releaseTypePieChart ?? (object)Text.Block("No data available").Muted())
-        ).Title("Releases vs Pre-releases");
+            ).Title("Releases vs Pre-releases");
 
         // All versions table - use ALL versions from service (no filtering)
         var allVersionsTable = s.Versions
@@ -424,10 +423,10 @@ public class NuGetStatsApp : ViewBase
 
         var versionsTable = allVersionsTable.AsQueryable()
             .ToDataTable()
+            .Height(Size.Units(150))
             .Header(v => v.Version, "Version")
             .Header(v => v.Published, "Published")
             .Header(v => v.Downloads, "Downloads")
-            .Height(Size.Units(400))
             .Config(c =>
             {
                 c.AllowSorting = true;
@@ -439,7 +438,7 @@ public class NuGetStatsApp : ViewBase
             Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4($"All Versions ({allVersionsTable.Count})")
                 | versionsTable
-        ).Width(Size.Fraction(0.35f));
+        ).Width(Size.Fraction(0.6f));
 
         return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | metrics.Width(Size.Fraction(0.9f))
@@ -448,10 +447,9 @@ public class NuGetStatsApp : ViewBase
                 | monthlyDownloadsCard
                 | releaseTypeChartCard)
             | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
-                | versionChartCard
-                | timelineChartCard)
-            | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
                 | versionsTableCard
-                | releaseTypeChartCard);
+                | (Layout.Vertical().Width(Size.Full())
+                    | versionChartCard
+                    | timelineChartCard ));
     }
 }
