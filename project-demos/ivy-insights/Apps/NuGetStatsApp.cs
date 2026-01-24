@@ -4,6 +4,14 @@ using Ivy.Helpers;
 
 namespace IvyInsights.Apps;
 
+internal class VersionChartDataItem
+{
+    public string Version { get; set; } = string.Empty;
+    public double Downloads { get; set; }
+    public bool HasDownloads { get; set; }
+    public bool IsTopVersion { get; set; }
+}
+
 [App(icon: Icons.ChartBar, title: "NuGet Statistics")]
 public class NuGetStatsApp : ViewBase
 {
@@ -71,6 +79,74 @@ public class NuGetStatsApp : ViewBase
         var animatedVersions = this.UseState(0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
+
+        // Version chart filters
+        var versionChartFromDate = this.UseState<DateTime?>(() => null);
+        var versionChartToDate = this.UseState<DateTime?>(() => null);
+        var versionChartShowPreReleases = this.UseState(true);
+        var versionChartCount = this.UseState(7);
+
+        // UseQuery for filtered version chart data - automatically updates when filters change
+        // Key includes filter values, so changing filters will automatically trigger re-fetch
+        var filteredVersionChartQuery = this.UseQuery(
+            key: $"version-chart-filtered/{PackageId}/{versionChartFromDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartToDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
+            fetcher: async (CancellationToken ct) =>
+            {
+                // Wait for main stats query to be ready
+                await Task.Yield(); // Ensure async
+                if (statsQuery.Value == null)
+                    return new List<VersionChartDataItem>();
+
+                var s = statsQuery.Value;
+                var count = Math.Clamp(versionChartCount.Value, 2, 20);
+                var filteredVersions = s.Versions.AsEnumerable();
+                
+                // Filter by date range
+                if (versionChartFromDate.Value.HasValue)
+                {
+                    var fromDate = versionChartFromDate.Value.Value.Date;
+                    filteredVersions = filteredVersions.Where(v => 
+                        v.Published.HasValue && v.Published.Value.Date >= fromDate);
+                }
+                if (versionChartToDate.Value.HasValue)
+                {
+                    var toDate = versionChartToDate.Value.Value.Date.AddDays(1);
+                    filteredVersions = filteredVersions.Where(v => 
+                        v.Published.HasValue && v.Published.Value.Date < toDate);
+                }
+                
+                // Filter pre-releases
+                if (!versionChartShowPreReleases.Value)
+                {
+                    filteredVersions = filteredVersions.Where(v => !IsPreRelease(v.Version));
+                }
+                
+                // Filter versions with downloads (same as Top Popular Versions)
+                // Only show versions that have download data
+                filteredVersions = filteredVersions.Where(v => v.Downloads.HasValue && v.Downloads.Value > 0);
+                
+                // Order by downloads (most downloaded first) - same as Top Popular Versions
+                var versionChartData = filteredVersions
+                    .OrderByDescending(v => v.Downloads)
+                    .Take(count)
+                    .Select(v => new VersionChartDataItem
+                    { 
+                        Version = v.Version, 
+                        Downloads = (double)v.Downloads!.Value,
+                        HasDownloads = true, // All versions here have downloads
+                        IsTopVersion = false // Will be set later if needed
+                    })
+                    .ToList();
+
+                return versionChartData;
+            },
+            options: new QueryOptions
+            {
+                Scope = QueryScope.Server, // Server scope, but with zero expiration for immediate recalculation
+                Expiration = TimeSpan.Zero, // No caching for filtered data - always recalculate
+                KeepPrevious = false, // Don't keep previous data when filters change
+                RevalidateOnMount = false // Don't revalidate on mount, only when key changes
+            });
 
         // Animate numbers when data is loaded
         if (statsQuery.Value != null && !hasAnimated.Value)
@@ -329,37 +405,45 @@ public class NuGetStatsApp : ViewBase
          .Height(Size.Full());
 
 
-        // Version distribution chart - enhanced with top version highlight
-        var versionChartData = s.Versions
-            .OrderByDescending(v => v.Published ?? DateTime.MinValue)
-            .Take(20)
+        // Version distribution chart - enhanced with filters
+        // Use filtered data from UseQuery which automatically updates when filters change
+        // Shows versions with most downloads (same approach as Top Popular Versions)
+        var versionChartData = filteredVersionChartQuery.Value ?? new List<VersionChartDataItem>();
+        var versionChartDataForChart = versionChartData
             .Select(v => new 
             { 
                 Version = v.Version, 
-                Downloads = (double)(v.Downloads ?? 0),
-                HasDownloads = v.Downloads.HasValue && v.Downloads.Value > 0,
-                IsTopVersion = mostDownloadedVersion != null && v.Version == mostDownloadedVersion.Version
+                Downloads = v.Downloads
             })
             .ToList();
 
-        var versionChart = versionChartData.ToBarChart()
-            .Dimension("Version", e => e.Version)
-            .Measure("Downloads", e => e.Sum(f => f.HasDownloads ? f.Downloads : 1.0));
+        var versionChart = versionChartDataForChart.Count > 0
+            ? versionChartDataForChart.ToBarChart()
+                .Dimension("Version", e => e.Version)
+                .Measure("Downloads", e => e.Sum(f => f.Downloads))
+            : null;
 
         var versionChartCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
                 | Layout.Horizontal().Gap(2)
                     | Text.H4("Recent Versions Distribution")
-                    | (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue
-                        ? Layout.Horizontal().Gap(1).Align(Align.Center)
-                            | Text.Block("Top: ").Muted()
-                            | Text.Block(mostDownloadedVersion.Version).Bold()
-                            | Text.Block($" ({mostDownloadedVersion.Downloads.Value:N0})").Muted()
-                        : null)
-                | Text.Muted(versionsWithDownloads > 0 
-                    ? "Showing downloads per version (hover for details)" 
-                    : "Showing version count (download data not available)")
-                | versionChart
+                | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | versionChartFromDate.ToDateInput().WithField()
+                    | versionChartToDate.ToDateInput().WithField()
+                    | new Button(versionChartShowPreReleases.Value ? "With Pre-releases" : "Releases Only")
+                        .Outline()
+                        .Icon(Icons.ChevronDown)
+                        .WithDropDown(
+                            MenuItem.Default("With Pre-releases").HandleSelect(() => versionChartShowPreReleases.Set(true)),
+                            MenuItem.Default("Releases Only").HandleSelect(() => versionChartShowPreReleases.Set(false))
+                        )
+                    | new NumberInput<int>(versionChartCount)
+                        .Min(2)
+                        .Max(20)
+                        .Width(Size.Units(60)))
+                | (versionChart != null
+                    ? versionChart
+                    : Text.Block("No versions found").Muted())
         );
 
         // Version timeline chart - group by month to show all releases
