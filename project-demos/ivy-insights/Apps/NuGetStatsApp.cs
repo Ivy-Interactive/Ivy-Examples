@@ -203,14 +203,20 @@ public class NuGetStatsApp : ViewBase
             return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
                 | Text.H1("NuGet Statistics")
                 | Text.Muted($"Loading statistics for {PackageId}...")
-                | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.8f))
+                | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.9f))
                     | new Skeleton().Height(Size.Units(80))
                     | new Skeleton().Height(Size.Units(80))
                     | new Skeleton().Height(Size.Units(80))
                     | new Skeleton().Height(Size.Units(80)))
-                | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(0.8f))
+                | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(0.9f))
                     | new Skeleton().Height(Size.Units(200))
-                    | new Skeleton().Height(Size.Units(200)));
+                    | new Skeleton().Height(Size.Units(200))
+                    | new Skeleton().Height(Size.Units(200)))
+                | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
+                    | new Skeleton().Width(Size.Fraction(0.6f)).Height(Size.Units(200))
+                    | (Layout.Vertical().Width(Size.Full())
+                        | new Skeleton().Height(Size.Units(200))
+                        | new Skeleton().Height(Size.Units(200))));
         }
 
         var s = statsQuery.Value!;
