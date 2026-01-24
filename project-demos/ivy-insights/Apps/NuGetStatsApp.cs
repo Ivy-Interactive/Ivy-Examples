@@ -9,6 +9,17 @@ public class NuGetStatsApp : ViewBase
 {
     private const string PackageId = "Ivy";
 
+    private static bool IsPreRelease(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+            return false;
+        
+        // Pre-releases in NuGet have a hyphen after the version number
+        // Examples: "1.0.0-alpha", "1.0.0-beta.1", "1.0.0-rc.1", "1.0.0-preview"
+        var parts = version.Split('-');
+        return parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]);
+    }
+
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
@@ -176,17 +187,88 @@ public class NuGetStatsApp : ViewBase
             ? Math.Round((recentDownloads / (double)totalDownloadsWithData) * 100, 1)
             : 0.0;
 
-        // Calculate growth metrics
+        // Calculate growth metrics using calendar months for consistency
+        var now = DateTime.UtcNow;
+        var thisMonthStart = new DateTime(now.Year, now.Month, 1);
+        var lastMonthStart = thisMonthStart.AddMonths(-1);
+        var lastMonthEnd = thisMonthStart;
+        var threeMonthsAgoStart = thisMonthStart.AddMonths(-3);
+        
         var versionsLastMonth = s.Versions
-            .Count(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-1));
+            .Count(v => v.Published.HasValue && 
+                       v.Published.Value >= lastMonthStart && 
+                       v.Published.Value < lastMonthEnd);
+        var versionsThisMonth = s.Versions
+            .Count(v => v.Published.HasValue && 
+                       v.Published.Value >= thisMonthStart && 
+                       v.Published.Value < now);
         var versionsLast3Months = s.Versions
-            .Count(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-3));
+            .Count(v => v.Published.HasValue && 
+                       v.Published.Value >= threeMonthsAgoStart && 
+                       v.Published.Value < now);
         var avgReleasesPerMonth = versionsLast3Months / 3.0;
         
-        // Calculate downloads for versions published in the last month
+        // Downloads for versions published in the last calendar month
         var downloadsLastMonth = s.Versions
-            .Where(v => v.Published.HasValue && v.Published.Value >= DateTime.UtcNow.AddMonths(-1) && v.Downloads.HasValue)
+            .Where(v => v.Published.HasValue && 
+                       v.Published.Value >= lastMonthStart && 
+                       v.Published.Value < lastMonthEnd &&
+                       v.Downloads.HasValue)
             .Sum(v => v.Downloads!.Value);
+        
+        // Downloads this month (versions published this calendar month)
+        var downloadsThisMonth = s.Versions
+            .Where(v => v.Published.HasValue && 
+                       v.Published.Value >= thisMonthStart && 
+                       v.Published.Value < now &&
+                       v.Downloads.HasValue)
+            .Sum(v => v.Downloads!.Value);
+
+        // Calculate average monthly downloads over last 6 months (excluding current month)
+        var monthlyDownloads = new List<long>();
+        for (int i = 1; i <= 6; i++)
+        {
+            var monthStart = thisMonthStart.AddMonths(-i);
+            var monthEnd = monthStart.AddMonths(1);
+            var monthDownloads = s.Versions
+                .Where(v => v.Published.HasValue && 
+                           v.Published.Value >= monthStart && 
+                           v.Published.Value < monthEnd &&
+                           v.Downloads.HasValue)
+                .Sum(v => v.Downloads!.Value);
+            monthlyDownloads.Add(monthDownloads);
+        }
+        
+        var avgMonthlyDownloads = monthlyDownloads.Count > 0 
+            ? monthlyDownloads.Average() 
+            : 0.0;
+
+        // Prepare monthly downloads data for chart - all months with versions
+        var monthlyChartData = s.Versions
+            .Where(v => v.Published.HasValue && v.Downloads.HasValue)
+            .GroupBy(v => new DateTime(v.Published!.Value.Year, v.Published.Value.Month, 1))
+            .OrderBy(g => g.Key)
+            .Select(g => new
+            {
+                Month = g.Key.ToString("MMM yyyy"),
+                Downloads = g.Sum(v => (double)v.Downloads!.Value)
+            })
+            .ToList();
+
+        // Calculate average downloads per month (stable value for all months)
+        var averageDownloads = monthlyChartData.Count > 0
+            ? Math.Round(monthlyChartData.Average(m => m.Downloads))
+            : 0.0;
+
+        // Add average to each month
+        var monthlyChartDataWithAverage = monthlyChartData
+            .Select(m => new
+            {
+                m.Month,
+                m.Downloads,
+                Average = averageDownloads
+            })
+            .ToList();
 
         // Smart Insights generation
         var insights = new List<string>();
@@ -221,15 +303,15 @@ public class NuGetStatsApp : ViewBase
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
                     | Text.H2(animatedDownloads.Value.ToString("N0")).Bold()
-                    | (downloadsLastMonth > 0
-                        ? Text.Block($"+{downloadsLastMonth:N0} this month").Muted()
+                    | (downloadsThisMonth > 0
+                        ? Text.Block($"+{downloadsThisMonth:N0} this month").Muted()
                         : null)
             ).Title("Total Downloads").Icon(Icons.Download)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3).Align(Align.Center)
                     | Text.H2(animatedVersions.Value.ToString("N0")).Bold()
-                    | (versionsLastMonth > 0
-                        ? Text.Block($"+{versionsLastMonth} this month").Muted()
+                    | (versionsThisMonth > 0
+                        ? Text.Block($"+{versionsThisMonth} this month").Muted()
                         : null)
             ).Title("Total Versions").Icon(Icons.Tag)
             | new Card(
@@ -261,30 +343,63 @@ public class NuGetStatsApp : ViewBase
                     )
         ).Width(Size.Fraction(0.35f));
 
-        // Adoption Rate card
-        var adoptionCard = new Card(
-            Layout.Vertical().Gap(3).Padding(3).Align(Align.Center)
-                | Text.H3($"{animatedAdoptionRate.Value:F1}%").Bold()
-                | Text.Muted("Adoption Rate")
-                | Text.Block("Users on versions from last 6 months").Muted()
-                | (adoptionRate > 50
-                    ? Text.Block("Excellent adoption")
-                    : adoptionRate > 30
-                        ? Text.Block("Good momentum")
-                        : Text.Block("Growth opportunity"))
-        ).Title("Adoption Velocity").Icon(Icons.TrendingUp).Width(Size.Fraction(0.3f));
+        // Top 3 Popular Versions bar chart
+        var topVersionsData = s.Versions
+            .Where(v => v.Downloads.HasValue && v.Downloads.Value > 0)
+            .OrderByDescending(v => v.Downloads)
+            .Take(3)
+            .Select(v => new
+            {
+                Version = v.Version,
+                Downloads = (double)v.Downloads!.Value
+            })
+            .ToList();
 
-        // Package info card
-        var packageInfo = new Card(
-            Layout.Vertical().Gap(2).Padding(3)
-                | Text.H3("Package Information")
-                | (s.Description != null ? Text.Block(s.Description) : Text.Muted("No description available"))
-                | (s.Authors != null ? Text.Block($"Authors: {s.Authors}") : null)
-                | (s.ProjectUrl != null 
-                    ? Text.Markdown($"Project URL: [{s.ProjectUrl}]({s.ProjectUrl})")
-                    : null)
-                | Text.Block($"First Published: {(s.FirstVersionPublished.HasValue ? s.FirstVersionPublished.Value.ToString("MMM dd, yyyy") : "N/A")}")
-        ).Width(Size.Fraction(0.35f));
+        var topVersionsChart = topVersionsData.Count > 0
+            ? topVersionsData.ToBarChart()
+                .Dimension("Version", e => e.Version)
+                .Measure("Downloads", e => e.Sum(f => f.Downloads))
+            : null;
+
+        var adoptionCard = topVersionsChart != null
+            ? new Card(
+                Layout.Vertical().Gap(3).Padding(3)
+                    | topVersionsChart
+            ).Title("Top Popular Versions").Icon(Icons.Star).Height(Size.Full())
+            : new Card(
+                Layout.Vertical().Gap(3).Padding(3).Align(Align.Center)
+                    | Text.Block("No download data available").Muted()
+            ).Title("Top Popular Versions").Icon(Icons.Star).Height(Size.Full());
+
+        // Monthly Downloads Card - compares this month with average
+        var percentDiff = avgMonthlyDownloads > 0
+            ? Math.Round(((downloadsThisMonth - avgMonthlyDownloads) / avgMonthlyDownloads) * 100, 1)
+            : 0.0;
+
+        var isGrowing = downloadsThisMonth > avgMonthlyDownloads;
+        var trendText = percentDiff == 0 
+            ? "On track"
+            : isGrowing 
+                ? $"+{Math.Abs(percentDiff):F1}% vs avg"
+                : $"{percentDiff:F1}% vs avg";
+
+        // Monthly downloads line chart with average line
+        var monthlyDownloadsChart = monthlyChartDataWithAverage
+            .ToLineChart(
+                dimension: m => m.Month,
+                measures: [
+                    m => m.First().Downloads,
+                    m => m.First().Average
+                ],
+                LineChartStyles.Dashboard);
+
+        var monthlyDownloadsCard = new Card(
+            Layout.Vertical().Gap(3).Padding(3)
+                | monthlyDownloadsChart
+        ).Title("Monthly Downloads")
+         .Icon(isGrowing ? Icons.TrendingUp : Icons.TrendingDown)
+         .Height(Size.Full());
+
 
         // Version distribution chart - enhanced with top version highlight
         var versionChartData = s.Versions
@@ -346,6 +461,29 @@ public class NuGetStatsApp : ViewBase
                 | timelineChart
         ).Width(Size.Fraction(0.65f));
 
+        // Releases vs Pre-releases pie chart
+        var releasesCount = s.Versions.Count(v => !IsPreRelease(v.Version));
+        var preReleasesCount = s.Versions.Count(v => IsPreRelease(v.Version));
+        
+        var releaseTypeData = new[]
+        {
+            new { Type = "Releases", Count = releasesCount },
+            new { Type = "Pre-releases", Count = preReleasesCount }
+        }.Where(x => x.Count > 0).ToList();
+
+        var releaseTypePieChart = releaseTypeData.Count > 0
+            ? releaseTypeData.ToPieChart(
+                dimension: item => item.Type,
+                measure: item => item.Sum(x => (double)x.Count),
+                PieChartStyles.Dashboard,
+                new PieChartTotal(s.Versions.Count.ToString("N0"), "Total Versions"))
+            : null;
+
+        var releaseTypeChartCard = new Card(
+            Layout.Vertical().Gap(3).Padding(3)
+                | (releaseTypePieChart ?? (object)Text.Block("No data available").Muted())
+        ).Title("Releases vs Pre-releases");
+
         // All versions table - use ALL versions from service (no filtering)
         var allVersionsTable = s.Versions
             .Select(v => new
@@ -377,15 +515,15 @@ public class NuGetStatsApp : ViewBase
 
         return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
             | metrics.Width(Size.Fraction(0.9f))
-            | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
+            | (Layout.Grid().Columns(3).Gap(3).Width(Size.Fraction(0.9f))
                 | adoptionCard
-                | insightsCard
-                | packageInfo)
+                | monthlyDownloadsCard
+                | releaseTypeChartCard)
             | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
                 | versionChartCard
                 | timelineChartCard)
             | (Layout.Horizontal().Gap(3).Width(Size.Fraction(0.9f))
                 | versionsTableCard
-                | new Spacer());
+                | releaseTypeChartCard);
     }
 }
