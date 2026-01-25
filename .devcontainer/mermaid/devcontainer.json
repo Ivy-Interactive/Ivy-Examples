@@ -1,0 +1,31 @@
+{
+    "name": "Mermaid",
+    "image": "mcr.microsoft.com/dotnet/sdk:9.0",
+    "features": {},
+    "workspaceFolder": "/workspaces/Ivy-Examples/packages-demos/mermaid",
+    "postCreateCommand": "dotnet tool install -g Ivy.Console",
+    "postStartCommand": "dotnet watch",
+    "forwardPorts": [
+        5010
+    ],
+    "portsAttributes": {
+        "5010": {
+            "label": "Mermaid",
+            "onAutoForward": "openPreview"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csharp",
+                "ms-vscode.powershell",
+                "ms-dotnettools.csdevkit"
+            ]
+        },
+        "codespaces": {
+            "openFiles": [
+                "Apps/MermaidApp.cs"
+            ]
+        }
+    }
+}
