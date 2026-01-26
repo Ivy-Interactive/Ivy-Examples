@@ -62,6 +62,22 @@ public class IvyInsightsApp : ViewBase
         var versionChartShowPreReleases = this.UseState(true);
         var versionChartCount = this.UseState(7);
 
+        var dbService = UseService<IDatabaseService>();
+        var dailyStatsQuery = this.UseQuery(
+            key: "daily-download-stats",
+            fetcher: async (CancellationToken ct) =>
+            {
+                return await dbService.GetDailyDownloadStatsAsync(30, ct);
+            },
+            options: new QueryOptions
+            {
+                Scope = QueryScope.Server,
+                Expiration = TimeSpan.FromMinutes(5),
+                KeepPrevious = true,
+                RevalidateOnMount = true
+            },
+            tags: ["database", "downloads"]);
+
         var filteredVersionChartQuery = this.UseQuery(
             key: $"version-chart-filtered/{PackageId}/{statsQuery.Value != null}/{versionChartFromDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartToDate.Value?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
             fetcher: async (CancellationToken ct) =>
@@ -215,54 +231,42 @@ public class IvyInsightsApp : ViewBase
                        v.Downloads.HasValue)
             .Sum(v => v.Downloads!.Value);
         
-        var downloadsThisMonth = s.Versions
-            .Where(v => v.Published.HasValue && 
-                       v.Published.Value >= thisMonthStart && 
-                       v.Published.Value < now &&
-                       v.Downloads.HasValue)
-            .Sum(v => v.Downloads!.Value);
-
-        var monthlyDownloads = new List<long>();
-        for (int i = 1; i <= 6; i++)
-        {
-            var monthStart = thisMonthStart.AddMonths(-i);
-            var monthEnd = monthStart.AddMonths(1);
-            var monthDownloads = s.Versions
-                .Where(v => v.Published.HasValue && 
-                           v.Published.Value >= monthStart && 
-                           v.Published.Value < monthEnd &&
-                           v.Downloads.HasValue)
-                .Sum(v => v.Downloads!.Value);
-            monthlyDownloads.Add(monthDownloads);
-        }
+        // Use daily stats from database
+        var dailyStats = dailyStatsQuery.Value ?? new List<DailyDownloadStats>();
         
-        var avgMonthlyDownloads = monthlyDownloads.Count > 0 
-            ? monthlyDownloads.Average() 
-            : 0.0;
-
-        var monthlyChartData = s.Versions
-            .Where(v => v.Published.HasValue && v.Downloads.HasValue)
-            .GroupBy(v => new DateTime(v.Published!.Value.Year, v.Published.Value.Month, 1))
-            .OrderBy(g => g.Key)
-            .Select(g => new
+        // Get daily downloads for the last month (last 30 days)
+        var last30DaysStart = now.AddDays(-30).Date;
+        var dailyChartData = dailyStats
+            .Where(d => d.Date >= DateOnly.FromDateTime(last30DaysStart))
+            .OrderBy(d => d.Date)
+            .Select(d => new
             {
-                Month = g.Key.ToString("MMM yyyy"),
-                Downloads = g.Sum(v => (double)v.Downloads!.Value)
+                Date = d.Date.ToString("MMM dd"),
+                Downloads = (double)Math.Max(0, d.DailyGrowth)
             })
             .ToList();
 
-        var averageDownloads = monthlyChartData.Count > 0
-            ? Math.Round(monthlyChartData.Average(m => m.Downloads))
+        var averageDailyDownloads = dailyChartData.Count > 0
+            ? Math.Round(dailyChartData.Average(d => d.Downloads))
             : 0.0;
 
-        var monthlyChartDataWithAverage = monthlyChartData
-            .Select(m => new
+        var dailyChartDataWithAverage = dailyChartData
+            .Select(d => new
             {
-                m.Month,
-                m.Downloads,
-                Average = averageDownloads
+                d.Date,
+                d.Downloads,
+                Average = averageDailyDownloads
             })
             .ToList();
+
+        // Calculate this month and average for metrics using database data
+        var downloadsThisMonth = dailyStats
+            .Where(d => d.Date.Year == now.Year && d.Date.Month == now.Month)
+            .Sum(d => Math.Max(0, d.DailyGrowth));
+        
+        var avgMonthlyDownloads = dailyChartData.Count > 0 
+            ? dailyChartData.Average(d => d.Downloads) * 30 // Average daily * 30 days
+            : 0.0;
 
         var latestVersionInfo = s.Versions.FirstOrDefault(v => v.Version == s.LatestVersion);
         
@@ -331,19 +335,23 @@ public class IvyInsightsApp : ViewBase
 
         var isGrowing = downloadsThisMonth > avgMonthlyDownloads;
 
-        var monthlyDownloadsChart = monthlyChartDataWithAverage
-            .ToLineChart(
-                dimension: m => m.Month,
-                measures: [
-                    m => m.First().Downloads,
-                    m => m.First().Average
-                ],
-                LineChartStyles.Dashboard);
+        var dailyDownloadsChart = dailyChartDataWithAverage.Count > 0
+            ? dailyChartDataWithAverage
+                .ToLineChart(
+                    dimension: d => d.Date,
+                    measures: [
+                        d => d.First().Downloads,
+                        d => d.First().Average
+                    ],
+                    LineChartStyles.Dashboard)
+            : null;
 
         var monthlyDownloadsCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
-                | monthlyDownloadsChart
-        ).Title("Monthly Downloads")
+                | (dailyDownloadsChart != null
+                    ? dailyDownloadsChart
+                    : Text.Block("No data available for the last month").Muted())
+        ).Title("Daily Downloads (Last 30 Days)")
          .Icon(isGrowing ? Icons.TrendingUp : Icons.TrendingDown)
          .Height(Size.Full());
 

@@ -92,3 +92,10 @@ public sealed class VersionInfo
     public DateTime? Published { get; set; }
     public long? Downloads { get; set; }
 }
+
+public sealed class DailyDownloadStats
+{
+    public DateOnly Date { get; set; }
+    public long TotalDownloads { get; set; }
+    public long DailyGrowth { get; set; }
+}

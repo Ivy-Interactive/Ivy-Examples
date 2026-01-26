@@ -20,6 +20,7 @@ server.Services.AddHttpClient<NuGetApiClient>(client =>
 });
 
 server.Services.AddSingleton<INuGetStatisticsProvider, NuGetStatisticsProvider>();
+server.Services.AddSingleton<IDatabaseService, DatabaseService>();
 
 #if DEBUG
 server.UseHotReload();
