@@ -144,24 +144,6 @@
       ]
     },
     {
-      "name": "Ivy Insights - NuGet Statistics Dashboard",
-      "description": "Ivy Insights is a comprehensive web application for visualizing and analyzing NuGet package statistics. It displays real-time data about package versions, downloads, releases, and trends with interactive charts, animated metrics, and detailed analytics. Built specifically for monitoring the Ivy framework package, but can be easily adapted for any NuGet package.",
-      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/ivy-insights",
-      "deploymentLink": "ivy-projectdemos-ivy-insights.sliplane.app",
-      "tags": [
-        "NuGet",
-        "Statistics",
-        "Analytics",
-        "Data Visualization",
-        "Dashboard",
-        "Ivy Framework",
-        "C#",
-        ".NET",
-        "Package Management",
-        "Metrics"
-      ]
-    },
-    {
       "name": "LlmTornado",
       "description": "LlmTornado Examples is a web application demonstrating the \\1 library capabilities for interacting with LLM models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support. https://github.com/user-attachments/assets/4466bb03-4a59-4469-b857-5bcd2e254963",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/llm-tornado-ollama",
