@@ -15,7 +15,7 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="Ivy" Version="1.2.13-pre-20260206112943" />
+    <PackageReference Include="Ivy" Version="1.2.14" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Apps" />
