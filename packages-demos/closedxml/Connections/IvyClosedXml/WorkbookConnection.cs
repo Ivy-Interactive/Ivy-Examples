@@ -101,10 +101,10 @@ public class WorkbookConnection : IConnection
 
     public string GetNamespace() => typeof(WorkbookConnection).Namespace;
 
-    public void RegisterServices(Server server)
+    public void RegisterServices(IServiceCollection services)
     {
         // Register the static WorkbookRepository instance as Singleton - single shared database for the entire application
-        server.Services.AddSingleton<WorkbookRepository>(_ => _sharedRepository);
-        server.Services.AddSingleton<WorkbookConnection>();
+        services.AddSingleton<WorkbookRepository>(_ => _sharedRepository);
+        services.AddSingleton<WorkbookConnection>();
     }
 }

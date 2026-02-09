@@ -121,7 +121,7 @@ public class TestAuthApp : ViewBase
                 .RemoveEmpty();
             
             var content = Layout.Vertical().Align(Align.Center)
-                | Text.Literal(repo.Name).Italic().Bold()
+                | Text.Block(repo.Name).Italic().Bold()
                 | details;
             
             return new Card(content)
