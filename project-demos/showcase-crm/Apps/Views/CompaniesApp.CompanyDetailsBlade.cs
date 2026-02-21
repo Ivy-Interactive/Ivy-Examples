@@ -111,7 +111,7 @@ public class CompanyDetailsBlade(int companyId) : ViewBase
             ));
 
         return new Fragment()
-               | new BladeHeader(Text.Literal($"Company: {companyValue.Name}"))
+               | new BladeHeader(Text.H4(companyValue.Name))
                | (Layout.Vertical() | detailsCard | relatedCard);
     }
 
