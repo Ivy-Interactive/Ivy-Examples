@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.14" />
+    <PackageReference Include="Ivy" Version="1.2.15" />
     <PackageReference Include="Ivy.Auth.GitHub" Version="1.2.12" />
     <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />

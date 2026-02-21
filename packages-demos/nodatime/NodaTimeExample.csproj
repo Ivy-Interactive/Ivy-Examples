@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.14" /> 
+    <PackageReference Include="Ivy" Version="1.2.15" /> 
     <PackageReference Include="NodaTime" Version="3.2.3" />
   </ItemGroup>
 

@@ -17,7 +17,7 @@
 
   
     <ItemGroup>
-      <PackageReference Include="Ivy" Version="1.2.14" />
+      <PackageReference Include="Ivy" Version="1.2.15" />
       <PackageReference Include="Snowflake.Data" Version="5.2.1" />
     </ItemGroup>
     
