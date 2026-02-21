@@ -20,7 +20,7 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
         if (dealQuery.Loading || dealQuery.Value == null)
             return Skeleton.Form().ToSheet(isOpen, "Edit Deal");
 
-        return dealQuery.Value
+        var formBuilder = dealQuery.Value
             .ToForm()
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
             .Builder(e => e.CloseDate, e => e.ToDateInput())
@@ -29,8 +29,35 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(UseContactSearch, UseContactLookup, placeholder: "Select Contact"))
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(UseLeadSearch, UseLeadLookup, placeholder: "Select Lead"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit)
-            .ToSheet(isOpen, "Edit Deal");
+            .HandleSubmit(OnSubmit);
+
+        var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(Context);
+
+        var deleteBtn = new Button("Delete", onClick: async _ =>
+            {
+                await DeleteDeal(dealId, factory, queryService);
+                queryService.RevalidateByTag((typeof(Deal), dealId));
+                queryService.RevalidateByTag(typeof(Deal[]));
+                refreshToken.Refresh(dealId);
+                isOpen.Set(false);
+            })
+            .Variant(ButtonVariant.Destructive)
+            .Icon(Icons.Trash2)
+            .WithConfirm("Are you sure you want to delete this deal?", "Delete Deal");
+
+        var footer = Layout.Horizontal()
+                | new Button("Save").Variant(ButtonVariant.Primary).Loading(loading).Disabled(loading)
+                    .HandleClick(async _ =>
+                    {
+                        if (await onSubmit())
+                            isOpen.Set(false);
+                    })
+                | deleteBtn
+                | new Button("Cancel").Variant(ButtonVariant.Outline).HandleClick(_ => isOpen.Set(false))
+                | validationView;
+
+        var layout = new FooterLayout(footer, formView);
+        return !isOpen.Value ? null : new Sheet(_ => isOpen.Set(false), layout, title: "Edit Deal");
 
         async Task OnSubmit(Deal? request)
         {
@@ -42,6 +69,17 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
             queryService.RevalidateByTag((typeof(Deal), dealId));
             queryService.RevalidateByTag(typeof(Deal[]));
             refreshToken.Refresh(dealId);
+        }
+    }
+
+    private static async Task DeleteDeal(int id, ShowcaseCrmContextFactory factory, IQueryService queryService)
+    {
+        await using var db = factory.CreateDbContext();
+        var deal = await db.Deals.SingleOrDefaultAsync(d => d.Id == id);
+        if (deal != null)
+        {
+            db.Deals.Remove(deal);
+            await db.SaveChangesAsync();
         }
     }
 
