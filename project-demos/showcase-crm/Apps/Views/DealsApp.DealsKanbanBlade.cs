@@ -14,18 +14,33 @@ public class DealsKanbanBlade : ViewBase
         var refreshToken = UseRefreshToken();
         var factory = UseService<ShowcaseCrmContextFactory>();
         var queryService = UseService<IQueryService>();
-        var deals = UseDealListRecords(Context);
+        var dealsQuery = UseDealListRecords(Context);
+        var deals = UseState<DealKanbanRecord[]>(() => []);
 
         var (sheetView, showSheet) = UseTrigger((IState<bool> isOpen, int id) => new DealEditSheet(isOpen, refreshToken, id));
 
-        UseEffect(() => { if (refreshToken.ReturnValue is int) deals.Mutator.Revalidate(); }, [refreshToken]);
+        UseEffect(() =>
+        {
+            if (dealsQuery.Value != null && deals.Value.Length == 0)
+                deals.Set(dealsQuery.Value);
+        }, EffectTrigger.OnBuild());
+        UseEffect(() =>
+        {
+            if (refreshToken.ReturnValue is int)
+            {
+                deals.Set([]);
+                dealsQuery.Mutator.Revalidate();
+            }
+        }, [refreshToken]);
 
-        if (deals.Value == null) return Text.Muted("Loading...");
+        if (dealsQuery.Value == null) return Text.Muted("Loading...");
 
-        var kanban = deals.Value
+        var data = deals.Value.Length > 0 ? deals.Value : dealsQuery.Value!;
+
+        var kanban = data
             .ToKanban(
                 groupBySelector: d => d.StageDescription,
-                idSelector: d => d.Id,
+                idSelector: d => d.Id.ToString(),
                 orderSelector: d => d.Id)
             .CardBuilder(deal => new Card(
                 content: deal.ToDetails()
@@ -34,7 +49,34 @@ public class DealsKanbanBlade : ViewBase
             .HandleClick(() => showSheet(deal.Id)))
             .ColumnOrder<int>(d => StageOrder(d.StageDescription))
             .Width(Size.Full())
-            .HandleMove(moveData => _ = MoveDeal(moveData, factory, queryService, () => deals.Mutator.Revalidate()))
+            .HandleMove(moveData =>
+            {
+                var cardId = moveData.CardId?.ToString();
+                if (string.IsNullOrEmpty(cardId) || !int.TryParse(cardId, out int id)) return;
+
+                var updatedTasks = data.ToList();
+                var taskToMove = updatedTasks.FirstOrDefault(t => t.Id == id);
+                if (taskToMove == null) return;
+
+                var updated = taskToMove with { StageDescription = moveData.ToColumn };
+                updatedTasks.RemoveAll(t => t.Id == id);
+
+                int insertIndex = updatedTasks.Count;
+                var taskAtTargetIndex = updatedTasks
+                    .Where(t => t.StageDescription == moveData.ToColumn)
+                    .ElementAtOrDefault(moveData.TargetIndex ?? -1);
+                if (taskAtTargetIndex != null)
+                    insertIndex = updatedTasks.IndexOf(taskAtTargetIndex);
+                else
+                {
+                    var last = updatedTasks.LastOrDefault(t => t.StageDescription == moveData.ToColumn);
+                    if (last != null) insertIndex = updatedTasks.IndexOf(last) + 1;
+                }
+                updatedTasks.Insert(insertIndex, updated);
+                deals.Set(updatedTasks.ToArray());
+
+                _ = MoveDeal(id, moveData.ToColumn, factory, queryService, () => dealsQuery.Mutator.Revalidate());
+            })
             .Empty(
                 new Card()
                     .Title("No Deals")
@@ -49,11 +91,10 @@ public class DealsKanbanBlade : ViewBase
         );
     }
 
-    private static async Task MoveDeal((object? CardId, string ToColumn, int? TargetIndex) moveData, ShowcaseCrmContextFactory factory, IQueryService queryService, Action revalidate)
+    private static async Task MoveDeal(int id, string toColumn, ShowcaseCrmContextFactory factory, IQueryService queryService, Action revalidate)
     {
-        if (moveData.CardId == null || !int.TryParse(moveData.CardId.ToString(), out int id)) return;
         await using var db = factory.CreateDbContext();
-        var stage = await db.DealStages.FirstOrDefaultAsync(s => s.DescriptionText == moveData.ToColumn);
+        var stage = await db.DealStages.FirstOrDefaultAsync(s => s.DescriptionText == toColumn);
         if (stage == null) return;
         var deal = await db.Deals.FirstOrDefaultAsync(d => d.Id == id);
         if (deal == null) return;
