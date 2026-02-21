@@ -1,6 +1,7 @@
 /*
-The percentage of leads that converted into closed deals. Measures the quality of leads and sales process efficiency.
-(COUNT(Deal WHERE Deal.LeadId IS NOT NULL AND Deal.Stage indicates closed/won AND Deal.CloseDate is within date range) / COUNT(Lead WHERE Lead.CreatedAt is within date range)) * 100
+Win Rate: percentage of closed deals (won + lost) that were won.
+Measures sales effectiveness and deal qualification quality.
+(COUNT(Deal WHERE Stage = 'Closed Won' AND CloseDate in range) / COUNT(Deal WHERE Stage IN ('Closed Won','Closed Lost') AND CloseDate in range)) * 100
 */
 namespace ShowcaseCrm.Apps.Views;
 
@@ -9,8 +10,8 @@ public class LeadConversionRateMetricView(DateTime fromDate, DateTime toDate) : 
     public override object? Build()
     {
         return new MetricView(
-            "Lead Conversion Rate",
-            Icons.Target,
+            "Win Rate",
+            Icons.Trophy,
             UseMetricData
         );
     }
@@ -25,60 +26,64 @@ public class LeadConversionRateMetricView(DateTime fromDate, DateTime toDate) : 
             {
                 await using var db = factory.CreateDbContext();
 
-                var currentPeriodDeals = await db.Deals
-                    .Where(d => d.LeadId != null 
-                                && d.Stage.DescriptionText.ToLower().Contains("closed/won") 
-                                && d.CloseDate >= fromDate 
+                var closedWon = await db.Deals
+                    .Where(d => d.Stage.DescriptionText == "Closed Won"
+                                && d.CloseDate >= fromDate
                                 && d.CloseDate <= toDate)
                     .CountAsync(ct);
 
-                var currentPeriodLeads = await db.Leads
-                    .Where(l => l.CreatedAt >= fromDate && l.CreatedAt <= toDate)
+                var closedLost = await db.Deals
+                    .Where(d => d.Stage.DescriptionText == "Closed Lost"
+                                && d.CloseDate >= fromDate
+                                && d.CloseDate <= toDate)
                     .CountAsync(ct);
 
-                double? currentConversionRate = currentPeriodLeads > 0 
-                    ? (double?)((double)currentPeriodDeals / currentPeriodLeads * 100) 
-                    : null;
+                var totalClosed = closedWon + closedLost;
+                double currentWinRate = totalClosed > 0
+                    ? (double)closedWon / totalClosed * 100
+                    : 0;
 
                 var periodLength = toDate - fromDate;
                 var previousFromDate = fromDate.AddDays(-periodLength.TotalDays);
                 var previousToDate = fromDate.AddDays(-1);
 
-                var previousPeriodDeals = await db.Deals
-                    .Where(d => d.LeadId != null 
-                                && d.Stage.DescriptionText.ToLower().Contains("closed/won") 
-                                && d.CloseDate >= previousFromDate 
+                var prevClosedWon = await db.Deals
+                    .Where(d => d.Stage.DescriptionText == "Closed Won"
+                                && d.CloseDate >= previousFromDate
                                 && d.CloseDate <= previousToDate)
                     .CountAsync(ct);
 
-                var previousPeriodLeads = await db.Leads
-                    .Where(l => l.CreatedAt >= previousFromDate && l.CreatedAt <= previousToDate)
+                var prevClosedLost = await db.Deals
+                    .Where(d => d.Stage.DescriptionText == "Closed Lost"
+                                && d.CloseDate >= previousFromDate
+                                && d.CloseDate <= previousToDate)
                     .CountAsync(ct);
 
-                double? previousConversionRate = previousPeriodLeads > 0 
-                    ? (double)previousPeriodDeals / previousPeriodLeads * 100 
-                    : null;
+                var prevTotalClosed = prevClosedWon + prevClosedLost;
+                double previousWinRate = prevTotalClosed > 0
+                    ? (double)prevClosedWon / prevTotalClosed * 100
+                    : 0;
 
-                if (previousConversionRate == null || previousConversionRate == 0)
+                if (previousWinRate == 0)
                 {
                     return new MetricRecord(
-                        MetricFormatted: currentConversionRate?.ToString("N2") + "%",
+                        MetricFormatted: currentWinRate.ToString("N1") + "%",
                         TrendComparedToPreviousPeriod: null,
                         GoalAchieved: null,
                         GoalFormatted: null
                     );
                 }
 
-                double? trend = (currentConversionRate - previousConversionRate) / previousConversionRate;
+                double trend = (currentWinRate - previousWinRate) / previousWinRate;
 
-                var goal = previousConversionRate * 1.1;
-                double? goalAchievement = goal > 0 ? currentConversionRate / goal : null;
+                var goal = Math.Min(100, previousWinRate * 1.1);
+                double? goalAchievement = goal > 0 ? currentWinRate / goal : null;
 
                 return new MetricRecord(
-                    MetricFormatted: currentConversionRate?.ToString("N2") + "%",
+                    MetricFormatted: currentWinRate.ToString("N1") + "%",
                     TrendComparedToPreviousPeriod: trend,
                     GoalAchieved: goalAchievement,
-                    GoalFormatted: (goal ?? 0).ToString("N2") + "%"
+                    GoalFormatted: goal.ToString("N1") + "%"
                 );
             },
             options: new QueryOptions { Expiration = TimeSpan.FromMinutes(5) }
