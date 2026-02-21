@@ -64,6 +64,7 @@ public class DealsKanbanBlade : ViewBase
             .Width(d => d.Id, Size.Px(40))
             .Width(d => d.CompanyName, Size.Px(250))
             .Width(d => d.Amount, Size.Px(100))
+            .LoadAllRows(true)
             .Config(config =>
             {
                 config.AllowSorting = true;
@@ -144,21 +145,12 @@ public class DealsKanbanBlade : ViewBase
                     .Description("Create your first deal to get started")
             );
 
-        var createButton = Layout.Vertical()
-            | new Button("Create Deal")
-                .Icon(Icons.Plus)
-                .Large()
-                .BorderRadius(BorderRadius.Full)
-                .Secondary()
-                .ToTrigger((o) => new DealCreateDialog(o, refreshToken));
-
         return new Fragment(
             Layout.Vertical().Height(Size.Full())
                 | Layout.Tabs(
                     new Tab("Kanban", kanban).Icon(Icons.LayoutGrid),
                     new Tab("DataTable", dataTable).Icon(Icons.Table)
                 ).Variant(TabsVariant.Tabs).Height(Size.Fraction(1f)),
-            new FloatingPanel(createButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 10)),
             sheetView,
             alertView
         );
@@ -202,7 +194,6 @@ public class DealsKanbanBlade : ViewBase
                 return await db.Deals
                     .Include(d => d.Company).Include(d => d.Contact).Include(d => d.Stage)
                     .OrderByDescending(d => d.CreatedAt)
-                    .Take(50)
                     .Select(d => new DealKanbanRecord(d.Id, d.Company.Name, $"{d.Contact.FirstName} {d.Contact.LastName}", d.Amount, d.Stage.DescriptionText, d.CloseDate, d.Lead != null ? d.Lead.Source : null))
                     .ToArrayAsync(ct);
             },

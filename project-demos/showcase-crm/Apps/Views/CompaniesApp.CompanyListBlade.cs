@@ -75,7 +75,6 @@ public class CompanyListBlade : ViewBase
 
                 return await linq
                     .OrderByDescending(e => e.CreatedAt)
-                    .Take(50)
                     .Select(e => new CompanyListRecord(e.Id, e.Name, e.Address))
                     .ToArrayAsync(ct);
             },

@@ -65,6 +65,7 @@ public class CompanyDealsBlade(int companyId) : ViewBase
             .Header(d => d.Amount, "Amount")
             .Header(d => d.CloseDate, "Date")
             .Width(d => d.Id, Size.Px(40))
+            .LoadAllRows(true)
             .Config(config =>
             {
                 config.AllowSorting = true;

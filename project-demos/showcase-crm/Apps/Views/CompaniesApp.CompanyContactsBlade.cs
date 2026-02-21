@@ -54,6 +54,7 @@ public class CompanyContactsBlade(int companyId) : ViewBase
             .Header(c => c.Email, "Email")
             .Header(c => c.Phone, "Phone")
             .Width(c => c.Id, Size.Px(40))
+            .LoadAllRows(true)
             .Config(config =>
             {
                 config.AllowSorting = true;

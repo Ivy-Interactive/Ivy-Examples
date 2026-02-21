@@ -75,7 +75,6 @@ public class UserListBlade : ViewBase
 
                 return await linq
                     .OrderByDescending(e => e.CreatedAt)
-                    .Take(50)
                     .Select(e => new UserListRecord(e.Id, e.Name, e.Email))
                     .ToArrayAsync(ct);
             },

@@ -80,7 +80,6 @@ public class ContactListBlade : ViewBase
 
                 return await linq
                     .OrderByDescending(e => e.CreatedAt)
-                    .Take(50)
                     .Select(e => new ContactListRecord(e.Id, e.FirstName, e.LastName, e.Email))
                     .ToArrayAsync(ct);
             },

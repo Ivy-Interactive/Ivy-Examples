@@ -60,6 +60,7 @@ public class CompanyLeadsBlade(int? companyId) : ViewBase
             .Header(l => l.CreatedAt, "Created")
             .Header(l => l.UpdatedAt, "Updated")
             .Width(l => l.Id, Size.Px(40))
+            .LoadAllRows(true)
             .Config(config =>
             {
                 config.AllowSorting = true;

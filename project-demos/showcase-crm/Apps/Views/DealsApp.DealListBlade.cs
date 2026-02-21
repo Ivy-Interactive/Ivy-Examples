@@ -88,7 +88,6 @@ public class DealListBlade : ViewBase
 
                 return await linq
                     .OrderByDescending(d => d.CreatedAt)
-                    .Take(50)
                     .Select(d => new DealListRecord(
                         d.Id,
                         d.Company.Name,

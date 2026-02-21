@@ -87,7 +87,6 @@ public class LeadListBlade : ViewBase
 
                 return await linq
                     .OrderByDescending(l => l.CreatedAt)
-                    .Take(50)
                     .Select(l => new LeadListRecord(
                         l.Id,
                         l.Company != null ? l.Company.Name : null,
