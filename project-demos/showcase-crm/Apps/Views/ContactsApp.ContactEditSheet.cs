@@ -53,7 +53,6 @@ public class ContactEditSheet(IState<bool> isOpen, RefreshToken refreshToken, in
                 return (await db.Companies
                         .Where(e => e.Name.Contains(query))
                         .Select(e => new { e.Id, e.Name })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.Name, e.Id))
                     .ToArray();

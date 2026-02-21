@@ -26,7 +26,7 @@ public class DealsClosedMetricView(DateTime fromDate, DateTime toDate) : ViewBas
                 await using var db = factory.CreateDbContext();
 
                 var currentPeriodDealsClosed = await db.Deals
-                    .Where(d => d.Stage.DescriptionText == "Closed/Won" && d.CloseDate >= fromDate && d.CloseDate <= toDate)
+                    .Where(d => d.Stage.DescriptionText == "Closed Won" && d.CloseDate >= fromDate && d.CloseDate <= toDate)
                     .CountAsync(ct);
 
                 var periodLength = toDate - fromDate;
@@ -34,7 +34,7 @@ public class DealsClosedMetricView(DateTime fromDate, DateTime toDate) : ViewBas
                 var previousToDate = fromDate.AddDays(-1);
 
                 var previousPeriodDealsClosed = await db.Deals
-                    .Where(d => d.Stage.DescriptionText == "Closed/Won" && d.CloseDate >= previousFromDate && d.CloseDate <= previousToDate)
+                    .Where(d => d.Stage.DescriptionText == "Closed Won" && d.CloseDate >= previousFromDate && d.CloseDate <= previousToDate)
                     .CountAsync(ct);
 
                 if (previousPeriodDealsClosed == 0)

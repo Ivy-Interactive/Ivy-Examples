@@ -79,7 +79,6 @@ public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
                 return (await db.Contacts
                         .Where(c => c.CompanyId == cid && (c.FirstName.Contains(query) || c.LastName.Contains(query)))
                         .Select(c => new { c.Id, Name = $"{c.FirstName} {c.LastName}" })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(c => new Option<int?>(c.Name, c.Id))
                     .ToArray();
@@ -112,7 +111,6 @@ public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
                 return (await db.DealStages
                         .Where(s => s.DescriptionText.Contains(query))
                         .Select(s => new { s.Id, s.DescriptionText })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(s => new Option<int?>(s.DescriptionText, s.Id))
                     .ToArray();
@@ -146,7 +144,6 @@ public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
                 return (await db.Leads
                         .Where(l => l.CompanyId == cid && (l.Source != null && l.Source.Contains(query)))
                         .Select(l => new { l.Id, l.Source })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(l => new Option<int?>(l.Source ?? "Unknown", l.Id))
                     .ToArray();

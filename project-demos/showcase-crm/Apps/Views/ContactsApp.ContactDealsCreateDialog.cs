@@ -70,7 +70,6 @@ public class ContactDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
                 return (await db.Companies
                         .Where(e => e.Name.Contains(query))
                         .Select(e => new { e.Id, e.Name })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.Name, e.Id))
                     .ToArray();
@@ -103,7 +102,6 @@ public class ContactDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
                 return (await db.DealStages
                         .Where(e => e.DescriptionText.Contains(query))
                         .Select(e => new { e.Id, e.DescriptionText })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.DescriptionText, e.Id))
                     .ToArray();

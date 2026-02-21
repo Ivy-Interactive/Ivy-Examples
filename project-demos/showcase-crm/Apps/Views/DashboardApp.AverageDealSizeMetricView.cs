@@ -27,7 +27,7 @@ public class AverageDealSizeMetricView(DateTime fromDate, DateTime toDate) : Vie
 
                 var currentPeriodDeals = await db.Deals
                     .Where(d => d.CloseDate >= fromDate && d.CloseDate <= toDate)
-                    .Where(d => d.Stage.DescriptionText == "Closed/Won")
+                    .Where(d => d.Stage.DescriptionText == "Closed Won")
                     .ToListAsync(ct);
 
                 var currentAverageDealSize = currentPeriodDeals.Any()
@@ -40,7 +40,7 @@ public class AverageDealSizeMetricView(DateTime fromDate, DateTime toDate) : Vie
 
                 var previousPeriodDeals = await db.Deals
                     .Where(d => d.CloseDate >= previousFromDate && d.CloseDate <= previousToDate)
-                    .Where(d => d.Stage.DescriptionText == "Closed/Won")
+                    .Where(d => d.Stage.DescriptionText == "Closed Won")
                     .ToListAsync(ct);
 
                 var previousAverageDealSize = previousPeriodDeals.Any()

@@ -1,6 +1,6 @@
 /*
-Track daily deal amounts to monitor revenue performance and identify trends
-GROUP deals BY DATE(CreatedAt) WHERE CreatedAt BETWEEN startDate AND endDate AND Amount IS NOT NULL, SUM(Amount) AS daily_revenue, ORDER BY date
+Track daily revenue from closed won deals to monitor sales performance.
+GROUP deals BY DATE(CloseDate) WHERE Stage=Closed Won AND CloseDate BETWEEN startDate AND endDate, SUM(Amount)
 */
 namespace ShowcaseCrm.Apps.Views;
 
@@ -11,7 +11,7 @@ public class DailyRevenueTrendLineChartView(DateTime startDate, DateTime endDate
     public override object Build()
     {
         var query = UseChartData(Context);
-        var card = new Card().Title("Daily Revenue Trend").Height(Size.Units(80));
+        var card = new Card().Title("Daily Revenue (Closed Won)").Height(Size.Units(80));
 
         if (query.Error != null)
         {
@@ -41,8 +41,10 @@ public class DailyRevenueTrendLineChartView(DateTime startDate, DateTime endDate
             {
                 await using var db = factory.CreateDbContext();
                 var data = await db.Deals
-                    .Where(d => d.CreatedAt >= startDate && d.CreatedAt <= endDate && d.Amount.HasValue)
-                    .GroupBy(d => d.CreatedAt.Date)
+                    .Where(d => d.Stage.DescriptionText == "Closed Won"
+                        && d.CloseDate >= startDate && d.CloseDate <= endDate
+                        && d.Amount.HasValue)
+                    .GroupBy(d => d.CloseDate!.Value.Date)
                     .OrderBy(g => g.Key)
                     .Select(g => new ChartData(
                         g.Key.ToString("d MMM"),

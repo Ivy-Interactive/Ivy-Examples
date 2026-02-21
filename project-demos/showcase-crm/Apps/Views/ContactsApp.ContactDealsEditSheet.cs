@@ -51,7 +51,6 @@ public class ContactDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
                 return (await db.DealStages
                         .Where(e => e.DescriptionText.Contains(query))
                         .Select(e => new { e.Id, e.DescriptionText })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.DescriptionText, e.Id))
                     .ToArray();

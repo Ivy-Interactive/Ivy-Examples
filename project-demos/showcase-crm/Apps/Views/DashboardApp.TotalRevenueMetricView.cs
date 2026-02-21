@@ -27,7 +27,7 @@ public class TotalRevenueMetricView(DateTime fromDate, DateTime toDate) : ViewBa
 
                 var currentPeriodRevenue = await db.Deals
                     .Where(d => d.CloseDate >= fromDate && d.CloseDate <= toDate)
-                    .Where(d => d.Stage.DescriptionText == "Closed/Won")
+                    .Where(d => d.Stage.DescriptionText == "Closed Won")
                     .SumAsync(d => (double)(d.Amount ?? 0), ct);
 
                 var periodLength = toDate - fromDate;
@@ -36,7 +36,7 @@ public class TotalRevenueMetricView(DateTime fromDate, DateTime toDate) : ViewBa
 
                 var previousPeriodRevenue = await db.Deals
                     .Where(d => d.CloseDate >= previousFromDate && d.CloseDate <= previousToDate)
-                    .Where(d => d.Stage.DescriptionText == "Closed/Won")
+                    .Where(d => d.Stage.DescriptionText == "Closed Won")
                     .SumAsync(d => (double)(d.Amount ?? 0), ct);
 
                 if (previousPeriodRevenue == 0)

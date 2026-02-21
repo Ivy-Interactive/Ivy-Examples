@@ -1,11 +1,13 @@
 /*
-The total monetary value of all open deals in the pipeline. Represents potential future revenue and sales forecast.
-SUM(Deal.Amount) WHERE Deal.Stage indicates open/active status AND Deal.CreatedAt is within date range
+The total monetary value of all open deals in the pipeline (Prospecting, Qualification, Proposal).
+Represents potential future revenue.
 */
 namespace ShowcaseCrm.Apps.Views;
 
 public class PipelineValueMetricView(DateTime fromDate, DateTime toDate) : ViewBase
 {
+    private static readonly string[] OpenStages = ["Prospecting", "Qualification", "Proposal"];
+
     public override object? Build()
     {
         return new MetricView(
@@ -25,25 +27,18 @@ public class PipelineValueMetricView(DateTime fromDate, DateTime toDate) : ViewB
             {
                 await using var db = factory.CreateDbContext();
 
-                var currentPeriodDeals = await db.Deals
-                    .Where(d => d.CreatedAt >= fromDate && d.CreatedAt <= toDate)
-                    .Where(d => d.Stage.DescriptionText == "Open" || d.Stage.DescriptionText == "Active")
-                    .ToListAsync(ct);
-
-                var currentPeriodPipelineValue = currentPeriodDeals
-                    .Sum(d => (double)(d.Amount ?? 0));
+                var currentPeriodPipelineValue = await db.Deals
+                    .Where(d => OpenStages.Contains(d.Stage.DescriptionText) && d.Amount.HasValue)
+                    .SumAsync(d => (double)d.Amount!.Value, ct);
 
                 var periodLength = toDate - fromDate;
                 var previousFromDate = fromDate.AddDays(-periodLength.TotalDays);
                 var previousToDate = fromDate.AddDays(-1);
 
-                var previousPeriodDeals = await db.Deals
+                var previousPeriodPipelineValue = await db.Deals
                     .Where(d => d.CreatedAt >= previousFromDate && d.CreatedAt <= previousToDate)
-                    .Where(d => d.Stage.DescriptionText == "Open" || d.Stage.DescriptionText == "Active")
-                    .ToListAsync(ct);
-
-                var previousPeriodPipelineValue = previousPeriodDeals
-                    .Sum(d => (double)(d.Amount ?? 0));
+                    .Where(d => OpenStages.Contains(d.Stage.DescriptionText) && d.Amount.HasValue)
+                    .SumAsync(d => (double)d.Amount!.Value, ct);
 
                 if (previousPeriodPipelineValue == 0)
                 {
@@ -58,7 +53,7 @@ public class PipelineValueMetricView(DateTime fromDate, DateTime toDate) : ViewB
                 double? trend = (currentPeriodPipelineValue - previousPeriodPipelineValue) / previousPeriodPipelineValue;
 
                 var goal = previousPeriodPipelineValue * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentPeriodPipelineValue / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentPeriodPipelineValue / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentPeriodPipelineValue.ToString("C0"),

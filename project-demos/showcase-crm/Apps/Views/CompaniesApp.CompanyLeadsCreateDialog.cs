@@ -58,7 +58,6 @@ public class CompanyLeadsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
                 return (await db.LeadStatuses
                         .Where(e => e.DescriptionText.Contains(query))
                         .Select(e => new { e.Id, e.DescriptionText })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.DescriptionText, e.Id))
                     .ToArray();

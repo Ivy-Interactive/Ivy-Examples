@@ -52,7 +52,6 @@ public class CompanyLeadsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
                 return (await db.LeadStatuses
                         .Where(e => e.DescriptionText.Contains(query))
                         .Select(e => new { e.Id, e.DescriptionText })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.DescriptionText, e.Id))
                     .ToArray();
@@ -85,7 +84,6 @@ public class CompanyLeadsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
                 return (await db.Companies
                         .Where(e => e.Name.Contains(query))
                         .Select(e => new { e.Id, e.Name })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.Name, e.Id))
                     .ToArray();
@@ -118,7 +116,6 @@ public class CompanyLeadsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
                 return (await db.Contacts
                         .Where(e => e.FirstName.Contains(query) || e.LastName.Contains(query))
                         .Select(e => new { e.Id, Name = $"{e.FirstName} {e.LastName}" })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.Name, e.Id))
                     .ToArray();
