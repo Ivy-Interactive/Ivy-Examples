@@ -10,7 +10,6 @@ public class CompanyDealsBlade(int companyId) : ViewBase
         var queryService = UseService<IQueryService>();
         var refreshToken = UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
-        var (sheetView, showSheet) = UseTrigger((IState<bool> isOpen, int id) => new CompanyDealsEditSheet(isOpen, refreshToken, id));
 
         var dealsQuery = UseQuery(
             key: (nameof(CompanyDealsBlade), companyId),
@@ -35,12 +34,14 @@ public class CompanyDealsBlade(int companyId) : ViewBase
             }
         }, [refreshToken]);
 
+        var (sheetView, showSheet) = UseTrigger((IState<bool> isOpen, int id) => new CompanyDealsEditSheet(isOpen, refreshToken, id, () => dealsQuery.Mutator.Revalidate()));
+
         if (dealsQuery.Loading) return Skeleton.Card();
 
         if (dealsQuery.Value == null || dealsQuery.Value.Length == 0)
         {
             var addBtnEmpty = new Button("Add Deal").Icon(Icons.Plus).Outline()
-                .ToTrigger((isOpen) => new CompanyDealsCreateDialog(isOpen, refreshToken, companyId));
+                .ToTrigger((isOpen) => new CompanyDealsCreateDialog(isOpen, refreshToken, companyId, () => dealsQuery.Mutator.Revalidate()));
 
             return new Fragment()
                    | new BladeHeader(addBtnEmpty)
@@ -104,7 +105,7 @@ public class CompanyDealsBlade(int companyId) : ViewBase
             .Height(Size.Full());
 
         var addBtn = new Button("Add Deal").Icon(Icons.Plus).Outline()
-            .ToTrigger((isOpen) => new CompanyDealsCreateDialog(isOpen, refreshToken, companyId));
+            .ToTrigger((isOpen) => new CompanyDealsCreateDialog(isOpen, refreshToken, companyId, () => dealsQuery.Mutator.Revalidate()));
 
         return new Fragment()
                | new BladeHeader(addBtn)

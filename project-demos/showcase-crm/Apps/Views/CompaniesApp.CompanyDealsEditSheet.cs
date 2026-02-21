@@ -1,6 +1,6 @@
 namespace ShowcaseCrm.Apps.Views;
 
-public class CompanyDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int dealId) : ViewBase
+public class CompanyDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int dealId, Action? onSuccess = null) : ViewBase
 {
     public override object? Build()
     {
@@ -39,6 +39,10 @@ public class CompanyDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
             db.Deals.Update(request);
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Deal), dealId));
+            queryService.RevalidateByTag(typeof(Deal[]));
+            queryService.RevalidateByTag((typeof(Company), request.CompanyId));
+            onSuccess?.Invoke();
+            refreshToken.Refresh(dealId);
         }
     }
 

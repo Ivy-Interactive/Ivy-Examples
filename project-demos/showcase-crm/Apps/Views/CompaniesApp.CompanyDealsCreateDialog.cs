@@ -1,6 +1,6 @@
 namespace ShowcaseCrm.Apps.Views;
 
-public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshToken, int companyId) : ViewBase
+public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshToken, int companyId, Action? onSuccess = null) : ViewBase
 {
     private record DealCreateRequest
     {
@@ -22,6 +22,7 @@ public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
     public override object? Build()
     {
         var factory = UseService<ShowcaseCrmContextFactory>();
+        var queryService = UseService<IQueryService>();
         var dealState = UseState(() => new DealCreateRequest());
 
         return dealState
@@ -37,6 +38,9 @@ public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
         async Task OnSubmit(DealCreateRequest request)
         {
             var dealId = await CreateDealAsync(factory, request);
+            queryService.RevalidateByTag(typeof(Deal[]));
+            queryService.RevalidateByTag((typeof(Company), companyId));
+            onSuccess?.Invoke();
             refreshToken.Refresh(dealId);
         }
     }
