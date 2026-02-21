@@ -40,6 +40,8 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
             db.Deals.Update(request);
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Deal), dealId));
+            queryService.RevalidateByTag(typeof(Deal[]));
+            refreshToken.Refresh(dealId);
         }
     }
 
