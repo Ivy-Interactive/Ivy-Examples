@@ -78,12 +78,14 @@ public class LeadDetailsBlade(int leadId) : ViewBase
             new List(
                 new ListItem("Deals", onClick: _ =>
                 {
-                    blades.Push(this, new LeadDealsBlade(leadId), "Deals");
+                    blades.Push(this, new LeadDealsBlade(leadId), "Deals", width: Size.Units(200));
                 }, badge: dealCountQuery.Value.ToString("N0"))
             ));
 
+        var leadTitle = leadValue.Company?.Name ?? $"{leadValue.Contact?.FirstName} {leadValue.Contact?.LastName}".Trim() ?? $"Lead #{leadValue.Id}";
+
         return new Fragment()
-               | new BladeHeader(Text.Literal($"Lead #{leadValue.Id}"))
+               | new BladeHeader(Text.H4(leadTitle))
                | (Layout.Vertical() | detailsCard | relatedCard);
     }
 
@@ -93,6 +95,7 @@ public class LeadDetailsBlade(int leadId) : ViewBase
         var lead = await db.Leads.FirstOrDefaultAsync(e => e.Id == leadId);
         if (lead != null)
         {
+            await db.Deals.Where(d => d.LeadId == leadId).ExecuteUpdateAsync(s => s.SetProperty(d => d.LeadId, (int?)null));
             db.Leads.Remove(lead);
             await db.SaveChangesAsync();
         }

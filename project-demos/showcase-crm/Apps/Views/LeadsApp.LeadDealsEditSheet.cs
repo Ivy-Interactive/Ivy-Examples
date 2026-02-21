@@ -40,6 +40,8 @@ public class LeadDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToken, 
             db.Deals.Update(request);
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Deal), dealId));
+            queryService.RevalidateByTag(typeof(Deal[]));
+            if (request.LeadId != null) queryService.RevalidateByTag((typeof(Lead), request.LeadId));
         }
     }
 

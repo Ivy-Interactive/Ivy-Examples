@@ -61,7 +61,7 @@ public class UserDetailsBlade(int userId) : ViewBase
         ).Title("User Details").Width(Size.Units(100));
 
         return new Fragment()
-               | new BladeHeader(Text.Literal(userValue.Name))
+               | new BladeHeader(Text.H4(userValue.Name))
                | (Layout.Vertical() | detailsCard);
     }
 
