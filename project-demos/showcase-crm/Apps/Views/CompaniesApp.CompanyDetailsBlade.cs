@@ -98,15 +98,15 @@ public class CompanyDetailsBlade(int companyId) : ViewBase
             new List(
                 new ListItem("Contacts", onClick: _ =>
                 {
-                    blades.Push(this, new CompanyContactsBlade(companyId), "Contacts");
+                    blades.Push(this, new CompanyContactsBlade(companyId), "Contacts", width: Size.Units(200));
                 }, badge: contactCountQuery.Value.ToString("N0")),
                 new ListItem("Deals", onClick: _ =>
                 {
-                    blades.Push(this, new CompanyDealsBlade(companyId), "Deals");
+                    blades.Push(this, new CompanyDealsBlade(companyId), "Deals", width: Size.Units(200));
                 }, badge: dealCountQuery.Value.ToString("N0")),
                 new ListItem("Leads", onClick: _ =>
                 {
-                    blades.Push(this, new CompanyLeadsBlade(companyId), "Leads");
+                    blades.Push(this, new CompanyLeadsBlade(companyId), "Leads", width: Size.Units(200));
                 }, badge: leadCountQuery.Value.ToString("N0"))
             ));
 

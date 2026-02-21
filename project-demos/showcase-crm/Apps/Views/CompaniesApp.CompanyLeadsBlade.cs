@@ -2,12 +2,15 @@ namespace ShowcaseCrm.Apps.Views;
 
 public class CompanyLeadsBlade(int? companyId) : ViewBase
 {
+    private record LeadTableRecord(int Id, string Status, string Source, string CreatedAt, string UpdatedAt);
+
     public override object? Build()
     {
         var factory = UseService<ShowcaseCrmContextFactory>();
         var queryService = UseService<IQueryService>();
         var refreshToken = UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
+        var (sheetView, showSheet) = UseTrigger((IState<bool> isOpen, int id) => new CompanyLeadsEditSheet(isOpen, refreshToken, id));
 
         var leadsQuery = UseQuery(
             key: (nameof(CompanyLeadsBlade), companyId),
@@ -40,43 +43,68 @@ public class CompanyLeadsBlade(int? companyId) : ViewBase
                    | new Callout("No leads found for this company. Add a lead to get started.").Variant(CalloutVariant.Info);
         }
 
-        var table = leadsQuery.Value.Select(e => new
+        var tableData = leadsQuery.Value.Select(e => new LeadTableRecord(
+            e.Id,
+            e.Status.DescriptionText,
+            e.Source ?? "",
+            e.CreatedAt.ToString("yyyy-MM-dd"),
+            e.UpdatedAt.ToString("yyyy-MM-dd")
+        )).ToArray();
+        var dataTableKey = $"leads-{companyId}-{tableData.Length}-{tableData.Aggregate(0, (h, l) => HashCode.Combine(h, l.Id))}";
+        var dataTable = tableData.AsQueryable()
+            .ToDataTable(idSelector: l => l.Id)
+            .Key(dataTableKey)
+            .Header(l => l.Id, "Id")
+            .Header(l => l.Status, "Status")
+            .Header(l => l.Source, "Source")
+            .Header(l => l.CreatedAt, "Created")
+            .Header(l => l.UpdatedAt, "Updated")
+            .Width(l => l.Id, Size.Px(40))
+            .Config(config =>
             {
-                Status = e.Status.DescriptionText,
-                Source = e.Source,
-                CreatedAt = e.CreatedAt.ToString("yyyy-MM-dd"),
-                UpdatedAt = e.UpdatedAt.ToString("yyyy-MM-dd"),
-                _ = Layout.Horizontal().Gap(2)
-                    | new Button("Delete", onClick: async _ =>
-                        {
-                            showAlert("Are you sure you want to delete this lead?", async result =>
-                            {
-                                if (result.IsOk())
-                                {
-                                    await Delete(factory, e.Id);
-                                    leadsQuery.Mutator.Revalidate();
-                                    queryService.RevalidateByTag((typeof(Company), companyId));
-                                }
-                            }, "Delete Lead", AlertButtonSet.OkCancel);
-                        })
-                        .Variant(ButtonVariant.Ghost)
-                        .Icon(Icons.Trash)
-                        .WithConfirm("Are you sure you want to delete this lead?", "Delete Lead")
-                    | Icons.ChevronRight
-                        .ToButton()
-                        .Outline()
-                        .Tooltip("Edit")
-                        .ToTrigger((isOpen) => new CompanyLeadsEditSheet(isOpen, refreshToken, e.Id))
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.ShowSearch = true;
             })
-            .ToTable()
-            .RemoveEmptyColumns();
+            .RowActions(
+                MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
+                MenuItem.Default(Icons.Trash2, "delete").Tag("delete")
+            )
+            .HandleRowAction(e =>
+            {
+                var args = e.Value;
+                var tag = args.Tag?.ToString();
+                var idStr = args.Id?.ToString();
+                if (string.IsNullOrEmpty(idStr) || !int.TryParse(idStr, out int id)) return ValueTask.CompletedTask;
+
+                if (tag == "edit")
+                {
+                    showSheet(id);
+                }
+                else if (tag == "delete")
+                {
+                    showAlert("Are you sure you want to delete this lead?", async result =>
+                    {
+                        if (result.IsOk())
+                        {
+                            await Delete(factory, id);
+                            leadsQuery.Mutator.Revalidate();
+                            queryService.RevalidateByTag((typeof(Company), companyId));
+                        }
+                    }, "Delete Lead", AlertButtonSet.OkCancel);
+                }
+                return ValueTask.CompletedTask;
+            })
+            .Width(Size.Full())
+            .Height(Size.Full());
 
         var addBtn = new Button("Add Lead").Icon(Icons.Plus).Outline()
             .ToTrigger((isOpen) => new CompanyLeadsCreateDialog(isOpen, refreshToken, companyId));
 
         return new Fragment()
                | new BladeHeader(addBtn)
-               | table
+               | dataTable
+               | sheetView
                | alertView;
     }
 

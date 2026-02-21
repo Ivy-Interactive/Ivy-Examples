@@ -2,12 +2,15 @@ namespace ShowcaseCrm.Apps.Views;
 
 public class CompanyContactsBlade(int companyId) : ViewBase
 {
+    private record ContactTableRecord(int Id, string FirstName, string LastName, string Email, string? Phone);
+
     public override object? Build()
     {
         var factory = UseService<ShowcaseCrmContextFactory>();
         var queryService = UseService<IQueryService>();
         var refreshToken = UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
+        var (sheetView, showSheet) = UseTrigger((IState<bool> isOpen, int id) => new CompanyContactsEditSheet(isOpen, refreshToken, id));
 
         var contactsQuery = UseQuery(
             key: (nameof(CompanyContactsBlade), companyId),
@@ -40,43 +43,62 @@ public class CompanyContactsBlade(int companyId) : ViewBase
                    | new Callout("No contacts found for this company. Add a contact to get started.").Variant(CalloutVariant.Info);
         }
 
-        var table = contactsQuery.Value.Select(c => new
+        var tableData = contactsQuery.Value.Select(c => new ContactTableRecord(c.Id, c.FirstName, c.LastName, c.Email ?? "", c.Phone)).ToArray();
+        var dataTableKey = $"contacts-{companyId}-{tableData.Length}-{tableData.Aggregate(0, (h, c) => HashCode.Combine(h, c.Id))}";
+        var dataTable = tableData.AsQueryable()
+            .ToDataTable(idSelector: c => c.Id)
+            .Key(dataTableKey)
+            .Header(c => c.Id, "Id")
+            .Header(c => c.FirstName, "First Name")
+            .Header(c => c.LastName, "Last Name")
+            .Header(c => c.Email, "Email")
+            .Header(c => c.Phone, "Phone")
+            .Width(c => c.Id, Size.Px(40))
+            .Config(config =>
             {
-                FirstName = c.FirstName,
-                LastName = c.LastName,
-                Email = c.Email,
-                Phone = c.Phone,
-                _ = Layout.Horizontal().Gap(2)
-                    | new Button("Delete", onClick: async _ =>
-                        {
-                            showAlert("Are you sure you want to delete this contact?", async result =>
-                            {
-                                if (result.IsOk())
-                                {
-                                    await Delete(factory, c.Id);
-                                    contactsQuery.Mutator.Revalidate();
-                                    queryService.RevalidateByTag((typeof(Company), companyId));
-                                }
-                            }, "Delete Contact", AlertButtonSet.OkCancel);
-                        })
-                        .Variant(ButtonVariant.Ghost)
-                        .Icon(Icons.Trash)
-                        .WithConfirm("Are you sure you want to delete this contact?", "Delete Contact")
-                    | Icons.Pencil
-                        .ToButton()
-                        .Outline()
-                        .Tooltip("Edit")
-                        .ToTrigger((isOpen) => new CompanyContactsEditSheet(isOpen, refreshToken, c.Id))
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.ShowSearch = true;
             })
-            .ToTable()
-            .RemoveEmptyColumns();
+            .RowActions(
+                MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
+                MenuItem.Default(Icons.Trash2, "delete").Tag("delete")
+            )
+            .HandleRowAction(e =>
+            {
+                var args = e.Value;
+                var tag = args.Tag?.ToString();
+                var idStr = args.Id?.ToString();
+                if (string.IsNullOrEmpty(idStr) || !int.TryParse(idStr, out int id)) return ValueTask.CompletedTask;
+
+                if (tag == "edit")
+                {
+                    showSheet(id);
+                }
+                else if (tag == "delete")
+                {
+                    showAlert("Are you sure you want to delete this contact?", async result =>
+                    {
+                        if (result.IsOk())
+                        {
+                            await Delete(factory, id);
+                            contactsQuery.Mutator.Revalidate();
+                            queryService.RevalidateByTag((typeof(Company), companyId));
+                        }
+                    }, "Delete Contact", AlertButtonSet.OkCancel);
+                }
+                return ValueTask.CompletedTask;
+            })
+            .Width(Size.Full())
+            .Height(Size.Full());
 
         var addBtn = new Button("Add Contact").Icon(Icons.Plus).Outline()
             .ToTrigger((isOpen) => new CompanyContactsCreateDialog(isOpen, refreshToken, companyId));
 
         return new Fragment()
                | new BladeHeader(addBtn)
-               | table
+               | dataTable
+               | sheetView
                | alertView;
     }
 
