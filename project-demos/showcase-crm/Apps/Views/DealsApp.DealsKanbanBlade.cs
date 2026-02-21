@@ -21,6 +21,7 @@ public class DealsKanbanBlade : ViewBase
         var deals = UseState<DealKanbanRecord[]>(() => []);
 
         var (sheetView, showSheet) = UseTrigger((IState<bool> isOpen, int id) => new DealEditSheet(isOpen, refreshToken, id));
+        var (createDialogView, showCreateDialog) = UseTrigger((IState<bool> isOpen) => new DealCreateDialog(isOpen, refreshToken));
 
         UseEffect(() =>
         {
@@ -145,13 +146,22 @@ public class DealsKanbanBlade : ViewBase
                     .Description("Create your first deal to get started")
             );
 
+        var createDealBtn = new Button("Create Deal", onClick: _ => showCreateDialog())
+            .Icon(Icons.Plus)
+            .Large()
+            .Secondary()
+            .BorderRadius(BorderRadius.Full)
+            .Tooltip("Create Deal");
+
         return new Fragment(
             Layout.Vertical().Height(Size.Full())
                 | Layout.Tabs(
                     new Tab("Kanban", kanban).Icon(Icons.LayoutGrid),
                     new Tab("DataTable", dataTable).Icon(Icons.Table)
                 ).Variant(TabsVariant.Tabs).Height(Size.Fraction(1f)),
+            new FloatingPanel(createDealBtn, Align.BottomRight).Offset(new Thickness(0, 0, 15, 15)),
             sheetView,
+            createDialogView,
             alertView
         );
     }

@@ -46,13 +46,11 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(
                 (ctx, q) => UseContactSearchForCompany(ctx, q, deal.Value.CompanyId),
                 UseContactLookup,
-                placeholder: "Select Contact")
-                .Disabled(deal.Value.CompanyId == 0))
+                placeholder: "Select Contact"))
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(
                 (ctx, q) => UseLeadSearchForCompany(ctx, q, deal.Value.CompanyId),
                 UseLeadLookup,
-                placeholder: "Select Lead")
-                .Disabled(deal.Value.CompanyId == 0))
+                placeholder: "Select Lead"))
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
             .Builder(e => e.CloseDate, e => e.ToDateInput())
             .Builder(e => e.StageId, e => e.ToAsyncSelectInput(UseStageSearch, UseStageLookup, placeholder: "Select Stage"))
@@ -101,7 +99,6 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
                         .Where(e => string.IsNullOrEmpty(searchTerm) || (e.Name != null && e.Name.Contains(searchTerm)))
                         .OrderBy(e => e.Name)
                         .Select(e => new { e.Id, e.Name })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.Name, e.Id))
                     .ToArray();
@@ -125,20 +122,21 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
 
     private static QueryResult<Option<int?>[]> UseContactSearchForCompany(IViewContext context, string query, int companyId)
     {
-        if (companyId == 0)
-            return context.UseQuery(
-                key: (nameof(UseContactSearchForCompany), 0, query),
-                fetcher: async (_, _) => Array.Empty<Option<int?>>());
         var factory = context.UseService<ShowcaseCrmContextFactory>();
+        var searchTerm = query?.Trim() ?? "";
         return context.UseQuery(
-            key: (nameof(UseContactSearchForCompany), companyId, query),
+            key: (nameof(UseContactSearchForCompany), companyId, searchTerm),
             fetcher: async ct =>
             {
                 await using var db = factory.CreateDbContext();
-                return (await db.Contacts
-                        .Where(c => c.CompanyId == companyId && (c.FirstName.Contains(query) || c.LastName.Contains(query)))
+                var linq = db.Contacts.AsQueryable();
+                if (companyId != 0)
+                    linq = linq.Where(c => c.CompanyId == companyId);
+                if (!string.IsNullOrEmpty(searchTerm))
+                    linq = linq.Where(c => (c.FirstName != null && c.FirstName.Contains(searchTerm)) || (c.LastName != null && c.LastName.Contains(searchTerm)));
+                return (await linq
+                        .OrderBy(c => c.FirstName)
                         .Select(c => new { c.Id, Name = c.FirstName + " " + c.LastName })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(c => new Option<int?>(c.Name, c.Id))
                     .ToArray();
@@ -162,20 +160,21 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
 
     private static QueryResult<Option<int?>[]> UseLeadSearchForCompany(IViewContext context, string query, int companyId)
     {
-        if (companyId == 0)
-            return context.UseQuery(
-                key: (nameof(UseLeadSearchForCompany), 0, query),
-                fetcher: async (_, _) => Array.Empty<Option<int?>>());
         var factory = context.UseService<ShowcaseCrmContextFactory>();
+        var searchTerm = query?.Trim() ?? "";
         return context.UseQuery(
-            key: (nameof(UseLeadSearchForCompany), companyId, query),
+            key: (nameof(UseLeadSearchForCompany), companyId, searchTerm),
             fetcher: async ct =>
             {
                 await using var db = factory.CreateDbContext();
-                return (await db.Leads
-                        .Where(l => l.CompanyId == companyId && (l.Source == null || l.Source.Contains(query)))
+                var linq = db.Leads.AsQueryable();
+                if (companyId != 0)
+                    linq = linq.Where(l => l.CompanyId == companyId);
+                if (!string.IsNullOrEmpty(searchTerm))
+                    linq = linq.Where(l => l.Source == null || l.Source.Contains(searchTerm));
+                return (await linq
+                        .OrderBy(l => l.Source)
                         .Select(l => new { l.Id, l.Source })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(l => new Option<int?>(l.Source ?? "", l.Id))
                     .ToArray();
@@ -208,7 +207,6 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
                 return (await db.DealStages
                         .Where(e => e.DescriptionText.Contains(query))
                         .Select(e => new { e.Id, e.DescriptionText })
-                        .Take(50)
                         .ToArrayAsync(ct))
                     .Select(e => new Option<int?>(e.DescriptionText, e.Id))
                     .ToArray();
