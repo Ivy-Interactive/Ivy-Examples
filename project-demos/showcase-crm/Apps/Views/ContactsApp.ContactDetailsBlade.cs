@@ -85,16 +85,16 @@ public class ContactDetailsBlade(int contactId) : ViewBase
             new List(
                 new ListItem("Deals", onClick: _ =>
                 {
-                    blades.Push(this, new ContactDealsBlade(contactId), "Deals");
+                    blades.Push(this, new ContactDealsBlade(contactId), "Deals", width: Size.Units(200));
                 }, badge: dealCountQuery.Value.ToString("N0")),
                 new ListItem("Leads", onClick: _ =>
                 {
-                    blades.Push(this, new ContactLeadsBlade(contactId), "Leads");
+                    blades.Push(this, new ContactLeadsBlade(contactId), "Leads", width: Size.Units(200));
                 }, badge: leadCountQuery.Value.ToString("N0"))
             ));
 
         return new Fragment()
-               | new BladeHeader(Text.Literal($"Contact #{contactValue.Id}"))
+               | new BladeHeader(Text.H4($"{contactValue.FirstName} {contactValue.LastName}"))
                | (Layout.Vertical() | detailsCard | relatedCard);
     }
 

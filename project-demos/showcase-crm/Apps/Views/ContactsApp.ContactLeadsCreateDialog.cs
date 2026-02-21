@@ -26,12 +26,12 @@ public class ContactLeadsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
 
         async Task OnSubmit(LeadCreateRequest request)
         {
-            await CreateLeadAsync(factory, request);
-            refreshToken.Refresh();
+            var leadId = await CreateLeadAsync(factory, request);
+            refreshToken.Refresh(leadId);
         }
     }
 
-    private async Task CreateLeadAsync(ShowcaseCrmContextFactory factory, LeadCreateRequest request)
+    private async Task<int> CreateLeadAsync(ShowcaseCrmContextFactory factory, LeadCreateRequest request)
     {
         await using var db = factory.CreateDbContext();
 
@@ -47,6 +47,7 @@ public class ContactLeadsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
 
         db.Leads.Add(lead);
         await db.SaveChangesAsync();
+        return lead.Id;
     }
 
     private static QueryResult<Option<int?>[]> UseStatusSearch(IViewContext context, string query)
