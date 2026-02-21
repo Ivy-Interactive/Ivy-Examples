@@ -107,10 +107,16 @@ public class CompanyContactsBlade(int companyId) : ViewBase
     {
         await using var db = factory.CreateDbContext();
         var contact = await db.Contacts.SingleOrDefaultAsync(c => c.Id == contactId);
-        if (contact != null)
-        {
-            db.Contacts.Remove(contact);
-            await db.SaveChangesAsync();
-        }
+        if (contact == null) return;
+
+        // Clear FK references before delete (Restrict prevents cascade)
+        await db.Leads.Where(l => l.ContactId == contactId).ExecuteUpdateAsync(s => s.SetProperty(l => l.ContactId, (int?)null));
+        var otherContact = await db.Contacts.FirstOrDefaultAsync(c => c.CompanyId == contact.CompanyId && c.Id != contactId);
+        if (otherContact != null)
+            await db.Deals.Where(d => d.ContactId == contactId).ExecuteUpdateAsync(s => s.SetProperty(d => d.ContactId, otherContact.Id));
+        else
+            db.Deals.RemoveRange(await db.Deals.Where(d => d.ContactId == contactId).ToListAsync());
+        db.Contacts.Remove(contact);
+        await db.SaveChangesAsync();
     }
 }
