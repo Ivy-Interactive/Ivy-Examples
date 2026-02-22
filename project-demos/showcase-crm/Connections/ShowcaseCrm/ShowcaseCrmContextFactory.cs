@@ -44,7 +44,7 @@ public sealed class ShowcaseCrmContextFactory : IDbContextFactory<ShowcaseCrmCon
         EnsureDatabasePresentOnce();
 
         var optionsBuilder = new DbContextOptionsBuilder<ShowcaseCrmContext>()
-            .UseSqlite($@"Data Source=""{_absolutePath}""");
+            .UseSqlite($@"Data Source=""{_relativePath}""");
 
         if (_args.Verbose)
         {
