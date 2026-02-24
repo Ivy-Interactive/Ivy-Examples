@@ -98,7 +98,7 @@ public class MainMenuBlade : ViewBase
                     | Text.Muted("Follow these steps to get started:")
                     | Text.Markdown("**1. Download Ollama** from [https://ollama.com/download](https://ollama.com/download)")
                     | Text.Markdown("**2. Download Models** for example:")
-                    | new Code("ollama pull llama2")
+                    | new CodeBlock("ollama pull llama2")
                         .ShowCopyButton()
                    | Text.Markdown("**3. Configuration:**")
                    | Layout.Horizontal()
