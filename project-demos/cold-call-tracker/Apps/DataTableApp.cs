@@ -700,7 +700,7 @@ public class DataTableApp : ViewBase
                                 .Variant(ButtonVariant.Outline)
                         ], gap: 8)
                     ),
-                    new Code(responseToShow, Languages.Json)
+                    new CodeBlock(responseToShow, Languages.Json)
                 ], gap: 12);
             }
 
@@ -738,7 +738,7 @@ public class DataTableApp : ViewBase
                         ], gap: 12)
                     ], gap: 8)
                 ),
-                new Code(responseToShow, Languages.Json)
+                new CodeBlock(responseToShow, Languages.Json)
             ], gap: 12);
         }
 
