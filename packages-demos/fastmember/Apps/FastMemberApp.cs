@@ -299,12 +299,12 @@ foreach (var product in products)
                 | new Card(Layout.Vertical().Gap(3)
                     | Text.H3("Example Code")
                     | Text.Muted("View the example code for the selected demonstration")
-                    | new Code(selectedDemoData.code, Languages.Csharp).ShowLineNumbers().ShowCopyButton()).Width(Size.Fraction(0.5f))
+                    | new CodeBlock(selectedDemoData.code, Languages.Csharp).ShowLineNumbers().ShowCopyButton()).Width(Size.Fraction(0.5f))
                 | new Card(Layout.Vertical().Gap(3)
                     | Text.H3("Result")
                     | Text.Muted("View the execution result")
                     | (resultState.Value != null
-                        ? new Code(resultState.Value, Languages.Json).ShowLineNumbers().ShowCopyButton()
+                        ? new CodeBlock(resultState.Value, Languages.Json).ShowLineNumbers().ShowCopyButton()
                         : Text.Muted("Computing..."))).Width(Size.Fraction(0.5f)));
     }
 

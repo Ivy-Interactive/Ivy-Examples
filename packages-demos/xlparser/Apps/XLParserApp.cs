@@ -52,7 +52,7 @@ public class XLParserApp : ViewBase
                             "Example Formulas",
                             Layout.Vertical(
                                 ExampleFormulas.Select(example =>
-                                    new Code(example)
+                                    new CodeBlock(example)
                                         .ShowCopyButton()
                                 )
                             )
