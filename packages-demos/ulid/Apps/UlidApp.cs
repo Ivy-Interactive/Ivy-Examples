@@ -54,11 +54,11 @@ public class UlidApp : ViewBase
         {
             generateContent = Layout.Vertical()
                 | Text.Label("Generated ULID")
-                | new Code(ulid.ToString(), Languages.Text)
+                | new CodeBlock(ulid.ToString(), Languages.Text)
                     .ShowCopyButton()
                     .Height(Size.Fit().Max(30))
                 | Text.Label("Timestamp (UTC)")
-                | new Code(ulid.Time.ToString("O"), Languages.Text)
+                | new CodeBlock(ulid.Time.ToString("O"), Languages.Text)
                     .ShowCopyButton()
                     .Height(Size.Fit().Max(30));
         }
@@ -77,7 +77,7 @@ public class UlidApp : ViewBase
         {
             parseResult = Layout.Vertical().Gap(4)
                 | Text.Label("Parsed Timestamp (UTC)")
-                | new Code(parsedUlidValue.Time.ToString("O"), Languages.Text)
+                | new CodeBlock(parsedUlidValue.Time.ToString("O"), Languages.Text)
                     .ShowCopyButton()
                     .Height(Size.Fit().Max(30))
                 | Callout.Success("ULID parsed successfully!", "Success");
