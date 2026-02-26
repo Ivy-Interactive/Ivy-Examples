@@ -1,5 +1,8 @@
+using Ivy.Auth.Sliplane;
+
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
+server.UseAuth<SliplaneAuthProvider>();
 #if DEBUG
 server.UseHotReload();
 #endif

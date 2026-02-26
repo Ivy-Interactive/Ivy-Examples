@@ -11,7 +11,8 @@
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.15.0" />
+    <ProjectReference Include="C:\git\Ivy-Interactive\Ivy-Framework\src\Ivy\Ivy.csproj" />
+    <ProjectReference Include="C:\git\Ivy-Interactive\Ivy-Framework\src\auth\Ivy.Auth.Sliplane\Ivy.Auth.Sliplane.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Apps" />
