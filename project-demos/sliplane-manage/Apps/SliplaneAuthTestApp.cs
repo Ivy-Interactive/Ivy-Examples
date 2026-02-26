@@ -61,7 +61,7 @@ public class SliplaneAuthTestApp : ViewBase
 
         return Layout.Center()
                | new Card(Layout.Vertical().Gap(4)
-                   | Text.H2("Sliplane authentication is working ✅")
+                   | Text.H2("Sliplane authentication is working")
                    | Text.Block("The SliplaneAuthProvider returned a valid auth session.")
                    | (new
                       {
@@ -70,7 +70,7 @@ public class SliplaneAuthTestApp : ViewBase
                           Name = userInfoState.Value.FullName,
                           HasAccessToken = hasToken,
                       }).ToDetails()
-                   | Text.Muted("Note: Sliplane does not expose a user-info endpoint, so values here may be placeholders from the provider."));
+                   | Text.Muted("Note: Sliplane does not expose a user-info endpoint, so values here may be placeholders from the provider.")).Width(Size.Fraction(0.6f));
     }
 }
 
