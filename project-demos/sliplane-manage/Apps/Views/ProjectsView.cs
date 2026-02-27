@@ -24,6 +24,9 @@ public class ProjectsView : ViewBase
         var creating = this.UseState(false);
         var newName  = this.UseState(string.Empty);
         var busy     = this.UseState(false);
+        var serviceCounts = this.UseState<Dictionary<string, int>>(() => new Dictionary<string, int>());
+        var (sheetView, showSheet) = this.UseTrigger(
+            (IState<bool> isOpen, SliplaneProject project) => new ProjectDetailsSheet(isOpen, _apiToken, project));
 
         var refresh = this.UseRefreshToken();
 
@@ -46,69 +49,158 @@ public class ProjectsView : ViewBase
 
         this.UseEffect(async () => await LoadProjectsAsync());
 
+        // Preload service counts per project so they are visible on cards
+        this.UseEffect(async () =>
+        {
+            var current = projects.Value;
+            if (current == null || current.Count == 0) return;
+
+            var map = new Dictionary<string, int>();
+
+            foreach (var p in current)
+            {
+                try
+                {
+                    var svcs = await client.GetServicesAsync(_apiToken, p.Id);
+                    map[p.Id] = svcs?.Count ?? 0;
+                }
+                catch
+                {
+                    map[p.Id] = 0;
+                }
+            }
+
+            serviceCounts.Set(map);
+        }, [projects]);
+
         if (loading.Value)
             return Layout.Center() | Text.Muted("Loading projects...");
 
         if (error.Value is { Length: > 0 })
             return new Callout($"Error: {error.Value}", variant: CalloutVariant.Error);
 
-        async ValueTask CreateProject()
+        var list = projects.Value ?? new List<SliplaneProject>();
+
+        object projectsBlock;
+        if (list.Count == 0)
         {
-            if (string.IsNullOrWhiteSpace(newName.Value)) return;
-            busy.Set(true);
-            await client.CreateProjectAsync(_apiToken, newName.Value.Trim());
-            newName.Set(string.Empty);
-            creating.Set(false);
-            busy.Set(false);
-            refresh.Refresh();
+            projectsBlock = new Callout("No projects yet. Create one above.", variant: CalloutVariant.Info);
+        }
+        else
+        {
+            var cards = list
+                .Select(p =>
+                {
+                    var hasCount = serviceCounts.Value.TryGetValue(p.Id, out var svcCount);
+                    var label = hasCount
+                        ? $"{svcCount} Service" + (svcCount == 1 ? string.Empty : "s")
+                        : "Services: —";
+
+                    var icon = hasCount && svcCount > 0
+                        ? Icons.FolderOpen
+                        : Icons.Folder;
+
+                    return new Card(
+                            (Layout.Vertical().Align(Align.Center)
+                            | Text.H2(p.Name)
+                            | Text.Muted(label))
+                        )
+                        .Title("Project")
+                        .Icon(icon)
+                        .HandleClick(_ => showSheet(p));
+                })
+                .ToArray();
+
+            projectsBlock = Layout.Grid().Columns(3).Gap(3) | cards;
         }
 
-        async ValueTask DeleteProject(string id)
-        {
-            busy.Set(true);
-            await client.DeleteProjectAsync(_apiToken, id);
-            busy.Set(false);
-            refresh.Refresh();
-        }
 
-        return Layout.Vertical()
-            | (Layout.Horizontal().Align(Align.Center)
-               | Text.H2("Projects")
-               | new Button("New Project").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
-                   .HandleClick(() => creating.Set(!creating.Value)))
-            | (creating.Value
-                ? (object)(new Card(
-                    Layout.Vertical()
-                    | Text.H4("Create Project")
-                    | newName.ToTextInput().Placeholder("Project name")
-                    | (Layout.Horizontal().Align(Align.Right)
-                       | new Button("Cancel").Variant(ButtonVariant.Ghost).HandleClick(() => creating.Set(false))
-                       | new Button("Create").Icon(Icons.Plus).Loading(busy.Value).HandleClick(async () => await CreateProject())))
-                  ).Width(Size.Fraction(0.45f))
-                : Layout.Vertical())
-            | BuildProjectTable(projects.Value ?? new List<SliplaneProject>(), DeleteProject);
+        return new Fragment(
+            Layout.Vertical()
+                | Text.H2("Projects")
+                | projectsBlock,
+            sheetView
+        );
+    }
+}
+
+internal sealed class ProjectDetailsSheet : ViewBase
+{
+    private readonly IState<bool> _isOpen;
+    private readonly string _apiToken;
+    private readonly SliplaneProject _project;
+
+    public ProjectDetailsSheet(IState<bool> isOpen, string apiToken, SliplaneProject project)
+    {
+        _isOpen = isOpen;
+        _apiToken = apiToken;
+        _project = project;
     }
 
-    private static object BuildProjectTable(
-        List<SliplaneProject> projects,
-        Func<string, ValueTask> onDelete)
+    public override object? Build()
     {
-        if (projects.Count == 0)
-            return new Callout("No projects yet. Create one above.", variant: CalloutVariant.Info);
+        if (!_isOpen.Value)
+        {
+            return null;
+        }
 
-        var rows = projects
-            .Select(p =>
-                Layout.Horizontal().Gap(2)
-                | Text.InlineCode(p.Id)
-                | Text.Block(p.Name)
-                | new Spacer()
-                | new Button("Delete")
-                    .Icon(Icons.Trash2)
-                    .Variant(ButtonVariant.Outline)
-                    .HandleClick(async () => await onDelete(p.Id))
-            )
-            .ToArray();
+        var client = this.UseService<SliplaneApiClient>();
+        var services = this.UseState<List<SliplaneService>?>(() => null);
+        var loading = this.UseState(true);
+        var error = this.UseState<string?>();
 
-        return Layout.Vertical() | rows;
+        this.UseEffect(async () =>
+        {
+            try
+            {
+                var list = await client.GetServicesAsync(_apiToken, _project.Id);
+                services.Set(list);
+            }
+            catch (Exception ex)
+            {
+                error.Set(ex.Message);
+            }
+            finally
+            {
+                loading.Set(false);
+            }
+        });
+
+        object body;
+        if (loading.Value)
+        {
+            body = Text.Muted("Loading project services...");
+        }
+        else if (error.Value is { Length: > 0 })
+        {
+            body = new Callout($"Error loading services: {error.Value}", variant: CalloutVariant.Error);
+        }
+        else if (services.Value == null || services.Value.Count == 0)
+        {
+            body = new Callout("No services in this project yet.", variant: CalloutVariant.Info);
+        }
+        else
+        {
+            var rows = services.Value
+                .Select(s =>
+                    Layout.Horizontal().Gap(2)
+                    | new Badge(s.Status ?? "—")
+                    | Text.Block(s.Name)
+                )
+                .ToArray();
+
+            body = Layout.Vertical().Gap(2) | rows;
+        }
+
+        var content = Layout.Vertical().Gap(3)
+            | Text.H3(_project.Name)
+            | Text.InlineCode(_project.Id)
+            | body;
+
+        return new Sheet(
+            onClose: _ => { _isOpen.Set(false); return ValueTask.CompletedTask; },
+            content: new Card(Layout.Vertical().Padding(4) | content),
+            title: $"Project: {_project.Name}"
+        );
     }
 }

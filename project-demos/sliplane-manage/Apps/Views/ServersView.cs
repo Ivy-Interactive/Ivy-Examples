@@ -104,7 +104,7 @@ public class ServersView : ViewBase
         var cards = list
             .Select(s =>
             {
-                var header = Layout.Vertical().Gap(1)
+                var header = Layout.Vertical()
                     | Text.H4(s.Name)
                     | Text.Muted(s.Plan);
 
@@ -145,7 +145,7 @@ public class ServersView : ViewBase
                     | Text.Muted(s.CreatedAt.ToString("MM/dd/yyyy"));
 
                 return new Card(
-                        Layout.Vertical().Gap(2)
+                        Layout.Vertical()
                         | header
                         | regionRow
                         | volumesRow
@@ -157,7 +157,7 @@ public class ServersView : ViewBase
             .ToArray();
 
         return new Fragment(
-            Layout.Vertical().Gap(5)
+            Layout.Vertical()
                 | Text.H2("Servers")
                 | (Layout.Grid().Columns(3) | cards),
             sheetView
