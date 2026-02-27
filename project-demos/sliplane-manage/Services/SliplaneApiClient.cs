@@ -189,7 +189,7 @@ public class SliplaneApiClient
     public async Task<List<SliplaneServiceLog>> GetServiceLogsAsync(string apiToken, string projectId, string serviceId)
     {
         var response = await SendAsync(HttpMethod.Get, $"/projects/{projectId}/services/{serviceId}/logs", apiToken);
-        return await ParseArrayAsync<SliplaneServiceLog>(response, "logs") ?? [];
+        return await ParseArrayAsync<SliplaneServiceLog>(response) ?? [];
     }
 
     public async Task<SliplaneServiceMetrics?> GetServiceMetricsAsync(string apiToken, string projectId, string serviceId)

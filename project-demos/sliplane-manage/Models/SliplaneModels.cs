@@ -61,7 +61,10 @@ public record SliplaneService(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     List<SliplaneServiceDomain>? Domains,
-    SliplaneServiceResources? Resources
+    SliplaneServiceResources? Resources,
+    [property: JsonPropertyName("network")] SliplaneServiceNetwork? Network,
+    [property: JsonPropertyName("deployment")] SliplaneServiceDeployment? Deployment,
+    [property: JsonPropertyName("serverId")] string? ServerId
 );
 
 public record SliplaneServiceDomain(
@@ -73,6 +76,28 @@ public record SliplaneServiceDomain(
 public record SliplaneServiceResources(
     double CpuLimit,
     int MemoryLimit
+);
+
+public record SliplaneServiceNetwork(
+    bool Public,
+    string Protocol,
+    string ManagedDomain,
+    string InternalDomain,
+    [property: JsonPropertyName("customDomains")] List<SliplaneServiceCustomDomain>? CustomDomains
+);
+
+public record SliplaneServiceCustomDomain(
+    string Id,
+    string Domain,
+    string Status
+);
+
+public record SliplaneServiceDeployment(
+    string Url,
+    string DockerfilePath,
+    string DockerContext,
+    bool AutoDeploy,
+    string Branch
 );
 
 public record SliplaneServiceMetrics(
@@ -89,8 +114,8 @@ public record SliplaneServiceEvent(
 );
 
 public record SliplaneServiceLog(
-    string Line,
-    DateTime Timestamp
+    [property: JsonPropertyName("message")] string Line,
+    [property: JsonPropertyName("createdAt")] DateTime Timestamp
 );
 
 public record CreateServiceRequest(
