@@ -61,7 +61,7 @@ public class SliplaneOverviewApp : ViewBase
         {
             return Layout.Center()
                    | new Card(
-                       Layout.Vertical().Gap(4).Align(Align.Center)
+                       Layout.Vertical().Align(Align.Center)
                        | Icons.LayoutGrid.ToIcon().Size(40).Color(Colors.Orange)
                        | Text.H2("Sliplane Overview")
                        | Text.Block("No API token configured.").Muted()

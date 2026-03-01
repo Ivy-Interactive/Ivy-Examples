@@ -207,7 +207,7 @@ public class ProjectsView : ViewBase
                 })
                 .ToArray();
 
-            projectsBlock = Layout.Grid().Columns(3).Gap(3) | cards;
+            projectsBlock = Layout.Grid().Columns(3) | cards;
         }
 
         Dialog? projectDetailDialog = null;
@@ -383,16 +383,16 @@ public class ProjectsView : ViewBase
                     .Select(s => new Option<string>(s.Name, s.Id))
                     .ToArray();
 
-                var createForm = Layout.Vertical().Gap(2)
+                var createForm = Layout.Vertical()
                     | Text.H4("New service")
                     | Text.Block("Deploy a new app from a Git repository.").Muted()
                     | newServiceName.ToTextInput().Placeholder("Service name")
                     | newServiceGitRepo.ToTextInput().Placeholder("Git repository URL (e.g. https://github.com/user/repo)")
                     | newServiceBranch.ToTextInput().Placeholder("Branch (default: main)")
-                    | (Layout.Horizontal().Gap(3).Align(Align.Center)
+                    | (Layout.Horizontal().Align(Align.Center)
                        | Text.Block("Server:").Bold()
                        | newServiceServerId.ToSelectInput(serverOptions))
-                    | (Layout.Horizontal().Gap(3).Align(Align.Center)
+                    | (Layout.Horizontal().Align(Align.Center)
                        | Text.Block("Auto-deploy on push:").Bold()
                        | newServiceAutoDeploy.ToBoolInput())
                     | (createServiceError.Value is { Length: > 0 } err

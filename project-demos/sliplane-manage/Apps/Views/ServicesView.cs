@@ -4,8 +4,7 @@ using SliplaneManage.Models;
 using SliplaneManage.Services;
 
 /// <summary>
-/// Services management view: per-project service list with pause/unpause/redeploy/delete
-/// and an inline logs + events drawer.
+/// Services view: all services as clickable cards; details and create in sheets (like Servers/Projects).
 /// </summary>
 public class ServicesView : ViewBase
 {
@@ -15,42 +14,50 @@ public class ServicesView : ViewBase
     public ServicesView(string apiToken, List<SliplaneProject> projects)
     {
         _apiToken = apiToken;
-        _projects  = projects;
+        _projects = projects;
     }
 
     public override object? Build()
     {
-        var client          = this.UseService<SliplaneApiClient>();
-        var selectedProject = this.UseState(_projects.FirstOrDefault()?.Id ?? string.Empty);
-        var services        = this.UseState<List<SliplaneService>>();
-        var loading         = this.UseState(true);
-        var error           = this.UseState<string?>();
-        var busy            = this.UseState(false);
-        var refresh         = this.UseRefreshToken();
-        var detailService   = this.UseState<SliplaneService?>();
-        var detailTab       = this.UseState(0); // 0=Logs 1=Events 2=Metrics
-        // Create service form
-        var newServiceName  = this.UseState(string.Empty);
-        var newGitRepo      = this.UseState(string.Empty);
-        var newBranch       = this.UseState("main");
-        var newServerId     = this.UseState(string.Empty);
-        var newAutoDeploy   = this.UseState(true);
-        var servers         = this.UseState<List<SliplaneServer>>();
+        var client         = this.UseService<SliplaneApiClient>();
+        var allServices    = this.UseState<List<(string ProjectId, string ProjectName, SliplaneService Service)>>();
+        var serverList     = this.UseState<List<SliplaneServer>>(() => new List<SliplaneServer>());
+        var loading        = this.UseState(true);
+        var error          = this.UseState<string?>();
+        var reloadCounter  = this.UseState(0);
+        var serviceDetailOpen = this.UseState(false);
+        var serviceDetailSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
+        var (createSheetView, openCreateSheet) = this.UseTrigger(
+            (IState<bool> isOpen) => new CreateServiceSheet(isOpen, _apiToken, _projects, reloadCounter));
 
-        async Task LoadServicesAsync()
+        void ShowServiceSheet(string projectId, string projectName, SliplaneService svc)
         {
-            if (string.IsNullOrEmpty(selectedProject.Value))
-            {
-                loading.Set(false);
-                return;
-            }
+            serviceDetailSelection.Set((projectId, projectName, svc));
+            serviceDetailOpen.Set(true);
+        }
 
+        async Task LoadAllAsync()
+        {
             loading.Set(true);
-            error.Value = null;
+            error.Set((string?)null);
             try
             {
-                var list = await client.GetServicesAsync(_apiToken, selectedProject.Value);
-                services.Set(list);
+                var overview = await client.GetOverviewAsync(_apiToken);
+                if (overview == null)
+                {
+                    allServices.Set(new List<(string, string, SliplaneService)>());
+                    serverList.Set(new List<SliplaneServer>());
+                    return;
+                }
+                serverList.Set(overview.Servers);
+                var flat = new List<(string ProjectId, string ProjectName, SliplaneService Service)>();
+                foreach (var kv in overview.ServicesByProject)
+                {
+                    var projectName = overview.Projects.FirstOrDefault(p => p.Id == kv.Key)?.Name ?? kv.Key;
+                    foreach (var svc in kv.Value)
+                        flat.Add((kv.Key, projectName, svc));
+                }
+                allServices.Set(flat);
             }
             catch (Exception ex)
             {
@@ -62,71 +69,323 @@ public class ServicesView : ViewBase
             }
         }
 
-        async Task LoadServersAsync()
+        this.UseEffect(async () => await LoadAllAsync(), EffectTrigger.OnMount(), reloadCounter);
+
+        if (loading.Value)
+            return Layout.Center() | Text.Muted("Loading all services...");
+
+        if (error.Value is { Length: > 0 })
+            return new Callout($"Error: {error.Value}", variant: CalloutVariant.Error);
+
+        var currentServices = allServices.Value ?? new List<(string ProjectId, string ProjectName, SliplaneService Service)>();
+        var servers = serverList.Value ?? new List<SliplaneServer>();
+
+        object content;
+        if (currentServices.Count == 0)
+        {
+            content = Layout.Vertical()
+                | Text.H2("Services")
+                | new Callout("No services found.", variant: CalloutVariant.Info)
+                | Layout.Horizontal()
+                    | new Button("Add service").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => openCreateSheet());
+        }
+        else
+        {
+            var cards = BuildServiceCards(currentServices, servers, ShowServiceSheet);
+            content = Layout.Vertical()
+                | Text.H2("Services")
+                | (Layout.Horizontal()
+                    | new Button("Add service").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => openCreateSheet()))
+                | (Layout.Grid().Columns(3) | cards);
+        }
+
+        return new Fragment(
+            content,
+            serviceDetailOpen.Value ? new ServiceDetailsSheet(serviceDetailOpen, _apiToken, serviceDetailSelection, reloadCounter) : null,
+            createSheetView
+        );
+    }
+
+    private static object[] BuildServiceCards(
+        List<(string ProjectId, string ProjectName, SliplaneService Service)> currentServices,
+        List<SliplaneServer> serverList,
+        Action<string, string, SliplaneService> showSheet)
+    {
+        return currentServices
+            .Select(t => (t.ProjectId, t.ProjectName, t.Service))
+            .Select(t =>
+            {
+                var (projectId, projectName, svc) = t;
+                var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId)
+                    ? "—"
+                    : (serverList.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId);
+                var statusLabel = string.IsNullOrWhiteSpace(svc.Status) ? "—" : svc.Status;
+                var siteUrl = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
+                             ?? svc.Network?.ManagedDomain
+                             ?? string.Empty;
+
+                var header = Layout.Vertical()
+                    | Text.H4(svc.Name)
+                    | Text.Muted(projectName);
+
+                var serverRow = Layout.Horizontal()
+                    | Icons.Server.ToIcon()
+                    | Text.Block(serverLabel);
+
+                var statusBadge = new Badge(statusLabel);
+
+                var openSiteBtn = !string.IsNullOrWhiteSpace(siteUrl)
+                    ? new Button("Open site").Icon(Icons.ExternalLink).Variant(ButtonVariant.Outline)
+                        .HandleClick(_ => { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(siteUrl) { UseShellExecute = true }); } catch { } })
+                    : null;
+
+                var body = Layout.Vertical()
+                    | header
+                    | serverRow
+                    | statusBadge
+                    | (openSiteBtn != null ? (object)openSiteBtn : Layout.Vertical());
+
+                return new Card(body).HandleClick(_ => showSheet(projectId, projectName, svc));
+            })
+            .ToArray();
+    }
+}
+
+/// <summary>
+/// Sheet showing service details: Logs, Events, Metrics tabs and Deploy / Pause / Delete actions.
+/// </summary>
+public class ServiceDetailsSheet : ViewBase
+{
+    private readonly IState<bool> _isOpen;
+    private readonly string _apiToken;
+    private readonly IState<(string ProjectId, string ProjectName, SliplaneService Service)?> _selection;
+    private readonly IState<int> _reloadCounter;
+
+    public ServiceDetailsSheet(
+        IState<bool> isOpen,
+        string apiToken,
+        IState<(string ProjectId, string ProjectName, SliplaneService Service)?> selection,
+        IState<int> reloadCounter)
+    {
+        _isOpen = isOpen;
+        _apiToken = apiToken;
+        _selection = selection;
+        _reloadCounter = reloadCounter;
+    }
+
+    public override object? Build()
+    {
+        var sel = _selection.Value;
+        if (sel == null || !_isOpen.Value)
+            return null;
+
+        var (projectId, projectName, service) = sel.Value;
+        var client = this.UseService<SliplaneApiClient>();
+        var tab = this.UseState(0); // 0=Logs, 1=Events, 2=Metrics
+        var logs = this.UseState<List<SliplaneServiceLog>?>();
+        var events = this.UseState<List<SliplaneServiceEvent>?>();
+        var metrics = this.UseState<SliplaneServiceMetrics?>();
+        var busy = this.UseState(false);
+
+        this.UseEffect(async () =>
+        {
+            try
+            {
+                var logsTask = client.GetServiceLogsAsync(_apiToken, projectId, service.Id);
+                var eventsTask = client.GetServiceEventsAsync(_apiToken, projectId, service.Id);
+                var metricsTask = client.GetServiceMetricsAsync(_apiToken, projectId, service.Id);
+                await Task.WhenAll(logsTask, eventsTask, metricsTask);
+                logs.Set(await logsTask);
+                events.Set(await eventsTask);
+                metrics.Set(await metricsTask);
+            }
+            catch
+            {
+                logs.Set((List<SliplaneServiceLog>?)null);
+                events.Set((List<SliplaneServiceEvent>?)null);
+                metrics.Set((SliplaneServiceMetrics?)null);
+            }
+        });
+
+        object tabContent;
+        if (tab.Value == 0)
+        {
+            if (logs.Value == null)
+                tabContent = Text.Muted("Loading logs...");
+            else if (logs.Value.Count == 0)
+                tabContent = Text.Muted("No logs.");
+            else
+            {
+                var codeContent = string.Join(
+                    Environment.NewLine,
+                    logs.Value.TakeLast(200).Select(l => $"{l.Timestamp:yyyy-MM-dd HH:mm:ss}  {l.Line}"));
+                tabContent = new CodeBlock(codeContent, Languages.Text)
+                    .ShowLineNumbers().ShowCopyButton().Width(Size.Full()).Height(Size.Units(200));
+            }
+        }
+        else if (tab.Value == 1)
+        {
+            if (events.Value == null)
+                tabContent = Text.Muted("Loading events...");
+            else if (events.Value.Count == 0)
+                tabContent = Text.Muted("No events.");
+            else
+                tabContent = Layout.Vertical() | events.Value.Take(100).Select(e =>
+                    Layout.Horizontal()
+                    | Text.InlineCode(e.Type)
+                    | Text.Block(e.Message)
+                    | Text.Muted(e.CreatedAt.ToString("yyyy-MM-dd HH:mm")))
+                    .ToArray<object>();
+        }
+        else
+        {
+            if (metrics.Value == null)
+                tabContent = Text.Muted("Loading metrics...");
+            else
+                tabContent = Layout.Vertical()
+                    | Text.Block($"CPU: {metrics.Value.CpuUsagePercent:F1}%")
+                    | Text.Block($"Memory: {metrics.Value.MemoryUsagePercent:F1}% ({metrics.Value.MemoryUsageMb:F0} / {metrics.Value.MemoryTotalMb:F0} MB)");
+        }
+
+        var tabButtons = Layout.Horizontal()
+            | new Button("Logs").Variant(tab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Outline).HandleClick(_ => tab.Set(0))
+            | new Button("Events").Variant(tab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Outline).HandleClick(_ => tab.Set(1))
+            | new Button("Metrics").Variant(tab.Value == 2 ? ButtonVariant.Primary : ButtonVariant.Outline).HandleClick(_ => tab.Set(2));
+
+        async Task DeployAsync()
+        {
+            if (busy.Value) return;
+            busy.Set(true);
+            try
+            {
+                await client.DeployServiceAsync(_apiToken, projectId, service.Id);
+                _reloadCounter.Set(_reloadCounter.Value + 1);
+            }
+            finally { busy.Set(false); }
+        }
+
+        async Task PauseUnpauseAsync()
+        {
+            if (busy.Value) return;
+            busy.Set(true);
+            try
+            {
+                if (string.Equals(service.Status, "paused", StringComparison.OrdinalIgnoreCase))
+                    await client.UnpauseServiceAsync(_apiToken, projectId, service.Id);
+                else
+                    await client.PauseServiceAsync(_apiToken, projectId, service.Id);
+                _reloadCounter.Set(_reloadCounter.Value + 1);
+            }
+            finally { busy.Set(false); }
+        }
+
+        async Task DeleteAsync()
+        {
+            if (busy.Value) return;
+            busy.Set(true);
+            try
+            {
+                await client.DeleteServiceAsync(_apiToken, projectId, service.Id);
+                _isOpen.Set(false);
+                _reloadCounter.Set(_reloadCounter.Value + 1);
+            }
+            finally { busy.Set(false); }
+        }
+
+        var isPaused = string.Equals(service.Status, "paused", StringComparison.OrdinalIgnoreCase);
+        var pauseLabel = isPaused ? "Unpause" : "Pause";
+
+        var actions = Layout.Horizontal()
+            | new Button("Deploy").Icon(Icons.Rocket).Variant(ButtonVariant.Outline).Loading(busy.Value).HandleClick(async _ => await DeployAsync())
+            | new Button(pauseLabel).Icon(Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value).HandleClick(async _ => await PauseUnpauseAsync())
+            | new Button("Delete").Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(busy.Value).HandleClick(async _ => await DeleteAsync());
+
+        var cardContent = Layout.Vertical()
+            | Text.Muted(projectName)
+                | tabButtons
+            | tabContent
+            | actions;
+
+        if (!_isOpen.Value)
+            return null;
+
+        return new Sheet(_ => _isOpen.Set(false), new Card(cardContent), title: $"Service: {service.Name}");
+    }
+}
+
+/// <summary>
+/// Sheet with form to create a new service (project, name, git repo, branch, server, auto-deploy).
+/// </summary>
+public class CreateServiceSheet : ViewBase
+{
+    private readonly IState<bool> _isOpen;
+    private readonly string _apiToken;
+    private readonly List<SliplaneProject> _projects;
+    private readonly IState<int> _reloadCounter;
+
+    public CreateServiceSheet(IState<bool> isOpen, string apiToken, List<SliplaneProject> projects, IState<int> reloadCounter)
+    {
+        _isOpen = isOpen;
+        _apiToken = apiToken;
+        _projects = projects;
+        _reloadCounter = reloadCounter;
+    }
+
+    public override object? Build()
+    {
+        var client = this.UseService<SliplaneApiClient>();
+        var servers = this.UseState<List<SliplaneServer>>(() => new List<SliplaneServer>());
+        var selectedProjectId = this.UseState(_projects.Count > 0 ? _projects[0].Id : string.Empty);
+        var name = this.UseState(string.Empty);
+        var gitRepo = this.UseState(string.Empty);
+        var branch = this.UseState("main");
+        var serverId = this.UseState(string.Empty);
+        var autoDeploy = this.UseState(true);
+        var busy = this.UseState(false);
+        var error = this.UseState<string?>(() => (string?)null);
+
+        this.UseEffect(async () =>
         {
             try
             {
                 var list = await client.GetServersAsync(_apiToken);
                 servers.Set(list);
-                if (list.Count > 0 && string.IsNullOrEmpty(newServerId.Value))
-                    newServerId.Set(list[0].Id);
+                if (list.Count > 0 && string.IsNullOrEmpty(serverId.Value))
+                    serverId.Set(list[0].Id);
             }
-            catch { /* ignore */ }
-        }
+            catch
+            {
+                servers.Set(new List<SliplaneServer>());
+            }
+        });
 
-        async Task CreateAndDeployServiceAsync()
+        var projectOptions = _projects.Select(p => new Option<string>(p.Name, p.Id)).ToArray();
+        var serverOptions = (servers.Value ?? new List<SliplaneServer>()).Select(s => new Option<string>(s.Name, s.Id)).ToArray();
+
+        async Task CreateAsync()
         {
             if (busy.Value) return;
-
-            if (string.IsNullOrWhiteSpace(selectedProject.Value))
-            {
-                error.Set("Select a project first.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(newServiceName.Value))
-            {
-                error.Set("Please enter an app name.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(newGitRepo.Value))
-            {
-                error.Set("Please enter a Git repository URL.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(newServerId.Value))
-            {
-                error.Set("Please select a server.");
-                return;
-            }
-
+            if (string.IsNullOrWhiteSpace(selectedProjectId.Value)) { error.Set("Select a project."); return; }
+            if (string.IsNullOrWhiteSpace(name.Value)) { error.Set("Enter service name."); return; }
+            if (string.IsNullOrWhiteSpace(gitRepo.Value)) { error.Set("Enter Git repository URL."); return; }
+            if (string.IsNullOrWhiteSpace(serverId.Value)) { error.Set("Select a server."); return; }
             error.Set((string?)null);
             busy.Set(true);
-
             try
             {
                 var request = new CreateServiceRequest(
-                    Name: newServiceName.Value.Trim(),
-                    ServerId: newServerId.Value,
+                    Name: name.Value.Trim(),
+                    ServerId: serverId.Value,
                     Network: new ServiceNetworkRequest(Public: true, Protocol: "http"),
                     Deployment: new RepositoryDeployment(
-                        Url: newGitRepo.Value.Trim(),
-                        Branch: string.IsNullOrWhiteSpace(newBranch.Value) ? "main" : newBranch.Value.Trim(),
-                        AutoDeploy: newAutoDeploy.Value
+                        Url: gitRepo.Value.Trim(),
+                        Branch: string.IsNullOrWhiteSpace(branch.Value) ? "main" : branch.Value.Trim(),
+                        AutoDeploy: autoDeploy.Value
                     )
                 );
-
-                await client.CreateServiceAsync(_apiToken, selectedProject.Value, request);
-
-                // Clear form and reload list
-                newServiceName.Set(string.Empty);
-                newGitRepo.Set(string.Empty);
-                newBranch.Set("main");
-                newAutoDeploy.Set(true);
-
-                await LoadServicesAsync();
+                await client.CreateServiceAsync(_apiToken, selectedProjectId.Value, request);
+                _isOpen.Set(false);
+                _reloadCounter.Set(_reloadCounter.Value + 1);
             }
             catch (Exception ex)
             {
@@ -138,232 +397,27 @@ public class ServicesView : ViewBase
             }
         }
 
-        this.UseEffect(async () =>
-        {
-            await LoadServersAsync();
-            await LoadServicesAsync();
-        });
+        var form = Layout.Vertical()
+            | Text.H4("New service")
+            | Text.Block("Deploy from a Git repository.").Muted()
+            | selectedProjectId.ToSelectInput(projectOptions)
+            | name.ToTextInput().Placeholder("Service name")
+            | gitRepo.ToTextInput().Placeholder("Git repository URL")
+            | branch.ToTextInput().Placeholder("Branch (default: main)")
+            | serverId.ToSelectInput(serverOptions)
+            | autoDeploy.ToBoolInput()
+            | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
 
-        if (_projects.Count == 0)
-            return new Callout("No projects found. Create a project first.", variant: CalloutVariant.Info);
+        if (!_isOpen.Value)
+            return null;
 
-        var projectOptions = _projects
-            .Select(p => new Option<string>(p.Name, p.Id))
-            .ToArray();
-
-        var serverOptions = (servers.Value ?? new List<SliplaneServer>())
-            .Select(s => new Option<string>(s.Name, s.Id))
-            .ToArray();
-
-        var currentServices = services.Value ?? new List<SliplaneService>();
-
-        var createCard = new Card(
-            Layout.Vertical().Gap(2)
-            | Text.H3("Create new service")
-            | Text.Muted("Deploy a service from a Git repository to the selected project.")
-            | newServiceName.ToTextInput().Placeholder("Service name (e.g. my-api)")
-            | newGitRepo.ToTextInput().Placeholder("Git repository URL (e.g. https://github.com/user/repo)")
-            | newBranch.ToTextInput().Placeholder("Branch (default: main)")
-            | (Layout.Horizontal().Gap(3).Align(Align.Center)
-               | Text.Block("Server:").Bold()
-               | newServerId.ToSelectInput(serverOptions))
-            | (Layout.Horizontal().Gap(3).Align(Align.Center)
-               | Text.Block("Auto-deploy on push:").Bold()
-               | newAutoDeploy.ToBoolInput())
-            | (error.Value is { Length: > 0 } err
-                ? (object)new Callout(err, variant: CalloutVariant.Error)
-                : Layout.Vertical())
-            | (Layout.Horizontal().Gap(2).Align(Align.Right)
-               | new Button("Create service")
-                    .Icon(Icons.Rocket)
-                    .Variant(ButtonVariant.Primary)
-                    .Loading(busy.Value)
-                    .HandleClick(async () => await CreateAndDeployServiceAsync()))
-        ).Width(Size.Fraction(0.6f));
-
-        return Layout.Vertical().Gap(5)
-            | Text.H2("Services")
-            | Text.Muted("Deploy and manage runtime services for your projects.")
-            | (Layout.Horizontal().Gap(3).Align(Align.Center)
-               | Text.Block("Project:").Bold()
-               | selectedProject.ToSelectInput(projectOptions))
-            | createCard
-            | (loading.Value
-                ? (object)(Layout.Center() | Text.Muted("Loading services..."))
-                : BuildServiceTable(client, currentServices, selectedProject.Value, busy, refresh, detailService))
-            | (detailService.Value != null
-                ? BuildServiceDetail(client, detailService.Value, selectedProject.Value, detailTab)
-                : currentServices.Count > 0
-                    ? new Callout("Select a service above to view logs, events, and metrics.", variant: CalloutVariant.Info)
-                    : Layout.Vertical());
-    }
-
-    // ── Service table ─────────────────────────────────────────────────────────
-
-    private object BuildServiceTable(
-        SliplaneApiClient client,
-        List<SliplaneService> svcs,
-        string projectId,
-        IState<bool> busy,
-        RefreshToken refresh,
-        IState<SliplaneService?> detail)
-    {
-        if (svcs.Count == 0)
-            return new Callout("No services in this project yet. Create a service for this project in Sliplane, then open this tab again.", variant: CalloutVariant.Info);
-
-        var rows = svcs
-            .Select(s =>
-                Layout.Horizontal().Gap(1)
-                | Text.Block(s.Name)
-                | (s.Image != null ? Text.InlineCode(s.Image) : Text.Muted("git"))
-                | Text.Block(s.Port?.ToString() ?? "—")
-                | Text.Muted(s.UpdatedAt?.ToString("MM/dd HH:mm") ?? "—")
-                | new Spacer()
-                | new Button("Logs").Icon(Icons.FileText)
-                    .Variant(ButtonVariant.Ghost)
-                    .HandleClick(() => detail.Set(detail.Value?.Id == s.Id ? null : s))
-                | BuildPauseButton(client, s, projectId, busy, refresh)
-                | new Button("Deploy").Icon(Icons.CloudUpload)
-                    .Variant(ButtonVariant.Outline)
-                    .Loading(busy.Value)
-                    .HandleClick(async () =>
-                    {
-                        busy.Set(true);
-                        await client.DeployServiceAsync(_apiToken, projectId, s.Id);
-                        busy.Set(false);
-                        refresh.Refresh();
-                    })
-                | new Button("Delete").Icon(Icons.Trash2)
-                    .Variant(ButtonVariant.Outline)
-                    .HandleClick(async () =>
-                    {
-                        busy.Set(true);
-                        await client.DeleteServiceAsync(_apiToken, projectId, s.Id);
-                        busy.Set(false);
-                        refresh.Refresh();
-                    })
-            )
-            .ToArray();
-
-        return Layout.Vertical().Gap(2) | rows;
-    }
-
-    private object BuildPauseButton(
-        SliplaneApiClient client,
-        SliplaneService svc,
-        string projectId,
-        IState<bool> busy,
-        RefreshToken refresh)
-    {
-        var isPaused = svc.Status?.Equals("paused", StringComparison.OrdinalIgnoreCase) == true;
-
-        return isPaused
-            ? new Button("Unpause").Icon(Icons.Play)
-                .Variant(ButtonVariant.Outline)
-                .Loading(busy.Value)
-                .HandleClick(async () =>
-                {
-                    busy.Set(true);
-                    await client.UnpauseServiceAsync(_apiToken, projectId, svc.Id);
-                    busy.Set(false);
-                    refresh.Refresh();
-                })
-            : new Button("Pause").Icon(Icons.Pause)
-                .Variant(ButtonVariant.Outline)
-                .Loading(busy.Value)
-                .HandleClick(async () =>
-                {
-                    busy.Set(true);
-                    await client.PauseServiceAsync(_apiToken, projectId, svc.Id);
-                    busy.Set(false);
-                    refresh.Refresh();
-                });
-    }
-
-    // ── Service detail drawer ─────────────────────────────────────────────────
-
-    private object BuildServiceDetail(
-        SliplaneApiClient client,
-        SliplaneService svc,
-        string projectId,
-        IState<int> tab)
-    {
-        var logs    = this.UseState<List<SliplaneServiceLog>>();
-        var events  = this.UseState<List<SliplaneServiceEvent>>();
-        var metrics = this.UseState<SliplaneServiceMetrics?>();
-
-        async Task LoadDetailsAsync()
-        {
-            var l = client.GetServiceLogsAsync(_apiToken, projectId, svc.Id);
-            var e = client.GetServiceEventsAsync(_apiToken, projectId, svc.Id);
-            var m = client.GetServiceMetricsAsync(_apiToken, projectId, svc.Id);
-            await Task.WhenAll(l, e, m);
-            logs.Set(await l);
-            events.Set(await e);
-            metrics.Set(await m);
-        }
-
-        // Fire-and-forget; we don't need triggers here
-        _ = LoadDetailsAsync();
-
-        var tabs = new[] { "Logs", "Events", "Metrics" };
-
-        return new Card(
-            Layout.Vertical().Gap(3)
-            | Text.H4($"Service: {svc.Name}")
-            | Layout.Tabs(
-                new Tab("Logs",    BuildLogs(logs.Value)),
-                new Tab("Events",  BuildEvents(events.Value)),
-                new Tab("Metrics", BuildMetrics(metrics.Value))
-              ).Variant(TabsVariant.Tabs)
-        );
-    }
-
-    private static object BuildLogs(List<SliplaneServiceLog>? logs)
-    {
-        if (logs == null) return Text.Muted("Loading logs...");
-        if (logs.Count == 0) return Text.Muted("No log entries found.");
-
-        return Layout.Vertical().Gap(1).Height(Size.Units(300)).Scroll()
-               | logs.TakeLast(100).Select(l =>
-                   Layout.Horizontal().Gap(2)
-                   | Text.Muted(l.Timestamp.ToString("HH:mm:ss"))
-                   | Text.Block(l.Line));
-    }
-
-    private static object BuildEvents(List<SliplaneServiceEvent>? events)
-    {
-        if (events == null) return Text.Muted("Loading events...");
-        if (events.Count == 0) return Text.Muted("No events found.");
-
-        var rows = events
-            .Select(e =>
-                Layout.Horizontal().Gap(2)
-                | Text.Muted(e.CreatedAt.ToString("MM/dd HH:mm"))
-                | new Badge(e.Type)
-                | Text.Block(e.Message)
-            )
-            .ToArray();
-
-        return Layout.Vertical().Gap(1) | rows;
-    }
-
-    private static object BuildMetrics(SliplaneServiceMetrics? m)
-    {
-        if (m == null) return Text.Muted("Loading metrics...");
-
-        return Layout.Horizontal().Gap(4).Wrap()
-               | MetricBox("CPU Usage", $"{m.CpuUsagePercent:F1}%", Icons.Cpu)
-               | MetricBox("Memory", $"{m.MemoryUsageMb:F0} / {m.MemoryTotalMb:F0} MB", Icons.HardDrive);
-    }
-
-    private static object MetricBox(string label, string value, Icons icon)
-    {
-        return new Card(
-            Layout.Vertical().Gap(1).Align(Align.Center)
-            | icon.ToIcon()
-            | Text.H3(value).Bold()
-            | Text.Muted(label)
-        ).Width(Size.Units(180));
+        return new Sheet(
+            _ => _isOpen.Set(false),
+            new Card(Layout.Vertical()
+                | form
+                | Layout.Horizontal()
+                    | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await CreateAsync())
+                    | new Button("Cancel").HandleClick(_ => _isOpen.Set(false))),
+            title: "Create service");
     }
 }

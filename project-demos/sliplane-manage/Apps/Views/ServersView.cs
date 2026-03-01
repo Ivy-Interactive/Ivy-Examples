@@ -96,7 +96,7 @@ public class ServersView : ViewBase
 
         if (list.Count == 0)
         {
-            return Layout.Vertical().Gap(5)
+            return Layout.Vertical()
                 | Text.H2("Servers")
                 | new Callout("No servers found.", variant: CalloutVariant.Info);
         }
@@ -119,7 +119,7 @@ public class ServersView : ViewBase
                     _               => s.Region
                 };
 
-                var regionRow = Layout.Horizontal().Gap(2)
+                var regionRow = Layout.Horizontal()
                     | Icons.MapPin.ToIcon()
                     | Text.Block(regionLabel);
 
@@ -129,18 +129,18 @@ public class ServersView : ViewBase
                     ? $"{volCount} Volume" + (volCount == 1 ? string.Empty : "s")
                     : "Volumes: —";
 
-                var volumesRow = Layout.Horizontal().Gap(2)
+                var volumesRow = Layout.Horizontal()
                     | Icons.HardDrive.ToIcon()
                     | Text.Block(volumesLabel);
 
                 var servicesCount = totalServices.Value;
                 var servicesLabel = $"{servicesCount} Service" + (servicesCount == 1 ? string.Empty : "s");
-                var servicesRow = Layout.Horizontal().Gap(2)
+                var servicesRow = Layout.Horizontal()
                     | Icons.Box.ToIcon()
                     | Text.Block(servicesLabel);
 
 
-                var createdRow = Layout.Horizontal().Gap(2)
+                var createdRow = Layout.Horizontal()
                     | Icons.Calendar.ToIcon()
                     | Text.Muted(s.CreatedAt.ToString("MM/dd/yyyy"));
 
@@ -180,12 +180,12 @@ public class ServersView : ViewBase
         this.UseEffect(async () => await LoadServerDetailsAsync());
 
         return new Card(
-            Layout.Vertical().Gap(4)
+            Layout.Vertical()
             | Text.H4($"Server: {server.Name}")
             | (volumes.Value?.Count > 0
-                ? (object)(Layout.Vertical().Gap(1)
+                ? (object)(Layout.Vertical()
                     | volumes.Value!.Select(v =>
-                        Layout.Horizontal().Gap(2)
+                        Layout.Horizontal()
                         | Text.Block(v.Name)
                         | Text.Block($"{v.SizeGb} GB")
                         | Text.InlineCode(v.MountPath)
@@ -224,14 +224,14 @@ public class ServerDetailsSheet(IState<bool> isOpen, string apiToken, SliplaneSe
             | Text.H3(server.Name)
             | Text.Muted($"{server.Region} • {server.Plan}")
             | (metrics.Value != null
-                ? (object)(Layout.Vertical().Gap(1)
+                ? (object)(Layout.Vertical()
                     | Text.Block($"CPU usage: {metrics.Value.CpuUsagePercent:F1}%")
                     | Text.Block($"Memory: {metrics.Value.MemoryUsageMb:F0} / {metrics.Value.MemoryTotalMb:F0} MB"))
                 : Text.Muted("Loading metrics..."))
             | (volumes.Value.Count > 0
-                ? (object)(Layout.Vertical().Gap(1)
+                ? (object)(Layout.Vertical()
                     | volumes.Value.Select(v =>
-                        Layout.Horizontal().Gap(2)
+                        Layout.Horizontal()
                         | Text.Block(v.Name)
                         | Text.Block($"{v.SizeGb} GB")
                         | Text.InlineCode(v.MountPath)
