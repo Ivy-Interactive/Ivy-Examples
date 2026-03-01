@@ -80,27 +80,27 @@ public class ServicesView : ViewBase
         var currentServices = allServices.Value ?? new List<(string ProjectId, string ProjectName, SliplaneService Service)>();
         var servers = serverList.Value ?? new List<SliplaneServer>();
 
+        var addServiceBtn = new Button("Add service").Icon(Icons.Plus).HandleClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
+        var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
+
         object content;
         if (currentServices.Count == 0)
         {
             content = Layout.Vertical()
                 | Text.H2("Services")
-                | new Callout("No services found.", variant: CalloutVariant.Info)
-                | Layout.Horizontal()
-                    | new Button("Add service").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => openCreateSheet());
+                | new Callout("No services found.", variant: CalloutVariant.Info);
         }
         else
         {
             var cards = BuildServiceCards(currentServices, servers, ShowServiceSheet);
             content = Layout.Vertical()
                 | Text.H2("Services")
-                | (Layout.Horizontal()
-                    | new Button("Add service").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => openCreateSheet()))
                 | (Layout.Grid().Columns(3) | cards);
         }
 
         return new Fragment(
             content,
+            addServiceFloat,
             serviceDetailOpen.Value ? new ServiceDetailsSheet(serviceDetailOpen, _apiToken, serviceDetailSelection, reloadCounter) : null,
             createSheetView
         );
@@ -120,30 +120,57 @@ public class ServicesView : ViewBase
                     ? "—"
                     : (serverList.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId);
                 var statusLabel = string.IsNullOrWhiteSpace(svc.Status) ? "—" : svc.Status;
+                var statusIcon = string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase)
+                    ? Icons.Clock.ToIcon()
+                    : string.Equals(svc.Status, "live", StringComparison.OrdinalIgnoreCase)
+                        ? Icons.Play.ToIcon()
+                        : string.Equals(svc.Status, "suspended", StringComparison.OrdinalIgnoreCase)
+                            ? Icons.Pause.ToIcon()
+                            : Icons.MonitorStop.ToIcon();
                 var siteUrl = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
                              ?? svc.Network?.ManagedDomain
                              ?? string.Empty;
+                var siteUrlAbsolute = string.IsNullOrWhiteSpace(siteUrl) ? string.Empty
+                    : (siteUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || siteUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                        ? siteUrl
+                        : "https://" + siteUrl);
 
-                var header = Layout.Vertical()
-                    | Text.H4(svc.Name)
-                    | Text.Muted(projectName);
+                var isDbService = (svc.Image?.Contains("docker.io", StringComparison.OrdinalIgnoreCase) == true)
+                    || (svc.Deployment?.Url?.Contains("docker.io", StringComparison.OrdinalIgnoreCase) == true)
+                    || (svc.GitRepo?.Contains("docker.io", StringComparison.OrdinalIgnoreCase) == true);
+                var serviceIcon = isDbService ? Icons.Database.ToIcon() : Icons.Box.ToIcon();
+
+                var header = Layout.Horizontal().Align(Align.Center)
+                    | (Layout.Vertical().Align(Align.Left)
+                        | Text.H3(svc.Name))
+                    | (Layout.Vertical().Align(Align.Right).Width(Size.Fit())
+                        | serviceIcon);
+                    
 
                 var serverRow = Layout.Horizontal()
                     | Icons.Server.ToIcon()
                     | Text.Block(serverLabel);
+                
+                var projectRow = Layout.Horizontal()
+                    | Icons.FolderOpen.ToIcon()
+                    | Text.Block(projectName);
 
-                var statusBadge = new Badge(statusLabel);
+                var statusRow = Layout.Horizontal()
+                    | statusIcon
+                    | Text.Block(statusLabel);
 
-                var openSiteBtn = !string.IsNullOrWhiteSpace(siteUrl)
-                    ? new Button("Open site").Icon(Icons.ExternalLink).Variant(ButtonVariant.Outline)
-                        .HandleClick(_ => { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(siteUrl) { UseShellExecute = true }); } catch { } })
-                    : null;
+                var openLinkRow = string.IsNullOrWhiteSpace(siteUrlAbsolute)
+                    ? null
+                    : (object)(Layout.Horizontal().Gap(0).Align(Align.Left)
+                        | Icons.ExternalLink.ToIcon()
+                        | new Button(siteUrl).Link().Url(siteUrlAbsolute));
 
                 var body = Layout.Vertical()
                     | header
                     | serverRow
-                    | statusBadge
-                    | (openSiteBtn != null ? (object)openSiteBtn : Layout.Vertical());
+                    | projectRow
+                    | statusRow
+                    | (openLinkRow ?? Layout.Vertical());
 
                 return new Card(body).HandleClick(_ => showSheet(projectId, projectName, svc));
             })
@@ -314,7 +341,8 @@ public class ServiceDetailsSheet : ViewBase
 }
 
 /// <summary>
-/// Sheet with form to create a new service (project, name, git repo, branch, server, auto-deploy).
+/// Sheet to create a new service with all Sliplane API fields (deployment, network, cmd, healthcheck, env, volumes).
+/// Uses FooterLayout and plain sections (no Cards).
 /// </summary>
 public class CreateServiceSheet : ViewBase
 {
@@ -335,14 +363,31 @@ public class CreateServiceSheet : ViewBase
     {
         var client = this.UseService<SliplaneApiClient>();
         var servers = this.UseState<List<SliplaneServer>>(() => new List<SliplaneServer>());
+        var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
         var selectedProjectId = this.UseState(_projects.Count > 0 ? _projects[0].Id : string.Empty);
         var name = this.UseState(string.Empty);
+        var serverId = this.UseState(string.Empty);
         var gitRepo = this.UseState(string.Empty);
         var branch = this.UseState("main");
-        var serverId = this.UseState(string.Empty);
+        var dockerfilePath = this.UseState("Dockerfile");
+        var dockerContext = this.UseState(".");
         var autoDeploy = this.UseState(true);
+        var cmd = this.UseState(string.Empty);
+        var healthcheck = this.UseState("/");
+        var networkPublic = this.UseState(true);
+        var networkProtocol = this.UseState("http");
         var busy = this.UseState(false);
         var error = this.UseState<string?>(() => (string?)null);
+        // Dynamic env list + dialog to add
+        var envList = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
+        var showAddEnvDialog = this.UseState(false);
+        var addEnvKey = this.UseState(string.Empty);
+        var addEnvValue = this.UseState(string.Empty);
+        // Dynamic volume mounts list + dialog to add
+        var volumeMountsList = this.UseState<List<(string VolumeId, string MountPath)>>(() => new List<(string, string)>());
+        var showAddVolumeDialog = this.UseState(false);
+        var addVolumeId = this.UseState(string.Empty);
+        var addMountPath = this.UseState(string.Empty);
 
         this.UseEffect(async () =>
         {
@@ -359,29 +404,60 @@ public class CreateServiceSheet : ViewBase
             }
         });
 
+        this.UseEffect(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(serverId.Value))
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+                return;
+            }
+            try
+            {
+                var vols = await client.GetServerVolumesAsync(_apiToken, serverId.Value);
+                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
+            }
+            catch
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+            }
+        }, serverId);
+
         var projectOptions = _projects.Select(p => new Option<string>(p.Name, p.Id)).ToArray();
         var serverOptions = (servers.Value ?? new List<SliplaneServer>()).Select(s => new Option<string>(s.Name, s.Id)).ToArray();
+        var volumeOptions = (serverVolumes.Value ?? new List<SliplaneVolume>()).Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id)).ToArray();
+        var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
 
         async Task CreateAsync()
         {
             if (busy.Value) return;
             if (string.IsNullOrWhiteSpace(selectedProjectId.Value)) { error.Set("Select a project."); return; }
             if (string.IsNullOrWhiteSpace(name.Value)) { error.Set("Enter service name."); return; }
-            if (string.IsNullOrWhiteSpace(gitRepo.Value)) { error.Set("Enter Git repository URL."); return; }
+            if (string.IsNullOrWhiteSpace(gitRepo.Value)) { error.Set("Enter repository or image URL."); return; }
             if (string.IsNullOrWhiteSpace(serverId.Value)) { error.Set("Select a server."); return; }
             error.Set((string?)null);
             busy.Set(true);
             try
             {
+                var env = envList.Value?.Count > 0 ? envList.Value : null;
+                var volumes = volumeMountsList.Value?.Count > 0
+                    ? volumeMountsList.Value.Select(v => new ServiceVolumeMount(v.VolumeId, v.MountPath)).ToList()
+                    : null;
+
                 var request = new CreateServiceRequest(
                     Name: name.Value.Trim(),
                     ServerId: serverId.Value,
-                    Network: new ServiceNetworkRequest(Public: true, Protocol: "http"),
+                    Network: new ServiceNetworkRequest(Public: networkPublic.Value, Protocol: networkProtocol.Value),
                     Deployment: new RepositoryDeployment(
                         Url: gitRepo.Value.Trim(),
                         Branch: string.IsNullOrWhiteSpace(branch.Value) ? "main" : branch.Value.Trim(),
-                        AutoDeploy: autoDeploy.Value
-                    )
+                        AutoDeploy: autoDeploy.Value,
+                        DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath.Value) ? "Dockerfile" : dockerfilePath.Value.Trim(),
+                        DockerContext: string.IsNullOrWhiteSpace(dockerContext.Value) ? "." : dockerContext.Value.Trim()
+                    ),
+                    Cmd: string.IsNullOrWhiteSpace(cmd.Value) ? null : cmd.Value.Trim(),
+                    Healthcheck: string.IsNullOrWhiteSpace(healthcheck.Value) ? null : healthcheck.Value.Trim(),
+                    Env: env,
+                    Volumes: volumes
                 );
                 await client.CreateServiceAsync(_apiToken, selectedProjectId.Value, request);
                 _isOpen.Set(false);
@@ -397,27 +473,177 @@ public class CreateServiceSheet : ViewBase
             }
         }
 
-        var form = Layout.Vertical()
-            | Text.H4("New service")
-            | Text.Block("Deploy from a Git repository.").Muted()
+        var basicSection = Layout.Vertical()
+            | Text.H4("Basic")
             | selectedProjectId.ToSelectInput(projectOptions)
             | name.ToTextInput().Placeholder("Service name")
-            | gitRepo.ToTextInput().Placeholder("Git repository URL")
+            | serverId.ToSelectInput(serverOptions);
+
+        var deploymentSection = Layout.Vertical()
+            | Text.H4("Deployment (source and build)")
+            | gitRepo.ToTextInput().Placeholder("Repository URL (e.g. https://github.com/user/repo or docker.io/image)")
             | branch.ToTextInput().Placeholder("Branch (default: main)")
-            | serverId.ToSelectInput(serverOptions)
-            | autoDeploy.ToBoolInput()
-            | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
+            | dockerfilePath.ToTextInput().Placeholder("Dockerfile path")
+            | dockerContext.ToTextInput().Placeholder("Docker context")
+            | autoDeploy.ToBoolInput().Label("Auto-deploy on push");
+
+        var optionalSection = Layout.Vertical()
+            | Text.H4("Optional (command, healthcheck)")
+            | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)");
+
+        var networkSection = Layout.Vertical()
+            | Text.H4("Network (public, protocol)")
+            | networkPublic.ToBoolInput().Label("Public access")
+            | networkProtocol.ToSelectInput(protocolOptions);
+
+        // Env: Table widget + Add button; dialog to add one entry
+        var envItems = envList.Value ?? new List<EnvironmentVariable>();
+        var envHeaderRow = new TableRow(
+            new TableCell("Key").IsHeader(),
+            new TableCell("Value").IsHeader(),
+            new TableCell("Actions").IsHeader().Width(Size.Fit()));
+        var envDataRows = envItems
+            .Select((e, idx) =>
+            {
+                var index = idx;
+                return new TableRow(
+                    new TableCell(e.Key),
+                    new TableCell(e.Value ?? ""),
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    {
+                        var next = envList.Value.Where((_, i) => i != index).ToList();
+                        envList.Set(next);
+                    })).Width(Size.Fit()));
+            })
+            .ToArray();
+        object envTableContent = envDataRows.Length == 0
+            ? (object)Text.Muted("No variables added.")
+            : new Table(new[] { envHeaderRow }.Concat(envDataRows).ToArray()).Width(Size.Full());
+        var envSection = Layout.Vertical()
+            | Text.H4("Environment variables")
+            | envTableContent
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddEnvDialog.Set(true));
+
+        // Volumes: Table widget + Add button; dialog to add one mount
+        var vols = serverVolumes.Value ?? new List<SliplaneVolume>();
+        var volItems = volumeMountsList.Value ?? new List<(string VolumeId, string MountPath)>();
+        var volHeaderRow = new TableRow(
+            new TableCell("Volume").IsHeader(),
+            new TableCell("Mount path").IsHeader(),
+            new TableCell("Actions").IsHeader().Width(Size.Fit()));
+        var volDataRows = volItems
+            .Select((v, idx) =>
+            {
+                var index = idx;
+                var volName = vols.FirstOrDefault(vol => vol.Id == v.VolumeId)?.Name ?? v.VolumeId;
+                return new TableRow(
+                    new TableCell(volName),
+                    new TableCell(v.MountPath),
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    {
+                        var next = volumeMountsList.Value.Where((_, i) => i != index).ToList();
+                        volumeMountsList.Set(next);
+                    })));
+            })
+            .ToArray();
+        object volTableContent = volDataRows.Length == 0
+            ? (object)Text.Muted("No volume mounts. Select a server first, then add.")
+            : new Table(new[] { volHeaderRow }.Concat(volDataRows).ToArray()).Width(Size.Full());
+        var volumesSection = Layout.Vertical()
+            | Text.H4("Volumes (attach server volumes)")
+            | volTableContent
+            | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddVolumeDialog.Set(true));
+
+        var errorBlock = error.Value is { Length: > 0 } err
+            ? (object)new Callout(err, variant: CalloutVariant.Error)
+            : Layout.Vertical();
+
+        var content = Layout.Vertical()
+            | basicSection
+            | deploymentSection
+            | optionalSection
+            | networkSection
+            | envSection
+            | volumesSection
+            | errorBlock;
+
+        var footer = Layout.Horizontal()
+            | new Button("Cancel").Variant(ButtonVariant.Outline).HandleClick(_ => _isOpen.Set(false))
+            | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await CreateAsync());
+
+        // Dialog: Add environment variable
+        Dialog? addEnvDialog = null;
+        if (showAddEnvDialog.Value)
+        {
+            void SaveEnv()
+            {
+                if (string.IsNullOrWhiteSpace(addEnvKey.Value)) return;
+                var next = (envList.Value ?? new List<EnvironmentVariable>()).ToList();
+                next.Add(new EnvironmentVariable(addEnvKey.Value.Trim(), addEnvValue.Value ?? string.Empty, false));
+                envList.Set(next);
+                addEnvKey.Set(string.Empty);
+                addEnvValue.Set(string.Empty);
+                showAddEnvDialog.Set(false);
+            }
+            var envForm = Layout.Vertical()
+                | addEnvKey.ToTextInput().Placeholder("Key (e.g. DATABASE_URL)")
+                | addEnvValue.ToTextInput().Placeholder("Value");
+            addEnvDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showAddEnvDialog.Set(false),
+                header: new DialogHeader("Add environment variable"),
+                body: new DialogBody(envForm),
+                footer: new DialogFooter(
+                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
+                    new Button("Cancel").HandleClick(_ => showAddEnvDialog.Set(false))
+                )).Width(Size.Units(220));
+        }
+
+        // Dialog: Add volume mount
+        Dialog? addVolumeDialog = null;
+        if (showAddVolumeDialog.Value)
+        {
+            void SaveVolume()
+            {
+                if (string.IsNullOrWhiteSpace(addVolumeId.Value) || string.IsNullOrWhiteSpace(addMountPath.Value)) return;
+                var next = (volumeMountsList.Value ?? new List<(string, string)>()).ToList();
+                next.Add((addVolumeId.Value, addMountPath.Value.Trim()));
+                volumeMountsList.Set(next);
+                addVolumeId.Set(string.Empty);
+                addMountPath.Set(string.Empty);
+                showAddVolumeDialog.Set(false);
+            }
+            var volForm = Layout.Vertical()
+                | addVolumeId.ToSelectInput(volumeOptions)
+                | addMountPath.ToTextInput().Placeholder("Mount path (e.g. /data)");
+            addVolumeDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showAddVolumeDialog.Set(false),
+                header: new DialogHeader("Add volume mount"),
+                body: new DialogBody(volForm),
+                footer: new DialogFooter(
+                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveVolume()),
+                    new Button("Cancel").HandleClick(_ => showAddVolumeDialog.Set(false))
+                )).Width(Size.Units(220));
+        }
 
         if (!_isOpen.Value)
             return null;
 
+        var sheetBody = new FooterLayout(footer, content);
+        object sheetContent;
+        if (addEnvDialog != null && addVolumeDialog != null)
+            sheetContent = new Fragment(sheetBody, addEnvDialog, addVolumeDialog);
+        else if (addEnvDialog != null)
+            sheetContent = new Fragment(sheetBody, addEnvDialog);
+        else if (addVolumeDialog != null)
+            sheetContent = new Fragment(sheetBody, addVolumeDialog);
+        else
+            sheetContent = sheetBody;
+
         return new Sheet(
             _ => _isOpen.Set(false),
-            new Card(Layout.Vertical()
-                | form
-                | Layout.Horizontal()
-                    | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await CreateAsync())
-                    | new Button("Cancel").HandleClick(_ => _isOpen.Set(false))),
-            title: "Create service");
+            sheetContent,
+            title: "Create service",
+            description: "Git repository or Docker image.")
+            .Width(Size.Fraction(1 / 3f));
     }
 }

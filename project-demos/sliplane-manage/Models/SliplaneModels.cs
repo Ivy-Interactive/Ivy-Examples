@@ -128,7 +128,14 @@ public record CreateServiceRequest(
     RepositoryDeployment Deployment,
     string? Cmd = null,
     string? Healthcheck = null,
-    List<EnvironmentVariable>? Env = null
+    List<EnvironmentVariable>? Env = null,
+    List<ServiceVolumeMount>? Volumes = null
+);
+
+/// <summary>Volume mount when creating a service.</summary>
+public record ServiceVolumeMount(
+    [property: JsonPropertyName("id")] string VolumeId,
+    [property: JsonPropertyName("mountPath")] string MountPath
 );
 
 /// <summary>Network settings for a new service.</summary>
