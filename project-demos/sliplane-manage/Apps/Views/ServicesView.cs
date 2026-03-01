@@ -20,15 +20,20 @@ public class ServicesView : ViewBase
     public override object? Build()
     {
         var client         = this.UseService<SliplaneApiClient>();
-        var allServices    = this.UseState<List<(string ProjectId, string ProjectName, SliplaneService Service)>>();
-        var serverList     = this.UseState<List<SliplaneServer>>(() => new List<SliplaneServer>());
-        var loading        = this.UseState(true);
-        var error          = this.UseState<string?>();
         var reloadCounter  = this.UseState(0);
         var serviceDetailOpen = this.UseState(false);
         var serviceDetailSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
         var (createSheetView, openCreateSheet) = this.UseTrigger(
             (IState<bool> isOpen) => new CreateServiceSheet(isOpen, _apiToken, _projects, reloadCounter));
+
+        var overviewQuery = this.UseQuery(
+            key: ("services-overview", _apiToken, reloadCounter.Value),
+            fetcher: async ct => await client.GetOverviewAsync(_apiToken),
+            options: new QueryOptions
+            {
+                RefreshInterval = TimeSpan.FromSeconds(30),
+                KeepPrevious = true
+            });
 
         void ShowServiceSheet(string projectId, string projectName, SliplaneService svc)
         {
@@ -36,49 +41,30 @@ public class ServicesView : ViewBase
             serviceDetailOpen.Set(true);
         }
 
-        async Task LoadAllAsync()
+        if (overviewQuery.Loading && overviewQuery.Value == null)
+            return Layout.Center() | Text.Muted("Loading all services...");
+
+        if (overviewQuery.Error is { } ex)
+            return new Callout($"Error: {ex.Message}", variant: CalloutVariant.Error);
+
+        var overview = overviewQuery.Value;
+        var servers = overview?.Servers ?? new List<SliplaneServer>();
+        var flat = new List<(string ProjectId, string ProjectName, SliplaneService Service)>();
+        if (overview != null)
         {
-            loading.Set(true);
-            error.Set((string?)null);
-            try
+            foreach (var kv in overview.ServicesByProject)
             {
-                var overview = await client.GetOverviewAsync(_apiToken);
-                if (overview == null)
-                {
-                    allServices.Set(new List<(string, string, SliplaneService)>());
-                    serverList.Set(new List<SliplaneServer>());
-                    return;
-                }
-                serverList.Set(overview.Servers);
-                var flat = new List<(string ProjectId, string ProjectName, SliplaneService Service)>();
-                foreach (var kv in overview.ServicesByProject)
-                {
-                    var projectName = overview.Projects.FirstOrDefault(p => p.Id == kv.Key)?.Name ?? kv.Key;
-                    foreach (var svc in kv.Value)
-                        flat.Add((kv.Key, projectName, svc));
-                }
-                allServices.Set(flat);
-            }
-            catch (Exception ex)
-            {
-                error.Set(ex.Message);
-            }
-            finally
-            {
-                loading.Set(false);
+                var projectName = overview.Projects.FirstOrDefault(p => p.Id == kv.Key)?.Name ?? kv.Key;
+                foreach (var svc in kv.Value)
+                    flat.Add((kv.Key, projectName, svc));
             }
         }
 
-        this.UseEffect(async () => await LoadAllAsync(), EffectTrigger.OnMount(), reloadCounter);
+        var currentServices = flat;
 
-        if (loading.Value)
-            return Layout.Center() | Text.Muted("Loading all services...");
-
-        if (error.Value is { Length: > 0 })
-            return new Callout($"Error: {error.Value}", variant: CalloutVariant.Error);
-
-        var currentServices = allServices.Value ?? new List<(string ProjectId, string ProjectName, SliplaneService Service)>();
-        var servers = serverList.Value ?? new List<SliplaneServer>();
+        var headerRow = Layout.Horizontal()
+            | Text.H2("Services")
+            | (overviewQuery.Validating ? Text.Muted("Updating...") : null!);
 
         var addServiceBtn = new Button("Add service").Icon(Icons.Plus).HandleClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
         var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
@@ -87,14 +73,14 @@ public class ServicesView : ViewBase
         if (currentServices.Count == 0)
         {
             content = Layout.Vertical()
-                | Text.H2("Services")
+                | headerRow
                 | new Callout("No services found.", variant: CalloutVariant.Info);
         }
         else
         {
             var cards = BuildServiceCards(currentServices, servers, ShowServiceSheet);
             content = Layout.Vertical()
-                | Text.H2("Services")
+                | headerRow
                 | (Layout.Grid().Columns(3) | cards);
         }
 
