@@ -36,6 +36,14 @@ public class ProjectsView : ViewBase
         var serviceLogs = this.UseState<List<SliplaneServiceLog>?>(() => null);
         var serviceLogsLoading = this.UseState(false);
         var serviceLogsError = this.UseState<string?>();
+        var showCreateServiceDialog = this.UseState(false);
+        var newServiceName = this.UseState(string.Empty);
+        var newServiceGitRepo = this.UseState(string.Empty);
+        var newServiceBranch = this.UseState("main");
+        var newServiceServerId = this.UseState(string.Empty);
+        var newServiceAutoDeploy = this.UseState(true);
+        var createServiceBusy = this.UseState(false);
+        var createServiceError = this.UseState<string?>();
 
         async Task LoadProjectsAsync()
         {
@@ -56,13 +64,15 @@ public class ProjectsView : ViewBase
 
         this.UseEffect(async () => await LoadProjectsAsync());
 
-        // Load all servers once so we can resolve server names for services
+        // Load all servers once so we can resolve server names for services AND populate the create-service dropdown
         this.UseEffect(async () =>
         {
             try
             {
                 var list = await client.GetServersAsync(_apiToken);
                 servers.Set(list);
+                if (list.Count > 0 && string.IsNullOrEmpty(newServiceServerId.Value))
+                    newServiceServerId.Set(list[0].Id);
             }
             catch
             {
@@ -201,6 +211,7 @@ public class ProjectsView : ViewBase
         }
 
         Dialog? projectDetailDialog = null;
+        Dialog? createServiceDialog = null;
         Dialog? serviceEditDialog = null;
         Dialog? serviceLogsDialog = null;
         if (selectedProject.Value is { } project)
@@ -305,11 +316,102 @@ public class ProjectsView : ViewBase
 
             projectDetailDialog = new Dialog(
                 onClose: (Event<Dialog> _) => selectedProject.Set((SliplaneProject?)null),
-                header: new DialogHeader($"Project: {project.Name}"),
+                header: new DialogHeader(project.Name),
                 body: new DialogBody(body),
                 footer: new DialogFooter(
+                    new Button("Create service")
+                        .Icon(Icons.Plus)
+                        .Variant(ButtonVariant.Outline)
+                        .HandleClick(_ => showCreateServiceDialog.Set(true)),
                     new Button("Close").HandleClick(_ => selectedProject.Set((SliplaneProject?)null)))
             ).Width(Size.Units(220));
+
+            if (showCreateServiceDialog.Value)
+            {
+                async Task CreateAndDeployServiceAsync()
+                {
+                    if (createServiceBusy.Value) return;
+                    if (string.IsNullOrWhiteSpace(newServiceName.Value))
+                    {
+                        createServiceError.Set("Enter service name.");
+                        return;
+                    }
+                    if (string.IsNullOrWhiteSpace(newServiceGitRepo.Value))
+                    {
+                        createServiceError.Set("Enter Git repository URL.");
+                        return;
+                    }
+                    if (string.IsNullOrWhiteSpace(newServiceServerId.Value))
+                    {
+                        createServiceError.Set("Select a server.");
+                        return;
+                    }
+                    createServiceError.Set((string?)null);
+                    createServiceBusy.Set(true);
+                    try
+                    {
+                        var request = new CreateServiceRequest(
+                            Name: newServiceName.Value.Trim(),
+                            ServerId: newServiceServerId.Value,
+                            Network: new ServiceNetworkRequest(Public: true, Protocol: "http"),
+                            Deployment: new RepositoryDeployment(
+                                Url: newServiceGitRepo.Value.Trim(),
+                                Branch: string.IsNullOrWhiteSpace(newServiceBranch.Value) ? "main" : newServiceBranch.Value.Trim(),
+                                AutoDeploy: newServiceAutoDeploy.Value
+                            )
+                        );
+                        await client.CreateServiceAsync(_apiToken, project.Id, request);
+                        newServiceName.Set(string.Empty);
+                        newServiceGitRepo.Set(string.Empty);
+                        newServiceBranch.Set("main");
+                        newServiceAutoDeploy.Set(true);
+                        showCreateServiceDialog.Set(false);
+                        var list = await client.GetServicesAsync(_apiToken, project.Id);
+                        services.Set(list);
+                    }
+                    catch (Exception ex)
+                    {
+                        createServiceError.Set(ex.Message);
+                    }
+                    finally
+                    {
+                        createServiceBusy.Set(false);
+                    }
+                }
+
+                var serverOptions = (servers.Value ?? new List<SliplaneServer>())
+                    .Select(s => new Option<string>(s.Name, s.Id))
+                    .ToArray();
+
+                var createForm = Layout.Vertical().Gap(2)
+                    | Text.H4("New service")
+                    | Text.Block("Deploy a new app from a Git repository.").Muted()
+                    | newServiceName.ToTextInput().Placeholder("Service name")
+                    | newServiceGitRepo.ToTextInput().Placeholder("Git repository URL (e.g. https://github.com/user/repo)")
+                    | newServiceBranch.ToTextInput().Placeholder("Branch (default: main)")
+                    | (Layout.Horizontal().Gap(3).Align(Align.Center)
+                       | Text.Block("Server:").Bold()
+                       | newServiceServerId.ToSelectInput(serverOptions))
+                    | (Layout.Horizontal().Gap(3).Align(Align.Center)
+                       | Text.Block("Auto-deploy on push:").Bold()
+                       | newServiceAutoDeploy.ToBoolInput())
+                    | (createServiceError.Value is { Length: > 0 } err
+                        ? (object)new Callout(err, variant: CalloutVariant.Error)
+                        : Layout.Vertical());
+
+                createServiceDialog = new Dialog(
+                    onClose: (Event<Dialog> _) => { showCreateServiceDialog.Set(false); createServiceError.Set((string?)null); },
+                    header: new DialogHeader("Create service"),
+                    body: new DialogBody(createForm),
+                    footer: new DialogFooter(
+                        new Button("Create & Deploy")
+                            .Icon(Icons.Rocket)
+                            .Variant(ButtonVariant.Primary)
+                            .Loading(createServiceBusy.Value)
+                            .HandleClick(async _ => await CreateAndDeployServiceAsync()),
+                        new Button("Cancel").HandleClick(_ => showCreateServiceDialog.Set(false)))
+                ).Width(Size.Units(220));
+            }
 
             if (selectedServiceForEdit.Value is { } svcEdit)
             {
@@ -378,6 +480,7 @@ public class ProjectsView : ViewBase
             | Text.H2("Projects")
             | projectsBlock
             | projectDetailDialog
+            | createServiceDialog
             | serviceEditDialog
             | serviceLogsDialog;
     }

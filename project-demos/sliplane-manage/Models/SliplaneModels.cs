@@ -118,20 +118,45 @@ public record SliplaneServiceLog(
     [property: JsonPropertyName("createdAt")] DateTime Timestamp
 );
 
+/// <summary>
+/// POST /projects/{projectId}/services — matches the Sliplane API spec.
+/// </summary>
 public record CreateServiceRequest(
     string Name,
-    string? Image,
-    string? GitRepo,
-    string? GitBranch,
-    int? Port
+    string ServerId,
+    ServiceNetworkRequest Network,
+    RepositoryDeployment Deployment,
+    string? Cmd = null,
+    string? Healthcheck = null,
+    List<EnvironmentVariable>? Env = null
+);
+
+/// <summary>Network settings for a new service.</summary>
+public record ServiceNetworkRequest(
+    bool Public = true,
+    string Protocol = "http"
+);
+
+/// <summary>Repository-based deployment configuration.</summary>
+public record RepositoryDeployment(
+    string Url,
+    string Branch = "main",
+    bool AutoDeploy = true,
+    string DockerfilePath = "Dockerfile",
+    string DockerContext = "."
+);
+
+/// <summary>A single environment variable.</summary>
+public record EnvironmentVariable(
+    string Key,
+    string Value,
+    bool Secret = false
 );
 
 public record UpdateServiceRequest(
-    string? Name,
-    string? Image,
-    string? GitRepo,
-    string? GitBranch,
-    int? Port
+    string? Name = null,
+    string? Cmd = null,
+    string? Healthcheck = null
 );
 
 public record AddDomainRequest(

@@ -29,10 +29,13 @@ public class ServicesView : ViewBase
         var refresh         = this.UseRefreshToken();
         var detailService   = this.UseState<SliplaneService?>();
         var detailTab       = this.UseState(0); // 0=Logs 1=Events 2=Metrics
+        // Create service form
         var newServiceName  = this.UseState(string.Empty);
         var newGitRepo      = this.UseState(string.Empty);
         var newBranch       = this.UseState("main");
-        var newPort         = this.UseState(string.Empty);
+        var newServerId     = this.UseState(string.Empty);
+        var newAutoDeploy   = this.UseState(true);
+        var servers         = this.UseState<List<SliplaneServer>>();
 
         async Task LoadServicesAsync()
         {
@@ -59,6 +62,18 @@ public class ServicesView : ViewBase
             }
         }
 
+        async Task LoadServersAsync()
+        {
+            try
+            {
+                var list = await client.GetServersAsync(_apiToken);
+                servers.Set(list);
+                if (list.Count > 0 && string.IsNullOrEmpty(newServerId.Value))
+                    newServerId.Set(list[0].Id);
+            }
+            catch { /* ignore */ }
+        }
+
         async Task CreateAndDeployServiceAsync()
         {
             if (busy.Value) return;
@@ -81,35 +96,35 @@ public class ServicesView : ViewBase
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(newServerId.Value))
+            {
+                error.Set("Please select a server.");
+                return;
+            }
+
             error.Set((string?)null);
             busy.Set(true);
 
             try
             {
-                int? port = null;
-                if (int.TryParse(newPort.Value, out var parsedPort))
-                    port = parsedPort;
-
                 var request = new CreateServiceRequest(
                     Name: newServiceName.Value.Trim(),
-                    Image: null,
-                    GitRepo: newGitRepo.Value.Trim(),
-                    GitBranch: string.IsNullOrWhiteSpace(newBranch.Value) ? "main" : newBranch.Value.Trim(),
-                    Port: port
+                    ServerId: newServerId.Value,
+                    Network: new ServiceNetworkRequest(Public: true, Protocol: "http"),
+                    Deployment: new RepositoryDeployment(
+                        Url: newGitRepo.Value.Trim(),
+                        Branch: string.IsNullOrWhiteSpace(newBranch.Value) ? "main" : newBranch.Value.Trim(),
+                        AutoDeploy: newAutoDeploy.Value
+                    )
                 );
 
-                var svc = await client.CreateServiceAsync(_apiToken, selectedProject.Value, request)
-                          ?? throw new InvalidOperationException("Failed to create Sliplane service.");
-
-                var deployed = await client.DeployServiceAsync(_apiToken, selectedProject.Value, svc.Id);
-                if (!deployed)
-                    throw new InvalidOperationException("Sliplane did not accept the deploy request.");
+                await client.CreateServiceAsync(_apiToken, selectedProject.Value, request);
 
                 // Clear form and reload list
                 newServiceName.Set(string.Empty);
                 newGitRepo.Set(string.Empty);
                 newBranch.Set("main");
-                newPort.Set(string.Empty);
+                newAutoDeploy.Set(true);
 
                 await LoadServicesAsync();
             }
@@ -123,7 +138,11 @@ public class ServicesView : ViewBase
             }
         }
 
-        this.UseEffect(async () => await LoadServicesAsync());
+        this.UseEffect(async () =>
+        {
+            await LoadServersAsync();
+            await LoadServicesAsync();
+        });
 
         if (_projects.Count == 0)
             return new Callout("No projects found. Create a project first.", variant: CalloutVariant.Info);
@@ -132,18 +151,30 @@ public class ServicesView : ViewBase
             .Select(p => new Option<string>(p.Name, p.Id))
             .ToArray();
 
+        var serverOptions = (servers.Value ?? new List<SliplaneServer>())
+            .Select(s => new Option<string>(s.Name, s.Id))
+            .ToArray();
+
         var currentServices = services.Value ?? new List<SliplaneService>();
 
         var createCard = new Card(
             Layout.Vertical().Gap(2)
-            | Text.H3("Create new app")
-            | Text.Muted("Define a service and deploy it to the selected project.")
-            | newServiceName.ToTextInput().Placeholder("App name (e.g. my-api)")
-            | newGitRepo.ToTextInput().Placeholder("Git repository URL (e.g. https://github.com/you/app.git)")
+            | Text.H3("Create new service")
+            | Text.Muted("Deploy a service from a Git repository to the selected project.")
+            | newServiceName.ToTextInput().Placeholder("Service name (e.g. my-api)")
+            | newGitRepo.ToTextInput().Placeholder("Git repository URL (e.g. https://github.com/user/repo)")
             | newBranch.ToTextInput().Placeholder("Branch (default: main)")
-            | newPort.ToTextInput().Placeholder("Port (e.g. 8080)")
+            | (Layout.Horizontal().Gap(3).Align(Align.Center)
+               | Text.Block("Server:").Bold()
+               | newServerId.ToSelectInput(serverOptions))
+            | (Layout.Horizontal().Gap(3).Align(Align.Center)
+               | Text.Block("Auto-deploy on push:").Bold()
+               | newAutoDeploy.ToBoolInput())
+            | (error.Value is { Length: > 0 } err
+                ? (object)new Callout(err, variant: CalloutVariant.Error)
+                : Layout.Vertical())
             | (Layout.Horizontal().Gap(2).Align(Align.Right)
-               | new Button("Create & Deploy")
+               | new Button("Create service")
                     .Icon(Icons.Rocket)
                     .Variant(ButtonVariant.Primary)
                     .Loading(busy.Value)
@@ -159,9 +190,7 @@ public class ServicesView : ViewBase
             | createCard
             | (loading.Value
                 ? (object)(Layout.Center() | Text.Muted("Loading services..."))
-                : error.Value is { Length: > 0 }
-                    ? (object)new Callout($"Error: {error.Value}", variant: CalloutVariant.Error)
-                    : BuildServiceTable(client, currentServices, selectedProject.Value, busy, refresh, detailService))
+                : BuildServiceTable(client, currentServices, selectedProject.Value, busy, refresh, detailService))
             | (detailService.Value != null
                 ? BuildServiceDetail(client, detailService.Value, selectedProject.Value, detailTab)
                 : currentServices.Count > 0

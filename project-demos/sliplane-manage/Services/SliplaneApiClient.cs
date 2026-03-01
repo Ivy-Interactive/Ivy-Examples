@@ -112,6 +112,17 @@ public class SliplaneApiClient
 
     public async Task<SliplaneService?> CreateServiceAsync(string apiToken, string projectId, CreateServiceRequest request)
     {
+        // Log exactly what we're sending so we can debug API issues
+        var serializerOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = true
+        };
+        var requestJson = JsonSerializer.Serialize(request, serializerOptions);
+        Console.WriteLine($"[CreateService] POST /projects/{projectId}/services");
+        Console.WriteLine($"[CreateService] Request body:\n{requestJson}");
+
         var response = await SendAsync(HttpMethod.Post, $"/projects/{projectId}/services", apiToken, request);
 
         if (response == null)
@@ -119,28 +130,26 @@ public class SliplaneApiClient
             throw new InvalidOperationException("Sliplane API did not respond when creating the service. Check your network connection and API token.");
         }
 
+        var responseBody = string.Empty;
+        try { responseBody = await response.Content.ReadAsStringAsync(); } catch { }
+
+        Console.WriteLine($"[CreateService] Response: {(int)response.StatusCode} {response.StatusCode}");
+        if (!string.IsNullOrWhiteSpace(responseBody))
+            Console.WriteLine($"[CreateService] Response body: {responseBody}");
+
         if (!response.IsSuccessStatusCode)
         {
-            string body;
-            try
-            {
-                body = await response.Content.ReadAsStringAsync();
-            }
-            catch
-            {
-                body = string.Empty;
-            }
-
             var message = $"Sliplane API returned {(int)response.StatusCode} {response.StatusCode} when creating the service.";
-            if (!string.IsNullOrWhiteSpace(body))
-            {
-                message += $" Response: {body}";
-            }
+            if (!string.IsNullOrWhiteSpace(responseBody))
+                message += $" Details: {responseBody}";
 
             throw new InvalidOperationException(message);
         }
 
-        return await ParseObjectAsync<SliplaneService>(response);
+        return string.IsNullOrWhiteSpace(responseBody)
+            ? null
+            : JsonSerializer.Deserialize<SliplaneService>(responseBody,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
 
     public async Task<bool> UpdateServiceAsync(string apiToken, string projectId, string serviceId, UpdateServiceRequest request)
@@ -273,7 +282,11 @@ public class SliplaneApiClient
             if (body != null)
             {
                 request.Content = new StringContent(
-                    JsonSerializer.Serialize(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
+                    JsonSerializer.Serialize(body, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                    }),
                     Encoding.UTF8,
                     "application/json"
                 );
