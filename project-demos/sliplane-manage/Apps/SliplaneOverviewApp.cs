@@ -7,7 +7,7 @@ using SliplaneManage.Services;
 /// <summary>
 /// Overview app — hub with summary cards (Servers, Projects, Services). Use the sidebar to open Servers, Projects, or Services.
 /// </summary>
-[App(icon: Icons.LayoutGrid, title: "Overview", searchHints: ["hub", "overview", "cards", "servers", "projects", "services"])]
+[App(icon: Icons.LayoutGrid, title: "Overview", searchHints: ["hub", "overview", "cards", "servers", "projects", "services"], isVisible: false)]
 public class SliplaneOverviewApp : ViewBase
 {
     public override object? Build()
@@ -55,6 +55,7 @@ public class SliplaneOverviewApp : ViewBase
 
         var serversCard = new Card(Text.H2($"{serversCount} Servers"))
             .Icon(Icons.Server)
+            .Height(Size.Full())
             .Width(Size.Units(110));
 
         var projectsCard = new Card(Text.H3(projectsCount.ToString()))
@@ -69,13 +70,11 @@ public class SliplaneOverviewApp : ViewBase
             .Icon(Icons.Box)
             .Width(Size.Units(110));
 
-        return Layout.Vertical()
-            | Text.H2("Sliplane Overview")
-            | Text.Muted("Use the sidebar to open Servers, Projects, or Services.")
-            | (Layout.Horizontal()
-               | serversCard
-               | projectsCard
-               | servicesCard);
+        return Layout.Vertical().Align(Align.TopCenter)
+               | (Layout.Horizontal().Align(Align.Center)
+                | serversCard
+                | projectsCard
+                | servicesCard);
     }
 }
 

@@ -1,5 +1,6 @@
 using Ivy.Auth.Sliplane;
 using SliplaneManage.Services;
+using SliplaneManage.Apps;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
@@ -28,7 +29,8 @@ server.AddConnectionsFromAssembly();
 server.UseAuth<SliplaneAuthProvider>();
 
 var chromeSettings = new ChromeSettings()
-    .UseTabs(preventDuplicates: true);
+    .UseTabs(preventDuplicates: true)
+    .DefaultApp<SliplaneServersApp>();
 server.UseChrome(chromeSettings);
 
 await server.RunAsync();
