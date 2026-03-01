@@ -2,6 +2,7 @@ namespace SliplaneManage.Apps.Views;
 
 using SliplaneManage.Models;
 using SliplaneManage.Services;
+using Ivy.Helpers;
 
 /// <summary>
 /// Services view: all services as clickable cards; details and create in sheets (like Servers/Projects).
@@ -106,8 +107,8 @@ public class ServicesView : ViewBase
                     ? "—"
                     : (serverList.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId);
                 var statusLabel = string.IsNullOrWhiteSpace(svc.Status) ? "—" : svc.Status;
-                var statusIcon = string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase)
-                    ? Icons.Clock.ToIcon()
+                object statusIcon = string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase)
+                    ? Icons.LoaderCircle.ToIcon().WithAnimation(AnimationType.Rotate).Trigger(AnimationTrigger.Auto).Duration(1)
                     : string.Equals(svc.Status, "live", StringComparison.OrdinalIgnoreCase)
                         ? Icons.Play.ToIcon()
                         : string.Equals(svc.Status, "suspended", StringComparison.OrdinalIgnoreCase)
@@ -165,7 +166,7 @@ public class ServicesView : ViewBase
 }
 
 /// <summary>
-/// Sheet showing service details: Logs, Events, Metrics tabs and Deploy / Pause / Delete actions.
+/// Sheet with full service settings (read-only). Footer: Edit, Pause/Resume, Delete.
 /// </summary>
 public class ServiceDetailsSheet : ViewBase
 {
@@ -194,88 +195,43 @@ public class ServiceDetailsSheet : ViewBase
 
         var (projectId, projectName, service) = sel.Value;
         var client = this.UseService<SliplaneApiClient>();
-        var tab = this.UseState(0); // 0=Logs, 1=Events, 2=Metrics
-        var logs = this.UseState<List<SliplaneServiceLog>?>();
-        var events = this.UseState<List<SliplaneServiceEvent>?>();
-        var metrics = this.UseState<SliplaneServiceMetrics?>();
         var busy = this.UseState(false);
 
-        this.UseEffect(async () =>
-        {
-            try
-            {
-                var logsTask = client.GetServiceLogsAsync(_apiToken, projectId, service.Id);
-                var eventsTask = client.GetServiceEventsAsync(_apiToken, projectId, service.Id);
-                var metricsTask = client.GetServiceMetricsAsync(_apiToken, projectId, service.Id);
-                await Task.WhenAll(logsTask, eventsTask, metricsTask);
-                logs.Set(await logsTask);
-                events.Set(await eventsTask);
-                metrics.Set(await metricsTask);
-            }
-            catch
-            {
-                logs.Set((List<SliplaneServiceLog>?)null);
-                events.Set((List<SliplaneServiceEvent>?)null);
-                metrics.Set((SliplaneServiceMetrics?)null);
-            }
-        });
+        var dep = service.Deployment;
+        var net = service.Network;
 
-        object tabContent;
-        if (tab.Value == 0)
+        var basicModel = new
         {
-            if (logs.Value == null)
-                tabContent = Text.Muted("Loading logs...");
-            else if (logs.Value.Count == 0)
-                tabContent = Text.Muted("No logs.");
-            else
-            {
-                var codeContent = string.Join(
-                    Environment.NewLine,
-                    logs.Value.TakeLast(200).Select(l => $"{l.Timestamp:yyyy-MM-dd HH:mm:ss}  {l.Line}"));
-                tabContent = new CodeBlock(codeContent, Languages.Text)
-                    .ShowLineNumbers().ShowCopyButton().Width(Size.Full()).Height(Size.Units(200));
-            }
-        }
-        else if (tab.Value == 1)
-        {
-            if (events.Value == null)
-                tabContent = Text.Muted("Loading events...");
-            else if (events.Value.Count == 0)
-                tabContent = Text.Muted("No events.");
-            else
-                tabContent = Layout.Vertical() | events.Value.Take(100).Select(e =>
-                    Layout.Horizontal()
-                    | Text.InlineCode(e.Type)
-                    | Text.Block(e.Message)
-                    | Text.Muted(e.CreatedAt.ToString("yyyy-MM-dd HH:mm")))
-                    .ToArray<object>();
-        }
-        else
-        {
-            if (metrics.Value == null)
-                tabContent = Text.Muted("Loading metrics...");
-            else
-                tabContent = Layout.Vertical()
-                    | Text.Block($"CPU: {metrics.Value.CpuUsagePercent:F1}%")
-                    | Text.Block($"Memory: {metrics.Value.MemoryUsagePercent:F1}% ({metrics.Value.MemoryUsageMb:F0} / {metrics.Value.MemoryTotalMb:F0} MB)");
-        }
+            Project = projectName,
+            Name = service.Name,
+            Status = service.Status,
+            ServerId = service.ServerId,
+            Image = service.Image ?? "—",
+            Port = service.Port?.ToString() ?? "—",
+            Created = service.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            Updated = service.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—"
+        };
 
-        var tabButtons = Layout.Horizontal()
-            | new Button("Logs").Variant(tab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Outline).HandleClick(_ => tab.Set(0))
-            | new Button("Events").Variant(tab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Outline).HandleClick(_ => tab.Set(1))
-            | new Button("Metrics").Variant(tab.Value == 2 ? ButtonVariant.Primary : ButtonVariant.Outline).HandleClick(_ => tab.Set(2));
-
-        async Task DeployAsync()
+        var deploymentModel = new
         {
-            if (busy.Value) return;
-            busy.Set(true);
-            try
-            {
-                await client.DeployServiceAsync(_apiToken, projectId, service.Id);
-                _reloadCounter.Set(_reloadCounter.Value + 1);
-            }
-            finally { busy.Set(false); }
-        }
+            Url = dep?.Url ?? "—",
+            Branch = dep?.Branch ?? "—",
+            Dockerfile = dep?.DockerfilePath ?? "—",
+            Context = dep?.DockerContext ?? "—",
+            AutoDeploy = dep?.AutoDeploy == true ? "Yes" : "No"
+        };
+
+        var networkModel = new
+        {
+            Public = net?.Public == true ? "Yes" : "No",
+            Protocol = net?.Protocol ?? "—",
+            ManagedDomain = net?.ManagedDomain ?? "—",
+            InternalDomain = net?.InternalDomain ?? "—"
+        };
+
+        bool IsPausedStatus(string? status) =>
+            string.Equals(status, "paused", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "suspended", StringComparison.OrdinalIgnoreCase);
 
         async Task PauseUnpauseAsync()
         {
@@ -283,10 +239,13 @@ public class ServiceDetailsSheet : ViewBase
             busy.Set(true);
             try
             {
-                if (string.Equals(service.Status, "paused", StringComparison.OrdinalIgnoreCase))
+                if (IsPausedStatus(service.Status))
                     await client.UnpauseServiceAsync(_apiToken, projectId, service.Id);
                 else
                     await client.PauseServiceAsync(_apiToken, projectId, service.Id);
+                var updated = await client.GetServiceAsync(_apiToken, projectId, service.Id);
+                if (updated != null)
+                    _selection.Set((projectId, projectName, updated));
                 _reloadCounter.Set(_reloadCounter.Value + 1);
             }
             finally { busy.Set(false); }
@@ -305,24 +264,207 @@ public class ServiceDetailsSheet : ViewBase
             finally { busy.Set(false); }
         }
 
-        var isPaused = string.Equals(service.Status, "paused", StringComparison.OrdinalIgnoreCase);
-        var pauseLabel = isPaused ? "Unpause" : "Pause";
+        var isPaused = IsPausedStatus(service.Status);
+        var pauseLabel = isPaused ? "Resume" : "Pause";
 
-        var actions = Layout.Horizontal()
-            | new Button("Deploy").Icon(Icons.Rocket).Variant(ButtonVariant.Outline).Loading(busy.Value).HandleClick(async _ => await DeployAsync())
-            | new Button(pauseLabel).Icon(Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value).HandleClick(async _ => await PauseUnpauseAsync())
-            | new Button("Delete").Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(busy.Value).HandleClick(async _ => await DeleteAsync());
+        var (editSheetView, openEditSheet) = this.UseTrigger((IState<bool> isOpen) =>
+            new EditServiceSheet(isOpen, _apiToken, projectId, projectName, service, _reloadCounter, _selection));
 
-        var cardContent = Layout.Vertical()
-            | Text.Muted(projectName)
-                | tabButtons
-            | tabContent
-            | actions;
+        var footer = Layout.Horizontal()
+            | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).HandleClick(_ => openEditSheet())
+            | new Button(pauseLabel).Icon(isPaused ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value).HandleClick(async _ => await PauseUnpauseAsync())
+            | new Button("Delete", onClick: async _ => await DeleteAsync())
+                .Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(busy.Value)
+                .WithConfirm("Are you sure you want to delete this service?", "Delete service");
+
+        var body = Layout.Vertical()
+            | basicModel.ToDetails()
+            | Text.H4("Deployment")
+            | deploymentModel.ToDetails()
+            | Text.H4("Network")
+            | networkModel.ToDetails()
+            | (service.Domains?.Count > 0 == true
+                ? Layout.Vertical()
+                    | Text.H4("Domains")
+                    | (Layout.Vertical() | service.Domains.Select(d => Text.Block($"{d.Domain} (custom: {d.IsCustom})")).ToArray<object>())
+                : Layout.Vertical());
 
         if (!_isOpen.Value)
             return null;
 
-        return new Sheet(_ => _isOpen.Set(false), new Card(cardContent), title: $"Service: {service.Name}");
+        var sheetBody = new FooterLayout(footer, body);
+        return new Fragment(
+            new Sheet(_ => _isOpen.Set(false), sheetBody, title: $"Service: {service.Name}").Width(Size.Fraction(1 / 3f)),
+            editSheetView
+        );
+    }
+}
+
+/// <summary>
+/// Sheet to PATCH service: name, deployment, env, healthcheck, cmd.
+/// </summary>
+public class EditServiceSheet : ViewBase
+{
+    private readonly IState<bool> _isOpen;
+    private readonly string _apiToken;
+    private readonly string _projectId;
+    private readonly string _projectName;
+    private readonly SliplaneService _service;
+    private readonly IState<int> _reloadCounter;
+    private readonly IState<(string ProjectId, string ProjectName, SliplaneService Service)?> _selection;
+
+    public EditServiceSheet(
+        IState<bool> isOpen,
+        string apiToken,
+        string projectId,
+        string projectName,
+        SliplaneService service,
+        IState<int> reloadCounter,
+        IState<(string ProjectId, string ProjectName, SliplaneService Service)?> selection)
+    {
+        _isOpen = isOpen;
+        _apiToken = apiToken;
+        _projectId = projectId;
+        _projectName = projectName;
+        _service = service;
+        _reloadCounter = reloadCounter;
+        _selection = selection;
+    }
+
+    public override object? Build()
+    {
+        var client = this.UseService<SliplaneApiClient>();
+        var dep = _service.Deployment;
+        var name = this.UseState(_service.Name ?? string.Empty);
+        var deployUrl = this.UseState(dep?.Url ?? string.Empty);
+        var branch = this.UseState(dep?.Branch ?? "main");
+        var dockerfilePath = this.UseState(dep?.DockerfilePath ?? "Dockerfile");
+        var dockerContext = this.UseState(dep?.DockerContext ?? ".");
+        var autoDeploy = this.UseState(dep?.AutoDeploy ?? true);
+        var cmd = this.UseState(string.Empty);
+        var healthcheck = this.UseState(string.Empty);
+        var busy = this.UseState(false);
+        var error = this.UseState<string?>(() => (string?)null);
+        var envList = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
+        var showAddEnvDialog = this.UseState(false);
+        var addEnvKey = this.UseState(string.Empty);
+        var addEnvValue = this.UseState(string.Empty);
+
+        async Task SaveAsync()
+        {
+            if (busy.Value) return;
+            if (string.IsNullOrWhiteSpace(name.Value)) { error.Set("Enter service name."); return; }
+            if (string.IsNullOrWhiteSpace(deployUrl.Value)) { error.Set("Enter deployment URL."); return; }
+            error.Set((string?)null);
+            busy.Set(true);
+            try
+            {
+                var request = new UpdateServiceRequest(
+                    Name: name.Value.Trim(),
+                    Cmd: string.IsNullOrWhiteSpace(cmd.Value) ? null : cmd.Value.Trim(),
+                    Healthcheck: string.IsNullOrWhiteSpace(healthcheck.Value) ? null : healthcheck.Value.Trim(),
+                    Deployment: new UpdateServiceDeployment(
+                        Url: deployUrl.Value.Trim(),
+                        Branch: string.IsNullOrWhiteSpace(branch.Value) ? "main" : branch.Value.Trim(),
+                        AutoDeploy: autoDeploy.Value,
+                        DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath.Value) ? "Dockerfile" : dockerfilePath.Value.Trim(),
+                        DockerContext: string.IsNullOrWhiteSpace(dockerContext.Value) ? "." : dockerContext.Value.Trim()
+                    ),
+                    Env: envList.Value?.Count > 0 ? envList.Value : null
+                );
+                await client.UpdateServiceAsync(_apiToken, _projectId, _service.Id, request);
+                var updated = await client.GetServiceAsync(_apiToken, _projectId, _service.Id);
+                if (updated != null)
+                    _selection.Set((_projectId, _projectName, updated));
+                _reloadCounter.Set(_reloadCounter.Value + 1);
+                _isOpen.Set(false);
+            }
+            catch (Exception ex)
+            {
+                error.Set(ex.Message);
+            }
+            finally
+            {
+                busy.Set(false);
+            }
+        }
+
+        var envItems = envList.Value ?? new List<EnvironmentVariable>();
+        var envHeaderRow = new TableRow(
+            new TableCell("Key").IsHeader(),
+            new TableCell("Value").IsHeader(),
+            new TableCell("Actions").IsHeader().Width(Size.Fit()));
+        var envDataRows = envItems
+            .Select((e, idx) =>
+            {
+                var index = idx;
+                return new TableRow(
+                    new TableCell(e.Key),
+                    new TableCell(e.Value ?? ""),
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    {
+                        var next = envList.Value.Where((_, i) => i != index).ToList();
+                        envList.Set(next);
+                    })).Width(Size.Fit()));
+            })
+            .ToArray();
+        object envTableContent = envDataRows.Length == 0
+            ? (object)Text.Muted("No variables.")
+            : new Table(new[] { envHeaderRow }.Concat(envDataRows).ToArray()).Width(Size.Full());
+
+        var content = Layout.Vertical()
+            | Text.H4("Basic")
+            | name.ToTextInput().Placeholder("Service name")
+            | Text.H4("Deployment")
+            | deployUrl.ToTextInput().Placeholder("Repository or image URL")
+            | branch.ToTextInput().Placeholder("Branch")
+            | dockerfilePath.ToTextInput().Placeholder("Dockerfile path")
+            | dockerContext.ToTextInput().Placeholder("Docker context")
+            | autoDeploy.ToBoolInput().Label("Auto-deploy on push")
+            | Text.H4("Optional")
+            | cmd.ToTextInput().Placeholder("Start command (e.g. npm start)")
+            | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)")
+            | Text.H4("Environment variables")
+            | envTableContent
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddEnvDialog.Set(true))
+            | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
+
+        var footer = Layout.Horizontal()
+            | new Button("Cancel").Variant(ButtonVariant.Outline).HandleClick(_ => _isOpen.Set(false))
+            | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await SaveAsync());
+
+        Dialog? addEnvDialog = null;
+        if (showAddEnvDialog.Value)
+        {
+            void SaveEnv()
+            {
+                if (string.IsNullOrWhiteSpace(addEnvKey.Value)) return;
+                var next = (envList.Value ?? new List<EnvironmentVariable>()).ToList();
+                next.Add(new EnvironmentVariable(addEnvKey.Value.Trim(), addEnvValue.Value ?? string.Empty, false));
+                envList.Set(next);
+                addEnvKey.Set(string.Empty);
+                addEnvValue.Set(string.Empty);
+                showAddEnvDialog.Set(false);
+            }
+            var envForm = Layout.Vertical()
+                | addEnvKey.ToTextInput().Placeholder("Key")
+                | addEnvValue.ToTextInput().Placeholder("Value");
+            addEnvDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showAddEnvDialog.Set(false),
+                header: new DialogHeader("Add environment variable"),
+                body: new DialogBody(envForm),
+                footer: new DialogFooter(
+                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
+                    new Button("Cancel").HandleClick(_ => showAddEnvDialog.Set(false))
+                )).Width(Size.Units(220));
+        }
+
+        if (!_isOpen.Value)
+            return null;
+
+        var sheetBody = new FooterLayout(footer, content);
+        object sheetContent = addEnvDialog != null ? new Fragment(sheetBody, addEnvDialog) : sheetBody;
+        return new Sheet(_ => _isOpen.Set(false), sheetContent, title: $"Edit: {_service.Name}").Width(Size.Fraction(1 / 3f));
     }
 }
 

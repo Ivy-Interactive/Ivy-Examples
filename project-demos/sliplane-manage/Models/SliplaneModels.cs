@@ -160,10 +160,22 @@ public record EnvironmentVariable(
     bool Secret = false
 );
 
+/// <summary>PATCH /projects/{projectId}/services/{serviceId} — partial update body.</summary>
 public record UpdateServiceRequest(
     string? Name = null,
     string? Cmd = null,
-    string? Healthcheck = null
+    string? Healthcheck = null,
+    UpdateServiceDeployment? Deployment = null,
+    List<EnvironmentVariable>? Env = null
+);
+
+/// <summary>Deployment section for PATCH service.</summary>
+public record UpdateServiceDeployment(
+    string Url,
+    string Branch = "main",
+    bool AutoDeploy = true,
+    string DockerfilePath = "Dockerfile",
+    string DockerContext = "."
 );
 
 public record AddDomainRequest(
