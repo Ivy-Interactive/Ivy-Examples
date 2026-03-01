@@ -362,9 +362,8 @@ public class CreateServiceSheet : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
-        var servers = this.UseState<List<SliplaneServer>>(() => new List<SliplaneServer>());
         var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
-        var selectedProjectId = this.UseState(_projects.Count > 0 ? _projects[0].Id : string.Empty);
+        var selectedProjectId = this.UseState(string.Empty);
         var name = this.UseState(string.Empty);
         var serverId = this.UseState(string.Empty);
         var gitRepo = this.UseState(string.Empty);
@@ -389,20 +388,51 @@ public class CreateServiceSheet : ViewBase
         var addVolumeId = this.UseState(string.Empty);
         var addMountPath = this.UseState(string.Empty);
 
-        this.UseEffect(async () =>
+        QueryResult<Option<string>[]> QueryProjects(IViewContext ctx, string query)
         {
-            try
-            {
-                var list = await client.GetServersAsync(_apiToken);
-                servers.Set(list);
-                if (list.Count > 0 && string.IsNullOrEmpty(serverId.Value))
-                    serverId.Set(list[0].Id);
-            }
-            catch
-            {
-                servers.Set(new List<SliplaneServer>());
-            }
-        });
+            return ctx.UseQuery<Option<string>[], (string, string)>(
+                key: (nameof(QueryProjects), query),
+                fetcher: _ => Task.FromResult(_projects
+                    .Where(p => string.IsNullOrEmpty(query) || p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .Take(20)
+                    .Select(p => new Option<string>(p.Name, p.Id))
+                    .ToArray()));
+        }
+
+        QueryResult<Option<string>?> LookupProject(IViewContext ctx, string? id)
+        {
+            return ctx.UseQuery<Option<string>?, (string, string?)>(
+                key: (nameof(LookupProject), id),
+                fetcher: _ => Task.FromResult<Option<string>?>(
+                    string.IsNullOrEmpty(id) ? null : _projects.FirstOrDefault(p => p.Id == id) is { } p ? new Option<string>(p.Name, p.Id) : null));
+        }
+
+        QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string query)
+        {
+            return ctx.UseQuery<Option<string>[], (string, string)>(
+                key: (nameof(QueryServers), query),
+                fetcher: async ct =>
+                {
+                    var list = await client.GetServersAsync(_apiToken);
+                    return list
+                        .Where(s => string.IsNullOrEmpty(query) || s.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        .Take(20)
+                        .Select(s => new Option<string>(s.Name, s.Id))
+                        .ToArray();
+                });
+        }
+
+        QueryResult<Option<string>?> LookupServer(IViewContext ctx, string? id)
+        {
+            return ctx.UseQuery<Option<string>?, (string, string?)>(
+                key: (nameof(LookupServer), id),
+                fetcher: async ct =>
+                {
+                    if (string.IsNullOrEmpty(id)) return null;
+                    var s = await client.GetServerAsync(_apiToken, id);
+                    return s != null ? new Option<string>(s.Name, s.Id) : null;
+                });
+        }
 
         this.UseEffect(async () =>
         {
@@ -422,8 +452,6 @@ public class CreateServiceSheet : ViewBase
             }
         }, serverId);
 
-        var projectOptions = _projects.Select(p => new Option<string>(p.Name, p.Id)).ToArray();
-        var serverOptions = (servers.Value ?? new List<SliplaneServer>()).Select(s => new Option<string>(s.Name, s.Id)).ToArray();
         var volumeOptions = (serverVolumes.Value ?? new List<SliplaneVolume>()).Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id)).ToArray();
         var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
 
@@ -475,9 +503,9 @@ public class CreateServiceSheet : ViewBase
 
         var basicSection = Layout.Vertical()
             | Text.H4("Basic")
-            | selectedProjectId.ToSelectInput(projectOptions)
+            | selectedProjectId.ToAsyncSelectInput(QueryProjects, LookupProject, placeholder: "Search project...")
             | name.ToTextInput().Placeholder("Service name")
-            | serverId.ToSelectInput(serverOptions);
+            | serverId.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server...");
 
         var deploymentSection = Layout.Vertical()
             | Text.H4("Deployment (source and build)")
