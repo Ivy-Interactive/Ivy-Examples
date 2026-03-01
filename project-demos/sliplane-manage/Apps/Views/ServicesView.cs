@@ -32,7 +32,7 @@ public class ServicesView : ViewBase
             fetcher: async ct => await client.GetOverviewAsync(_apiToken),
             options: new QueryOptions
             {
-                RefreshInterval = TimeSpan.FromSeconds(30),
+                RefreshInterval = TimeSpan.FromSeconds(5),
                 KeepPrevious = true
             });
 
