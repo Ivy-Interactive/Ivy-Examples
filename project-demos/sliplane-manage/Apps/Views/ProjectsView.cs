@@ -19,6 +19,8 @@ public class ProjectsView : ViewBase
     public override object? Build()
     {
         var client   = this.UseService<SliplaneApiClient>();
+        var refreshSender   = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
+        var refreshReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
         var projects = this.UseState<List<SliplaneProject>>();
         var loading  = this.UseState(true);
         var error    = this.UseState<string?>();
@@ -50,6 +52,7 @@ public class ProjectsView : ViewBase
         var serviceEventsLoading = this.UseState(false);
         var serviceEventsError = this.UseState<string?>();
         var createServiceSheetOpen = this.UseState(false);
+        var refreshTick = this.UseState(0);
         var showAddProjectDialog = this.UseState(false);
         var newProjectName = this.UseState(string.Empty);
         var addProjectBusy = this.UseState(false);
@@ -73,6 +76,13 @@ public class ProjectsView : ViewBase
         }
 
         this.UseEffect(async () => await LoadProjectsAsync());
+        this.UseEffect(async () => await LoadProjectsAsync(), refreshTick);
+
+        this.UseEffect(() => refreshReceiver.Receive(_ =>
+        {
+            refreshTick.Set(refreshTick.Value + 1);
+            return new Unit();
+        }));
 
         // Load all servers once so we can resolve server names for services AND populate the create-service sheet
         this.UseEffect(async () =>
@@ -647,6 +657,7 @@ public class ProjectsView : ViewBase
                 try
                 {
                     await client.CreateProjectAsync(_apiToken, newProjectName.Value.Trim());
+                    await refreshSender.Send("projects");
                     newProjectName.Set(string.Empty);
                     showAddProjectDialog.Set(false);
                     var list = await client.GetProjectsAsync(_apiToken);
@@ -694,6 +705,73 @@ public class ProjectsView : ViewBase
     }
 }
 
+internal static class ServiceRequestFactory
+{
+    public static UpdateServiceRequest BuildUpdateRequest(
+        string name,
+        string deployUrl,
+        string branch,
+        string dockerfilePath,
+        string dockerContext,
+        bool autoDeploy,
+        string? cmd,
+        string? healthcheck,
+        IReadOnlyCollection<EnvironmentVariable>? env)
+    {
+        return new UpdateServiceRequest(
+            Name: name.Trim(),
+            Cmd: string.IsNullOrWhiteSpace(cmd) ? null : cmd.Trim(),
+            Healthcheck: string.IsNullOrWhiteSpace(healthcheck) ? null : healthcheck.Trim(),
+            Deployment: new UpdateServiceDeployment(
+                Url: deployUrl.Trim(),
+                Branch: string.IsNullOrWhiteSpace(branch) ? "main" : branch.Trim(),
+                AutoDeploy: autoDeploy,
+                DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath) ? "Dockerfile" : dockerfilePath.Trim(),
+                DockerContext: string.IsNullOrWhiteSpace(dockerContext) ? "." : dockerContext.Trim()
+            ),
+            Env: env is { Count: > 0 } ? env.ToList() : null
+        );
+    }
+
+    public static CreateServiceRequest BuildCreateRequest(
+        string name,
+        string serverId,
+        string gitRepo,
+        string branch,
+        string dockerfilePath,
+        string dockerContext,
+        bool autoDeploy,
+        bool networkPublic,
+        string networkProtocol,
+        string? cmd,
+        string? healthcheck,
+        IReadOnlyCollection<EnvironmentVariable>? env,
+        IReadOnlyCollection<(string VolumeId, string MountPath)>? volumeMounts)
+    {
+        var envList = env is { Count: > 0 } ? env.ToList() : null;
+        var volumes = volumeMounts is { Count: > 0 }
+            ? volumeMounts.Select(v => new ServiceVolumeMount(v.VolumeId, v.MountPath)).ToList()
+            : null;
+
+        return new CreateServiceRequest(
+            Name: name.Trim(),
+            ServerId: serverId,
+            Network: new ServiceNetworkRequest(Public: networkPublic, Protocol: networkProtocol),
+            Deployment: new RepositoryDeployment(
+                Url: gitRepo.Trim(),
+                Branch: string.IsNullOrWhiteSpace(branch) ? "main" : branch.Trim(),
+                AutoDeploy: autoDeploy,
+                DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath) ? "Dockerfile" : dockerfilePath.Trim(),
+                DockerContext: string.IsNullOrWhiteSpace(dockerContext) ? "." : dockerContext.Trim()
+            ),
+            Cmd: string.IsNullOrWhiteSpace(cmd) ? null : cmd.Trim(),
+            Healthcheck: string.IsNullOrWhiteSpace(healthcheck) ? null : healthcheck.Trim(),
+            Env: envList,
+            Volumes: volumes
+        );
+    }
+}
+
 /// <summary>
 /// Sheet to edit a service from the Projects view (PATCH). Refreshes the services list via onSaved.
 /// </summary>
@@ -728,6 +806,7 @@ public class ProjectServiceEditSheet : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
+        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
         var dep = _service.Deployment;
         var name = this.UseState(_service.Name ?? string.Empty);
         var deployUrl = this.UseState(dep?.Url ?? string.Empty);
@@ -753,23 +832,22 @@ public class ProjectServiceEditSheet : ViewBase
             busy.Set(true);
             try
             {
-                var request = new UpdateServiceRequest(
-                    Name: name.Value.Trim(),
-                    Cmd: string.IsNullOrWhiteSpace(cmd.Value) ? null : cmd.Value.Trim(),
-                    Healthcheck: string.IsNullOrWhiteSpace(healthcheck.Value) ? null : healthcheck.Value.Trim(),
-                    Deployment: new UpdateServiceDeployment(
-                        Url: deployUrl.Value.Trim(),
-                        Branch: string.IsNullOrWhiteSpace(branch.Value) ? "main" : branch.Value.Trim(),
-                        AutoDeploy: autoDeploy.Value,
-                        DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath.Value) ? "Dockerfile" : dockerfilePath.Value.Trim(),
-                        DockerContext: string.IsNullOrWhiteSpace(dockerContext.Value) ? "." : dockerContext.Value.Trim()
-                    ),
-                    Env: envList.Value?.Count > 0 ? envList.Value : null
+                var request = ServiceRequestFactory.BuildUpdateRequest(
+                    name: name.Value,
+                    deployUrl: deployUrl.Value,
+                    branch: branch.Value,
+                    dockerfilePath: dockerfilePath.Value,
+                    dockerContext: dockerContext.Value,
+                    autoDeploy: autoDeploy.Value,
+                    cmd: cmd.Value,
+                    healthcheck: healthcheck.Value,
+                    env: envList.Value
                 );
                 await client.UpdateServiceAsync(_apiToken, _projectId, _service.Id, request);
                 await _onSaved();
                 _isOpen.Set(false);
                 _onClose();
+                await refreshSender.Send("services");
             }
             catch (Exception ex)
             {
@@ -900,6 +978,7 @@ public class ProjectCreateServiceSheet : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
+        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
         var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
         var name = this.UseState(string.Empty);
         var serverId = this.UseState(string.Empty);
@@ -955,31 +1034,26 @@ public class ProjectCreateServiceSheet : ViewBase
             busy.Set(true);
             try
             {
-                var env = envList.Value?.Count > 0 ? envList.Value : null;
-                var volumes = volumeMountsList.Value?.Count > 0
-                    ? volumeMountsList.Value.Select(v => new ServiceVolumeMount(v.VolumeId, v.MountPath)).ToList()
-                    : null;
-
-                var request = new CreateServiceRequest(
-                    Name: name.Value.Trim(),
-                    ServerId: serverId.Value,
-                    Network: new ServiceNetworkRequest(Public: networkPublic.Value, Protocol: networkProtocol.Value),
-                    Deployment: new RepositoryDeployment(
-                        Url: gitRepo.Value.Trim(),
-                        Branch: string.IsNullOrWhiteSpace(branch.Value) ? "main" : branch.Value.Trim(),
-                        AutoDeploy: autoDeploy.Value,
-                        DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath.Value) ? "Dockerfile" : dockerfilePath.Value.Trim(),
-                        DockerContext: string.IsNullOrWhiteSpace(dockerContext.Value) ? "." : dockerContext.Value.Trim()
-                    ),
-                    Cmd: string.IsNullOrWhiteSpace(cmd.Value) ? null : cmd.Value.Trim(),
-                    Healthcheck: string.IsNullOrWhiteSpace(healthcheck.Value) ? null : healthcheck.Value.Trim(),
-                    Env: env,
-                    Volumes: volumes
+                var request = ServiceRequestFactory.BuildCreateRequest(
+                    name: name.Value,
+                    serverId: serverId.Value,
+                    gitRepo: gitRepo.Value,
+                    branch: branch.Value,
+                    dockerfilePath: dockerfilePath.Value,
+                    dockerContext: dockerContext.Value,
+                    autoDeploy: autoDeploy.Value,
+                    networkPublic: networkPublic.Value,
+                    networkProtocol: networkProtocol.Value,
+                    cmd: cmd.Value,
+                    healthcheck: healthcheck.Value,
+                    env: envList.Value,
+                    volumeMounts: volumeMountsList.Value
                 );
                 await client.CreateServiceAsync(_apiToken, _projectId, request);
                 await _onCreated();
                 _isOpen.Set(false);
                 _onClose();
+                await refreshSender.Send("services");
             }
             catch (Exception ex)
             {

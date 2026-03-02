@@ -59,6 +59,8 @@ public class SliplaneServicesApp : ViewBase
         var config   = this.UseService<IConfiguration>();
         var client   = this.UseService<SliplaneApiClient>();
         var auth     = this.UseService<IAuthService>();
+        var refreshReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
+        var reloadCounter = this.UseState(0);
         var session  = auth.GetAuthSession();
         var apiToken = config["Sliplane:ApiToken"]
                        ?? session.AuthToken?.AccessToken
@@ -79,7 +81,13 @@ public class SliplaneServicesApp : ViewBase
             {
                 projects.Set(new List<SliplaneProject>());
             }
-        });
+        }, reloadCounter);
+
+        this.UseEffect(() => refreshReceiver.Receive(_ =>
+        {
+            reloadCounter.Set(reloadCounter.Value + 1);
+            return new Unit();
+        }));
 
         return new ServicesView(apiToken, projects.Value ?? []);
     }
