@@ -64,8 +64,7 @@ public class ServicesView : ViewBase
         var currentServices = flat;
 
         var headerRow = Layout.Horizontal()
-            | Text.H2("Services")
-            | (overviewQuery.Validating ? Text.Muted("Updating...") : null!);
+            | Text.H2("Services");
 
         var addServiceBtn = new Button("Add service").Icon(Icons.Plus).HandleClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
         var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
