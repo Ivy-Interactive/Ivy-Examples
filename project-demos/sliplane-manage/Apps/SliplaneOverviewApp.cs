@@ -69,19 +69,9 @@ public class SliplaneServicesApp : ViewBase
         if (string.IsNullOrWhiteSpace(apiToken))
             return Layout.Center() | Text.Muted("No API token. Sign in or configure Sliplane:ApiToken.");
 
-        var projects = this.UseState<List<SliplaneProject>>(() => new List<SliplaneProject>());
-        this.UseEffect(async () =>
-        {
-            try
-            {
-                var list = await client.GetProjectsAsync(apiToken);
-                projects.Set(list);
-            }
-            catch
-            {
-                projects.Set(new List<SliplaneProject>());
-            }
-        }, reloadCounter);
+        var projectsQuery = this.UseQuery(
+            key: ("services-projects", apiToken, reloadCounter.Value),
+            fetcher: async ct => await client.GetProjectsAsync(apiToken));
 
         this.UseEffect(() => refreshReceiver.Receive(_ =>
         {
@@ -89,6 +79,7 @@ public class SliplaneServicesApp : ViewBase
             return new Unit();
         }));
 
-        return new ServicesView(apiToken, projects.Value ?? []);
+        var projects = projectsQuery.Value ?? new List<SliplaneProject>();
+        return new ServicesView(apiToken, projects);
     }
 }

@@ -528,27 +528,36 @@ public class CreateServiceSheet : ViewBase
 
         QueryResult<Option<string>[]> QueryProjects(IViewContext ctx, string query)
         {
-            return ctx.UseQuery<Option<string>[], (string, string)>(
-                key: (nameof(QueryProjects), query),
-                fetcher: _ => Task.FromResult(_projects
-                    .Where(p => string.IsNullOrEmpty(query) || p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    .Take(20)
-                    .Select(p => new Option<string>(p.Name, p.Id))
-                    .ToArray()));
+            return ctx.UseQuery<Option<string>[], (string, string, int)>(
+                key: (nameof(QueryProjects), query, _reloadCounter.Value),
+                fetcher: async ct =>
+                {
+                    var list = await client.GetProjectsAsync(_apiToken);
+                    return list
+                        .Where(p => string.IsNullOrEmpty(query) || p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        .Take(20)
+                        .Select(p => new Option<string>(p.Name, p.Id))
+                        .ToArray();
+                });
         }
 
         QueryResult<Option<string>?> LookupProject(IViewContext ctx, string? id)
         {
-            return ctx.UseQuery<Option<string>?, (string, string?)>(
-                key: (nameof(LookupProject), id),
-                fetcher: _ => Task.FromResult<Option<string>?>(
-                    string.IsNullOrEmpty(id) ? null : _projects.FirstOrDefault(p => p.Id == id) is { } p ? new Option<string>(p.Name, p.Id) : null));
+            return ctx.UseQuery<Option<string>?, (string, string?, int)>(
+                key: (nameof(LookupProject), id, _reloadCounter.Value),
+                fetcher: async ct =>
+                {
+                    if (string.IsNullOrEmpty(id)) return null;
+                    var list = await client.GetProjectsAsync(_apiToken);
+                    var p = list.FirstOrDefault(pj => pj.Id == id);
+                    return p != null ? new Option<string>(p.Name, p.Id) : null;
+                });
         }
 
         QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string query)
         {
-            return ctx.UseQuery<Option<string>[], (string, string)>(
-                key: (nameof(QueryServers), query),
+            return ctx.UseQuery<Option<string>[], (string, string, int)>(
+                key: (nameof(QueryServers), query, _reloadCounter.Value),
                 fetcher: async ct =>
                 {
                     var list = await client.GetServersAsync(_apiToken);
@@ -562,13 +571,14 @@ public class CreateServiceSheet : ViewBase
 
         QueryResult<Option<string>?> LookupServer(IViewContext ctx, string? id)
         {
-            return ctx.UseQuery<Option<string>?, (string, string?)>(
-                key: (nameof(LookupServer), id),
+            return ctx.UseQuery<Option<string>?, (string, string?, int)>(
+                key: (nameof(LookupServer), id, _reloadCounter.Value),
                 fetcher: async ct =>
                 {
                     if (string.IsNullOrEmpty(id)) return null;
-                    var s = await client.GetServerAsync(_apiToken, id);
-                    return s != null ? new Option<string>(s.Name, s.Id) : null;
+                    var list = await client.GetServersAsync(_apiToken);
+                    var server = list.FirstOrDefault(s => s.Id == id);
+                    return server != null ? new Option<string>(server.Name, server.Id) : null;
                 });
         }
 
