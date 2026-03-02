@@ -307,6 +307,28 @@ public class ProjectsView : ViewBase
         object? eventsSheetView = null;
         if (selectedProject.Value is { } project)
         {
+            async Task DeleteProjectAsync()
+            {
+                if (busy.Value) return;
+                busy.Set(true);
+                try
+                {
+                    await client.DeleteProjectAsync(_apiToken, project.Id);
+                    await refreshSender.Send("projects");
+                    selectedProject.Set((SliplaneProject?)null);
+                    var list = await client.GetProjectsAsync(_apiToken);
+                    projects.Set(list);
+                }
+                catch (Exception ex)
+                {
+                    error.Set(ex.Message);
+                }
+                finally
+                {
+                    busy.Set(false);
+                }
+            }
+
             object body;
             if (servicesLoading.Value)
             {
@@ -424,11 +446,19 @@ public class ProjectsView : ViewBase
                 header: new DialogHeader(project.Name),
                 body: new DialogBody(body),
                 footer: new DialogFooter(
+                    new Button("Cancel")
+                        .HandleClick(_ => selectedProject.Set((SliplaneProject?)null))
+                        .Secondary(),
                     new Button("Create service")
                         .Icon(Icons.Plus)
-                        .Variant(ButtonVariant.Outline)
+                        .Primary()
                         .HandleClick(_ => createServiceSheetOpen.Set(true)),
-                    new Button("Close").HandleClick(_ => selectedProject.Set((SliplaneProject?)null)))
+                    new Button("Delete project", onClick: async _ => await DeleteProjectAsync())
+                        .Icon(Icons.Trash)
+                        .Variant(ButtonVariant.Destructive)
+                        .Loading(busy.Value)
+                        .WithConfirm("Are you sure you want to delete this project?", "Delete project")
+                    )
             ).Width(Size.Units(220));
 
             if (createServiceSheetOpen.Value)
@@ -674,19 +704,16 @@ public class ProjectsView : ViewBase
             }
 
             var addProjectForm = Layout.Vertical()
-                | newProjectName.ToTextInput().Placeholder("Project name")
-                | (addProjectError.Value is { Length: > 0 } err
-                    ? (object)new Callout(err, variant: CalloutVariant.Error)
-                    : Layout.Vertical());
+                | newProjectName.ToTextInput().Placeholder("Project name");
 
             addProjectDialog = new Dialog(
                 onClose: (Event<Dialog> _) => { showAddProjectDialog.Set(false); addProjectError.Set((string?)null); },
                 header: new DialogHeader("Add project"),
                 body: new DialogBody(addProjectForm),
                 footer: new DialogFooter(
-                    new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(addProjectBusy.Value).HandleClick(async _ => await CreateProjectAsync()),
-                    new Button("Cancel").HandleClick(_ => showAddProjectDialog.Set(false)))
-            ).Width(Size.Units(220));
+                    new Button("Cancel").HandleClick(_ => showAddProjectDialog.Set(false)).Secondary(),
+                    new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(addProjectBusy.Value).HandleClick(async _ => await CreateProjectAsync()))
+            ).Width(Size.Units(120));
         }
 
         return new Fragment(
