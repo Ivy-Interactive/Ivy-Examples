@@ -77,12 +77,15 @@ jobs:
           latest="${{ steps.get-latest.outputs.latest-version }}"
           current="${{ steps.get-current.outputs.current-version }}"
 
+          latest_base=$(echo "$latest" | cut -d'-' -f1)
+          current_base=$(echo "$current" | cut -d'-' -f1)
+
           # Always build for PRs and manual triggers
           if [ "${{ github.event_name }}" == "push" ] || [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "should-build=true" >> $GITHUB_OUTPUT
             echo "latest-version=$latest" >> $GITHUB_OUTPUT
             echo "current-version=$current" >> $GITHUB_OUTPUT
-          elif [ "$latest" != "$current" ]; then
+          elif [ "$latest_base" != "$current_base" ]; then
             echo "should-build=true" >> $GITHUB_OUTPUT
             echo "latest-version=$latest" >> $GITHUB_OUTPUT
             echo "current-version=$current" >> $GITHUB_OUTPUT
@@ -283,7 +286,19 @@ jobs:
           IVY_VERSION="${{ needs.check-ivy-version.outputs.latest-version }}"
           CURRENT_VERSION="${{ needs.check-ivy-version.outputs.current-version }}"
           HAS_MULTIPLE="${{ needs.check-ivy-version.outputs.has-multiple-versions }}"
-          
+
+          CURRENT_BASE=$(echo "$CURRENT_VERSION" | cut -d'-' -f1)
+
+          # If a pre-release is manually set for the same base version, do not downgrade to stable
+          case "$CURRENT_VERSION" in
+            *-*)
+              if [ "$CURRENT_BASE" = "$IVY_VERSION" ]; then
+                echo "Pre-release Ivy version ($CURRENT_VERSION) matches latest stable ($IVY_VERSION). Skipping automatic update."
+                exit 0
+              fi
+              ;;
+          esac
+
           # Only update if version changed or multiple versions detected
           if [ "$IVY_VERSION" != "$CURRENT_VERSION" ] || [ "$HAS_MULTIPLE" == "true" ]; then
             echo "Updating Ivy to version: $IVY_VERSION"
