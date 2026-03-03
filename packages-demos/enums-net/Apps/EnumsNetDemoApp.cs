@@ -406,7 +406,7 @@ namespace EnumsNetApp.Apps
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                 | selectedDemo.ToSelectInput(new[] { "Enumeration", "StringFormatting", "FlagOperations", "Parsing" }.ToOptions())
-                                    .Variant(SelectInputs.Toggle)
+                                    .Variant(SelectInputVariant.Toggle)
                                 | validationResult.Value)
                     );
 

@@ -45,8 +45,8 @@ public class DiffPlexApp : ViewBase
         // Comparison controls
         var controls =
             Layout.Horizontal().Gap(3)
-            | ignoreWhitespace.ToBoolInput(variant: BoolInputs.Checkbox).Label("Ignore Whitespace")
-            | ignoreCase.ToBoolInput(variant: BoolInputs.Checkbox).Label("Ignore Case")
+            | ignoreWhitespace.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Ignore Whitespace")
+            | ignoreCase.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Ignore Case")
             | new Button("Compare Texts", onClick: compareDiff).Primary().Icon(Icons.GitCompare)
             | new Button("Clear", onClick: () => diffResult.Value = null).Variant(ButtonVariant.Secondary).Icon(Icons.X);
 

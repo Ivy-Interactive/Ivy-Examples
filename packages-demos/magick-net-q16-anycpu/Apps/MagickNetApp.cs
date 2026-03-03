@@ -248,7 +248,7 @@ public class MagickNetApp : ViewBase
                                | new NumberInput<int>(widthState)
                                | Text.Block("Height:")
                                | new NumberInput<int>(heightState))
-                             | maintainAspectRatio.ToBoolInput(variant: BoolInputs.Checkbox).Label("Maintain aspect ratio")
+                             | maintainAspectRatio.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Maintain aspect ratio")
                            : selectedEffect.Value == "blur"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Blur Radius:")
@@ -279,8 +279,8 @@ public class MagickNetApp : ViewBase
                              | new NumberInput<double>(rotation).Min(-360).Max(360).Step(1)
                            : selectedEffect.Value == "flip"
                            ? Layout.Vertical().Gap(2)
-                             | flipHorizontal.ToBoolInput(variant: BoolInputs.Checkbox).Label("Flip horizontally")
-                             | flipVertical.ToBoolInput(variant: BoolInputs.Checkbox).Label("Flip vertically")
+                             | flipHorizontal.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Flip horizontally")
+                             | flipVertical.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Flip vertically")
                            : Text.Block("No additional parameters needed for this effect."))
                        // Output format
                        | Text.H4("Output Format")

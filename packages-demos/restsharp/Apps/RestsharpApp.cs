@@ -134,7 +134,7 @@ public class RestSharpApp : ViewBase
                         .ToArray()
                 ),
             new TextInput(url, placeholder: "URL")
-                .Variant(TextInputs.Url)
+                .Variant(TextInputVariant.Url)
         };
 
         if (RequiresResourceId(method.Value))
