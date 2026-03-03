@@ -16,7 +16,7 @@
     <Folder Include="Connections" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.16-pre-20260303081117" />
-    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.16-pre-20260303081117" />
+    <PackageReference Include="Ivy" Version="1.2.16-pre-20260303194234" />
+    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.16-pre-20260303194234" />
   </ItemGroup>
 </Project>
