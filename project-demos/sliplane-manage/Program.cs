@@ -7,7 +7,7 @@ CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICult
 var server = new Server();
 
 // Register the HttpClient factory for Sliplane API calls
-server.Services.AddHttpClient("Sliplane", client =>
+server.Services.AddHttpClient("Ivy", client =>
 {
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.DefaultRequestHeaders.Add("User-Agent", "Ivy-SliplaneManager/1.0");
