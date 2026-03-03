@@ -90,7 +90,7 @@ public class SmartFormatNetApp : ViewBase
 
                 | (Layout.Horizontal()
                     | Text.Label("Output: ")
-                    | new Code(string.IsNullOrEmpty(outputText.Value) ? "Click 'Format String' to see the result..." : outputText.Value)
+                    | new CodeBlock(string.IsNullOrEmpty(outputText.Value) ? "Click 'Format String' to see the result..." : outputText.Value)
                         .ShowCopyButton()
                     )
                 | new Separator()

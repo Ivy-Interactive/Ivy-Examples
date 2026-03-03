@@ -16,7 +16,7 @@ public class CodeView : ViewBase
         using var reader = new StreamReader(stream);
         var code = reader.ReadToEnd();
         
-        return new Code(code, Languages.Csharp).Width(Size.Fit()).Height(Size.Fit());
+        return new CodeBlock(code, Languages.Csharp).Width(Size.Fit()).Height(Size.Fit());
     }
 }
 

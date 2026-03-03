@@ -120,7 +120,7 @@ public class SerializeLinqApp : ViewBase
             | Text.Block("The LINQ expression serialized as JSON:")
             | (string.IsNullOrEmpty(jsonState.Value)
                 ? Text.Muted("Click 'Serialize' to generate the JSON representation of the expression...")
-                : new Code(jsonState.Value, Languages.Json)
+                : new CodeBlock(jsonState.Value, Languages.Json)
                     .ShowLineNumbers()
                     .ShowCopyButton()
                     .Width(Size.Full())

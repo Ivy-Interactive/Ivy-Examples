@@ -218,6 +218,22 @@
       ]
     },
     {
+      "name": "Showcase CRM",
+      "description": "Showcase CRM is a full-featured Customer Relationship Management web application built with Ivy Framework. It demonstrates how to build a complete CRM with companies, contacts, leads, deals, and users management—featuring an interactive dashboard with metrics and charts, Kanban boards for deal pipeline, DataTables with row actions, and Entity Framework Core with SQLite.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/showcase-crm",
+      "deploymentLink": "ivy-projectdemos-showcase-crm.sliplane.app",
+      "tags": [
+        "CRM",
+        "Sales",
+        "Leads",
+        "Deals",
+        "Kanban",
+        "Entity Framework",
+        "SQLite",
+        "Ivy"
+      ]
+    },
+    {
       "name": "Snowflake",
       "description": "Snowflake Database Explorer is a web application for exploring Snowflake databases with interactive navigation through databases, schemas, and tables, real-time statistics, table structure inspection, and paginated data preview.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/snowflake",

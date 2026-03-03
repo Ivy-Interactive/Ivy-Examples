@@ -151,10 +151,10 @@ public class ZStringApp : ViewBase
         {
             codeBlocks = Layout.Vertical()
                 | Text.Label("Function Code")
-                | new Code(selectedOp.code, Languages.Csharp)
+                | new CodeBlock(selectedOp.code, Languages.Csharp)
                     .ShowCopyButton()
                 | Text.Label("Result")
-                | new Code(resultState.Value ?? "Computing...", Languages.Text)
+                | new CodeBlock(resultState.Value ?? "Computing...", Languages.Text)
                     .ShowCopyButton();
         }
 

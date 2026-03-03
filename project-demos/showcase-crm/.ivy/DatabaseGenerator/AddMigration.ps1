@@ -1,0 +1,1 @@
+C:\Users\artem\AppData\Roaming\Ivy.Console\dotnet-tools\dotnet-ef\10.0.x\dotnet-ef.exe migrations add InitialCreate -- --connection-string "Data Source=C:\git\Ivy-Interactive\Ivy-Examples\project-demos\showcase-crm\db.sqlite"

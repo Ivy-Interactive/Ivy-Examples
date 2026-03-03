@@ -177,11 +177,11 @@ public class RestSharpApp : ViewBase
                 | Text.Muted("This is the response from the API. It is displayed in JSON format.")
                 | (hasResponse
                     ? Layout.Vertical()
-                        | new Code(formatJson.Value ? FormatStringToJson(response.Value) : response.Value, Languages.Json)
+                        | new CodeBlock(formatJson.Value ? FormatStringToJson(response.Value) : response.Value, Languages.Json)
                             .Height(Size.Fit().Max(70))
                         | formatJson.ToInput("Format JSON")
                     : Layout.Vertical()
-                        | new Code("Please execute a request to see the response here", Languages.Json)
+                        | new CodeBlock("Please execute a request to see the response here", Languages.Json)
                             .Height(Size.Fit().Max(70)))
                 | statusCallout
                 )
