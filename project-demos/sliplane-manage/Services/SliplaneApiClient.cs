@@ -254,7 +254,7 @@ public class SliplaneApiClient
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 
-    private HttpClient CreateClient() => _httpClientFactory.CreateClient("Sliplane");
+    private HttpClient CreateClient() => _httpClientFactory.CreateClient("Ivy");
 
     private async Task<HttpResponseMessage?> SendAsync(HttpMethod method, string path, string apiToken, object? body = null)
     {
