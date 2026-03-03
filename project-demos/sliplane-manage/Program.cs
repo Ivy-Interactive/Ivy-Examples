@@ -19,6 +19,11 @@ server.Services.AddSingleton(server.Configuration);
 // Register Sliplane API client
 server.Services.AddScoped<SliplaneApiClient>();
 
+Server.ConfigureAuthCookieOptions = options =>
+{
+    options.Expires = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(30));
+};
+
 #if DEBUG
 server.UseHotReload();
 #endif
