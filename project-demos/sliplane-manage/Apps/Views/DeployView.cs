@@ -1,0 +1,242 @@
+namespace SliplaneManage.Apps.Views;
+
+using System.ComponentModel.DataAnnotations;
+using SliplaneManage.Models;
+using SliplaneManage.Services;
+using SliplaneManage.Apps;
+
+public class DeployFormModel
+{
+    [Display(Name = "Project", Description = "Select an existing Sliplane project", Order = 1)]
+    [Required(ErrorMessage = "Select a project")]
+    public string ProjectId { get; set; } = "";
+
+    [Display(Name = "Service name", Order = 2)]
+    [Required(ErrorMessage = "Enter a service name")]
+    [MinLength(2, ErrorMessage = "Service name must be at least 2 characters")]
+    public string Name { get; set; } = "";
+
+    [Display(Name = "Server", Description = "Select a server to deploy on", Order = 3)]
+    [Required(ErrorMessage = "Select a server")]
+    public string ServerId { get; set; } = "";
+
+    [Display(GroupName = "Repository", Name = "Repository URL", Order = 4)]
+    [Required(ErrorMessage = "Enter a repository URL")]
+    public string GitRepo { get; set; } = "";
+
+    [Display(GroupName = "Repository", Name = "Branch", Order = 5)]
+    public string Branch { get; set; } = "main";
+
+    [Display(GroupName = "Build", Name = "Dockerfile path", Order = 6)]
+    public string DockerfilePath { get; set; } = "Dockerfile";
+
+    [Display(GroupName = "Build", Name = "Docker context", Order = 7)]
+    public string DockerContext { get; set; } = ".";
+
+    [Display(GroupName = "Build", Name = "Auto-deploy on push", Order = 8)]
+    public bool AutoDeploy { get; set; } = true;
+
+    [Display(GroupName = "Network", Name = "Public access", Order = 9)]
+    public bool NetworkPublic { get; set; } = true;
+
+    [Display(GroupName = "Network", Name = "Protocol", Order = 10)]
+    public string NetworkProtocol { get; set; } = "http";
+
+    [Display(GroupName = "Optional", Name = "Health check path", Prompt = "/health", Order = 11)]
+    public string Healthcheck { get; set; } = "/";
+
+    [Display(GroupName = "Optional", Name = "Start command", Prompt = "e.g. npm start", Order = 12)]
+    public string? Cmd { get; set; }
+}
+
+public class DeployView : ViewBase
+{
+    private readonly string _apiToken;
+    private readonly string _repoUrl;
+
+    public DeployView(string apiToken, string repoUrl)
+    {
+        _apiToken = apiToken;
+        _repoUrl  = repoUrl;
+    }
+
+    public override object? Build()
+    {
+        var client        = this.UseService<SliplaneApiClient>();
+        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
+
+        var initialName = DeriveServiceName(_repoUrl);
+
+        var model = this.UseState(() => new DeployFormModel
+        {
+            GitRepo = _repoUrl,
+            Name    = initialName,
+        });
+
+        // Keep DeploymentDraftStore in sync as the user edits the repo URL
+        this.UseEffect(() => DeploymentDraftStore.SaveRepoUrl(model.Value.GitRepo), model);
+
+        var success        = this.UseState(false);
+        var createdService = this.UseState<SliplaneService?>(() => null);
+        var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
+        var showAddEnvDlg  = this.UseState(false);
+        var addEnvKey      = this.UseState(string.Empty);
+        var addEnvValue    = this.UseState(string.Empty);
+        var reloadCounter  = this.UseState(0);
+
+        QueryResult<Option<string>[]> QueryProjects(IViewContext ctx, string q) =>
+            ctx.UseQuery<Option<string>[], (string, string, int)>(
+                key: ("deploy-projects", q, reloadCounter.Value),
+                fetcher: async _ =>
+                    (await client.GetProjectsAsync(_apiToken))
+                        .Where(p => string.IsNullOrEmpty(q) || p.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
+                        .Take(20).Select(p => new Option<string>(p.Name, p.Id)).ToArray());
+
+        QueryResult<Option<string>?> LookupProject(IViewContext ctx, string? id) =>
+            ctx.UseQuery<Option<string>?, (string, string?, int)>(
+                key: ("deploy-project-lookup", id, reloadCounter.Value),
+                fetcher: async _ =>
+                {
+                    if (string.IsNullOrEmpty(id)) return null;
+                    var p = (await client.GetProjectsAsync(_apiToken)).FirstOrDefault(x => x.Id == id);
+                    return p is null ? null : new Option<string>(p.Name, p.Id);
+                });
+
+        QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string q) =>
+            ctx.UseQuery<Option<string>[], (string, string, int)>(
+                key: ("deploy-servers", q, reloadCounter.Value),
+                fetcher: async _ =>
+                    (await client.GetServersAsync(_apiToken))
+                        .Where(s => string.IsNullOrEmpty(q) || s.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
+                        .Take(20).Select(s => new Option<string>(s.Name, s.Id)).ToArray());
+
+        QueryResult<Option<string>?> LookupServer(IViewContext ctx, string? id) =>
+            ctx.UseQuery<Option<string>?, (string, string?, int)>(
+                key: ("deploy-server-lookup", id, reloadCounter.Value),
+                fetcher: async _ =>
+                {
+                    if (string.IsNullOrEmpty(id)) return null;
+                    var s = (await client.GetServersAsync(_apiToken)).FirstOrDefault(x => x.Id == id);
+                    return s is null ? null : new Option<string>(s.Name, s.Id);
+                });
+
+        var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
+
+        var (onSubmit, formView, validationView, loading) = this.UseForm(() => model.ToForm("Deploy")
+            .Builder(m => m.ProjectId,       s => s.ToAsyncSelectInput(QueryProjects, LookupProject, placeholder: "Search project..."))
+            .Builder(m => m.ServerId,        s => s.ToAsyncSelectInput(QueryServers,  LookupServer,  placeholder: "Search server..."))
+            .Builder(m => m.NetworkProtocol, s => s.ToSelectInput(protocolOptions))
+            .Required(m => m.ProjectId, m => m.Name, m => m.ServerId, m => m.GitRepo));
+
+        async ValueTask HandleDeploy()
+        {
+            if (!await onSubmit()) return;
+            var m   = model.Value;
+            var svc = await client.CreateServiceAsync(_apiToken, m.ProjectId,
+                ServiceRequestFactory.BuildCreateRequest(
+                    name: m.Name, serverId: m.ServerId, gitRepo: m.GitRepo,
+                    branch: m.Branch, dockerfilePath: m.DockerfilePath,
+                    dockerContext: m.DockerContext, autoDeploy: m.AutoDeploy,
+                    networkPublic: m.NetworkPublic, networkProtocol: m.NetworkProtocol,
+                    cmd: m.Cmd ?? string.Empty, healthcheck: m.Healthcheck,
+                    env: envList.Value, volumeMounts: null));
+            createdService.Set(svc);
+            success.Set(true);
+            await refreshSender.Send("services");
+        }
+
+        if (success.Value)
+        {
+            var svc    = createdService.Value;
+            var domain = svc?.Network?.ManagedDomain ?? svc?.Network?.CustomDomains?.FirstOrDefault()?.Domain;
+            var url    = string.IsNullOrWhiteSpace(domain) ? null
+                : domain.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? domain : "https://" + domain;
+
+            return Layout.Center()
+                | (Layout.Vertical().Align(Align.Center).Gap(6)
+                    | Icons.CircleCheck.ToIcon()
+                    | Text.H2("Deployed Successfully! 🎉")
+                    | Text.P($"Service \"{svc?.Name ?? model.Value.Name}\" is deploying.")
+                    | (url != null
+                        ? (object)new Button("Open App").Icon(Icons.ExternalLink).Primary().Url(url)
+                        : Text.Muted("Your app will be available shortly."))
+                    | new Button("Deploy another").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
+                        .HandleClick(_ =>
+                        {
+                            success.Set(false);
+                            createdService.Set((SliplaneService?)null);
+                            model.Set(new DeployFormModel { GitRepo = _repoUrl, Name = initialName });
+                        }));
+        }
+
+        // Env variable table
+        var envItems = envList.Value;
+        var envHeaderRow = new TableRow(
+            new TableCell("Key").IsHeader(),
+            new TableCell("Value").IsHeader(),
+            new TableCell("").IsHeader().Width(Size.Fit()));
+        var envDataRows = envItems.Select((e, i) => new TableRow(
+            new TableCell(e.Key),
+            new TableCell(e.Value ?? ""),
+            new TableCell(new Button("Remove").Variant(ButtonVariant.Outline)
+                .HandleClick(_ => envList.Set(envList.Value.Where((_, j) => j != i).ToList())))
+                .Width(Size.Fit()))).ToArray();
+
+        object envTable = envDataRows.Length == 0
+            ? Text.Muted("No variables added.")
+            : new Table(new[] { envHeaderRow }.Concat(envDataRows).ToArray()).Width(Size.Full());
+
+        Dialog? addEnvDialog = null;
+        if (showAddEnvDlg.Value)
+        {
+            void SaveEnv()
+            {
+                if (string.IsNullOrWhiteSpace(addEnvKey.Value)) return;
+                envList.Set(envList.Value
+                    .Append(new EnvironmentVariable(addEnvKey.Value.Trim(), addEnvValue.Value ?? string.Empty, false))
+                    .ToList());
+                addEnvKey.Set(string.Empty);
+                addEnvValue.Set(string.Empty);
+                showAddEnvDlg.Set(false);
+            }
+            addEnvDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showAddEnvDlg.Set(false),
+                header:  new DialogHeader("Add environment variable"),
+                body:    new DialogBody(Layout.Vertical()
+                    | addEnvKey.ToTextInput().Placeholder("Key (e.g. DATABASE_URL)")
+                    | addEnvValue.ToTextInput().Placeholder("Value")),
+                footer:  new DialogFooter(
+                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
+                    new Button("Cancel").HandleClick(_ => showAddEnvDlg.Set(false))
+                )).Width(Size.Units(220));
+        }
+
+        var page = Layout.Center()
+            | (Layout.Vertical().Gap(8)
+                | (Layout.Vertical().Align(Align.Center).Gap(4)
+                    | Icons.Rocket.ToIcon()
+                    | Text.H1("Deploy to Sliplane")
+                    | Text.Lead("Configure and deploy your Ivy app in seconds."))
+                | new Separator()
+                | formView
+                | (Layout.Vertical()
+                    | Text.H4("Environment Variables")
+                    | envTable
+                    | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
+                        .HandleClick(_ => showAddEnvDlg.Set(true)))
+                | (Layout.Horizontal()
+                    | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
+                        .HandleClick(async _ => await HandleDeploy())
+                    | validationView));
+
+        return addEnvDialog != null ? new Fragment(page, addEnvDialog) : (object)page;
+    }
+
+    private static string DeriveServiceName(string repoUrl)
+    {
+        if (string.IsNullOrWhiteSpace(repoUrl)) return string.Empty;
+        var seg = repoUrl.TrimEnd('/').Split('/').LastOrDefault() ?? string.Empty;
+        if (seg.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) seg = seg[..^4];
+        return string.IsNullOrWhiteSpace(seg) ? string.Empty : seg.ToLowerInvariant();
+    }
+}

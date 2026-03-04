@@ -24,6 +24,9 @@ Server.ConfigureAuthCookieOptions = options =>
     options.Expires = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(30));
 };
 
+// Captures ?repo= from the initial HTTP GET before Ivy SPA strips query params.
+server.Services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, SliplaneManage.Services.RepoCaptureFilter>();
+
 #if DEBUG
 server.UseHotReload();
 #endif
