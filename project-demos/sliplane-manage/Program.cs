@@ -38,7 +38,7 @@ server.UseAuth<SliplaneAuthProvider>();
 
 var chromeSettings = new ChromeSettings()
     .UseTabs(preventDuplicates: true)
-    .DefaultApp<SliplaneServersApp>();
+    .DefaultApp<SliplaneDeployApp>();
 server.UseChrome(chromeSettings);
 
 await server.RunAsync();

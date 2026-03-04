@@ -7,39 +7,39 @@ using SliplaneManage.Apps;
 
 public class DeployFormModel
 {
-    [Display(Name = "Project", Order = 1)]
+    [Display(Name = "Server", Order = 1, Prompt = "Select a server")]
+    [Required(ErrorMessage = "Select a server")]
+    public string ServerId { get; set; } = "";
+
+    [Display(Name = "Project", Order = 2, Prompt = "Select a project")]
     [Required(ErrorMessage = "Select a project")]
     public string ProjectId { get; set; } = "";
 
-    [Display(Name = "Service name", Order = 2)]
+    [Display(Name = "Service name", Order = 3, Prompt = "my-ivy-service")]
     [Required(ErrorMessage = "Enter a service name")]
     [MinLength(2, ErrorMessage = "Service name must be at least 2 characters")]
     public string Name { get; set; } = "";
 
-    [Display(Name = "Server", Order = 3)]
-    [Required(ErrorMessage = "Select a server")]
-    public string ServerId { get; set; } = "";
-
-    [Display(GroupName = "Repository", Name = "Repository URL", Order = 4)]
+    [Display(Name = "Repository URL", Order = 4, Prompt = "https://github.com/user/repo")]
     [Required(ErrorMessage = "Enter a repository URL")]
     public string GitRepo { get; set; } = "";
 
-    [Display(GroupName = "Repository", Name = "Branch", Order = 5)]
+    [Display(Name = "Branch", Order = 5, Prompt = "main")]
     public string Branch { get; set; } = "main";
 
-    [Display(GroupName = "Build", Name = "Dockerfile path", Order = 6)]
+    [Display(GroupName = "Build", Name = "Dockerfile path", Order = 6, Prompt = "Dockerfile")]
     public string DockerfilePath { get; set; } = "Dockerfile";
 
-    [Display(GroupName = "Build", Name = "Docker context", Order = 7)]
+    [Display(GroupName = "Build", Name = "Docker context", Order = 7, Prompt = ".")]
     public string DockerContext { get; set; } = ".";
 
-    [Display(GroupName = "Build", Name = "Auto-deploy on push", Order = 8)]
+    [Display(GroupName = "Build", Name = "Auto-deploy on push", Order = 8, Prompt = "Enable auto-deploy on push")]
     public bool AutoDeploy { get; set; } = true;
 
-    [Display(GroupName = "Network", Name = "Public access", Order = 9)]
+    [Display(GroupName = "Network", Name = "Public access", Order = 9, Prompt = "Expose service publicly")]
     public bool NetworkPublic { get; set; } = true;
 
-    [Display(GroupName = "Network", Name = "Protocol", Order = 10)]
+    [Display(GroupName = "Network", Name = "Protocol", Order = 10, Prompt = "http or https")]
     public string NetworkProtocol { get; set; } = "http";
 
     [Display(GroupName = "Optional", Name = "Health check path", Prompt = "/health", Order = 11)]
@@ -216,11 +216,12 @@ public class DeployView : ViewBase
             | Text.H1("Deploy to Sliplane")
             | Text.Lead("Configure and deploy your Ivy app in seconds.");
 
-        var envSection = Layout.Vertical()
-            | Text.H4("Environment Variables")
-            | envTable
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
-                .HandleClick(_ => showAddEnvDlg.Set(true));
+        var envSection = new Expandable(
+            "Environment Variables",
+            Layout.Vertical()
+                | envTable
+                | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
+                    .HandleClick(_ => showAddEnvDlg.Set(true)));
 
         var actionsRow = Layout.Horizontal()
             | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
@@ -228,7 +229,7 @@ public class DeployView : ViewBase
             | validationView;
 
         var card = new Card(
-            Layout.Vertical().Gap(8)
+            Layout.Vertical()
                 | headerSection
                 | new Separator()
                 | formView
