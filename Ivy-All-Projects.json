@@ -234,6 +234,24 @@
       ]
     },
     {
+      "name": "Sliplane Manage",
+      "description": "Sliplane Manage is a web application for managing your \\1 infrastructure: servers, projects, and services. It uses the Sliplane Control API to list and manage resources, deploy services from Git repositories or Docker images, view logs and events, and perform pause/resume and delete operations—all through an interactive UI built with the Ivy framework.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/sliplane-manage",
+      "deploymentLink": "ivy-projectdemos-sliplane-manage.sliplane.app",
+      "tags": [
+        "Sliplane",
+        "DevOps",
+        "Servers",
+        "Projects",
+        "Services",
+        "Ivy Framework",
+        "C#",
+        ".NET",
+        "API",
+        "OAuth"
+      ]
+    },
+    {
       "name": "Snowflake",
       "description": "Snowflake Database Explorer is a web application for exploring Snowflake databases with interactive navigation through databases, schemas, and tables, real-time statistics, table structure inspection, and paginated data preview.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/snowflake",
