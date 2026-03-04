@@ -81,6 +81,11 @@ public class DeployView : ViewBase
         var addEnvKey      = this.UseState(string.Empty);
         var addEnvValue    = this.UseState(string.Empty);
         var reloadCounter  = this.UseState(0);
+        var serverVolumes  = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
+        var volumeMountsList = this.UseState<List<(string VolumeId, string MountPath)>>(() => new List<(string, string)>());
+        var showAddVolumeDlg = this.UseState(false);
+        var addVolumeId    = this.UseState(string.Empty);
+        var addMountPath   = this.UseState(string.Empty);
 
         QueryResult<Option<string>[]> QueryProjects(IViewContext ctx, string q) =>
             ctx.UseQuery<Option<string>[], (string, string, int)>(
@@ -127,6 +132,25 @@ public class DeployView : ViewBase
             .Builder(m => m.NetworkProtocol, s => s.ToSelectInput(protocolOptions))
             .Required(m => m.ProjectId, m => m.Name, m => m.ServerId, m => m.GitRepo));
 
+        this.UseEffect(async () =>
+        {
+            var serverId = model.Value.ServerId;
+            if (string.IsNullOrWhiteSpace(serverId))
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+                return;
+            }
+            try
+            {
+                var vols = await client.GetServerVolumesAsync(_apiToken, serverId);
+                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
+            }
+            catch
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+            }
+        }, model);
+
         async ValueTask HandleDeploy()
         {
             if (!await onSubmit()) return;
@@ -138,7 +162,7 @@ public class DeployView : ViewBase
                     dockerContext: m.DockerContext, autoDeploy: m.AutoDeploy,
                     networkPublic: m.NetworkPublic, networkProtocol: m.NetworkProtocol,
                     cmd: m.Cmd ?? string.Empty, healthcheck: m.Healthcheck,
-                    env: envList.Value, volumeMounts: null));
+                    env: envList.Value, volumeMounts: volumeMountsList.Value));
             await refreshSender.Send("services");
             navigator.Navigate(typeof(SliplaneServicesApp));
         }
@@ -185,6 +209,33 @@ public class DeployView : ViewBase
                 )).Width(Size.Units(220));
         }
 
+        Dialog? addVolumeDialog = null;
+        if (showAddVolumeDlg.Value)
+        {
+            void SaveVolume()
+            {
+                if (string.IsNullOrWhiteSpace(addVolumeId.Value) || string.IsNullOrWhiteSpace(addMountPath.Value)) return;
+                volumeMountsList.Set(volumeMountsList.Value
+                    .Append((addVolumeId.Value, addMountPath.Value.Trim()))
+                    .ToList());
+                addVolumeId.Set(string.Empty);
+                addMountPath.Set(string.Empty);
+                showAddVolumeDlg.Set(false);
+            }
+            var volumeOptionsForDialog = (serverVolumes.Value ?? new List<SliplaneVolume>())
+                .Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id)).ToArray();
+            addVolumeDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showAddVolumeDlg.Set(false),
+                header:  new DialogHeader("Add volume mount"),
+                body:    new DialogBody(Layout.Vertical()
+                    | addVolumeId.ToSelectInput(volumeOptionsForDialog)
+                    | addMountPath.ToTextInput().Placeholder("Mount path (e.g. /data)")),
+                footer:  new DialogFooter(
+                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveVolume()),
+                    new Button("Cancel").HandleClick(_ => showAddVolumeDlg.Set(false))
+                )).Width(Size.Units(220));
+        }
+
         var headerSection = Layout.Vertical().Align(Align.Center).Gap(4)
             | Icons.Rocket.ToIcon()
             | Text.H1("Deploy to Sliplane")
@@ -197,6 +248,34 @@ public class DeployView : ViewBase
                 | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
                     .HandleClick(_ => showAddEnvDlg.Set(true)));
 
+        var vols = serverVolumes.Value ?? new List<SliplaneVolume>();
+        var volItems = volumeMountsList.Value ?? new List<(string VolumeId, string MountPath)>();
+        var volHeaderRow = new TableRow(
+            new TableCell("Volume").IsHeader(),
+            new TableCell("Mount path").IsHeader(),
+            new TableCell("").IsHeader().Width(Size.Fit()));
+        var volDataRows = volItems.Select((v, i) =>
+        {
+            var index = i;
+            var volName = vols.FirstOrDefault(vol => vol.Id == v.VolumeId)?.Name ?? v.VolumeId;
+            return new TableRow(
+                new TableCell(volName),
+                new TableCell(v.MountPath),
+                new TableCell(new Button("Remove").Variant(ButtonVariant.Outline)
+                    .HandleClick(_ => volumeMountsList.Set(volumeMountsList.Value.Where((_, j) => j != index).ToList())))
+                    .Width(Size.Fit()));
+        }).ToArray();
+        object volTableContent = volDataRows.Length == 0
+            ? (object)Text.Muted("No volume mounts. Select a server first, then add.")
+            : new Table(new[] { volHeaderRow }.Concat(volDataRows).ToArray()).Width(Size.Full());
+
+        var volumesSection = new Expandable(
+            "Volumes",
+            Layout.Vertical()
+                | volTableContent
+                | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
+                    .HandleClick(_ => showAddVolumeDlg.Set(true)));
+
         var actionsRow = Layout.Horizontal()
             | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
                 .HandleClick(async _ => await HandleDeploy())
@@ -208,13 +287,17 @@ public class DeployView : ViewBase
                 | new Separator()
                 | formView
                 | envSection
+                | volumesSection
                 | actionsRow)
             .Width(Size.Fraction(0.5f));
 
         var page = Layout.Vertical().Align(Align.TopCenter)
             | card;
 
-        return addEnvDialog != null ? new Fragment(page, addEnvDialog) : (object)page;
+        if (addEnvDialog != null && addVolumeDialog != null) return new Fragment(page, addEnvDialog, addVolumeDialog);
+        if (addEnvDialog != null) return new Fragment(page, addEnvDialog);
+        if (addVolumeDialog != null) return new Fragment(page, addVolumeDialog);
+        return page;
     }
 
     private static string DeriveServiceName(string repoUrl)
