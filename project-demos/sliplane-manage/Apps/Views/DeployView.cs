@@ -76,8 +76,6 @@ public class DeployView : ViewBase
         // Keep DeploymentDraftStore in sync as the user edits the repo URL
         this.UseEffect(() => DeploymentDraftStore.SaveRepoUrl(model.Value.GitRepo), model);
 
-        var success        = this.UseState(false);
-        var createdService = this.UseState<SliplaneService?>(() => null);
         var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
         var showAddEnvDlg  = this.UseState(false);
         var addEnvKey      = this.UseState(string.Empty);
@@ -122,6 +120,7 @@ public class DeployView : ViewBase
 
         var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
 
+        var navigator = this.Context.UseNavigation();
         var (onSubmit, formView, validationView, loading) = this.UseForm(() => model.ToForm("Deploy")
             .Builder(m => m.ProjectId,       s => s.ToAsyncSelectInput(QueryProjects, LookupProject, placeholder: "Search project..."))
             .Builder(m => m.ServerId,        s => s.ToAsyncSelectInput(QueryServers,  LookupServer,  placeholder: "Search server..."))
@@ -132,7 +131,7 @@ public class DeployView : ViewBase
         {
             if (!await onSubmit()) return;
             var m   = model.Value;
-            var svc = await client.CreateServiceAsync(_apiToken, m.ProjectId,
+            await client.CreateServiceAsync(_apiToken, m.ProjectId,
                 ServiceRequestFactory.BuildCreateRequest(
                     name: m.Name, serverId: m.ServerId, gitRepo: m.GitRepo,
                     branch: m.Branch, dockerfilePath: m.DockerfilePath,
@@ -140,33 +139,8 @@ public class DeployView : ViewBase
                     networkPublic: m.NetworkPublic, networkProtocol: m.NetworkProtocol,
                     cmd: m.Cmd ?? string.Empty, healthcheck: m.Healthcheck,
                     env: envList.Value, volumeMounts: null));
-            createdService.Set(svc);
-            success.Set(true);
             await refreshSender.Send("services");
-        }
-
-        if (success.Value)
-        {
-            var svc    = createdService.Value;
-            var domain = svc?.Network?.ManagedDomain ?? svc?.Network?.CustomDomains?.FirstOrDefault()?.Domain;
-            var url    = string.IsNullOrWhiteSpace(domain) ? null
-                : domain.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? domain : "https://" + domain;
-
-            return Layout.Center()
-                | (Layout.Vertical().Align(Align.Center).Gap(6)
-                    | Icons.CircleCheck.ToIcon()
-                    | Text.H2("Deployed Successfully! 🎉")
-                    | Text.P($"Service \"{svc?.Name ?? model.Value.Name}\" is deploying.")
-                    | (url != null
-                        ? (object)new Button("Open App").Icon(Icons.ExternalLink).Primary().Url(url)
-                        : Text.Muted("Your app will be available shortly."))
-                    | new Button("Deploy another").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
-                        .HandleClick(_ =>
-                        {
-                            success.Set(false);
-                            createdService.Set((SliplaneService?)null);
-                            model.Set(new DeployFormModel { GitRepo = _repoUrl, Name = initialName });
-                        }));
+            navigator.Navigate(typeof(SliplaneServicesApp));
         }
 
         // Env variable table
