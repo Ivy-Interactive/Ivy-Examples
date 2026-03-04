@@ -7,7 +7,7 @@ using SliplaneManage.Apps;
 
 public class DeployFormModel
 {
-    [Display(Name = "Project", Description = "Select an existing Sliplane project", Order = 1)]
+    [Display(Name = "Project", Order = 1)]
     [Required(ErrorMessage = "Select a project")]
     public string ProjectId { get; set; } = "";
 
@@ -16,7 +16,7 @@ public class DeployFormModel
     [MinLength(2, ErrorMessage = "Service name must be at least 2 characters")]
     public string Name { get; set; } = "";
 
-    [Display(Name = "Server", Description = "Select a server to deploy on", Order = 3)]
+    [Display(Name = "Server", Order = 3)]
     [Required(ErrorMessage = "Select a server")]
     public string ServerId { get; set; } = "";
 
@@ -211,23 +211,33 @@ public class DeployView : ViewBase
                 )).Width(Size.Units(220));
         }
 
-        var page = Layout.Center()
-            | (Layout.Vertical().Gap(8)
-                | (Layout.Vertical().Align(Align.Center).Gap(4)
-                    | Icons.Rocket.ToIcon()
-                    | Text.H1("Deploy to Sliplane")
-                    | Text.Lead("Configure and deploy your Ivy app in seconds."))
+        var headerSection = Layout.Vertical().Align(Align.Center).Gap(4)
+            | Icons.Rocket.ToIcon()
+            | Text.H1("Deploy to Sliplane")
+            | Text.Lead("Configure and deploy your Ivy app in seconds.");
+
+        var envSection = Layout.Vertical()
+            | Text.H4("Environment Variables")
+            | envTable
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
+                .HandleClick(_ => showAddEnvDlg.Set(true));
+
+        var actionsRow = Layout.Horizontal()
+            | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
+                .HandleClick(async _ => await HandleDeploy())
+            | validationView;
+
+        var card = new Card(
+            Layout.Vertical().Gap(8)
+                | headerSection
                 | new Separator()
                 | formView
-                | (Layout.Vertical()
-                    | Text.H4("Environment Variables")
-                    | envTable
-                    | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
-                        .HandleClick(_ => showAddEnvDlg.Set(true)))
-                | (Layout.Horizontal()
-                    | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
-                        .HandleClick(async _ => await HandleDeploy())
-                    | validationView));
+                | envSection
+                | actionsRow)
+            .Width(Size.Fraction(0.5f));
+
+        var page = Layout.Vertical().Align(Align.TopCenter)
+            | card;
 
         return addEnvDialog != null ? new Fragment(page, addEnvDialog) : (object)page;
     }
