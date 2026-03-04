@@ -4,6 +4,19 @@
 
 Sliplane Manage is a web application for managing your [Sliplane](https://sliplane.io) infrastructure: servers, projects, and services. It uses the Sliplane Control API to list and manage resources, deploy services from Git repositories or Docker images, view logs and events, and perform pause/resume and delete operations—all through an interactive UI built with the Ivy framework.
 
+### Deploy button for your repo
+
+Add this to your project’s README so users can deploy your Ivy app to Sliplane in one click (replace the `repo` URL with your repository):
+
+<p align="center">
+  <a href="http://localhost:5010/sliplane-deploy-app?repo=https://github.com/ArtemLazarchuk/ivy-helloworld">
+    <img src="https://raw.githubusercontent.com/ArtemLazarchuk/Ivy-Examples/main/project-demos/sliplane-manage/Assets/deploy-button.svg"
+         alt="Host your Ivy app on Sliplane" />
+  </a>
+</p>
+
+For production, change `http://localhost:5010` to your deployed app URL.
+
 ## Features
 
 - **Overview** – Dashboard with summary cards (Servers, Projects, Services) and counts; use the sidebar to jump to each section.
