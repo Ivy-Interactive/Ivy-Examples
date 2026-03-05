@@ -52,12 +52,12 @@ public class DeployFormModel
 public class DeployView : ViewBase
 {
     private readonly string _apiToken;
-    private readonly string _repoUrl;
+    private readonly DeployDraft _draft;
 
-    public DeployView(string apiToken, string repoUrl)
+    public DeployView(string apiToken, DeployDraft draft)
     {
         _apiToken = apiToken;
-        _repoUrl  = repoUrl;
+        _draft    = draft;
     }
 
     public override object? Build()
@@ -66,16 +66,17 @@ public class DeployView : ViewBase
         var draftStore    = this.UseService<DeploymentDraftStore>();
         var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
 
-        var initialName = DeriveServiceName(_repoUrl);
-
         var model = this.UseState(() => new DeployFormModel
         {
-            GitRepo = _repoUrl,
-            Name    = initialName,
+            GitRepo        = _draft.RepoUrl,
+            Branch         = _draft.Branch,
+            DockerContext  = _draft.DockerContext,
+            DockerfilePath = _draft.DockerfilePath,
+            Name           = DeriveServiceName(_draft.RepoUrl, _draft.DockerContext),
         });
 
-        // Keep DeploymentDraftStore in sync as the user edits the repo URL (per-user)
-        this.UseEffect(() => draftStore.SaveRepoUrl(model.Value.GitRepo), model);
+        // Keep draft in sync as the user edits the repo URL
+        this.UseEffect(() => draftStore.SaveDraft(DeploymentDraftStore.ParseGitHubUrl(model.Value.GitRepo)), model);
 
         var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
         var showAddEnvDlg  = this.UseState(false);
@@ -301,10 +302,16 @@ public class DeployView : ViewBase
         return page;
     }
 
-    private static string DeriveServiceName(string repoUrl)
+    // Prefer the last segment of dockerContext (e.g. "packages-demos/yamldotnet" → "yamldotnet"),
+    // falling back to the last segment of the repo URL.
+    private static string DeriveServiceName(string repoUrl, string dockerContext = ".")
     {
-        if (string.IsNullOrWhiteSpace(repoUrl)) return string.Empty;
-        var seg = repoUrl.TrimEnd('/').Split('/').LastOrDefault() ?? string.Empty;
+        var source = (!string.IsNullOrWhiteSpace(dockerContext) && dockerContext != ".")
+            ? dockerContext
+            : repoUrl;
+
+        if (string.IsNullOrWhiteSpace(source)) return string.Empty;
+        var seg = source.TrimEnd('/').Split('/').LastOrDefault() ?? string.Empty;
         if (seg.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) seg = seg[..^4];
         return string.IsNullOrWhiteSpace(seg) ? string.Empty : seg.ToLowerInvariant();
     }

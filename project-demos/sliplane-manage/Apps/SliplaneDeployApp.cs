@@ -5,9 +5,8 @@ using SliplaneManage.Services;
 
 /// <summary>
 /// Route: /sliplane-deploy-app
-/// Opened via the "Host your Ivy app on Sliplane" button in GitHub READMEs.
-/// The ?repo= query param is captured by RepoCaptureFilter before Ivy SPA loads,
-/// stored in DeploymentDraftStore, and read here to pre-fill the deploy form.
+/// Opened via the "Host your Ivy app on Sliplane" button.
+/// ?repo= is captured by RepoCaptureFilter, parsed into a DeployDraft, and pre-fills the form.
 /// </summary>
 [App(
     id: "sliplane-deploy-app",
@@ -26,10 +25,13 @@ public class SliplaneDeployApp : ViewBase
                        ?? session.AuthToken?.AccessToken
                        ?? string.Empty;
 
-        // Repo from internal navigation args or last saved value (per-user)
         var draftStore = this.UseService<DeploymentDraftStore>();
-        var args    = this.UseArgs<DeployArgs>();
-        var repoUrl = args?.Repo ?? draftStore.LastRepoUrl ?? string.Empty;
+        var args       = this.UseArgs<DeployArgs>();
+
+        // Args from internal navigation take priority over the stored draft
+        var draft = args is not null
+            ? DeploymentDraftStore.ParseGitHubUrl(args.Repo)
+            : draftStore.LastDraft;
 
         if (string.IsNullOrWhiteSpace(apiToken))
         {
@@ -37,13 +39,13 @@ public class SliplaneDeployApp : ViewBase
                 | (Layout.Vertical().Align(Align.Center).Gap(6)
                     | Icons.Rocket.ToIcon()
                     | Text.H2("Deploy to Sliplane")
-                    | (string.IsNullOrWhiteSpace(repoUrl)
-                        ? Text.Muted("Sign in with Sliplane to deploy your Ivy app.")
-                        : Text.Muted($"Repository: {repoUrl}"))
+                    | (draft is not null
+                        ? Text.Muted($"Repository: {draft.RepoUrl}")
+                        : Text.Muted("Sign in with Sliplane to deploy your Ivy app."))
                     | Text.Muted("No API token. Please sign in or configure Sliplane:ApiToken."));
         }
 
-        return new DeployView(apiToken, repoUrl);
+        return new DeployView(apiToken, draft ?? new DeployDraft(string.Empty));
     }
 }
 
