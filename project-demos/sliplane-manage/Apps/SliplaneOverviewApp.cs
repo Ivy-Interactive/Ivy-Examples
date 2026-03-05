@@ -51,7 +51,7 @@ public class SliplaneProjectsApp : ViewBase
 /// <summary>
 /// Services app — list services, create, edit, pause, delete.
 /// </summary>
-[App(icon: Icons.Box, title: "Services", searchHints: ["services", "deploy"])]
+[App(id: "sliplane-services-app", icon: Icons.Box, title: "Services", searchHints: ["services", "deploy"])]
 public class SliplaneServicesApp : ViewBase
 {
     public override object? Build()
