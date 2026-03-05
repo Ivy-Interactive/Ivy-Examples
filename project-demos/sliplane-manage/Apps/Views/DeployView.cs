@@ -53,11 +53,15 @@ public class DeployView : ViewBase
 {
     private readonly string _apiToken;
     private readonly DeployDraft _draft;
+    private readonly string _defaultServerId;
+    private readonly string _defaultProjectId;
 
-    public DeployView(string apiToken, DeployDraft draft)
+    public DeployView(string apiToken, DeployDraft draft, string defaultServerId = "", string defaultProjectId = "")
     {
-        _apiToken = apiToken;
-        _draft    = draft;
+        _apiToken         = apiToken;
+        _draft            = draft;
+        _defaultServerId  = defaultServerId;
+        _defaultProjectId = defaultProjectId;
     }
 
     public override object? Build()
@@ -67,11 +71,17 @@ public class DeployView : ViewBase
 
         var model = this.UseState(() => new DeployFormModel
         {
-            GitRepo        = _draft.RepoUrl,
-            Branch         = _draft.Branch,
-            DockerContext  = _draft.DockerContext,
-            DockerfilePath = _draft.DockerfilePath,
-            Name           = DeriveServiceName(_draft.RepoUrl, _draft.DockerContext),
+            ServerId        = _defaultServerId,
+            ProjectId       = _defaultProjectId,
+            GitRepo         = _draft.RepoUrl,
+            Branch          = string.IsNullOrWhiteSpace(_draft.Branch) ? "main" : _draft.Branch,
+            DockerContext   = string.IsNullOrWhiteSpace(_draft.DockerContext) ? "." : _draft.DockerContext,
+            DockerfilePath  = string.IsNullOrWhiteSpace(_draft.DockerfilePath) ? "Dockerfile" : _draft.DockerfilePath,
+            Name            = DeriveServiceName(_draft.RepoUrl, _draft.DockerContext),
+            AutoDeploy      = true,
+            NetworkPublic   = true,
+            NetworkProtocol = "http",
+            Healthcheck     = "/",
         });
 
         var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());

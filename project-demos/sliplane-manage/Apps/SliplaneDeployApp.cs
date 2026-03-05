@@ -2,6 +2,7 @@ namespace SliplaneManage.Apps;
 
 using SliplaneManage.Apps.Views;
 using SliplaneManage.Services;
+using SliplaneManage.Models;
 
 /// <summary>
 /// Route: /sliplane-deploy-app
@@ -45,7 +46,20 @@ public class SliplaneDeployApp : ViewBase
                     | Text.Muted("No API token. Please sign in or configure Sliplane:ApiToken."));
         }
 
-        return new DeployView(apiToken, draft ?? new DeployDraft(string.Empty));
+        var client = this.UseService<SliplaneApiClient>();
+        var firstServerQuery = this.UseQuery<SliplaneServer?, (string, string)>(
+            key: ("deploy-default-server", apiToken),
+            fetcher: async (_, ct) => (await client.GetServersAsync(apiToken)).FirstOrDefault());
+        var firstProjectQuery = this.UseQuery<SliplaneProject?, (string, string)>(
+            key: ("deploy-default-project", apiToken),
+            fetcher: async (_, ct) => (await client.GetProjectsAsync(apiToken)).FirstOrDefault());
+
+        // Pre-fill server/project only when we came from the deploy button (draft present).
+        // On refresh or opening Deploy from sidebar without repo → draft is empty → form starts blank.
+        var defaultServerId  = draft is not null ? (firstServerQuery.Value?.Id  ?? "") : "";
+        var defaultProjectId = draft is not null ? (firstProjectQuery.Value?.Id ?? "") : "";
+
+        return new DeployView(apiToken, draft ?? new DeployDraft(string.Empty), defaultServerId, defaultProjectId);
     }
 }
 
