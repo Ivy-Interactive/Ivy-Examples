@@ -29,6 +29,17 @@ public class DeploymentDraftStore
 
     public DeployDraft? LastDraft => GetDraft();
 
+    /// <summary>
+    /// Returns the draft and immediately removes it from the store (one-shot pre-fill).
+    /// </summary>
+    public DeployDraft? ReadAndClearDraft()
+    {
+        var key = GetCurrentKey();
+        if (key is null) return null;
+        _store.TryRemove(key, out var draft);
+        return draft;
+    }
+
     public void SaveDraft(DeployDraft draft)
     {
         _store[GetOrCreateKey()] = draft;

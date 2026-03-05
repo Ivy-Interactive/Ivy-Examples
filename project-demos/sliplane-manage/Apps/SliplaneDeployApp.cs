@@ -28,10 +28,10 @@ public class SliplaneDeployApp : ViewBase
         var draftStore = this.UseService<DeploymentDraftStore>();
         var args       = this.UseArgs<DeployArgs>();
 
-        // Args from internal navigation take priority over the stored draft
+        // Args from internal navigation take priority; draft is consumed once (one-shot pre-fill)
         var draft = args is not null
             ? DeploymentDraftStore.ParseGitHubUrl(args.Repo)
-            : draftStore.LastDraft;
+            : draftStore.ReadAndClearDraft();
 
         if (string.IsNullOrWhiteSpace(apiToken))
         {

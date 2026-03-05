@@ -63,7 +63,6 @@ public class DeployView : ViewBase
     public override object? Build()
     {
         var client        = this.UseService<SliplaneApiClient>();
-        var draftStore    = this.UseService<DeploymentDraftStore>();
         var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
 
         var model = this.UseState(() => new DeployFormModel
@@ -74,9 +73,6 @@ public class DeployView : ViewBase
             DockerfilePath = _draft.DockerfilePath,
             Name           = DeriveServiceName(_draft.RepoUrl, _draft.DockerContext),
         });
-
-        // Keep draft in sync as the user edits the repo URL
-        this.UseEffect(() => draftStore.SaveDraft(DeploymentDraftStore.ParseGitHubUrl(model.Value.GitRepo)), model);
 
         var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
         var showAddEnvDlg  = this.UseState(false);
