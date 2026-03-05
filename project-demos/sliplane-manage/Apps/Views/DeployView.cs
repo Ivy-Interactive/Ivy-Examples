@@ -63,6 +63,7 @@ public class DeployView : ViewBase
     public override object? Build()
     {
         var client        = this.UseService<SliplaneApiClient>();
+        var draftStore    = this.UseService<DeploymentDraftStore>();
         var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
 
         var initialName = DeriveServiceName(_repoUrl);
@@ -73,8 +74,8 @@ public class DeployView : ViewBase
             Name    = initialName,
         });
 
-        // Keep DeploymentDraftStore in sync as the user edits the repo URL
-        this.UseEffect(() => DeploymentDraftStore.SaveRepoUrl(model.Value.GitRepo), model);
+        // Keep DeploymentDraftStore in sync as the user edits the repo URL (per-user)
+        this.UseEffect(() => draftStore.SaveRepoUrl(model.Value.GitRepo), model);
 
         var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
         var showAddEnvDlg  = this.UseState(false);

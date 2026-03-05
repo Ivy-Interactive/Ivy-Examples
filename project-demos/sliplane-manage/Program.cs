@@ -16,6 +16,12 @@ server.Services.AddHttpClient("Sliplane", client =>
 // Ensure IConfiguration is available to apps
 server.Services.AddSingleton(server.Configuration);
 
+// Register IHttpContextAccessor (required by DeploymentDraftStore for per-user isolation)
+server.Services.AddHttpContextAccessor();
+
+// Register per-user deployment draft store (scoped = one instance per HTTP request/connection)
+server.Services.AddScoped<DeploymentDraftStore>();
+
 // Register Sliplane API client
 server.Services.AddScoped<SliplaneApiClient>();
 

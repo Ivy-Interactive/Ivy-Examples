@@ -26,9 +26,10 @@ public class SliplaneDeployApp : ViewBase
                        ?? session.AuthToken?.AccessToken
                        ?? string.Empty;
 
-        // Repo from internal navigation args or last saved value
+        // Repo from internal navigation args or last saved value (per-user)
+        var draftStore = this.UseService<DeploymentDraftStore>();
         var args    = this.UseArgs<DeployArgs>();
-        var repoUrl = args?.Repo ?? DeploymentDraftStore.LastRepoUrl ?? string.Empty;
+        var repoUrl = args?.Repo ?? draftStore.LastRepoUrl ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(apiToken))
         {

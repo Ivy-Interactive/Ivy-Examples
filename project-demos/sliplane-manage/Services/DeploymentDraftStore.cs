@@ -1,32 +1,72 @@
 namespace SliplaneManage.Services;
 
-/// <summary>
-/// Very simple in-memory store for the last used deployment repository URL.
-/// Lives for the lifetime of the Sliplane Manage process.
-/// </summary>
-public static class DeploymentDraftStore
-{
-    private static readonly object _lock = new();
-    private static string? _lastRepoUrl;
+using Microsoft.AspNetCore.Http;
 
-    public static string? LastRepoUrl
+/// <summary>
+/// Per-user store for the deployment repo URL.
+/// Key: access token (logged-in) or anonymous browser cookie (pre-login).
+/// </summary>
+public class DeploymentDraftStore
+{
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _store = new();
+
+    public const string CookieName = "sliplane-deploy-repo-key";
+
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public DeploymentDraftStore(IHttpContextAccessor httpContextAccessor)
     {
-        get
-        {
-            lock (_lock)
-                return _lastRepoUrl;
-        }
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    public static void SaveRepoUrl(string? repoUrl)
-    {
-        if (string.IsNullOrWhiteSpace(repoUrl))
-            return;
+    public string? LastRepoUrl => GetRepoUrl();
 
-        lock (_lock)
+    public void SaveRepoUrl(string? repoUrl)
+    {
+        if (string.IsNullOrWhiteSpace(repoUrl)) return;
+        _store[GetOrCreateKey()] = repoUrl;
+    }
+
+    private string? GetRepoUrl()
+    {
+        var key = GetCurrentKey();
+        return key is not null && _store.TryGetValue(key, out var url) ? url : null;
+    }
+
+    private string? GetCurrentKey()
+    {
+        var ctx = _httpContextAccessor.HttpContext;
+        if (ctx is null) return null;
+
+        // Prefer access token (per authenticated user)
+        var token = ctx.Request.Cookies[".ivy.auth.token"];
+        if (!string.IsNullOrWhiteSpace(token)) return "token:" + token;
+
+        // Fall back to anonymous browser cookie
+        return ctx.Request.Cookies.TryGetValue(CookieName, out var k) && !string.IsNullOrWhiteSpace(k) ? k : null;
+    }
+
+    private string GetOrCreateKey()
+    {
+        var ctx = _httpContextAccessor.HttpContext;
+
+        if (ctx is not null)
         {
-            _lastRepoUrl = repoUrl;
+            var token = ctx.Request.Cookies[".ivy.auth.token"];
+            if (!string.IsNullOrWhiteSpace(token)) return "token:" + token;
+
+            if (ctx.Request.Cookies.TryGetValue(CookieName, out var existing) && !string.IsNullOrWhiteSpace(existing))
+                return existing;
         }
+
+        var newKey = "anon:" + Guid.NewGuid().ToString("N");
+        ctx?.Response.Cookies.Append(CookieName, newKey, new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddHours(2),
+        });
+
+        return newKey;
     }
 }
-
