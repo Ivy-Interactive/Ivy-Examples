@@ -131,6 +131,13 @@ public class DeployView : ViewBase
                     return s is null ? null : new Option<string>(s.Name, s.Id);
                 });
 
+        // Warm up the query cache so AsyncSelect has data immediately on first open,
+        // and lookup queries (used to display the pre-selected label) are already in-flight.
+        _ = QueryProjects(this.Context, "");
+        _ = QueryServers(this.Context, "");
+        _ = LookupServer(this.Context, model.Value.ServerId);
+        _ = LookupProject(this.Context, model.Value.ProjectId);
+
         var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
 
         var navigator = this.Context.UseNavigation();
