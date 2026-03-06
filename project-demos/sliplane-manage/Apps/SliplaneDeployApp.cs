@@ -13,8 +13,7 @@ using SliplaneManage.Models;
     id: "sliplane-deploy-app",
     icon: Icons.Rocket,
     title: "Deploy on Sliplane",
-    searchHints: ["deploy", "host", "sliplane"],
-    isVisible: true)]
+    isVisible: false)]
 public class SliplaneDeployApp : ViewBase
 {
     public override object? Build()
