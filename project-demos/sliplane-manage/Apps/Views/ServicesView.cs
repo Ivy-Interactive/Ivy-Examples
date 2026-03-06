@@ -106,7 +106,7 @@ public class ServicesView : ViewBase
         string projectId,
         SliplaneService svc)
     {
-        // Base mapping from raw status
+        // Base mapping from raw status (fallback when we don't get useful events).
         static (object Icon, string Label) MapBase(string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
@@ -126,10 +126,7 @@ public class ServicesView : ViewBase
             return (Icons.MonitorStop.ToIcon(), status);
         }
 
-        // Only pending status needs deeper inspection
-        if (!string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase))
-            return MapBase(svc.Status);
-
+        // Always look at events (with polling) and derive status from the latest event.
         var eventsQuery = ctx.UseQuery<List<SliplaneServiceEvent>?, (string, string, string)>(
             key: ("service-events-status", projectId, svc.Id),
             fetcher: async _ => await client.GetServiceEventsAsync(apiToken, projectId, svc.Id),
@@ -140,9 +137,44 @@ public class ServicesView : ViewBase
             });
 
         var events = eventsQuery.Value ?? new List<SliplaneServiceEvent>();
-        if (events.Count == 0)
+        if (events.Count > 0)
         {
-            // Still no events – keep pending spinner
+            var ordered    = events.OrderByDescending(e => e.CreatedAt).ToList();
+            var latest     = ordered.First();
+            var latestType = latest.Type?.ToLowerInvariant() ?? string.Empty;
+
+            // Most recent action wins for suspend: if the last event is a suspend,
+            // show the service as suspended regardless of previous build failures.
+            if (latestType.Contains("suspend"))
+                return (Icons.Pause.ToIcon(), "suspended");
+
+            // For all other cases, look for the latest *meaningful* event: ignore
+            // suspend/resume toggles so a previous build failure still shows as
+            // error even after a resume, until there is an actual successful deploy.
+            var lastMeaningful = ordered.FirstOrDefault(e =>
+            {
+                var t = e.Type?.ToLowerInvariant() ?? string.Empty;
+                return !t.Contains("suspend") && !t.Contains("resume");
+            }) ?? latest;
+
+            var type = lastMeaningful.Type?.ToLowerInvariant() ?? string.Empty;
+            var msg  = lastMeaningful.Message?.ToLowerInvariant() ?? string.Empty;
+
+            bool IsError() =>
+                type.Contains("error") || type.Contains("fail") || type.Contains("failed") ||
+                msg.Contains("error") || msg.Contains("fail") || msg.Contains("failed");
+
+            bool IsSuccess() =>
+                type.Contains("live") || type.Contains("ready") || type.Contains("success")
+                || type.Contains("deployed") || type.Contains("healthy");
+
+            if (IsError())
+                return (Icons.CircleX.ToIcon(), "error");
+
+            if (IsSuccess())
+                return (Icons.CircleCheck.ToIcon(), "live");
+
+            // Unknown event type – show pending spinner while actions are in-flight.
             return (Icons.LoaderCircle.ToIcon()
                         .WithAnimation(AnimationType.Rotate)
                         .Trigger(AnimationTrigger.Auto)
@@ -150,30 +182,17 @@ public class ServicesView : ViewBase
                     "pending");
         }
 
-        var last = events.OrderByDescending(e => e.CreatedAt).First();
-        var type = last.Type?.ToLowerInvariant() ?? string.Empty;
-        var msg  = last.Message?.ToLowerInvariant() ?? string.Empty;
+        // No events yet – fall back to raw status (includes paused/suspended/error etc.).
+        if (string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase))
+        {
+            return (Icons.LoaderCircle.ToIcon()
+                        .WithAnimation(AnimationType.Rotate)
+                        .Trigger(AnimationTrigger.Auto)
+                        .Duration(1),
+                    "pending");
+        }
 
-        bool IsError() =>
-            type.Contains("error") || type.Contains("fail") || type.Contains("failed") ||
-            msg.Contains("error") || msg.Contains("fail") || msg.Contains("failed");
-
-        bool IsSuccess() =>
-            type.Contains("live") || type.Contains("ready") || type.Contains("success")
-            || type.Contains("deployed") || type.Contains("healthy");
-
-        if (IsError())
-            return (Icons.CircleX.ToIcon(), "error");
-
-        if (IsSuccess())
-            return (Icons.CircleCheck.ToIcon(), "live");
-
-        // Unknown event type – keep pending spinner
-        return (Icons.LoaderCircle.ToIcon()
-                    .WithAnimation(AnimationType.Rotate)
-                    .Trigger(AnimationTrigger.Auto)
-                    .Duration(1),
-                "pending");
+        return MapBase(svc.Status);
     }
 
     private static object[] BuildServiceCards(
