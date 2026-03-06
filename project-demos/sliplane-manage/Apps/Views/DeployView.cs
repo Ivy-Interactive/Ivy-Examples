@@ -52,30 +52,37 @@ public class DeployFormModel
 public class DeployView : ViewBase
 {
     private readonly string _apiToken;
-    private readonly string _repoUrl;
+    private readonly DeployDraft _draft;
+    private readonly string _defaultServerId;
+    private readonly string _defaultProjectId;
 
-    public DeployView(string apiToken, string repoUrl)
+    public DeployView(string apiToken, DeployDraft draft, string defaultServerId = "", string defaultProjectId = "")
     {
-        _apiToken = apiToken;
-        _repoUrl  = repoUrl;
+        _apiToken         = apiToken;
+        _draft            = draft;
+        _defaultServerId  = defaultServerId;
+        _defaultProjectId = defaultProjectId;
     }
 
     public override object? Build()
     {
         var client        = this.UseService<SliplaneApiClient>();
-        var draftStore    = this.UseService<DeploymentDraftStore>();
         var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
-
-        var initialName = DeriveServiceName(_repoUrl);
 
         var model = this.UseState(() => new DeployFormModel
         {
-            GitRepo = _repoUrl,
-            Name    = initialName,
+            ServerId        = _defaultServerId,
+            ProjectId       = _defaultProjectId,
+            GitRepo         = _draft.RepoUrl,
+            Branch          = string.IsNullOrWhiteSpace(_draft.Branch) ? "main" : _draft.Branch,
+            DockerContext   = string.IsNullOrWhiteSpace(_draft.DockerContext) ? "." : _draft.DockerContext,
+            DockerfilePath  = string.IsNullOrWhiteSpace(_draft.DockerfilePath) ? "Dockerfile" : _draft.DockerfilePath,
+            Name            = DeriveServiceName(_draft.RepoUrl, _draft.DockerContext),
+            AutoDeploy      = true,
+            NetworkPublic   = true,
+            NetworkProtocol = "http",
+            Healthcheck     = "/",
         });
-
-        // Keep DeploymentDraftStore in sync as the user edits the repo URL (per-user)
-        this.UseEffect(() => draftStore.SaveRepoUrl(model.Value.GitRepo), model);
 
         var envList        = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
         var showAddEnvDlg  = this.UseState(false);
@@ -301,10 +308,16 @@ public class DeployView : ViewBase
         return page;
     }
 
-    private static string DeriveServiceName(string repoUrl)
+    // Prefer the last segment of dockerContext (e.g. "packages-demos/yamldotnet" → "yamldotnet"),
+    // falling back to the last segment of the repo URL.
+    private static string DeriveServiceName(string repoUrl, string dockerContext = ".")
     {
-        if (string.IsNullOrWhiteSpace(repoUrl)) return string.Empty;
-        var seg = repoUrl.TrimEnd('/').Split('/').LastOrDefault() ?? string.Empty;
+        var source = (!string.IsNullOrWhiteSpace(dockerContext) && dockerContext != ".")
+            ? dockerContext
+            : repoUrl;
+
+        if (string.IsNullOrWhiteSpace(source)) return string.Empty;
+        var seg = source.TrimEnd('/').Split('/').LastOrDefault() ?? string.Empty;
         if (seg.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) seg = seg[..^4];
         return string.IsNullOrWhiteSpace(seg) ? string.Empty : seg.ToLowerInvariant();
     }

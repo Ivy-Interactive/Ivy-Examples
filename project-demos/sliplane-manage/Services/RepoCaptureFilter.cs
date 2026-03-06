@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Captures ?repo= from the initial GET /sliplane-deploy-app before Ivy SPA strips query params.
-/// Stores it in <see cref="DeploymentDraftStore"/> so DeployView can pre-fill the form.
+/// Parses GitHub URLs (including /tree/branch/subpath) and stores a <see cref="DeployDraft"/>.
 /// </summary>
 public class RepoCaptureFilter : IStartupFilter
 {
@@ -19,11 +19,12 @@ public class RepoCaptureFilter : IStartupFilter
             {
                 if (context.Request.Path.StartsWithSegments("/sliplane-deploy-app", StringComparison.OrdinalIgnoreCase))
                 {
-                    var repo = context.Request.Query["repo"].ToString();
-                    if (!string.IsNullOrWhiteSpace(repo))
+                    var raw = context.Request.Query["repo"].ToString();
+                    if (!string.IsNullOrWhiteSpace(raw))
                     {
+                        var draft = DeploymentDraftStore.ParseGitHubUrl(Uri.UnescapeDataString(raw));
                         var store = context.RequestServices.GetRequiredService<DeploymentDraftStore>();
-                        store.SaveRepoUrl(Uri.UnescapeDataString(repo));
+                        store.SaveDraft(draft);
                     }
                 }
 

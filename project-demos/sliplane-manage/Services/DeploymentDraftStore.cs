@@ -1,54 +1,106 @@
 namespace SliplaneManage.Services;
 
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 
 /// <summary>
-/// Per-user store for the deployment repo URL.
-/// Key: access token (logged-in) or anonymous browser cookie (pre-login).
+/// Parsed info from a GitHub URL (repo page or tree URL).
+/// </summary>
+public record DeployDraft(
+    string RepoUrl,
+    string Branch       = "main",
+    string DockerContext = ".",
+    string DockerfilePath = "Dockerfile");
+
+/// <summary>
+/// Per-user store for the last deploy draft.
+/// Key: Sliplane access-token cookie (logged-in) or anonymous browser cookie (pre-login).
 /// </summary>
 public class DeploymentDraftStore
 {
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _store = new();
+    private static readonly ConcurrentDictionary<string, DeployDraft> _store = new();
 
     public const string CookieName = "sliplane-deploy-repo-key";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IHttpContextAccessor _http;
 
-    public DeploymentDraftStore(IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
+    public DeploymentDraftStore(IHttpContextAccessor http) => _http = http;
 
-    public string? LastRepoUrl => GetRepoUrl();
+    public DeployDraft? LastDraft => GetDraft();
 
-    public void SaveRepoUrl(string? repoUrl)
-    {
-        if (string.IsNullOrWhiteSpace(repoUrl)) return;
-        _store[GetOrCreateKey()] = repoUrl;
-    }
-
-    private string? GetRepoUrl()
+    /// <summary>
+    /// Returns the draft and immediately removes it from the store (one-shot pre-fill).
+    /// </summary>
+    public DeployDraft? ReadAndClearDraft()
     {
         var key = GetCurrentKey();
-        return key is not null && _store.TryGetValue(key, out var url) ? url : null;
+        if (key is null) return null;
+        _store.TryRemove(key, out var draft);
+        return draft;
+    }
+
+    public void SaveDraft(DeployDraft draft)
+    {
+        _store[GetOrCreateKey()] = draft;
+    }
+
+    /// <summary>
+    /// Parses a GitHub URL into a <see cref="DeployDraft"/>.
+    /// Supports:
+    ///   https://github.com/{owner}/{repo}/tree/{branch}/{subpath}  → repo + branch + docker context
+    ///   https://github.com/{owner}/{repo}                          → repo only
+    /// </summary>
+    public static DeployDraft ParseGitHubUrl(string input)
+    {
+        input = input.Trim().TrimEnd('/');
+
+        // https://github.com/owner/repo/tree/branch/sub/path
+        var treeMatch = Regex.Match(input,
+            @"^https://github\.com/(?<owner>[^/]+)/(?<repo>[^/]+)/tree/(?<branch>[^/]+)(?:/(?<path>.+))?$");
+
+        if (treeMatch.Success)
+        {
+            var repoUrl  = $"https://github.com/{treeMatch.Groups["owner"].Value}/{treeMatch.Groups["repo"].Value}";
+            var branch   = treeMatch.Groups["branch"].Value;
+            var subPath  = treeMatch.Groups["path"].Value.TrimEnd('/');
+
+            if (string.IsNullOrWhiteSpace(subPath))
+                return new DeployDraft(repoUrl, branch);
+
+            return new DeployDraft(
+                RepoUrl:       repoUrl,
+                Branch:        branch,
+                DockerContext: subPath,
+                DockerfilePath: $"{subPath}/Dockerfile");
+        }
+
+        // Plain repo URL: https://github.com/owner/repo
+        return new DeployDraft(input);
+    }
+
+    // ── private helpers ──────────────────────────────────────────────────────
+
+    private DeployDraft? GetDraft()
+    {
+        var key = GetCurrentKey();
+        return key is not null && _store.TryGetValue(key, out var d) ? d : null;
     }
 
     private string? GetCurrentKey()
     {
-        var ctx = _httpContextAccessor.HttpContext;
+        var ctx = _http.HttpContext;
         if (ctx is null) return null;
 
-        // Prefer access token (per authenticated user)
         var token = ctx.Request.Cookies[".ivy.auth.token"];
         if (!string.IsNullOrWhiteSpace(token)) return "token:" + token;
 
-        // Fall back to anonymous browser cookie
         return ctx.Request.Cookies.TryGetValue(CookieName, out var k) && !string.IsNullOrWhiteSpace(k) ? k : null;
     }
 
     private string GetOrCreateKey()
     {
-        var ctx = _httpContextAccessor.HttpContext;
+        var ctx = _http.HttpContext;
 
         if (ctx is not null)
         {
@@ -64,7 +116,7 @@ public class DeploymentDraftStore
         {
             HttpOnly = true,
             SameSite = SameSiteMode.Lax,
-            Expires = DateTimeOffset.UtcNow.AddHours(2),
+            Expires  = DateTimeOffset.UtcNow.AddHours(2),
         });
 
         return newKey;
