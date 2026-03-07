@@ -151,7 +151,7 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeService bla
             Layout.Vertical().Gap(2)
             | Layout.Horizontal().Gap(2)
                 | columnName.ToTextInput(placeholder: "Column name")
-                | selectedType.ToSelectInput(columnTypes.ToOptions()).Variant(SelectInputs.Select)
+                | selectedType.ToSelectInput(columnTypes.ToOptions()).Variant(SelectInputVariants.Select)
                 | addColumnButton
         ).Title($"Add New Column");
 
