@@ -185,7 +185,7 @@ public class DeployView : ViewBase
             new TableCell(e.Key),
             new TableCell(e.Value ?? ""),
             new TableCell(new Button("Remove").Variant(ButtonVariant.Outline)
-                .HandleClick(_ => envList.Set(envList.Value.Where((_, j) => j != i).ToList())))
+                .OnClick(_ => envList.Set(envList.Value.Where((_, j) => j != i).ToList())))
                 .Width(Size.Fit()))).ToArray();
 
         object envTable = envDataRows.Length == 0
@@ -212,8 +212,8 @@ public class DeployView : ViewBase
                     | addEnvKey.ToTextInput().Placeholder("Key (e.g. DATABASE_URL)")
                     | addEnvValue.ToTextInput().Placeholder("Value")),
                 footer:  new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
-                    new Button("Cancel").HandleClick(_ => showAddEnvDlg.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
+                    new Button("Cancel").OnClick(_ => showAddEnvDlg.Set(false))
                 )).Width(Size.Units(220));
         }
 
@@ -239,8 +239,8 @@ public class DeployView : ViewBase
                     | addVolumeId.ToSelectInput(volumeOptionsForDialog)
                     | addMountPath.ToTextInput().Placeholder("Mount path (e.g. /data)")),
                 footer:  new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveVolume()),
-                    new Button("Cancel").HandleClick(_ => showAddVolumeDlg.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveVolume()),
+                    new Button("Cancel").OnClick(_ => showAddVolumeDlg.Set(false))
                 )).Width(Size.Units(220));
         }
 
@@ -254,7 +254,7 @@ public class DeployView : ViewBase
             Layout.Vertical()
                 | envTable
                 | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
-                    .HandleClick(_ => showAddEnvDlg.Set(true)));
+                    .OnClick(_ => showAddEnvDlg.Set(true)));
 
         var vols = serverVolumes.Value ?? new List<SliplaneVolume>();
         var volItems = volumeMountsList.Value ?? new List<(string VolumeId, string MountPath)>();
@@ -270,7 +270,7 @@ public class DeployView : ViewBase
                 new TableCell(volName),
                 new TableCell(v.MountPath),
                 new TableCell(new Button("Remove").Variant(ButtonVariant.Outline)
-                    .HandleClick(_ => volumeMountsList.Set(volumeMountsList.Value.Where((_, j) => j != index).ToList())))
+                    .OnClick(_ => volumeMountsList.Set(volumeMountsList.Value.Where((_, j) => j != index).ToList())))
                     .Width(Size.Fit()));
         }).ToArray();
         object volTableContent = volDataRows.Length == 0
@@ -282,11 +282,11 @@ public class DeployView : ViewBase
             Layout.Vertical()
                 | volTableContent
                 | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline)
-                    .HandleClick(_ => showAddVolumeDlg.Set(true)));
+                    .OnClick(_ => showAddVolumeDlg.Set(true)));
 
         var actionsRow = Layout.Horizontal()
             | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
-                .HandleClick(async _ => await HandleDeploy())
+                .OnClick(async _ => await HandleDeploy())
             | validationView;
 
         var card = new Card(
