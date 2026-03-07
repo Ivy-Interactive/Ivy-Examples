@@ -54,9 +54,9 @@ namespace BarcodeLibExample.Apps
                 | typeDropDown
                 | new Button(includeLabel.Value ? "Label: ON" : "Label: OFF")
                     .Primary()
-                    .HandleClick(() => includeLabel.Value = !includeLabel.Value)
+                    .OnClick(() => includeLabel.Value = !includeLabel.Value)
                 | new Button("Preview").Primary().Icon(Icons.Eye)
-                    .HandleClick(() =>
+                    .OnClick(() =>
                     {
                         if (string.IsNullOrWhiteSpace(text.Value))
                         {
