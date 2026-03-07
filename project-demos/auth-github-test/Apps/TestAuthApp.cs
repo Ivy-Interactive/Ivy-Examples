@@ -94,7 +94,7 @@ public class TestAuthApp : ViewBase
             : $"Repositories ({count})";
 
         return new Button(buttonText, variant: ButtonVariant.Outline)
-            .HandleClick(_ => isSheetOpen.Set(true))
+            .OnClick(_ => isSheetOpen.Set(true))
             .Disabled(count == 0)
             .Width(Size.Full());
     }
@@ -125,7 +125,7 @@ public class TestAuthApp : ViewBase
                 | details;
             
             return new Card(content)
-                .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
+                .OnClick(_ => client.OpenUrl(repo.HtmlUrl));
         });
 
         var content = Layout.Vertical().Gap(3)
