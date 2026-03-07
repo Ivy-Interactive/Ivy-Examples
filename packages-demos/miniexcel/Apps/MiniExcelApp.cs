@@ -148,7 +148,7 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
                     | new Button("Delete")
                         .Icon(Icons.Trash)
                         .Destructive()
-                        .HandleClick(onDelete)
+                        .OnClick(onDelete)
                 )
             | alertView;
     }
