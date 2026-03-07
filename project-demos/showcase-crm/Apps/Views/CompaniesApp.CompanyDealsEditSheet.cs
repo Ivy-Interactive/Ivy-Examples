@@ -28,7 +28,7 @@ public class CompanyDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(UseContactSearch, UseContactLookup, placeholder: "Select Contact"))
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(UseLeadSearch, UseLeadLookup, placeholder: "Select Lead"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToSheet(isOpen, "Edit Deal");
 
         async Task OnSubmit(Deal? request)

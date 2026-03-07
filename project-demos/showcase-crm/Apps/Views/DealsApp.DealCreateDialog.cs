@@ -54,7 +54,7 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
             .Builder(e => e.CloseDate, e => e.ToDateInput())
             .Builder(e => e.StageId, e => e.ToAsyncSelectInput(UseStageSearch, UseStageLookup, placeholder: "Select Stage"))
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create Deal", submitTitle: "Create");
 
         async Task OnSubmit(DealCreateRequest request)

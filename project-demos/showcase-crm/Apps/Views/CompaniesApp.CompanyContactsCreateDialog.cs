@@ -24,7 +24,7 @@ public class CompanyContactsCreateDialog(IState<bool> isOpen, RefreshToken refre
 
         return contact
             .ToForm()
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create Contact", submitTitle: "Create");
 
         async Task OnSubmit(ContactCreateRequest request)
