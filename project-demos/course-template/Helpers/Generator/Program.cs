@@ -173,7 +173,7 @@ class Program
         if (document.Any(e => e is not YamlFrontMatterBlock))
         {
             codeBuilder.AppendTab(2).AppendLine("var appDescriptor = this.UseService<AppDescriptor>();");
-            codeBuilder.AppendTab(2).AppendLine("var onLinkClick = this.UseLinks();");
+            codeBuilder.AppendTab(2).AppendLine("var OnLinkClick = this.UseLinks();");
             codeBuilder.AppendTab(2).AppendLine("var article = new Article().ShowToc(true).ShowFooter(true)");
 
             // Simplified markdown handling - just render everything as markdown
@@ -190,7 +190,7 @@ class Program
             var content = contentBuilder.ToString().Trim();
             if (!string.IsNullOrEmpty(content))
             {
-                AppendAsMultiLineString(3, content, codeBuilder, "| new Markdown(", ").HandleLinkClick(onLinkClick)");
+                AppendAsMultiLineString(3, content, codeBuilder, "| new Markdown(", ").OnLinkClick(OnLinkClick)");
             }
 
             codeBuilder.AppendTab(3).AppendLine(";");
