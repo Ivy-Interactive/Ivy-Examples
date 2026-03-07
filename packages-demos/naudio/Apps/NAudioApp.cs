@@ -112,13 +112,13 @@ public class NAudioApp : ViewBase
                     | Text.Label("Wave Type")
                     | waveType.ToSelectInput(typeof(SignalGeneratorType).ToOptions())
                     | Text.Label("Frequency (Hz)")
-                    | new NumberInput<int>(freq).Min(50).Max(1000).Variant(NumberInputs.Slider)
+                    | new NumberInput<int>(freq).Min(50).Max(1000).Variant(NumberInputVariants.Slider)
                     | Text.Label("Duration (seconds)")
-                    | new NumberInput<double>(dur).Min(0.1).Max(600).Step(0.1).Variant(NumberInputs.Slider)
+                    | new NumberInput<double>(dur).Min(0.1).Max(600).Step(0.1).Variant(NumberInputVariants.Slider)
                     | Text.Label("Volume")
-                    | new NumberInput<float>(vol).Min(0).Max(1).Step(0.01).Variant(NumberInputs.Slider)
+                    | new NumberInput<float>(vol).Min(0).Max(1).Step(0.01).Variant(NumberInputVariants.Slider)
                     | (genError.Value != null ? new Callout(genError.Value, variant: CalloutVariant.Error) : null)
-                    | new Button("Generate").Primary().Icon(Icons.Play).HandleClick(_ =>
+                    | new Button("Generate").Primary().Icon(Icons.Play).OnClick(_ =>
                     {
                         try
                         {
@@ -156,11 +156,11 @@ public class NAudioApp : ViewBase
                         ? new Callout("Upload a file first", variant: CalloutVariant.Warning)
                         : Text.Muted($"Uploaded file ready ({uploadBytes.Value.Length / 1024} KB)"))
                     | Text.Label("Generated Sound Volume")
-                    | new NumberInput<float>(mixGenVol).Min(0).Max(1).Step(0.01).Variant(NumberInputs.Slider)
+                    | new NumberInput<float>(mixGenVol).Min(0).Max(1).Step(0.01).Variant(NumberInputVariants.Slider)
                     | Text.Label("Uploaded File Volume")
-                    | new NumberInput<float>(mixUploadVol).Min(0).Max(1).Step(0.01).Variant(NumberInputs.Slider)
+                    | new NumberInput<float>(mixUploadVol).Min(0).Max(1).Step(0.01).Variant(NumberInputVariants.Slider)
                     | (mixError.Value != null ? new Callout(mixError.Value, variant: CalloutVariant.Error) : null)
-                    | new Button("Mix").Primary().Icon(Icons.Layers).HandleClick(_ =>
+                    | new Button("Mix").Primary().Icon(Icons.Layers).OnClick(_ =>
                     {
                         if (genBytes.Value == null || uploadBytes.Value == null)
                         { mixError.Set("Both generated sound and uploaded file are required"); return; }
