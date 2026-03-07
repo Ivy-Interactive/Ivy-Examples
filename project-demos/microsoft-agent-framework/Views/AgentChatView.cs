@@ -259,7 +259,7 @@ public class AgentChatView : ViewBase
                 .Label(e => e.Description, "Description")
                 .Builder(e => e.OllamaModel,e => modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models..."))
                 .Label(e => e.OllamaModel, "Ollama Model")
-                .Builder(e => e.Instructions, e => e.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
+                .Builder(e => e.Instructions, e => e.ToTextareaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50)))
                 .Label(e => e.Instructions, "Instructions (System Prompt)")
                 .ToDialog(isEditDialogOpen,

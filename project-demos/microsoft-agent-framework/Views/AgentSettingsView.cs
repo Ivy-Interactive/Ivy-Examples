@@ -153,7 +153,7 @@ public class AgentSettingsView : ViewBase
                 | modelInput)
             | (Layout.Vertical().Gap(1)
                 | Text.Block("Instructions (System Prompt)").Bold()
-                | instState.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
+                | instState.ToTextareaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50))
                     .Disabled(isReadOnly))
             | (Layout.Vertical().Gap(1)
