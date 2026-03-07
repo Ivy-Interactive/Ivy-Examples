@@ -61,7 +61,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
                 Completed = taskValue.Completed == true ? "Yes" : "No"
             }
             .ToDetails()
-            .MultiLine(e => e.Description)
+            .Multiline(e => e.Description)
             .RemoveEmpty(),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)
                 | dropDown

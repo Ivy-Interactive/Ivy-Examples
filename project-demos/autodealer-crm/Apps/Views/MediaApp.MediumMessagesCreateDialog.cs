@@ -37,7 +37,7 @@ public class MediumMessagesCreateDialog(IState<bool> isOpen, RefreshToken refres
 
         return message
             .ToForm()
-            .Builder(e => e.Content, e => e.ToTextAreaInput())
+            .Builder(e => e.Content, e => e.ToTextareaInput())
             .Builder(e => e.CustomerId, e => e.ToNumberInput())
             .Builder(e => e.LeadId, e => e.ToNumberInput())
             .Builder(e => e.MessageChannelId, e => e.ToNumberInput())

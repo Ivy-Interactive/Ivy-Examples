@@ -25,7 +25,7 @@ public class CustomerLeadsCreateDialog(IState<bool> isOpen, RefreshToken refresh
 
         return lead
             .ToForm()
-            .Builder(e => e.Notes, e => e.ToTextAreaInput())
+            .Builder(e => e.Notes, e => e.ToTextareaInput())
             .Builder(e => e.SourceChannelId, e => e.ToAsyncSelectInput<int>(QuerySourceChannels, LookupSourceChannel, placeholder: "Select Source Channel"))
             .Builder(e => e.LeadIntentId, e => e.ToAsyncSelectInput<int>(QueryLeadIntents, LookupLeadIntent, placeholder: "Select Lead Intent"))
             .Builder(e => e.LeadStageId, e => e.ToAsyncSelectInput<int>(QueryLeadStages, LookupLeadStage, placeholder: "Select Lead Stage"))

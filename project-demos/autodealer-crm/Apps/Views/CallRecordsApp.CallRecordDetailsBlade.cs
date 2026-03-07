@@ -66,7 +66,7 @@ public class CallRecordDetailsBlade(int callRecordId) : ViewBase
                 Sentiment = callRecordValue.Sentiment ?? "N/A"
             }
             .ToDetails()
-            .MultiLine(e => e.RecordingUrl)
+            .Multiline(e => e.RecordingUrl)
             .RemoveEmpty()
             .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

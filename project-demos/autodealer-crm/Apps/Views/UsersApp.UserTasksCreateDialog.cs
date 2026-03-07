@@ -31,7 +31,7 @@ public class UserTasksCreateDialog(IState<bool> isOpen, RefreshToken refreshToke
         return taskState
             .ToForm()
             .Builder(e => e.Title, e => e.ToTextInput())
-            .Builder(e => e.Description, e => e.ToTextAreaInput())
+            .Builder(e => e.Description, e => e.ToTextareaInput())
             .Builder(e => e.DueDate, e => e.ToDateInput())
             .Builder(e => e.Completed, e => e.ToFeedbackInput())
             .ToDialog(isOpen, title: "Create Task", submitTitle: "Create");

@@ -42,7 +42,7 @@ public class LeadMessagesCreateDialog(IState<bool> isOpen, RefreshToken refreshT
             .Builder(e => e.MessageDirectionId, e => e.ToAsyncSelectInput<int>(QueryMessageDirections, LookupMessageDirection, placeholder: "Select Message Direction"))
             .Builder(e => e.MessageTypeId, e => e.ToAsyncSelectInput<int>(QueryMessageTypes, LookupMessageType, placeholder: "Select Message Type"))
             .Builder(e => e.MediaId, e => e.ToAsyncSelectInput<int?>(QueryMedia, LookupMedia, placeholder: "Select Media"))
-            .Builder(e => e.Content, e => e.ToTextAreaInput())
+            .Builder(e => e.Content, e => e.ToTextareaInput())
             .Builder(e => e.SentAt, e => e.ToDateTimeInput())
             .ToDialog(isOpen, title: "Create Message", submitTitle: "Create");
     }

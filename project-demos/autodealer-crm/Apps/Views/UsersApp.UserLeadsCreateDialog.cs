@@ -39,7 +39,7 @@ public class UserLeadsCreateDialog(IState<bool> isOpen, RefreshToken refreshToke
             .Builder(e => e.LeadIntentId, e => e.ToAsyncSelectInput<int>(QueryLeadIntents, LookupLeadIntent, placeholder: "Select Lead Intent"))
             .Builder(e => e.LeadStageId, e => e.ToAsyncSelectInput<int>(QueryLeadStages, LookupLeadStage, placeholder: "Select Lead Stage"))
             .Builder(e => e.Priority, e => e.ToNumberInput())
-            .Builder(e => e.Notes, e => e.ToTextAreaInput())
+            .Builder(e => e.Notes, e => e.ToTextareaInput())
             .ToDialog(isOpen, title: "Create Lead", submitTitle: "Create");
     }
 
