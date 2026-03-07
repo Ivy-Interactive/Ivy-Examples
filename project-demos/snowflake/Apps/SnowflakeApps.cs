@@ -556,15 +556,15 @@ public class SnowflakeApp : ViewBase
         return Layout.Horizontal().Gap(2)
             | new Button("Settings").Icon(Icons.Settings)
                 .Variant(activeTab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Outline)
-                .HandleClick(() => activeTab.Value = 0)
+                .OnClick(() => activeTab.Value = 0)
             | new Button("Database Explorer").Icon(Icons.Database)
                 .Variant(activeTab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Outline)
                 .Disabled(!isVerified)
-                .HandleClick(() => activeTab.Value = 1)
+                .OnClick(() => activeTab.Value = 1)
             | new Button("Brand Dashboard").Icon(Icons.ChartBar)
                 .Variant(activeTab.Value == 2 ? ButtonVariant.Primary : ButtonVariant.Outline)
                 .Disabled(!isVerified)
-                .HandleClick(() => activeTab.Value = 2);
+                .OnClick(() => activeTab.Value = 2);
     }
 
     object BuildSettingsTab(
@@ -596,7 +596,7 @@ public class SnowflakeApp : ViewBase
                     ? new Button("Clear Credentials")
                         .Icon(Icons.LogOut)
                         .Variant(ButtonVariant.Secondary)
-                        .HandleClick(_ =>
+                        .OnClick(_ =>
                         {
                             account.Value = "";
                             user.Value = "";
@@ -609,7 +609,7 @@ public class SnowflakeApp : ViewBase
                         .Icon(Icons.Key)
                         .Variant(ButtonVariant.Primary)
                         .Disabled(isVerifying.Value)
-                        .HandleClick(_ =>
+                        .OnClick(_ =>
                         {
                             isDialogOpen.Value = true;
                             verificationStatus.Value = null;
@@ -1115,12 +1115,12 @@ public class SnowflakeApp : ViewBase
         var dataTab = new Button("Data")
             .Icon(Icons.Table)
             .Variant(activeTab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Outline)
-            .HandleClick(() => activeTab.Value = 0);
+            .OnClick(() => activeTab.Value = 0);
         
         var structureTab = new Button("Structure")
             .Icon(Icons.Layers)
             .Variant(activeTab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Outline)
-            .HandleClick(() => activeTab.Value = 1)
+            .OnClick(() => activeTab.Value = 1)
             .Disabled(tableInfo == null);
         
         return Layout.Horizontal().Gap(2)
