@@ -314,7 +314,7 @@ foreach (var product in products)
             | Text.H3("Performance Benchmark")
             | Text.Muted("Compare FastMember performance with standard .NET Reflection API, Dynamic C#, and PropertyDescriptor")
             | new Button(benchmarkResultState.Value == null ? "Run Benchmark" : "Run Benchmark Again")
-                .HandleClick(_ => showBenchmark(runBenchmark())).Icon(Icons.Zap).Primary());
+                .OnClick(_ => showBenchmark(runBenchmark())).Icon(Icons.Zap).Primary());
 
         if (benchmarkResultState.Value == null)
             return buttonCard;
