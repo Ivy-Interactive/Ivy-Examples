@@ -142,7 +142,7 @@ public class CsvHelperApp : ViewBase
                 .Icon(Icons.Plus)
                 .Primary()
                 .Width(Size.Full())
-                .HandleClick(_ => isDialogOpen.Set(true))
+                .OnClick(_ => isDialogOpen.Set(true))
 
             | product.ToForm()
                 .Remove(m => m.Id)
