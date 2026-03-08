@@ -160,7 +160,7 @@ public class RepositoriesSlide : ViewBase
                     | Text.Block($"{repo.CommitCount} commits").Muted())
                 .Title($"{repo.Name}")
                 .Icon(Icons.Folder)
-                .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
+                .OnClick(_ => client.OpenUrl(repo.HtmlUrl));
         });
 
         // Arrange cards: first row with 2 cards, second row with 3 cards

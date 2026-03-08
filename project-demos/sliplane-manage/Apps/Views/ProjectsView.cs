@@ -292,7 +292,7 @@ public class ProjectsView : ViewBase
                         | servicesRow;
 
                     return new Card(body)
-                        .HandleClick(_ => selectedProject.Set(p));
+                        .OnClick(_ => selectedProject.Set(p));
                 })
                 .ToArray();
 
@@ -398,7 +398,7 @@ public class ProjectsView : ViewBase
                         MenuItem.Default(Icons.FileText, "Logs").Tag("logs"),
                         MenuItem.Default(Icons.Calendar, "Events").Tag("events")
                     )
-                    .HandleRowAction(e =>
+                    .OnRowAction(e =>
                     {
                         var args = e.Value;
                         var tag = args.Tag?.ToString();
@@ -447,12 +447,12 @@ public class ProjectsView : ViewBase
                 body: new DialogBody(body),
                 footer: new DialogFooter(
                     new Button("Cancel")
-                        .HandleClick(_ => selectedProject.Set((SliplaneProject?)null))
+                        .OnClick(_ => selectedProject.Set((SliplaneProject?)null))
                         .Secondary(),
                     new Button("Create service")
                         .Icon(Icons.Plus)
                         .Primary()
-                        .HandleClick(_ => createServiceSheetOpen.Set(true)),
+                        .OnClick(_ => createServiceSheetOpen.Set(true)),
                     new Button("Delete project", onClick: async _ => await DeleteProjectAsync())
                         .Icon(Icons.Trash)
                         .Variant(ButtonVariant.Destructive)
@@ -620,8 +620,8 @@ public class ProjectsView : ViewBase
 
                     var pauseLabel = isPausedStatus(full.Status) ? "Resume" : "Pause";
                     viewFooter = Layout.Horizontal()
-                        | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).HandleClick(_ => { selectedServiceForEdit.Set(full); editSheetOpen.Set(true); })
-                        | new Button(pauseLabel).Icon(isPausedStatus(full.Status) ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(viewSheetBusy.Value).HandleClick(async _ => await PauseUnpauseAsync())
+                        | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).OnClick(_ => { selectedServiceForEdit.Set(full); editSheetOpen.Set(true); })
+                        | new Button(pauseLabel).Icon(isPausedStatus(full.Status) ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(viewSheetBusy.Value).OnClick(async _ => await PauseUnpauseAsync())
                         | new Button("Delete", onClick: async _ => await DeleteAsync())
                             .Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(viewSheetBusy.Value)
                             .WithConfirm("Are you sure you want to delete this service?", "Delete service")
@@ -668,7 +668,7 @@ public class ProjectsView : ViewBase
             }
         }
 
-        var addProjectBtn = new Button("Add project").Icon(Icons.Plus).Large().Secondary().BorderRadius(BorderRadius.Full).HandleClick(_ => showAddProjectDialog.Set(true));
+        var addProjectBtn = new Button("Add project").Icon(Icons.Plus).Large().Secondary().BorderRadius(BorderRadius.Full).OnClick(_ => showAddProjectDialog.Set(true));
         var addProjectFloat = new FloatingPanel(addProjectBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
 
         Dialog? addProjectDialog = null;
@@ -711,8 +711,8 @@ public class ProjectsView : ViewBase
                 header: new DialogHeader("Add project"),
                 body: new DialogBody(addProjectForm),
                 footer: new DialogFooter(
-                    new Button("Cancel").HandleClick(_ => showAddProjectDialog.Set(false)).Secondary(),
-                    new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(addProjectBusy.Value).HandleClick(async _ => await CreateProjectAsync()))
+                    new Button("Cancel").OnClick(_ => showAddProjectDialog.Set(false)).Secondary(),
+                    new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(addProjectBusy.Value).OnClick(async _ => await CreateProjectAsync()))
             ).Width(Size.Units(120));
         }
 
@@ -904,7 +904,7 @@ public class ProjectServiceEditSheet : ViewBase
                 return new TableRow(
                     new TableCell(e.Key),
                     new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
                     {
                         var next = envList.Value.Where((_, i) => i != index).ToList();
                         envList.Set(next);
@@ -929,12 +929,12 @@ public class ProjectServiceEditSheet : ViewBase
             | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)")
             | Text.H4("Environment variables")
             | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddEnvDialog.Set(true))
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true))
             | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
 
         var footer = Layout.Horizontal()
             | new Button("Cancel", onClick: _ => CloseSheet()).Variant(ButtonVariant.Outline)
-            | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await SaveAsync());
+            | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await SaveAsync());
 
         Dialog? addEnvDialog = null;
         if (showAddEnvDialog.Value)
@@ -957,8 +957,8 @@ public class ProjectServiceEditSheet : ViewBase
                 header: new DialogHeader("Add environment variable"),
                 body: new DialogBody(envForm),
                 footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
-                    new Button("Cancel").HandleClick(_ => showAddEnvDialog.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
+                    new Button("Cancel").OnClick(_ => showAddEnvDialog.Set(false))
                 )).Width(Size.Units(220));
         }
 
@@ -1134,7 +1134,7 @@ public class ProjectCreateServiceSheet : ViewBase
                 return new TableRow(
                     new TableCell(e.Key),
                     new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
                     {
                         var next = envList.Value.Where((_, i) => i != index).ToList();
                         envList.Set(next);
@@ -1147,7 +1147,7 @@ public class ProjectCreateServiceSheet : ViewBase
         var envSection = Layout.Vertical()
             | Text.H4("Environment variables")
             | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddEnvDialog.Set(true));
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true));
 
         var vols = serverVolumes.Value ?? new List<SliplaneVolume>();
         var volItems = volumeMountsList.Value ?? new List<(string VolumeId, string MountPath)>();
@@ -1163,7 +1163,7 @@ public class ProjectCreateServiceSheet : ViewBase
                 return new TableRow(
                     new TableCell(volName),
                     new TableCell(v.MountPath),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
                     {
                         var next = volumeMountsList.Value.Where((_, i) => i != index).ToList();
                         volumeMountsList.Set(next);
@@ -1176,7 +1176,7 @@ public class ProjectCreateServiceSheet : ViewBase
         var volumesSection = Layout.Vertical()
             | Text.H4("Volumes (attach server volumes)")
             | volTableContent
-            | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddVolumeDialog.Set(true));
+            | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddVolumeDialog.Set(true));
 
         var errorBlock = error.Value is { Length: > 0 } err
             ? (object)new Callout(err, variant: CalloutVariant.Error)
@@ -1193,7 +1193,7 @@ public class ProjectCreateServiceSheet : ViewBase
 
         var footer = Layout.Horizontal()
             | new Button("Cancel", onClick: _ => CloseSheet()).Variant(ButtonVariant.Outline)
-            | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await CreateAsync());
+            | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await CreateAsync());
 
         Dialog? addEnvDialog = null;
         if (showAddEnvDialog.Value)
@@ -1216,8 +1216,8 @@ public class ProjectCreateServiceSheet : ViewBase
                 header: new DialogHeader("Add environment variable"),
                 body: new DialogBody(envForm),
                 footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
-                    new Button("Cancel").HandleClick(_ => showAddEnvDialog.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
+                    new Button("Cancel").OnClick(_ => showAddEnvDialog.Set(false))
                 )).Width(Size.Units(220));
         }
 
@@ -1242,8 +1242,8 @@ public class ProjectCreateServiceSheet : ViewBase
                 header: new DialogHeader("Add volume mount"),
                 body: new DialogBody(volForm),
                 footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveVolume()),
-                    new Button("Cancel").HandleClick(_ => showAddVolumeDialog.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveVolume()),
+                    new Button("Cancel").OnClick(_ => showAddVolumeDialog.Set(false))
                 )).Width(Size.Units(220));
         }
 

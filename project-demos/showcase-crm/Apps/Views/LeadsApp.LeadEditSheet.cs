@@ -31,7 +31,7 @@ public class LeadEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int l
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(UseContactSearch, UseContactLookup, placeholder: "Select Contact"))
             .Builder(e => e.StatusId, e => e.ToAsyncSelectInput(UseStatusSearch, UseStatusLookup, placeholder: "Select Status"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToSheet(isOpen, "Edit Lead");
 
         async Task OnSubmit(Lead? request)

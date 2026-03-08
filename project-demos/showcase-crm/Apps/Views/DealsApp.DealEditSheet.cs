@@ -29,7 +29,7 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(UseContactSearch, UseContactLookup, placeholder: "Select Contact"))
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(UseLeadSearch, UseLeadLookup, placeholder: "Select Lead"))
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit);
+            .OnSubmit(OnSubmit);
 
         var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(Context);
 
@@ -47,13 +47,13 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
 
         var footer = Layout.Horizontal()
                 | new Button("Save").Variant(ButtonVariant.Primary).Loading(loading).Disabled(loading)
-                    .HandleClick(async _ =>
+                    .OnClick(async _ =>
                     {
                         if (await onSubmit())
                             isOpen.Set(false);
                     })
                 | deleteBtn
-                | new Button("Cancel").Variant(ButtonVariant.Outline).HandleClick(_ => isOpen.Set(false))
+                | new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => isOpen.Set(false))
                 | validationView;
 
         var layout = new FooterLayout(footer, formView);

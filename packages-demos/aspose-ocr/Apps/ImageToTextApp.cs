@@ -23,7 +23,7 @@ public class ImageToTextApp : ViewBase
             | (error.Value != null ? new Callout(error.Value, variant: CalloutVariant.Error) : null)
             | uploadedFile.ToFileInput(upload).Placeholder("Upload Image")
             | new Button("Recognize").Primary().Icon(Icons.Eye)
-                .HandleClick(() =>
+                .OnClick(() =>
                 {
                     if (error.Value == null && uploadedFile.Value != null)
                     {

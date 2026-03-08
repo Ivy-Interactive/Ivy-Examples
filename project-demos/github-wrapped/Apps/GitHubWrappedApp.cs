@@ -69,7 +69,7 @@ public class GitHubWrappedApp : ViewBase
                                     .Icon(Icons.ChevronLeft)
                                     .Variant(ButtonVariant.Outline)
                                     .Disabled(selectedIndex.Value == 0)
-                                    .HandleClick(() =>
+                                    .OnClick(() =>
                                     {
                                         selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
                                     }))
@@ -78,7 +78,7 @@ public class GitHubWrappedApp : ViewBase
                                     ? BuildShareButton(stats.Value)
                                     : new Button(selectedIndex.Value == 0 ? "Start the recap" : "Show me more")
                                         .Icon(Icons.ChevronRight, Align.Right)
-                                        .HandleClick(() =>
+                                        .OnClick(() =>
                                         {
                                             selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
                                         })))),

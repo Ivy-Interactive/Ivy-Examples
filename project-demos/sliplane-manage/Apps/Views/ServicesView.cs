@@ -73,7 +73,7 @@ public class ServicesView : ViewBase
         var headerRow = Layout.Horizontal()
             | Text.H2("Services");
 
-        var addServiceBtn = new Button("Add service").Icon(Icons.Plus).HandleClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
+        var addServiceBtn = new Button("Add service").Icon(Icons.Plus).OnClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
         var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
 
         object content;
@@ -257,7 +257,7 @@ public class ServicesView : ViewBase
                     | statusRow
                     | (openLinkRow ?? Layout.Vertical());
 
-                return new Card(body).HandleClick(_ => showSheet(projectId, projectName, svc));
+                return new Card(body).OnClick(_ => showSheet(projectId, projectName, svc));
             })
             .ToArray();
     }
@@ -372,8 +372,8 @@ public class ServiceDetailsSheet : ViewBase
             new EditServiceSheet(isOpen, _apiToken, projectId, projectName, service, _reloadCounter, _selection));
 
         var footer = Layout.Horizontal()
-            | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).HandleClick(_ => openEditSheet())
-            | new Button(pauseLabel).Icon(isPaused ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value).HandleClick(async _ => await PauseUnpauseAsync())
+            | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).OnClick(_ => openEditSheet())
+            | new Button(pauseLabel).Icon(isPaused ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value).OnClick(async _ => await PauseUnpauseAsync())
             | new Button("Delete", onClick: async _ => await DeleteAsync())
                 .Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(busy.Value)
                 .WithConfirm("Are you sure you want to delete this service?", "Delete service");
@@ -502,7 +502,7 @@ public class EditServiceSheet : ViewBase
                 return new TableRow(
                     new TableCell(e.Key),
                     new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
                     {
                         var next = envList.Value.Where((_, i) => i != index).ToList();
                         envList.Set(next);
@@ -527,12 +527,12 @@ public class EditServiceSheet : ViewBase
             | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)")
             | Text.H4("Environment variables")
             | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddEnvDialog.Set(true))
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true))
             | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
 
         var footer = Layout.Horizontal()
-            | new Button("Cancel").Variant(ButtonVariant.Outline).HandleClick(_ => _isOpen.Set(false))
-            | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await SaveAsync());
+            | new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => _isOpen.Set(false))
+            | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await SaveAsync());
 
         Dialog? addEnvDialog = null;
         if (showAddEnvDialog.Value)
@@ -555,8 +555,8 @@ public class EditServiceSheet : ViewBase
                 header: new DialogHeader("Add environment variable"),
                 body: new DialogBody(envForm),
                 footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
-                    new Button("Cancel").HandleClick(_ => showAddEnvDialog.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
+                    new Button("Cancel").OnClick(_ => showAddEnvDialog.Set(false))
                 )).Width(Size.Units(220));
         }
 
@@ -772,7 +772,7 @@ public class CreateServiceSheet : ViewBase
                 return new TableRow(
                     new TableCell(e.Key),
                     new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
                     {
                         var next = envList.Value.Where((_, i) => i != index).ToList();
                         envList.Set(next);
@@ -785,7 +785,7 @@ public class CreateServiceSheet : ViewBase
         var envSection = Layout.Vertical()
             | Text.H4("Environment variables")
             | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddEnvDialog.Set(true));
+            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true));
 
         // Volumes: Table widget + Add button; dialog to add one mount
         var vols = serverVolumes.Value ?? new List<SliplaneVolume>();
@@ -802,7 +802,7 @@ public class CreateServiceSheet : ViewBase
                 return new TableRow(
                     new TableCell(volName),
                     new TableCell(v.MountPath),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).HandleClick(_ =>
+                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
                     {
                         var next = volumeMountsList.Value.Where((_, i) => i != index).ToList();
                         volumeMountsList.Set(next);
@@ -815,7 +815,7 @@ public class CreateServiceSheet : ViewBase
         var volumesSection = Layout.Vertical()
             | Text.H4("Volumes (attach server volumes)")
             | volTableContent
-            | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).HandleClick(_ => showAddVolumeDialog.Set(true));
+            | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddVolumeDialog.Set(true));
 
         var errorBlock = error.Value is { Length: > 0 } err
             ? (object)new Callout(err, variant: CalloutVariant.Error)
@@ -831,8 +831,8 @@ public class CreateServiceSheet : ViewBase
             | errorBlock;
 
         var footer = Layout.Horizontal()
-            | new Button("Cancel").Variant(ButtonVariant.Outline).HandleClick(_ => _isOpen.Set(false))
-            | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).HandleClick(async _ => await CreateAsync());
+            | new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => _isOpen.Set(false))
+            | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await CreateAsync());
 
         // Dialog: Add environment variable
         Dialog? addEnvDialog = null;
@@ -856,8 +856,8 @@ public class CreateServiceSheet : ViewBase
                 header: new DialogHeader("Add environment variable"),
                 body: new DialogBody(envForm),
                 footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveEnv()),
-                    new Button("Cancel").HandleClick(_ => showAddEnvDialog.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
+                    new Button("Cancel").OnClick(_ => showAddEnvDialog.Set(false))
                 )).Width(Size.Units(220));
         }
 
@@ -883,8 +883,8 @@ public class CreateServiceSheet : ViewBase
                 header: new DialogHeader("Add volume mount"),
                 body: new DialogBody(volForm),
                 footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).HandleClick(_ => SaveVolume()),
-                    new Button("Cancel").HandleClick(_ => showAddVolumeDialog.Set(false))
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveVolume()),
+                    new Button("Cancel").OnClick(_ => showAddVolumeDialog.Set(false))
                 )).Width(Size.Units(220));
         }
 

@@ -76,7 +76,7 @@ public class DealsKanbanBlade : ViewBase
                 MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
                 MenuItem.Default(Icons.Trash2, "delete").Tag("delete")
             )
-            .HandleRowAction(e =>
+            .OnRowAction(e =>
             {
                 var args = e.Value;
                 var tag = args.Tag?.ToString();
@@ -109,7 +109,7 @@ public class DealsKanbanBlade : ViewBase
                 content: deal.ToDetails()
                     .Remove(x => x.Id)
             )
-            .HandleClick(() => showSheet(deal.Id)))
+            .OnClick(() => showSheet(deal.Id)))
             .ColumnOrder<int>(d => StageOrder(d.StageDescription))
             .Width(Size.Full())
             .HandleMove(moveData =>

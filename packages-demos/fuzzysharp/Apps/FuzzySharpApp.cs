@@ -61,7 +61,7 @@ public class FuzzySharpApp : ViewBase
             | Text.Muted("Intelligent search with typo tolerance")
             | new TextInput(searchTerm)
                 .Placeholder("Try: 'aple', 'bana', 'berry'...")
-                .Variant(TextInputs.Search)
+                .Variant(TextInputVariants.Search)
             | new Spacer()
             | Text.Block("This demo uses the FuzzySharp NuGet package for intelligent text matching.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FuzzySharp](https://github.com/JakeBayer/FuzzySharp)")

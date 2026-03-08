@@ -126,7 +126,7 @@ public class MainMenuBlade : ViewBase
                              | new Button("Try It")
                                  .Variant(ButtonVariant.Primary)
                                  .Disabled(selectedModel.Value == null)
-                                 .HandleClick(_ => blades.Push(this, new SimpleChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Simple Chat")))
+                                 .OnClick(_ => blades.Push(this, new SimpleChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Simple Chat")))
                      )
                     | new Card(
                         Layout.Horizontal().Gap(3)
@@ -138,7 +138,7 @@ public class MainMenuBlade : ViewBase
                             | new Button("Try It")
                                 .Variant(ButtonVariant.Primary)
                                 .Disabled(selectedModel.Value == null)
-                                .HandleClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
+                                .OnClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
                     );
 
         return new Fragment()

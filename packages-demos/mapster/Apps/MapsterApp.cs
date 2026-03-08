@@ -1,4 +1,4 @@
-﻿namespace MapsterExample
+namespace MapsterExample
 {
     [App(icon: Icons.PersonStanding, title: "Mapster")]
     public class MapsterApp : ViewBase
@@ -41,43 +41,39 @@
 
             // Person -> PersonDto
             var toDtoButton = new Button("Person -> PersonDto")
-            {
-                OnClick = async (evt) =>
+                .OnClick(async _ =>
                 {
                     try
                     {
                         var person = JsonSerializer.Deserialize<Person>(personJsonState.Value);
                         var dto = person.Adapt<PersonDto>();
-                        dtoJsonState.Value = ToPrettyJson(dto);
+                        dtoJsonState.Set(ToPrettyJson(dto));
                     }
                     catch (Exception ex)
                     {
-                        dtoJsonState.Value = $"{{ \"error\": \"{ex.Message}\" }}";
+                        dtoJsonState.Set($"{{ \"error\": \"{ex.Message}\" }}");
                     }
 
                     await ValueTask.CompletedTask;
-                }
-            };
+                });
 
             // PersonDto -> Person
             var toPersonButton = new Button("PersonDto -> Person")
-            {
-                OnClick = async (evt) =>
+                .OnClick(async _ =>
                 {
                     try
                     {
                         var dto = JsonSerializer.Deserialize<PersonDto>(dtoJsonState.Value);
                         var person = dto.Adapt<Person>();
-                        personJsonState.Value = ToPrettyJson(person);
+                        personJsonState.Set(ToPrettyJson(person));
                     }
                     catch (Exception ex)
                     {
-                        personJsonState.Value = $"{{ \"error\": \"{ex.Message}\" }}";
+                        personJsonState.Set($"{{ \"error\": \"{ex.Message}\" }}");
                     }
 
                     await ValueTask.CompletedTask;
-                }
-            };
+                });
 
             return Layout.Vertical()
                | new Card(

@@ -67,7 +67,7 @@ public class SmartFormatNetApp : ViewBase
                 | Text.Label("Examples")
                 | selectedExampleIndex
                     .ToSelectInput(exampleOptions)
-                    .Variant(SelectInputs.Toggle)
+                    .Variant(SelectInputVariants.Toggle)
 
                 | Text.Label("Template")
                 | templateInput
@@ -83,8 +83,8 @@ public class SmartFormatNetApp : ViewBase
                     .ShowCopyButton()
                     .Height(Size.Fit())
 
-                | new Button("Format String").HandleClick(new Action(FormatString))
-                    .HandleClick(new Action(FormatString))
+                | new Button("Format String")
+                    .OnClick(new Action(FormatString))
                     .Disabled(string.IsNullOrWhiteSpace(templateInput.Value) || string.IsNullOrWhiteSpace(jsonInput.Value))
                     .Width(Size.Full())
 

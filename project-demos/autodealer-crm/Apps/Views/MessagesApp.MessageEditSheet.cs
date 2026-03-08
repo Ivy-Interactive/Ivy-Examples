@@ -18,7 +18,7 @@ public class MessageEditSheet(IState<bool> isOpen, RefreshToken refreshToken, in
 
         return message
             .ToForm()
-            .Builder(e => e.Content, e => e.ToTextAreaInput())
+            .Builder(e => e.Content, e => e.ToTextareaInput())
             .Builder(e => e.SentAt, e => e.ToDateTimeInput())
             .Builder(e => e.CustomerId, e => e.ToAsyncSelectInput<int?>(QueryCustomers, LookupCustomer, placeholder: "Select Customer"))
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput<int?>(QueryLeads, LookupLead, placeholder: "Select Lead"))

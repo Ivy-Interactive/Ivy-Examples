@@ -26,7 +26,7 @@ public class ContactCreateDialog(IState<bool> isOpen, RefreshToken refreshToken)
         return contact
             .ToForm()
             .Builder(e => e.CompanyId, e => e.ToAsyncSelectInput(UseCompanySearch, UseCompanyLookup, placeholder: "Select Company"))
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create Contact", submitTitle: "Create");
 
         async Task OnSubmit(ContactCreateRequest request)

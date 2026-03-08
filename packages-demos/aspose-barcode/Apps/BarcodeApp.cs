@@ -68,7 +68,7 @@ public class BarcodeApp : ViewBase
       | typeDropDown
       | sizeDropDown
       | new Button("Preview").Primary().Icon(Icons.Eye)
-        .HandleClick(() =>
+        .OnClick(() =>
         {
           if (string.IsNullOrWhiteSpace(text.Value))
           {

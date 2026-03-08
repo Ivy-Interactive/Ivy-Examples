@@ -52,7 +52,7 @@ Addresses = new Dictionary<string, Address> {
 
                 // Convert Button
                 | new Button("Convert to YAML")
-                    .HandleClick(() => ConvertToYaml(personCode.Value, yamlOutput, errorMessage, resultOutput))
+                    .OnClick(() => ConvertToYaml(personCode.Value, yamlOutput, errorMessage, resultOutput))
             )
 
             | Text.Block("This demo uses YamlDotNet library to serialize Person objects to YAML format.")

@@ -59,23 +59,23 @@ public class EPPlusApp : ViewBase
             ? new Button("Delete All Records")
                 .Destructive()
                 .Icon(Icons.Trash)
-                .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+                .OnClick(_ => HandleDeleteAsync(booksState, filePath, client))
             : new Button("Delete All Records")
                 .Secondary()
                 .Icon(Icons.Trash)
-                .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+                .OnClick(_ => HandleDeleteAsync(booksState, filePath, client))
                 .Disabled();
 
         var generateBtn = hasBooks
             ? new Button("Generate Excel")
                 .Secondary()
                 .Icon(Icons.FileText)
-                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState))
+                .OnClick(_ => ExcelManipulation.WriteExcel(booksState))
                 .Disabled()
             : new Button("Generate Excel")
                 .Primary()
                 .Icon(Icons.FileText)
-                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState));
+                .OnClick(_ => ExcelManipulation.WriteExcel(booksState));
 
         var book = UseState(() => new Book());
         var formBuilder = book.ToForm().Remove(x => x.ID)
@@ -112,7 +112,7 @@ public class EPPlusApp : ViewBase
                 | new Button("Add Book")
                     .Primary()
                     .Icon(Icons.Plus)
-                    .HandleClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
+                    .OnClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
                     .Loading(loading)
                     .Disabled(loading)
             | validationView

@@ -70,7 +70,7 @@ public class ProfileApp : ViewBase
             | Text.Block("Fill in your information to create a shareable profile")
             | formView
             | Layout.Horizontal()
-                 | new Button("Create Profile").HandleClick(new Action(HandleSubmit))
+                 | new Button("Create Profile").OnClick(new Action(HandleSubmit))
                     .Loading(loading).Disabled(loading)
                 | validationView
             | Text.Block("This demo uses QRCoder library to generate vCard QR codes for contact sharing.")
