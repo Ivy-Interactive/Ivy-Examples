@@ -69,6 +69,7 @@ public class ServicesView : ViewBase
         }
 
         var currentServices = flat;
+        var rows = BuildServiceRows(this.Context, client, _apiToken, currentServices, servers);
 
         var headerRow = Layout.Horizontal()
             | Text.H2("Services");
@@ -76,19 +77,56 @@ public class ServicesView : ViewBase
         var addServiceBtn = new Button("Add service").Icon(Icons.Plus).OnClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
         var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
 
+        var table = rows
+            .AsQueryable()
+            .ToDataTable(r => r.ServiceId)
+            .Header(r => r.Name, "Service")
+            .Header(r => r.Project, "Project")
+            .Header(r => r.Server, "Server")
+            .Header(r => r.Status, "Status")
+            .Header(r => r.Url, "URL")
+            .Config(config =>
+            {
+                config.ShowSearch = true;
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.SelectionMode = SelectionModes.Rows;
+            })
+            .Height(Size.Units(100))
+            .RowActions(
+                MenuItem.Default(Icons.Eye, "view").Label("View"),
+                MenuItem.Default(Icons.Pencil, "edit").Label("Edit"))
+            .OnRowAction(async e =>
+            {
+                var args = e.Value;
+                if (args?.Id is null) return;
+                var id = args.Id.ToString() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(id)) return;
+
+                var match = currentServices.FirstOrDefault(cs => cs.Service.Id == id);
+                var projectId = match.ProjectId;
+                var projectName = match.ProjectName;
+                var svc = match.Service;
+                if (svc == null || string.IsNullOrWhiteSpace(projectId))
+                    return;
+
+                ShowServiceSheet(projectId, projectName, svc);
+                await ValueTask.CompletedTask;
+            });
+
         object content;
         if (currentServices.Count == 0)
         {
             content = Layout.Vertical()
                 | headerRow
-                | new Callout("No services found.", variant: CalloutVariant.Info);
+                | new Callout("No services found.", variant: CalloutVariant.Info)
+                | table;
         }
         else
         {
-            var cards = BuildServiceCards(this.Context, client, _apiToken, currentServices, servers, ShowServiceSheet);
             content = Layout.Vertical()
                 | headerRow
-                | (Layout.Grid().Columns(3) | cards);
+                | table;
         }
 
         return new Fragment(
@@ -98,6 +136,14 @@ public class ServicesView : ViewBase
             createSheetView
         );
     }
+
+    private sealed record ServiceRow(
+        string ServiceId,
+        string Name,
+        string Project,
+        string Server,
+        string Status,
+        string Url);
 
     private static (object Icon, string Label) GetStatusVisual(
         IViewContext ctx,
@@ -195,23 +241,21 @@ public class ServicesView : ViewBase
         return MapBase(svc.Status);
     }
 
-    private static object[] BuildServiceCards(
+    private static ServiceRow[] BuildServiceRows(
         IViewContext ctx,
         SliplaneApiClient client,
         string apiToken,
         List<(string ProjectId, string ProjectName, SliplaneService Service)> currentServices,
-        List<SliplaneServer> serverList,
-        Action<string, string, SliplaneService> showSheet)
+        List<SliplaneServer> serverList)
     {
         return currentServices
-            .Select(t => (t.ProjectId, t.ProjectName, t.Service))
             .Select(t =>
             {
                 var (projectId, projectName, svc) = t;
                 var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId)
                     ? "—"
                     : (serverList.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId);
-                var (statusIcon, statusLabel) = GetStatusVisual(ctx, client, apiToken, projectId, svc);
+                var (_, statusLabel) = GetStatusVisual(ctx, client, apiToken, projectId, svc);
                 var siteUrl = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
                              ?? svc.Network?.ManagedDomain
                              ?? string.Empty;
@@ -220,44 +264,13 @@ public class ServicesView : ViewBase
                         ? siteUrl
                         : "https://" + siteUrl);
 
-                var isDbService = (svc.Image?.Contains("docker.io", StringComparison.OrdinalIgnoreCase) == true)
-                    || (svc.Deployment?.Url?.Contains("docker.io", StringComparison.OrdinalIgnoreCase) == true)
-                    || (svc.GitRepo?.Contains("docker.io", StringComparison.OrdinalIgnoreCase) == true);
-                var serviceIcon = isDbService ? Icons.Database.ToIcon() : Icons.Box.ToIcon();
-
-                var header = Layout.Horizontal().Align(Align.Center)
-                    | (Layout.Vertical().Align(Align.Left)
-                        | Text.H3(svc.Name))
-                    | (Layout.Vertical().Align(Align.Right).Width(Size.Fit())
-                        | serviceIcon);
-                    
-
-                var serverRow = Layout.Horizontal()
-                    | Icons.Server.ToIcon()
-                    | Text.Block(serverLabel);
-                
-                var projectRow = Layout.Horizontal()
-                    | Icons.FolderOpen.ToIcon()
-                    | Text.Block(projectName);
-
-                var statusRow = Layout.Horizontal()
-                    | statusIcon
-                    | Text.Block(statusLabel);
-
-                var openLinkRow = string.IsNullOrWhiteSpace(siteUrlAbsolute)
-                    ? null
-                    : (object)(Layout.Horizontal().Gap(0).Align(Align.Left)
-                        | Icons.ExternalLink.ToIcon()
-                        | new Button(siteUrl).Link().Url(siteUrlAbsolute));
-
-                var body = Layout.Vertical()
-                    | header
-                    | serverRow
-                    | projectRow
-                    | statusRow
-                    | (openLinkRow ?? Layout.Vertical());
-
-                return new Card(body).OnClick(_ => showSheet(projectId, projectName, svc));
+                return new ServiceRow(
+                    ServiceId: svc.Id,
+                    Name: svc.Name,
+                    Project: projectName,
+                    Server: serverLabel,
+                    Status: statusLabel,
+                    Url: siteUrlAbsolute);
             })
             .ToArray();
     }
