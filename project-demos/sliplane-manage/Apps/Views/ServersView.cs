@@ -164,7 +164,7 @@ public class ServersView : ViewBase
                         | servicesRow
                         | createdRow
                     )
-                    .HandleClick(_ => showSheet(s));
+                    .OnClick(_ => showSheet(s));
             })
             .ToArray();
 
