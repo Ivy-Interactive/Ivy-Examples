@@ -20,6 +20,7 @@ public class ServicesView : ViewBase
 
     public override object? Build()
     {
+        var refreshToken = UseRefreshToken();
         var client         = this.UseService<SliplaneApiClient>();
         var refreshReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
         var reloadCounter  = this.UseState(0);
@@ -33,6 +34,14 @@ public class ServicesView : ViewBase
             reloadCounter.Set(reloadCounter.Value + 1);
             return new Unit();
         }));
+
+        this.UseEffect(() =>
+        {
+            if (refreshToken.IsRefreshed)
+            {
+                reloadCounter.Set(reloadCounter.Value + 1);
+            }
+        }, [refreshToken]);
 
         var overviewQuery = this.UseQuery(
             key: ("services-overview", _apiToken, reloadCounter.Value),
@@ -80,6 +89,7 @@ public class ServicesView : ViewBase
         var table = rows
             .AsQueryable()
             .ToDataTable(r => r.ServiceId)
+            .RefreshToken(refreshToken)
             .Height(Size.Full())
             .Hidden(r => r.ServiceId)
             .Header(r => r.Name, "Service")
@@ -88,16 +98,20 @@ public class ServicesView : ViewBase
             .Header(r => r.StatusIcon, "Icon")
             .Header(r => r.Status, "Name")
             .Header(r => r.LastUpdated, "Last updated")
+            .Header(r => r.DeployStatus, "Logs")
             .Header(r => r.Url, "URL")
             .Group(r => r.Name, "Identity")
             .Group(r => r.Project, "Identity")
             .Group(r => r.Server, "Identity")
             .Group(r => r.StatusIcon, "Status")
             .Group(r => r.Status, "Status")
-            .Group(r => r.LastUpdated, "Status")
+            .Group(r => r.LastUpdated, "Deploy")
+            .Group(r => r.DeployStatus, "Deploy")
             .Group(r => r.Url, "Routing")
             .Width(r => r.StatusIcon, Size.Px(50))
-            .Width(r => r.Status, Size.Px(120))
+            .Width(r => r.Status, Size.Px(100))
+            .Width(r => r.LastUpdated, Size.Px(120))
+            .Width(r => r.DeployStatus, Size.Px(200))
             .Config(config =>
             {
                 config.ShowGroups = true;
@@ -148,7 +162,7 @@ public class ServicesView : ViewBase
         return new Fragment(
             content,
             addServiceFloat,
-            serviceDetailOpen.Value ? new ServiceDetailsSheet(serviceDetailOpen, _apiToken, serviceDetailSelection, reloadCounter) : null,
+            serviceDetailOpen.Value ? new ServiceDetailsSheet(serviceDetailOpen, _apiToken, serviceDetailSelection, reloadCounter, refreshToken) : null,
             createSheetView
         );
     }
@@ -161,92 +175,43 @@ public class ServicesView : ViewBase
         string Status,
         Icons StatusIcon,
         string LastUpdated,
+        string DeployStatus,
         string Url);
 
-    private static Icons GetStatusIcon(
-        IViewContext ctx,
-        SliplaneApiClient client,
-        string apiToken,
-        string projectId,
-        SliplaneService svc)
+    internal static (string Label, Icons Icon, string? EventType) GetServiceStatus(SliplaneService svc, List<SliplaneServiceEvent> events)
     {
-        // Base mapping from raw status (fallback when we don't get useful events).
-        static Icons MapBase(string? status)
+        var rawStatus = svc.Status ?? string.Empty;
+        
+        // Find the most recent suspend/resume event
+        var ev = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault(e => 
+            e.Type == "service_suspend" || 
+            e.Type == "service_suspend_success" ||
+            e.Type == "service_resume" || 
+            e.Type == "service_resume_success");
+
+        if (ev != null)
         {
-            if (string.IsNullOrWhiteSpace(status))
-                return Icons.MonitorStop;
-
-            if (string.Equals(status, "live", StringComparison.OrdinalIgnoreCase))
-                return Icons.Play;
-
-            if (string.Equals(status, "suspended", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(status, "paused", StringComparison.OrdinalIgnoreCase))
-                return Icons.Pause;
-
-            if (string.Equals(status, "error", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase))
-                return Icons.CircleX;
-
-            return Icons.MonitorStop;
+            var msg = ev.Message ?? string.Empty;
+            if (ev.Type == "service_suspend")
+                return (msg, Icons.LoaderCircle, ev.Type);
+            if (ev.Type == "service_resume")
+                return (msg, Icons.LoaderCircle, ev.Type);
+            
+            // If completed, we can optimistically report the status until the API's raw status catches up
+            if (ev.Type == "service_suspend_success")
+                return ("suspended", Icons.Pause, ev.Type);
+            if (ev.Type == "service_resume_success")
+                return ("live", Icons.CircleCheck, ev.Type);
         }
 
-        // Always look at events (with polling) and derive status from the latest event.
-        var eventsQuery = ctx.UseQuery<List<SliplaneServiceEvent>?, (string, string, string)>(
-            key: ("service-events-status", projectId, svc.Id),
-            fetcher: async _ => await client.GetServiceEventsAsync(apiToken, projectId, svc.Id),
-            options: new QueryOptions
-            {
-                RefreshInterval = TimeSpan.FromSeconds(5),
-                KeepPrevious = true
-            });
-
-        var events = eventsQuery.Value ?? new List<SliplaneServiceEvent>();
-        if (events.Count > 0)
+        return rawStatus.ToLowerInvariant() switch
         {
-            var ordered    = events.OrderByDescending(e => e.CreatedAt).ToList();
-            var latest     = ordered.First();
-            var latestType = latest.Type?.ToLowerInvariant() ?? string.Empty;
-
-            // Most recent action wins for suspend: if the last event is a suspend,
-            // show the service as suspended regardless of previous build failures.
-            if (latestType.Contains("suspend"))
-                return Icons.Pause;
-
-            // For all other cases, look for the latest *meaningful* event: ignore
-            // suspend/resume toggles so a previous build failure still shows as
-            // error even after a resume, until there is an actual successful deploy.
-            var lastMeaningful = ordered.FirstOrDefault(e =>
-            {
-                var t = e.Type?.ToLowerInvariant() ?? string.Empty;
-                return !t.Contains("suspend") && !t.Contains("resume");
-            }) ?? latest;
-
-            var type = lastMeaningful.Type?.ToLowerInvariant() ?? string.Empty;
-            var msg  = lastMeaningful.Message?.ToLowerInvariant() ?? string.Empty;
-
-            bool IsError() =>
-                type.Contains("error") || type.Contains("fail") || type.Contains("failed") ||
-                msg.Contains("error") || msg.Contains("fail") || msg.Contains("failed");
-
-            bool IsSuccess() =>
-                type.Contains("live") || type.Contains("ready") || type.Contains("success")
-                || type.Contains("deployed") || type.Contains("healthy");
-
-            if (IsError())
-                return Icons.CircleX;
-
-            if (IsSuccess())
-                return Icons.CircleCheck;
-
-            // Unknown event type – pending.
-            return Icons.LoaderCircle;
-        }
-
-        // No events yet – fall back to raw status (includes paused/suspended/error etc.).
-        if (string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase))
-            return Icons.LoaderCircle;
-
-        return MapBase(svc.Status);
+            "live" => ("live", Icons.CircleCheck, null),
+            "suspended" or "paused" => ("suspended", Icons.Pause, null),
+            "error" or "failed" => ("error", Icons.CircleX, null),
+            "pending" => ("pending", Icons.LoaderCircle, null),
+            _ => (string.IsNullOrWhiteSpace(rawStatus) ? "—" : rawStatus, Icons.MonitorStop, null)
+        };
     }
 
     private static ServiceRow[] BuildServiceRows(
@@ -263,18 +228,38 @@ public class ServicesView : ViewBase
                 var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId)
                     ? "—"
                     : (serverList.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId);
-                var statusIcon = GetStatusIcon(ctx, client, apiToken, projectId, svc);
-                var statusLabel = statusIcon switch
-                {
-                    Icons.CircleCheck => "live",
-                    Icons.Pause       => "suspended",
-                    Icons.CircleX     => "error",
-                    Icons.LoaderCircle => "pending",
-                    _ => string.IsNullOrWhiteSpace(svc.Status) ? "—" : svc.Status
-                };
 
+                // Deployment events: compute last deploy time + logs status
+                var eventsQuery = ctx.UseQuery<List<SliplaneServiceEvent>?, (string, string, string)>(
+                    key: ("service-deploy-events", projectId, svc.Id),
+                    fetcher: async _ => await client.GetServiceEventsAsync(apiToken, projectId, svc.Id),
+                    options: new QueryOptions
+                    {
+                        RefreshInterval = TimeSpan.FromSeconds(3),
+                        KeepPrevious = true
+                    });
+
+                var events = eventsQuery.Value ?? new List<SliplaneServiceEvent>();
+                
+                // Status based on raw status field + events (handles "suspending" / "resuming")
+                var (statusLabel, statusIcon, _) = GetServiceStatus(svc, events);
+
+                // Last updated (any change)
                 var lastUpdatedInstant = svc.UpdatedAt ?? svc.CreatedAt;
                 var lastUpdated = lastUpdatedInstant.ToString("yyyy-MM-dd HH:mm");
+                string deployStatus = "—";
+
+                if (events.Count > 0)
+                {
+                    var latestEvent = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+                    if (latestEvent != null)
+                    {
+                        deployStatus = string.IsNullOrWhiteSpace(latestEvent.Message) 
+                            ? latestEvent.Type ?? "Event" 
+                            : latestEvent.Message;
+                    }
+                }
+
                 var siteUrl = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
                              ?? svc.Network?.ManagedDomain
                              ?? string.Empty;
@@ -287,14 +272,15 @@ public class ServicesView : ViewBase
                 {
                     SortKey = lastUpdatedInstant,
                     Row = new ServiceRow(
-                    ServiceId: svc.Id,
-                    Name: svc.Name,
-                    Project: projectName,
-                    Server: serverLabel,
-                    Status: statusLabel,
-                    StatusIcon: statusIcon,
-                    LastUpdated: lastUpdated,
-                    Url: siteUrlAbsolute)
+                        ServiceId: svc.Id,
+                        Name: svc.Name,
+                        Project: projectName,
+                        Server: serverLabel,
+                        Status: statusLabel,
+                        StatusIcon: statusIcon,
+                        LastUpdated: lastUpdated,
+                        DeployStatus: deployStatus,
+                        Url: siteUrlAbsolute)
                 };
             })
             .OrderByDescending(x => x.SortKey)
@@ -312,17 +298,20 @@ public class ServiceDetailsSheet : ViewBase
     private readonly string _apiToken;
     private readonly IState<(string ProjectId, string ProjectName, SliplaneService Service)?> _selection;
     private readonly IState<int> _reloadCounter;
+    private readonly RefreshToken _tableRefreshToken;
 
     public ServiceDetailsSheet(
         IState<bool> isOpen,
         string apiToken,
         IState<(string ProjectId, string ProjectName, SliplaneService Service)?> selection,
-        IState<int> reloadCounter)
+        IState<int> reloadCounter,
+        RefreshToken tableRefreshToken)
     {
         _isOpen = isOpen;
         _apiToken = apiToken;
         _selection = selection;
         _reloadCounter = reloadCounter;
+        _tableRefreshToken = tableRefreshToken;
     }
 
     public override object? Build()
@@ -339,11 +328,19 @@ public class ServiceDetailsSheet : ViewBase
         var dep = service.Deployment;
         var net = service.Network;
 
+        var eventsQuery = this.UseQuery<List<SliplaneServiceEvent>?, (string, string, string)>(
+            key: ("events", projectId, service.Id),
+            fetcher: async _ => await client.GetServiceEventsAsync(_apiToken, projectId, service.Id),
+            options: new QueryOptions { RefreshInterval = TimeSpan.FromSeconds(3), KeepPrevious = true });
+            
+        var events = eventsQuery.Value ?? new List<SliplaneServiceEvent>();
+        var (statusLabel, _, eventType) = ServicesView.GetServiceStatus(service, events);
+
         var basicModel = new
         {
             Project = projectName,
             Name = service.Name,
-            Status = service.Status,
+            Status = statusLabel,
             ServerId = service.ServerId,
             Image = service.Image ?? "—",
             Port = service.Port?.ToString() ?? "—",
@@ -368,44 +365,8 @@ public class ServiceDetailsSheet : ViewBase
             InternalDomain = net?.InternalDomain ?? "—"
         };
 
-        bool IsPausedStatus(string? status) =>
-            string.Equals(status, "paused", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(status, "suspended", StringComparison.OrdinalIgnoreCase);
-
-        async Task PauseUnpauseAsync()
-        {
-            if (busy.Value) return;
-            busy.Set(true);
-            try
-            {
-                if (IsPausedStatus(service.Status))
-                    await client.UnpauseServiceAsync(_apiToken, projectId, service.Id);
-                else
-                    await client.PauseServiceAsync(_apiToken, projectId, service.Id);
-                var updated = await client.GetServiceAsync(_apiToken, projectId, service.Id);
-                if (updated != null)
-                    _selection.Set((projectId, projectName, updated));
-                _reloadCounter.Set(_reloadCounter.Value + 1);
-                await refreshSender.Send("services");
-            }
-            finally { busy.Set(false); }
-        }
-
-        async Task DeleteAsync()
-        {
-            if (busy.Value) return;
-            busy.Set(true);
-            try
-            {
-                await client.DeleteServiceAsync(_apiToken, projectId, service.Id);
-                _isOpen.Set(false);
-                _reloadCounter.Set(_reloadCounter.Value + 1);
-                await refreshSender.Send("services");
-            }
-            finally { busy.Set(false); }
-        }
-
-        var isPaused = IsPausedStatus(service.Status);
+        bool isResumingOrSuspending = eventType == "service_suspend" || eventType == "service_resume";
+        var isPaused = statusLabel == "suspended";
         var pauseLabel = isPaused ? "Resume" : "Pause";
 
         var (editSheetView, openEditSheet) = this.UseTrigger((IState<bool> isOpen) =>
@@ -413,8 +374,43 @@ public class ServiceDetailsSheet : ViewBase
 
         var footer = Layout.Horizontal()
             | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).OnClick(_ => openEditSheet())
-            | new Button(pauseLabel).Icon(isPaused ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value).OnClick(async _ => await PauseUnpauseAsync())
-            | new Button("Delete", onClick: async _ => await DeleteAsync())
+            | new Button(pauseLabel).Icon(isPaused ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value || isResumingOrSuspending)
+                .OnClick(async _ => 
+                {
+                    if (busy.Value || isResumingOrSuspending) return;
+                    busy.Set(true);
+                    try
+                    {
+                        if (isPaused)
+                            await client.UnpauseServiceAsync(_apiToken, projectId, service.Id);
+                        else
+                            await client.PauseServiceAsync(_apiToken, projectId, service.Id);
+
+                        // Refresh local events so the status text in the sheet updates quickly
+                        eventsQuery.Mutator.Revalidate();
+
+                        // Also refresh the main services overview + table so the status
+                        // in the DataTable matches the latest service state.
+                        _reloadCounter.Set(_reloadCounter.Value + 1);
+                        _tableRefreshToken.Refresh();
+                        await refreshSender.Send("services");
+                    }
+                    finally { busy.Set(false); }
+                })
+            | new Button("Delete", onClick: async _ => 
+                {
+                    if (busy.Value) return;
+                    busy.Set(true);
+                    try
+                    {
+                        await client.DeleteServiceAsync(_apiToken, projectId, service.Id);
+                        _isOpen.Set(false);
+                        _reloadCounter.Set(_reloadCounter.Value + 1);
+                        _tableRefreshToken.Refresh();
+                        await refreshSender.Send("services");
+                    }
+                    finally { busy.Set(false); }
+                })
                 .Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(busy.Value)
                 .WithConfirm("Are you sure you want to delete this service?", "Delete service");
 
