@@ -71,7 +71,7 @@ public class ServicesView : ViewBase
         var currentServices = flat;
         var rows = BuildServiceRows(this.Context, client, _apiToken, currentServices, servers);
 
-        var headerRow = Layout.Horizontal()
+        var headerRow = Layout.Horizontal().Height(Size.Fit())
             | Text.H2("Services");
 
         var addServiceBtn = new Button("Add service").Icon(Icons.Plus).OnClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
@@ -80,19 +80,33 @@ public class ServicesView : ViewBase
         var table = rows
             .AsQueryable()
             .ToDataTable(r => r.ServiceId)
+            .Height(Size.Full())
+            .Hidden(r => r.ServiceId)
             .Header(r => r.Name, "Service")
             .Header(r => r.Project, "Project")
             .Header(r => r.Server, "Server")
-            .Header(r => r.Status, "Status")
+            .Header(r => r.StatusIcon, "Icon")
+            .Header(r => r.Status, "Name")
+            .Header(r => r.LastUpdated, "Last updated")
             .Header(r => r.Url, "URL")
+            .Group(r => r.Name, "Identity")
+            .Group(r => r.Project, "Identity")
+            .Group(r => r.Server, "Identity")
+            .Group(r => r.StatusIcon, "Status")
+            .Group(r => r.Status, "Status")
+            .Group(r => r.LastUpdated, "Status")
+            .Group(r => r.Url, "Routing")
+            .Width(r => r.StatusIcon, Size.Px(50))
+            .Width(r => r.Status, Size.Px(120))
             .Config(config =>
             {
-                config.ShowSearch = true;
+                config.ShowGroups = true;
+                config.ShowIndexColumn = false;
                 config.AllowSorting = true;
                 config.AllowFiltering = true;
+                config.ShowSearch = true;
                 config.SelectionMode = SelectionModes.Rows;
             })
-            .Height(Size.Units(100))
             .RowActions(
                 MenuItem.Default(Icons.Eye, "view").Label("View"),
                 MenuItem.Default(Icons.Pencil, "edit").Label("Edit"))
@@ -112,7 +126,9 @@ public class ServicesView : ViewBase
 
                 ShowServiceSheet(projectId, projectName, svc);
                 await ValueTask.CompletedTask;
-            });
+            })
+             // Column renderers - LinkDisplayRenderer automatically sets ColType.Link
+            .Renderer(e => e.Url, new LinkDisplayRenderer { Type = LinkDisplayType.Url });
 
         object content;
         if (currentServices.Count == 0)
@@ -124,7 +140,7 @@ public class ServicesView : ViewBase
         }
         else
         {
-            content = Layout.Vertical()
+            content = Layout.Vertical().Height(Size.Full())
                 | headerRow
                 | table;
         }
@@ -143,9 +159,11 @@ public class ServicesView : ViewBase
         string Project,
         string Server,
         string Status,
+        Icons StatusIcon,
+        string LastUpdated,
         string Url);
 
-    private static (object Icon, string Label) GetStatusVisual(
+    private static Icons GetStatusIcon(
         IViewContext ctx,
         SliplaneApiClient client,
         string apiToken,
@@ -153,23 +171,23 @@ public class ServicesView : ViewBase
         SliplaneService svc)
     {
         // Base mapping from raw status (fallback when we don't get useful events).
-        static (object Icon, string Label) MapBase(string? status)
+        static Icons MapBase(string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
-                return (Icons.MonitorStop.ToIcon(), "—");
+                return Icons.MonitorStop;
 
             if (string.Equals(status, "live", StringComparison.OrdinalIgnoreCase))
-                return (Icons.Play.ToIcon(), "live");
+                return Icons.Play;
 
             if (string.Equals(status, "suspended", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(status, "paused", StringComparison.OrdinalIgnoreCase))
-                return (Icons.Pause.ToIcon(), status);
+                return Icons.Pause;
 
             if (string.Equals(status, "error", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase))
-                return (Icons.CircleX.ToIcon(), status);
+                return Icons.CircleX;
 
-            return (Icons.MonitorStop.ToIcon(), status);
+            return Icons.MonitorStop;
         }
 
         // Always look at events (with polling) and derive status from the latest event.
@@ -192,7 +210,7 @@ public class ServicesView : ViewBase
             // Most recent action wins for suspend: if the last event is a suspend,
             // show the service as suspended regardless of previous build failures.
             if (latestType.Contains("suspend"))
-                return (Icons.Pause.ToIcon(), "suspended");
+                return Icons.Pause;
 
             // For all other cases, look for the latest *meaningful* event: ignore
             // suspend/resume toggles so a previous build failure still shows as
@@ -215,28 +233,18 @@ public class ServicesView : ViewBase
                 || type.Contains("deployed") || type.Contains("healthy");
 
             if (IsError())
-                return (Icons.CircleX.ToIcon(), "error");
+                return Icons.CircleX;
 
             if (IsSuccess())
-                return (Icons.CircleCheck.ToIcon(), "live");
+                return Icons.CircleCheck;
 
-            // Unknown event type – show pending spinner while actions are in-flight.
-            return (Icons.LoaderCircle.ToIcon()
-                        .WithAnimation(AnimationType.Rotate)
-                        .Trigger(AnimationTrigger.Auto)
-                        .Duration(1),
-                    "pending");
+            // Unknown event type – pending.
+            return Icons.LoaderCircle;
         }
 
         // No events yet – fall back to raw status (includes paused/suspended/error etc.).
         if (string.Equals(svc.Status, "pending", StringComparison.OrdinalIgnoreCase))
-        {
-            return (Icons.LoaderCircle.ToIcon()
-                        .WithAnimation(AnimationType.Rotate)
-                        .Trigger(AnimationTrigger.Auto)
-                        .Duration(1),
-                    "pending");
-        }
+            return Icons.LoaderCircle;
 
         return MapBase(svc.Status);
     }
@@ -255,7 +263,18 @@ public class ServicesView : ViewBase
                 var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId)
                     ? "—"
                     : (serverList.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId);
-                var (_, statusLabel) = GetStatusVisual(ctx, client, apiToken, projectId, svc);
+                var statusIcon = GetStatusIcon(ctx, client, apiToken, projectId, svc);
+                var statusLabel = statusIcon switch
+                {
+                    Icons.CircleCheck => "live",
+                    Icons.Pause       => "suspended",
+                    Icons.CircleX     => "error",
+                    Icons.LoaderCircle => "pending",
+                    _ => string.IsNullOrWhiteSpace(svc.Status) ? "—" : svc.Status
+                };
+
+                var lastUpdatedInstant = svc.UpdatedAt ?? svc.CreatedAt;
+                var lastUpdated = lastUpdatedInstant.ToString("yyyy-MM-dd HH:mm");
                 var siteUrl = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
                              ?? svc.Network?.ManagedDomain
                              ?? string.Empty;
@@ -264,14 +283,22 @@ public class ServicesView : ViewBase
                         ? siteUrl
                         : "https://" + siteUrl);
 
-                return new ServiceRow(
+                return new
+                {
+                    SortKey = lastUpdatedInstant,
+                    Row = new ServiceRow(
                     ServiceId: svc.Id,
                     Name: svc.Name,
                     Project: projectName,
                     Server: serverLabel,
                     Status: statusLabel,
-                    Url: siteUrlAbsolute);
+                    StatusIcon: statusIcon,
+                    LastUpdated: lastUpdated,
+                    Url: siteUrlAbsolute)
+                };
             })
+            .OrderByDescending(x => x.SortKey)
+            .Select(x => x.Row)
             .ToArray();
     }
 }
