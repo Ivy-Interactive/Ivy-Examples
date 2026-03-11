@@ -127,7 +127,7 @@ public class ServicesView : ViewBase
 
     var selectedForEdit = serviceDetailSelection.Value;
     object? editSheetView = selectedForEdit is { } sel && serviceDetailOpen.Value
-        ? new EditServiceSheet(serviceDetailOpen, _apiToken, sel.ProjectId, sel.ProjectName, sel.Service, serviceDetailSelection)
+        ? new EditServiceSheet(serviceDetailOpen, _apiToken, sel.ProjectId, sel.ProjectName, sel.Service, serviceDetailSelection, currentServers)
         : null;
 
     // Use overviewQuery directly for loading/error state to avoid stale local flags.
@@ -449,6 +449,7 @@ public class EditServiceSheet : ViewBase
     private readonly string _projectName;
     private readonly SliplaneService _service;
     private readonly IState<(string ProjectId, string ProjectName, SliplaneService Service)?> _selection;
+    private readonly List<SliplaneServer> _servers;
 
     public EditServiceSheet(
         IState<bool> isOpen,
@@ -456,7 +457,8 @@ public class EditServiceSheet : ViewBase
         string projectId,
         string projectName,
         SliplaneService service,
-        IState<(string ProjectId, string ProjectName, SliplaneService Service)?> selection)
+        IState<(string ProjectId, string ProjectName, SliplaneService Service)?> selection,
+        List<SliplaneServer>? servers = null)
     {
         _isOpen = isOpen;
         _apiToken = apiToken;
@@ -464,6 +466,7 @@ public class EditServiceSheet : ViewBase
         _projectName = projectName;
         _service = service;
         _selection = selection;
+        _servers = servers ?? new List<SliplaneServer>();
     }
 
     public override object? Build()
@@ -477,14 +480,44 @@ public class EditServiceSheet : ViewBase
         var dockerfilePath = this.UseState(dep?.DockerfilePath ?? "Dockerfile");
         var dockerContext = this.UseState(dep?.DockerContext ?? ".");
         var autoDeploy = this.UseState(dep?.AutoDeploy ?? true);
-        var cmd = this.UseState(string.Empty);
+        var cmd = this.UseState(_service.Cmd ?? string.Empty);
         var healthcheck = this.UseState(_service.Healthcheck ?? string.Empty);
         var busy = this.UseState(false);
         var error = this.UseState<string?>(() => (string?)null);
-        var envList = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
+        var envList = this.UseState<List<EnvironmentVariable>>(() =>
+            _service.Env is { Count: > 0 }
+                ? _service.Env.Select(e => new EnvironmentVariable(e.Key, e.Value, e.Secret)).ToList()
+                : new List<EnvironmentVariable>());
         var showAddEnvDialog = this.UseState(false);
         var addEnvKey = this.UseState(string.Empty);
         var addEnvValue = this.UseState(string.Empty);
+        var showEditEnvDialog = this.UseState(false);
+        var editEnvIndex = this.UseState<int?>(() => null);
+        var editEnvKey = this.UseState(string.Empty);
+        var editEnvValue = this.UseState(string.Empty);
+        // Track current volume mounts — user can remove or add
+        var volumesList = this.UseState<List<SliplaneServiceVolumeInfo>>(() =>
+            _service.Volumes is { Count: > 0 }
+                ? _service.Volumes.ToList()
+                : new List<SliplaneServiceVolumeInfo>());
+        var volumesModified = this.UseState(false);
+        // Server volumes (for the add-volume picker)
+        var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
+        var showAddVolumeDialog = this.UseState(false);
+        var addVolumeId = this.UseState(string.Empty);
+        var addVolumeMountPath = this.UseState(string.Empty);
+
+        // Load available volumes for this service's server once
+        this.UseEffect(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(_service.ServerId)) return;
+            try
+            {
+                var vols = await client.GetServerVolumesAsync(_apiToken, _service.ServerId);
+                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
+            }
+            catch { serverVolumes.Set(new List<SliplaneVolume>()); }
+        });
 
         async Task SaveAsync()
         {
@@ -530,44 +563,98 @@ public class EditServiceSheet : ViewBase
         var envHeaderRow = new TableRow(
             new TableCell("Key").IsHeader(),
             new TableCell("Value").IsHeader(),
-            new TableCell("Actions").IsHeader().Width(Size.Fit()));
+            new TableCell(" ").IsHeader());
         var envDataRows = envItems
             .Select((e, idx) =>
             {
                 var index = idx;
+                var displayValue = e.Secret ? "•••••" : (e.Value ?? "");
                 return new TableRow(
                     new TableCell(e.Key),
-                    new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
-                    {
-                        var next = envList.Value.Where((_, i) => i != index).ToList();
-                        envList.Set(next);
-                    })).Width(Size.Fit()));
+                    new TableCell(displayValue),
+                    new TableCell(
+                        Layout.Horizontal()
+                            .Align(Align.Right)
+                            | new Button().Icon(Icons.Pencil)
+                                .Variant(ButtonVariant.Outline)
+                                .OnClick(_ =>
+                                {
+                                    editEnvIndex.Set(index);
+                                    editEnvKey.Set(e.Key);
+                                    editEnvValue.Set(e.Value ?? string.Empty);
+                                    showEditEnvDialog.Set(true);
+                                })
+                            | new Button().Icon(Icons.Trash2)
+                                .Destructive()
+                                .OnClick(_ =>
+                                {
+                                    var next = envList.Value.Where((_, i) => i != index).ToList();
+                                    envList.Set(next);
+                                })));
             })
             .ToArray();
         object envTableContent = envDataRows.Length == 0
             ? (object)Text.Muted("No variables.")
             : new Table(new[] { envHeaderRow }.Concat(envDataRows).ToArray()).Width(Size.Full());
 
+        bool IsPausedStatus(string? s) =>
+            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
+
+        async Task PauseUnpauseAsync()
+        {
+            if (busy.Value) return;
+            busy.Set(true);
+            try
+            {
+                if (IsPausedStatus(_service.Status))
+                    await client.UnpauseServiceAsync(_apiToken, _projectId, _service.Id);
+                else
+                    await client.PauseServiceAsync(_apiToken, _projectId, _service.Id);
+
+                var updated = await client.GetServiceAsync(_apiToken, _projectId, _service.Id);
+                if (updated != null)
+                {
+                    _selection.Set((_projectId, _projectName, updated));
+                    await refreshSender.Send("service-json:" + JsonSerializer.Serialize(updated));
+                }
+            }
+            finally
+            {
+                busy.Set(false);
+            }
+        }
+
         var content = Layout.Vertical()
             | Text.H4("Basic")
-            | name.ToTextInput().Placeholder("Service name")
+            | name.ToTextInput().Placeholder("Service name").WithField().Label("Service name")
             | Text.H4("Deployment")
-            | deployUrl.ToTextInput().Placeholder("Repository or image URL")
-            | branch.ToTextInput().Placeholder("Branch")
-            | dockerfilePath.ToTextInput().Placeholder("Dockerfile path")
-            | dockerContext.ToTextInput().Placeholder("Docker context")
-            | autoDeploy.ToBoolInput().Label("Auto-deploy on push")
+            | deployUrl.ToTextInput().Placeholder("Repository or image URL").WithField().Label("Repository or image URL")
+            | branch.ToTextInput().Placeholder("Branch").WithField().Label("Branch")
+            | dockerfilePath.ToTextInput().Placeholder("Dockerfile path").WithField().Label("Dockerfile path")
+            | dockerContext.ToTextInput().Placeholder("Docker context").WithField().Label("Docker context")
+            | autoDeploy.ToBoolInput().WithField().Label("Auto-deploy on push")
             | Text.H4("Optional")
-            | cmd.ToTextInput().Placeholder("Start command (e.g. npm start)")
-            | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)")
-            | Text.H4("Environment variables")
+            | cmd.ToTextInput().Placeholder("Start command (e.g. npm start)").WithField().Label("Start command (e.g. npm start)")
+            | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)").WithField().Label("Health check path (e.g. /health)")
+            | (Layout.Horizontal().Align(Align.Left)
+                | Text.H4("Environment variables")
+                | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true))
+                )
             | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true))
+            | BuildVolumesSection(volumesList, volumesModified, () => showAddVolumeDialog.Set(true))
+            | BuildServiceInfoSection(
+                _service,
+                _projectName,
+                _servers.FirstOrDefault(s => s.Id == _service.ServerId)?.Name ?? _service.ServerId ?? "—")
             | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
+
+        var pauseLabel = IsPausedStatus(_service.Status) ? "Resume" : "Pause";
+        var pauseIcon = IsPausedStatus(_service.Status) ? Icons.Play : Icons.Pause;
 
         var footer = Layout.Horizontal()
             | new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => _isOpen.Set(false))
+            | new Button(pauseLabel).Icon(pauseIcon).Variant(ButtonVariant.Outline).Loading(busy.Value).OnClick(async _ => await PauseUnpauseAsync())
             | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await SaveAsync());
 
         Dialog? addEnvDialog = null;
@@ -596,12 +683,163 @@ public class EditServiceSheet : ViewBase
                 )).Width(Size.Units(220));
         }
 
+        Dialog? editEnvDialog = null;
+        if (showEditEnvDialog.Value && editEnvIndex.Value is int envIdx && envIdx >= 0 && envIdx < envItems.Count)
+        {
+            void SaveEditedEnv()
+            {
+                if (string.IsNullOrWhiteSpace(editEnvKey.Value)) return;
+                var next = (envList.Value ?? new List<EnvironmentVariable>()).ToList();
+                var existing = next[envIdx];
+                next[envIdx] = new EnvironmentVariable(editEnvKey.Value.Trim(), editEnvValue.Value ?? string.Empty, existing.Secret);
+                envList.Set(next);
+                showEditEnvDialog.Set(false);
+            }
+
+            var editForm = Layout.Vertical()
+                | editEnvKey.ToTextInput().Placeholder("Key")
+                | editEnvValue.ToTextInput().Placeholder("Value");
+
+            editEnvDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showEditEnvDialog.Set(false),
+                header: new DialogHeader("Edit environment variable"),
+                body: new DialogBody(editForm),
+                footer: new DialogFooter(
+                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEditedEnv()),
+                    new Button("Cancel").OnClick(_ => showEditEnvDialog.Set(false))
+                )).Width(Size.Units(220));
+        }
+
+        // Add-volume dialog
+        Dialog? addVolumeDialog = null;
+        if (showAddVolumeDialog.Value)
+        {
+            var volumeOptions = (serverVolumes.Value ?? new List<SliplaneVolume>())
+                .Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id))
+                .ToArray();
+
+            void SaveVolume()
+            {
+                if (string.IsNullOrWhiteSpace(addVolumeId.Value)) return;
+                var chosen = serverVolumes.Value?.FirstOrDefault(v => v.Id == addVolumeId.Value);
+                if (chosen == null) return;
+                var mountPath = string.IsNullOrWhiteSpace(addVolumeMountPath.Value)
+                    ? chosen.MountPath
+                    : addVolumeMountPath.Value.Trim();
+                var next = (volumesList.Value ?? new List<SliplaneServiceVolumeInfo>()).ToList();
+                next.Add(new SliplaneServiceVolumeInfo(chosen.Id, chosen.Name, mountPath));
+                volumesList.Set(next);
+                volumesModified.Set(true);
+                addVolumeId.Set(string.Empty);
+                addVolumeMountPath.Set(string.Empty);
+                showAddVolumeDialog.Set(false);
+            }
+
+            var addVolumeForm = Layout.Vertical()
+                | Text.Muted("Select a volume from this service's server")
+                | addVolumeId.ToSelectInput(volumeOptions)
+                | addVolumeMountPath.ToTextInput().Placeholder("Mount path (leave blank for default)");
+
+            addVolumeDialog = new Dialog(
+                onClose: (Event<Dialog> _) => showAddVolumeDialog.Set(false),
+                header: new DialogHeader("Add volume"),
+                body: new DialogBody(addVolumeForm),
+                footer: new DialogFooter(
+                    new Button("Add").Variant(ButtonVariant.Primary).OnClick(_ => SaveVolume()),
+                    new Button("Cancel").OnClick(_ => showAddVolumeDialog.Set(false))
+                )).Width(Size.Units(220));
+        }
+
         if (!_isOpen.Value)
             return null;
 
         var sheetBody = new FooterLayout(footer, content);
-        object sheetContent = addEnvDialog != null ? new Fragment(sheetBody, addEnvDialog) : sheetBody;
-        return new Sheet(_ => _isOpen.Set(false), sheetContent, title: $"Edit: {_service.Name}").Width(Size.Fraction(1 / 3f));
+        var dialogs = new[] { addEnvDialog, editEnvDialog, addVolumeDialog }
+            .Where(d => d != null).Cast<object>().ToArray();
+        object sheetContent = dialogs.Length > 0
+            ? new Fragment(new[] { (object)sheetBody }.Concat(dialogs).ToArray())
+            : sheetBody;
+        return new Sheet(_ => _isOpen.Set(false), sheetContent, title: $"{_service.Name}").Width(Size.Fraction(1 / 3f));
+    }
+
+    /// <summary>
+    /// Builds a read-only volumes section with Remove buttons.
+    /// Always shows the "Volumes" header; if there are no volumes, shows a hint text.
+    /// </summary>
+    private static object BuildVolumesSection(
+        IState<List<SliplaneServiceVolumeInfo>> volumesList,
+        IState<bool> volumesModified,
+        Action onAdd)
+    {
+        var items = volumesList.Value;
+
+        var headerRow = new TableRow(
+            new TableCell("Name").IsHeader(),
+            new TableCell("Mount path").IsHeader(),
+            new TableCell(" ").IsHeader());
+
+        var dataRows = items
+            .Select((v, idx) =>
+            {
+                var index = idx;
+                return new TableRow(
+                    new TableCell(v.Name),
+                    new TableCell(v.MountPath),
+                    new TableCell(
+                        Layout.Horizontal().Align(Align.Right)
+                        | new Button().Icon(Icons.Trash2)
+                            .Destructive()
+                            .OnClick(_ =>
+                            {
+                                    var next = volumesList.Value.Where((_, i) => i != index).ToList();
+                                    volumesList.Set(next);
+                                    volumesModified.Set(true);
+                                })));
+            })
+            .ToArray();
+
+        object tableContent = dataRows.Length == 0
+            ? (object)Text.Muted("No volumes attached.")
+            : new Table(new[] { headerRow }.Concat(dataRows).ToArray()).Width(Size.Full());
+
+        return Layout.Vertical()
+            | (Layout.Horizontal().Align(Align.Left)
+                | Text.H4("Volumes")
+                | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => onAdd())
+              )
+            | tableContent;
+    }
+
+    private static object BuildServiceInfoSection(SliplaneService svc, string projectName, string serverName)
+    {
+        var publicEndpoint = svc.Network?.ManagedDomain
+            ?? svc.Network?.CustomDomains?.FirstOrDefault()?.Domain;
+        var publicEndpointUrl = publicEndpoint != null
+            ? (publicEndpoint.StartsWith("http") ? publicEndpoint : $"https://{publicEndpoint}")
+            : null;
+
+        var repoUrl = svc.Deployment?.Url;
+
+        var model = new
+        {
+            DeployHook       = svc.Webhook,
+            InternalEndpoint = svc.Network?.InternalDomain,
+            PublicEndpoint   = publicEndpointUrl,
+            Repository       = repoUrl,
+            Project          = projectName,
+            Server           = serverName,
+            CreatedAt        = svc.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+        };
+
+        return Layout.Vertical()
+            | Text.H4("Service Info")
+            | model
+                .ToDetails()
+                .RemoveEmpty()
+                .Builder(x => x.DeployHook, b => b.CopyToClipboard())
+                .Builder(x => x.InternalEndpoint, b => b.CopyToClipboard())
+                .Builder(x => x.PublicEndpoint, b => b.Link())
+                .Builder(x => x.Repository, b => b.Link());
     }
 }
 
