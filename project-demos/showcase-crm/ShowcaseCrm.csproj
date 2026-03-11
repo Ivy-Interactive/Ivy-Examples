@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -30,7 +30,7 @@
     <Folder Include="Connections" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="C:\git\Ivy-Interactive\Ivy-Examples\project-demos\showcase-crm\db.sqlite">
+    <None Update="db.sqlite">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
