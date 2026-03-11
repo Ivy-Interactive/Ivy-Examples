@@ -43,6 +43,11 @@ public class ServicesView : ViewBase
         var deleteSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
         var deleteCommandInput = this.UseState(string.Empty);
         var deleteCommandError = this.UseState<string?>(() => (string?)null);
+        // ── Logs / Events sheets ───────────────────────────────────────────────
+        var logsSheetOpen      = this.UseState(false);
+        var logsSelection      = this.UseState<(string ProjectId, string ServiceName, string ServiceId)?>(() => null);
+        var eventsSheetOpen    = this.UseState(false);
+        var eventsSelection    = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
 
     // ── 1) data loading: UseQuery with polling ───────────────────────────────
     var overviewKey = $"overview:{_apiToken}";
@@ -128,6 +133,16 @@ public class ServicesView : ViewBase
     var selectedForEdit = serviceDetailSelection.Value;
     object? editSheetView = selectedForEdit is { } sel && serviceDetailOpen.Value
         ? new EditServiceSheet(serviceDetailOpen, _apiToken, sel.ProjectId, sel.ProjectName, sel.Service, serviceDetailSelection, currentServers)
+        : null;
+
+    // ── Logs sheet ────────────────────────────────────────────────────────────
+    object? logsSheetView = logsSelection.Value is { } logsSel && logsSheetOpen.Value
+        ? new ServiceLogsSheet(logsSheetOpen, _apiToken, logsSel.ProjectId, logsSel.ServiceId, logsSel.ServiceName)
+        : null;
+
+    // ── Events sheet ──────────────────────────────────────────────────────────
+    object? eventsSheetView = eventsSelection.Value is { } evtSel && eventsSheetOpen.Value
+        ? new ServiceEventsSheet(eventsSheetOpen, evtSel.ServiceName, evtSel.Events)
         : null;
 
     // Use overviewQuery directly for loading/error state to avoid stale local flags.
@@ -227,13 +242,16 @@ public class ServicesView : ViewBase
 
             if (tag == "logs")
             {
-                showAlert($"Logs for service \"{match.Service.Name}\" can be viewed from the Projects view.", async _ => { await Task.CompletedTask; }, "Logs");
+                logsSelection.Set((match.ProjectId, match.Service.Name ?? match.Service.Id, match.Service.Id));
+                logsSheetOpen.Set(true);
                 return ValueTask.CompletedTask;
             }
 
             if (tag == "events")
             {
-                showAlert($"Events for service \"{match.Service.Name}\" can be viewed from the Projects view.", async _ => { await Task.CompletedTask; }, "Events");
+                var evts = eventsByService.TryGetValue(match.Service.Id, out var ev) ? ev : new List<SliplaneServiceEvent>();
+                eventsSelection.Set((match.Service.Name ?? match.Service.Id, evts));
+                eventsSheetOpen.Set(true);
                 return ValueTask.CompletedTask;
             }
 
@@ -297,6 +315,8 @@ public class ServicesView : ViewBase
         addServiceFloat,
         editSheetView,
         createSheetView,
+        logsSheetView,
+        eventsSheetView,
         alertView,
         deleteDialog);
 }
@@ -436,6 +456,162 @@ public class ServicesView : ViewBase
             .Select(x => x.Row)
             .ToArray();
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ServiceLogsSheet — shows service logs in a CodeBlock inside a Sheet.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// <summary>
+/// Fetches and displays service logs in a Sheet using a CodeBlock widget.
+/// Polls every 5 seconds for fresh data.
+/// </summary>
+public class ServiceLogsSheet : ViewBase
+{
+    private readonly IState<bool> _isOpen;
+    private readonly string _apiToken;
+    private readonly string _projectId;
+    private readonly string _serviceId;
+    private readonly string _serviceName;
+
+    public ServiceLogsSheet(
+        IState<bool> isOpen,
+        string apiToken,
+        string projectId,
+        string serviceId,
+        string serviceName)
+    {
+        _isOpen = isOpen;
+        _apiToken = apiToken;
+        _projectId = projectId;
+        _serviceId = serviceId;
+        _serviceName = serviceName;
+    }
+
+    public override object? Build()
+    {
+        if (!_isOpen.Value) return null;
+
+        var client = this.UseService<SliplaneApiClient>();
+
+        var logsQuery = this.UseQuery<List<SliplaneServiceLog>, string>(
+            key: $"logs:{_serviceId}",
+            fetcher: async ct =>
+            {
+                var logs = await client.GetServiceLogsAsync(_apiToken, _projectId, _serviceId);
+                return logs ?? new List<SliplaneServiceLog>();
+            },
+            options: new QueryOptions
+            {
+                RefreshInterval = TimeSpan.FromSeconds(5),
+                RevalidateOnMount = true
+            });
+
+        string logsText;
+        if (logsQuery.Loading && logsQuery.Value == null)
+        {
+            logsText = "Loading logs…";
+        }
+        else if (logsQuery.Error is { } err)
+        {
+            logsText = $"Error loading logs: {err.Message}";
+        }
+        else
+        {
+            var logs = logsQuery.Value ?? new List<SliplaneServiceLog>();
+            logsText = logs.Count == 0
+                ? "No logs available."
+                : string.Join("\n", logs
+                    .OrderBy(l => l.Timestamp)
+                    .Select(l => $"[{l.Timestamp.ToLocalTime():yyyy-MM-dd HH:mm:ss}] {l.Line}"));
+        }
+
+        var codeBlock = new CodeBlock(logsText)
+            .Language(Languages.Text)
+            .ShowCopyButton()
+            .Width(Size.Full())
+            .Height(Size.Full());
+
+        var body = Layout.Vertical().Height(Size.Full()) | codeBlock;
+
+        return new Sheet(
+            _ => { _isOpen.Set(false); },
+            body,
+            title: $"Logs — {_serviceName}",
+            description: "Live logs (refreshes every 5 s)")
+            .Width(Size.Fraction(1 / 2f));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ServiceEventsSheet — shows service events in a CodeBlock inside a Sheet.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// <summary>
+/// Displays the service events (already loaded from the overview cache) in a
+/// Sheet using a CodeBlock widget for easy reading and copy.
+/// </summary>
+public class ServiceEventsSheet : ViewBase
+{
+    private readonly IState<bool> _isOpen;
+    private readonly string _serviceName;
+    private readonly List<SliplaneServiceEvent> _events;
+
+    public ServiceEventsSheet(
+        IState<bool> isOpen,
+        string serviceName,
+        List<SliplaneServiceEvent> events)
+    {
+        _isOpen = isOpen;
+        _serviceName = serviceName;
+        _events = events;
+    }
+
+    public override object? Build()
+    {
+        if (!_isOpen.Value) return null;
+
+        string eventsText = _events.Count == 0
+            ? "No events recorded for this service."
+            : string.Join("\n\n", _events
+                .OrderByDescending(e => e.CreatedAt)
+                .Select(e =>
+                {
+                    var date  = e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                    var label = FormatEventType(e.Type);
+                    var msg   = string.IsNullOrWhiteSpace(e.Message)
+                        ? string.Empty
+                        : $"\n  Message: {e.Message}";
+                    return $"[{date}]  {label}{msg}";
+                }));
+
+        var codeBlock = new CodeBlock(eventsText)
+            .Language(Languages.Text)
+            .ShowCopyButton()
+            .Width(Size.Full())
+            .Height(Size.Full());
+
+        var body = Layout.Vertical().Height(Size.Full()) | codeBlock;
+
+        return new Sheet(
+            _ => { _isOpen.Set(false); },
+            body,
+            title: $"Events — {_serviceName}",
+            description: $"{_events.Count} event(s) in total")
+            .Width(Size.Fraction(1 / 2f));
+    }
+
+    private static string FormatEventType(string? type) => type switch
+    {
+        "service_resume_success"  => "Service resumed successfully",
+        "service_resume"          => "Service resume requested",
+        "service_suspend_success" => "Service suspended successfully",
+        "service_suspend"         => "Service suspension requested",
+        "service_deploy_success"  => "Service deployed successfully",
+        "service_deploy"          => "Service deploy started",
+        "service_deploy_failed"   => "Service deploy failed",
+        _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
+    };
 }
 
 /// <summary>
