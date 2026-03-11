@@ -82,6 +82,11 @@ public class ServicesView : ViewBase
         serviceDetailOpen.Set(true);
     }
 
+    var selectedForEdit = serviceDetailSelection.Value;
+    object? editSheetView = selectedForEdit is { } sel && serviceDetailOpen.Value
+        ? new EditServiceSheet(serviceDetailOpen, _apiToken, sel.ProjectId, sel.ProjectName, sel.Service, serviceDetailSelection)
+        : null;
+
     // Use overviewQuery directly for loading/error state to avoid stale local flags.
     if (overviewQuery.Loading && overviewQuery.Value == null && currentServices.Count == 0)
         return Layout.Center() | Text.Muted("Loading all services...");
@@ -129,7 +134,7 @@ public class ServicesView : ViewBase
             config.ShowSearch      = true;
             config.SelectionMode   = SelectionModes.Rows;
         })
-        .RowActions(MenuItem.Default(Icons.Eye, "view").Label("View"))
+        .RowActions(MenuItem.Default(Icons.Pencil, "Edit").Label("Edit"))
         .OnRowAction(async e =>
         {
             var args = e.Value;
@@ -151,7 +156,7 @@ public class ServicesView : ViewBase
     return new Fragment(
         content,
         addServiceFloat,
-        serviceDetailOpen.Value ? new ServiceDetailsSheet(serviceDetailOpen, _apiToken, serviceDetailSelection) : null,
+        editSheetView,
         createSheetView);
 }
 
@@ -297,157 +302,6 @@ public class ServicesView : ViewBase
 }
 
 /// <summary>
-/// Sheet with full service settings (read-only). Footer: Edit, Pause/Resume, Delete.
-/// </summary>
-public class ServiceDetailsSheet : ViewBase
-{
-    private readonly IState<bool> _isOpen;
-    private readonly string _apiToken;
-    private readonly IState<(string ProjectId, string ProjectName, SliplaneService Service)?> _selection;
-
-    public ServiceDetailsSheet(
-        IState<bool> isOpen,
-        string apiToken,
-        IState<(string ProjectId, string ProjectName, SliplaneService Service)?> selection)
-    {
-        _isOpen = isOpen;
-        _apiToken = apiToken;
-        _selection = selection;
-    }
-
-    public override object? Build()
-    {
-        var sel = _selection.Value;
-        if (sel == null || !_isOpen.Value)
-            return null;
-
-        var (projectId, projectName, service) = sel.Value;
-        var client = this.UseService<SliplaneApiClient>();
-        // SliplaneRefreshSignal expects string payloads.
-        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
-        var busy = this.UseState(false);
-
-        var dep = service.Deployment;
-        var net = service.Network;
-
-        var eventsQuery = this.UseQuery<List<SliplaneServiceEvent>?, (string, string, string)>(
-            key: ("events", projectId, service.Id),
-            fetcher: async _ => await client.GetServiceEventsAsync(_apiToken, projectId, service.Id),
-            options: new QueryOptions { RefreshInterval = TimeSpan.FromSeconds(3), KeepPrevious = true });
-            
-        var events = eventsQuery.Value ?? new List<SliplaneServiceEvent>();
-        var (statusLabel, _, eventType) = ServicesView.GetServiceStatus(service, events);
-
-        var basicModel = new
-        {
-            Project = projectName,
-            Name = service.Name,
-            Status = statusLabel,
-            ServerId = service.ServerId,
-            Image = service.Image ?? "—",
-            Port = service.Port?.ToString() ?? "—",
-            Created = service.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
-            Updated = service.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—"
-        };
-
-        var deploymentModel = new
-        {
-            Url = dep?.Url ?? "—",
-            Branch = dep?.Branch ?? "—",
-            Dockerfile = dep?.DockerfilePath ?? "—",
-            Context = dep?.DockerContext ?? "—",
-            AutoDeploy = dep?.AutoDeploy == true ? "Yes" : "No"
-        };
-
-        var networkModel = new
-        {
-            Public = net?.Public == true ? "Yes" : "No",
-            Protocol = net?.Protocol ?? "—",
-            ManagedDomain = net?.ManagedDomain ?? "—",
-            InternalDomain = net?.InternalDomain ?? "—"
-        };
-
-        bool isResumingOrSuspending = eventType == "service_suspend" || eventType == "service_resume";
-        var isPaused = statusLabel == "suspended";
-        var pauseLabel = isPaused ? "Resume" : "Pause";
-
-        var (editSheetView, openEditSheet) = this.UseTrigger((IState<bool> isOpen) =>
-            new EditServiceSheet(isOpen, _apiToken, projectId, projectName, service, _selection));
-
-        var footer = Layout.Horizontal()
-            | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).OnClick(_ => openEditSheet())
-            | new Button(pauseLabel).Icon(isPaused ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(busy.Value || isResumingOrSuspending)
-                .OnClick(async _ => 
-                {
-                    if (busy.Value || isResumingOrSuspending) return;
-                    busy.Set(true);
-                    try
-                    {
-                        SliplaneService updatedService;
-                        if (isPaused)
-                        {
-                            await client.UnpauseServiceAsync(_apiToken, projectId, service.Id);
-                            // Optimistic local update so the sheet status changes immediately
-                            updatedService = service with { Status = "live" };
-                        }
-                        else
-                        {
-                            await client.PauseServiceAsync(_apiToken, projectId, service.Id);
-                            // Optimistic local update so the sheet status changes immediately
-                            updatedService = service with { Status = "suspended" };
-                        }
-
-                        // Ensure selection uses the updated service instance so Build() re-runs with new status
-                        _selection.Set((projectId, projectName, updatedService));
-
-                        // Refresh local events so the status text in the sheet updates quickly
-                        eventsQuery.Mutator.Revalidate();
-
-                        // Also notify the main list via JSON payload so that the DataTable
-                        // can optimistically patch the full service (name, status, etc.).
-                        await refreshSender.Send("service-json:" + JsonSerializer.Serialize(updatedService));
-                    }
-                    finally { busy.Set(false); }
-                })
-            | new Button("Delete", onClick: async _ => 
-                {
-                    if (busy.Value) return;
-                    busy.Set(true);
-                    try
-                    {
-                        await client.DeleteServiceAsync(_apiToken, projectId, service.Id);
-                        _isOpen.Set(false);
-                        await refreshSender.Send("services");
-                    }
-                    finally { busy.Set(false); }
-                })
-                .Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(busy.Value)
-                .WithConfirm("Are you sure you want to delete this service?", "Delete service");
-
-        var body = Layout.Vertical()
-            | basicModel.ToDetails()
-            | Text.H4("Deployment")
-            | deploymentModel.ToDetails()
-            | Text.H4("Network")
-            | networkModel.ToDetails()
-            | (service.Domains?.Count > 0 == true
-                ? Layout.Vertical()
-                    | Text.H4("Domains")
-                    | (Layout.Vertical() | service.Domains.Select(d => Text.Block($"{d.Domain} (custom: {d.IsCustom})")).ToArray<object>())
-                : Layout.Vertical());
-
-        if (!_isOpen.Value)
-            return null;
-
-        var sheetBody = new FooterLayout(footer, body);
-        return new Fragment(
-            new Sheet(_ => _isOpen.Set(false), sheetBody, title: $"Service: {service.Name}").Width(Size.Fraction(1 / 3f)),
-            editSheetView
-        );
-    }
-}
-
-/// <summary>
 /// Sheet to PATCH service: name, deployment, env, healthcheck, cmd.
 /// </summary>
 public class EditServiceSheet : ViewBase
@@ -487,7 +341,7 @@ public class EditServiceSheet : ViewBase
         var dockerContext = this.UseState(dep?.DockerContext ?? ".");
         var autoDeploy = this.UseState(dep?.AutoDeploy ?? true);
         var cmd = this.UseState(string.Empty);
-        var healthcheck = this.UseState(string.Empty);
+        var healthcheck = this.UseState(_service.Healthcheck ?? string.Empty);
         var busy = this.UseState(false);
         var error = this.UseState<string?>(() => (string?)null);
         var envList = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());

@@ -64,7 +64,8 @@ public record SliplaneService(
     SliplaneServiceResources? Resources,
     [property: JsonPropertyName("network")] SliplaneServiceNetwork? Network,
     [property: JsonPropertyName("deployment")] SliplaneServiceDeployment? Deployment,
-    [property: JsonPropertyName("serverId")] string? ServerId
+    [property: JsonPropertyName("serverId")] string? ServerId,
+    [property: JsonPropertyName("healthcheck")] string? Healthcheck = null
 );
 
 public record SliplaneServiceDomain(
