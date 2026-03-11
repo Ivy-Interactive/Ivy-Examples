@@ -210,5 +210,6 @@ public record UpdateRegistryCredentialRequest(
 public record SliplaneOverview(
     List<SliplaneProject> Projects,
     List<SliplaneServer> Servers,
-    Dictionary<string, List<SliplaneService>> ServicesByProject
+    Dictionary<string, List<SliplaneService>> ServicesByProject,
+    Dictionary<string, List<SliplaneServiceEvent>>? EventsByService = null
 );

@@ -46,17 +46,6 @@ public class ServicesView : ViewBase
         fetcher: async ct =>
         {
             var result = await client.GetOverviewAsync(_apiToken);
-            try
-            {
-                var summary = result == null
-                    ? "null overview"
-                    : $"projects={result.Projects?.Count ?? 0}, servers={result.Servers?.Count ?? 0}, servicesByProject={result.ServicesByProject?.Count ?? 0}";
-                Console.WriteLine($"[ServicesView] GetOverviewAsync result: {summary}");
-            }
-            catch
-            {
-                // ignore logging failures
-            }
 
             // Tell the DataTable to re-read rows after each successful fetch.
             refreshToken.Refresh();
@@ -71,18 +60,17 @@ public class ServicesView : ViewBase
 
     // Current data for the table derived directly from overviewQuery
     var overview = overviewQuery.Value;
-    var currentServices = overview == null
-        ? new List<(string ProjectId, string ProjectName, SliplaneService Service)>()
-        : overview.ServicesByProject
-            .SelectMany(kv =>
-            {
-                var projectName = overview.Projects.FirstOrDefault(p => p.Id == kv.Key)?.Name ?? kv.Key;
-                return kv.Value.Select(svc => (ProjectId: kv.Key, ProjectName: projectName, Service: svc));
-            })
-            .ToList();
-    Console.WriteLine($"[ServicesView] currentServices.Count = {currentServices.Count}");
+        var currentServices = overview == null
+            ? new List<(string ProjectId, string ProjectName, SliplaneService Service)>()
+            : overview.ServicesByProject
+                .SelectMany(kv =>
+                {
+                    var projectName = overview.Projects.FirstOrDefault(p => p.Id == kv.Key)?.Name ?? kv.Key;
+                    return kv.Value.Select(svc => (ProjectId: kv.Key, ProjectName: projectName, Service: svc));
+                })
+                .ToList();
     var currentServers  = overview?.Servers ?? new List<SliplaneServer>();
-    var eventsByService = new Dictionary<string, List<SliplaneServiceEvent>>(); // no separate events polling yet
+    var eventsByService = overview?.EventsByService ?? new Dictionary<string, List<SliplaneServiceEvent>>();
 
     // ── build rows (pure – no hooks) ──────────────────────────────────────
     var rows = BuildServiceRows(currentServices, currentServers, eventsByService);
@@ -112,22 +100,26 @@ public class ServicesView : ViewBase
         .RefreshToken(refreshToken)
         .Height(Size.Full())
         .Hidden(r => r.ServiceId)
-        .Header(r => r.Name,         "Service")
-        .Header(r => r.Project,      "Project")
-        .Header(r => r.Server,       "Server")
-        .Header(r => r.StatusIcon,   "Status")
-        .Header(r => r.Status,       "Status text")
-        .Header(r => r.LastUpdated,  "Last updated")
+        .Header(r => r.Name, "Service")
+        .Header(r => r.Project, "Project")
+        .Header(r => r.Server, "Server")
+        .Header(r => r.StatusIcon, "Icon")
+        .Header(r => r.Status, "Name")
+        .Header(r => r.LastUpdated, "Last updated")
         .Header(r => r.DeployStatus, "Logs")
-        .Header(r => r.Url,          "URL")
-        .Group(r => r.Name,         "Identity")
-        .Group(r => r.Project,      "Identity")
-        .Group(r => r.Server,       "Identity")
-        .Group(r => r.StatusIcon,   "Status")
-        .Group(r => r.Status,       "Status")
-        .Group(r => r.LastUpdated,  "Deploy")
+        .Header(r => r.Url, "URL")
+        .Group(r => r.Name, "Identity")
+        .Group(r => r.Project, "Identity")
+        .Group(r => r.Server, "Identity")
+        .Group(r => r.StatusIcon, "Status")
+        .Group(r => r.Status, "Status")
+        .Group(r => r.LastUpdated, "Deploy")
         .Group(r => r.DeployStatus, "Deploy")
-        .Group(r => r.Url,          "Routing")
+        .Group(r => r.Url, "Routing")
+        .Width(r => r.StatusIcon, Size.Px(50))
+        .Width(r => r.Status, Size.Px(120))
+        .Width(r => r.LastUpdated, Size.Px(130))
+        .Width(r => r.DeployStatus, Size.Px(200))
         .Config(config =>
         {
             config.ShowGroups      = true;
@@ -141,8 +133,8 @@ public class ServicesView : ViewBase
         .OnRowAction(async e =>
         {
             var args = e.Value;
-            if (args?.Id is null) return;
-            var id = args.Id.ToString() ?? string.Empty;
+            if (args is null) return;
+            var id = args.Id?.ToString() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(id)) return;
 
             var match = currentServices.FirstOrDefault(cs => cs.Service.Id == id);
@@ -211,6 +203,21 @@ public class ServicesView : ViewBase
     }
 
     /// <summary>
+    /// Converts a raw Sliplane event type string to a human-readable log label.
+    /// </summary>
+    private static string FormatEventType(string? type) => type switch
+    {
+        "service_resume_success"  => "Service resumed successfully",
+        "service_resume"          => "Service resume requested",
+        "service_suspend_success" => "Service suspended successfully",
+        "service_suspend"         => "Service suspension requested",
+        "service_deploy_success"  => "Service deployed successfully",
+        "service_deploy"          => "Service deploy started",
+        "service_deploy_failed"   => "Service deploy failed",
+        _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
+    };
+
+    /// <summary>
     /// Pure function – builds ServiceRow[] from already-loaded data.
     /// Must NOT call any Ivy hooks (UseQuery, UseState, UseEffect, …).
     /// </summary>
@@ -239,11 +246,24 @@ public class ServicesView : ViewBase
                 string deployStatus = "—";
                 if (events.Count > 0)
                 {
-                    var latest = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
-                    if (latest != null)
-                        deployStatus = string.IsNullOrWhiteSpace(latest.Message)
-                            ? latest.Type ?? "Event"
-                            : latest.Message;
+                    // Format each event as:
+                    //   Service resumed successfully
+                    //   11.03.2026, 16:47:19
+                    //   triggered by manual deploy
+                    deployStatus = string.Join("\n\n",
+                        events
+                            .OrderByDescending(e => e.CreatedAt)
+                            .Take(10)
+                            .Select(e =>
+                            {
+                                var label = string.IsNullOrWhiteSpace(e.Message)
+                                    ? FormatEventType(e.Type)
+                                    : e.Message;
+                                var dateStr = e.CreatedAt.ToLocalTime()
+                                    .ToString("dd.MM.yyyy, HH:mm:ss");
+                                var trigger = "triggered by manual deploy";
+                                return $"{label}\n{dateStr}\n{trigger}";
+                            }));
                 }
 
                 var siteUrl = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
