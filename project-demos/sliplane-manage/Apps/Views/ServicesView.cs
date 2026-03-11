@@ -30,14 +30,19 @@ public class ServicesView : ViewBase
     }
 
     public override object? Build()
-{
-    // ── infrastructure ────────────────────────────────────────────────────
-    var client          = this.UseService<SliplaneApiClient>();
-    var refreshToken    = this.UseRefreshToken();
-    var serviceDetailOpen      = this.UseState(false);
-    var serviceDetailSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
-    var (createSheetView, openCreateSheet) = this.UseTrigger(
-        (IState<bool> isOpen) => new CreateServiceSheet(isOpen, _apiToken, _projects));
+    {
+        // ── infrastructure ────────────────────────────────────────────────────
+        var client          = this.UseService<SliplaneApiClient>();
+        var refreshToken    = this.UseRefreshToken();
+        var serviceDetailOpen      = this.UseState(false);
+        var serviceDetailSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
+        var (createSheetView, openCreateSheet) = this.UseTrigger(
+            (IState<bool> isOpen) => new CreateServiceSheet(isOpen, _apiToken, _projects));
+        var (alertView, showAlert) = this.UseAlert();
+        var deleteDialogOpen = this.UseState(false);
+        var deleteSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
+        var deleteCommandInput = this.UseState(string.Empty);
+        var deleteCommandError = this.UseState<string?>(() => (string?)null);
 
     // ── 1) data loading: UseQuery with polling ───────────────────────────────
     var overviewKey = $"overview:{_apiToken}";
@@ -54,7 +59,7 @@ public class ServicesView : ViewBase
         options: new QueryOptions
         {
             KeepPrevious = true,
-            RefreshInterval = TimeSpan.FromSeconds(3),
+            RefreshInterval = TimeSpan.FromSeconds(1),
             RevalidateOnMount = true
         });
 
@@ -80,6 +85,44 @@ public class ServicesView : ViewBase
     {
         serviceDetailSelection.Set((projectId, projectName, svc));
         serviceDetailOpen.Set(true);
+    }
+
+    async Task PauseServiceAsync(string projectId, SliplaneService svc)
+    {
+        bool IsPausedStatus(string? s) =>
+            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
+
+        if (IsPausedStatus(svc.Status))
+        {
+            showAlert(
+                $"Service \"{svc.Name}\" is already paused.",
+                async _ => { await Task.CompletedTask; },
+                "Pause service");
+            return;
+        }
+
+        await client.PauseServiceAsync(_apiToken, projectId, svc.Id);
+        refreshToken.Refresh();
+    }
+
+    async Task ResumeServiceAsync(string projectId, SliplaneService svc)
+    {
+        bool IsPausedStatus(string? s) =>
+            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
+
+        if (!IsPausedStatus(svc.Status))
+        {
+            showAlert(
+                $"Service \"{svc.Name}\" is already running.",
+                async _ => { await Task.CompletedTask; },
+                "Resume service");
+            return;
+        }
+
+        await client.UnpauseServiceAsync(_apiToken, projectId, svc.Id);
+        refreshToken.Refresh();
     }
 
     var selectedForEdit = serviceDetailSelection.Value;
@@ -134,20 +177,116 @@ public class ServicesView : ViewBase
             config.ShowSearch      = true;
             config.SelectionMode   = SelectionModes.Rows;
         })
-        .RowActions(MenuItem.Default(Icons.Pencil, "Edit").Label("Edit"))
-        .OnRowAction(async e =>
+        .RowActions(
+            MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
+            MenuItem.Default(Icons.Trash2, "delete").Tag("delete"),
+            MenuItem.Default(Icons.EllipsisVertical, "more")
+                .Children([
+                    MenuItem.Default(Icons.Pause, "pause").Label("Pause").Tag("pause"),
+                    MenuItem.Default(Icons.Play, "resume").Label("Resume").Tag("resume"),
+                    MenuItem.Default(Icons.FileText, "logs").Label("Logs").Tag("logs"),
+                    MenuItem.Default(Icons.Calendar, "events").Label("Events").Tag("events")
+                ]))
+        .OnRowAction(e =>
         {
             var args = e.Value;
-            if (args is null) return;
+            if (args is null) return ValueTask.CompletedTask;
+            var tag = args.Tag?.ToString();
             var id = args.Id?.ToString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(id)) return;
+            if (string.IsNullOrWhiteSpace(id)) return ValueTask.CompletedTask;
 
             var match = currentServices.FirstOrDefault(cs => cs.Service.Id == id);
-            if (match.Service == null || string.IsNullOrWhiteSpace(match.ProjectId)) return;
-            ShowServiceSheet(match.ProjectId, match.ProjectName, match.Service);
-            await ValueTask.CompletedTask;
+            if (match.Service == null || string.IsNullOrWhiteSpace(match.ProjectId)) return ValueTask.CompletedTask;
+
+            if (tag == "edit")
+            {
+                ShowServiceSheet(match.ProjectId, match.ProjectName, match.Service);
+                return ValueTask.CompletedTask;
+            }
+
+            if (tag == "delete")
+            {
+                deleteSelection.Set((match.ProjectId, match.ProjectName, match.Service));
+                deleteCommandInput.Set(string.Empty);
+                deleteCommandError.Set((string?)null);
+                deleteDialogOpen.Set(true);
+                return ValueTask.CompletedTask;
+            }
+
+            if (tag == "pause")
+            {
+                _ = PauseServiceAsync(match.ProjectId, match.Service);
+                return ValueTask.CompletedTask;
+            }
+
+            if (tag == "resume")
+            {
+                _ = ResumeServiceAsync(match.ProjectId, match.Service);
+                return ValueTask.CompletedTask;
+            }
+
+            if (tag == "logs")
+            {
+                showAlert($"Logs for service \"{match.Service.Name}\" can be viewed from the Projects view.", async _ => { await Task.CompletedTask; }, "Logs");
+                return ValueTask.CompletedTask;
+            }
+
+            if (tag == "events")
+            {
+                showAlert($"Events for service \"{match.Service.Name}\" can be viewed from the Projects view.", async _ => { await Task.CompletedTask; }, "Events");
+                return ValueTask.CompletedTask;
+            }
+
+            return ValueTask.CompletedTask;
         })
         .Renderer(e => e.Url, new LinkDisplayRenderer { Type = LinkDisplayType.Url });
+
+    Dialog? deleteDialog = null;
+    if (deleteDialogOpen.Value && deleteSelection.Value is { } del)
+    {
+        async Task ConfirmDeleteAsync()
+        {
+            var expectedName = del.Service.Name ?? string.Empty;
+            if (!string.Equals(deleteCommandInput.Value?.Trim(), expectedName, StringComparison.Ordinal))
+            {
+                deleteCommandError.Set("Service name does not match. Please type it exactly.");
+                return;
+            }
+
+            deleteCommandError.Set((string?)null);
+            await client.DeleteServiceAsync(_apiToken, del.ProjectId, del.Service.Id);
+            CloseDeleteDialog();
+            refreshToken.Refresh();
+        }
+
+        void CloseDeleteDialog()
+        {
+            deleteDialogOpen.Set(false);
+            deleteSelection.Set(((string ProjectId, string ProjectName, SliplaneService Service)?)null);
+            deleteCommandInput.Set(string.Empty);
+            deleteCommandError.Set((string?)null);
+        }
+
+        var deleteBody = Layout.Vertical()
+            | Text.Markdown($"If you want to delete this service, type the following service name: **`{del.Service.Name}`**")
+            | deleteCommandInput.ToTextInput().Placeholder("Enter service name here")
+            | (deleteCommandError.Value is { Length: > 0 } errMsg
+                ? (object)new Callout(errMsg, variant: CalloutVariant.Error)
+                : Layout.Vertical());
+
+        var deleteFooter = new DialogFooter(
+            new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => CloseDeleteDialog()),
+            new Button("Delete")
+                .Destructive()
+                .Icon(Icons.Trash2)
+                .OnClick(async _ => await ConfirmDeleteAsync()));
+
+        deleteDialog = new Dialog(
+            onClose: (Event<Dialog> _) => CloseDeleteDialog(),
+            header: new DialogHeader("Are you sure you want to delete this service?"),
+            body: new DialogBody(deleteBody),
+            footer: deleteFooter);
+    }
 
     object content = currentServices.Count == 0
         ? (object)(Layout.Vertical() | headerRow | new Callout("No services found.", variant: CalloutVariant.Info) | table)
@@ -157,7 +296,9 @@ public class ServicesView : ViewBase
         content,
         addServiceFloat,
         editSheetView,
-        createSheetView);
+        createSheetView,
+        alertView,
+        deleteDialog);
 }
 
     // ── pure data types ────────────────────────────────────────────────────────
@@ -251,10 +392,6 @@ public class ServicesView : ViewBase
                 string deployStatus = "—";
                 if (events.Count > 0)
                 {
-                    // Format each event as:
-                    //   Service resumed successfully
-                    //   11.03.2026, 16:47:19
-                    //   triggered by manual deploy
                     deployStatus = string.Join("\n\n",
                         events
                             .OrderByDescending(e => e.CreatedAt)
