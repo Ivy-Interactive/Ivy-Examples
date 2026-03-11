@@ -184,20 +184,20 @@ public class ServicesView : ViewBase
             var msg = ev.Message ?? string.Empty;
             return ev.Type switch
             {
-                "service_suspend"         => (msg, Icons.LoaderCircle, ev.Type),
-                "service_resume"          => (msg, Icons.LoaderCircle, ev.Type),
-                "service_suspend_success" => ("suspended", Icons.Pause,       ev.Type),
-                "service_resume_success"  => ("live",      Icons.CircleCheck, ev.Type),
+                "service_suspend"         => ("pending",   Icons.Clock, ev.Type),
+                "service_resume"          => ("pending",   Icons.Clock, ev.Type),
+                "service_suspend_success" => ("suspended", Icons.Pause,  ev.Type),
+                "service_resume_success"  => ("live",      Icons.Play,   ev.Type),
                 _                         => (rawStatus,   Icons.MonitorStop, ev.Type)
             };
         }
 
         return rawStatus.ToLowerInvariant() switch
         {
-            "live"                => ("live",      Icons.CircleCheck, null),
-            "suspended" or "paused" => ("suspended", Icons.Pause,    null),
-            "error"     or "failed" => ("error",     Icons.CircleX,  null),
-            "pending"               => ("pending",   Icons.LoaderCircle, null),
+            "live"                   => ("live",      Icons.Play,    null),
+            "suspended" or "paused"  => ("suspended", Icons.Pause,   null),
+            "error"      or "failed" => ("error",     Icons.CircleX, null),
+            "pending"                => ("pending",   Icons.Clock,   null),
             _ => (string.IsNullOrWhiteSpace(rawStatus) ? "—" : rawStatus, Icons.MonitorStop, null)
         };
     }
