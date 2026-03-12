@@ -10,7 +10,6 @@ using SliplaneManage.Models;
 /// ?repo= is captured by RepoCaptureFilter, parsed into a DeployDraft, and pre-fills the form.
 /// </summary>
 [App(
-    id: "sliplane-deploy-app",
     icon: Icons.Rocket,
     title: "Deploy on Sliplane",
     isVisible: false)]
@@ -51,16 +50,28 @@ public class SliplaneDeployApp : ViewBase
         var firstServerQuery = this.UseQuery<SliplaneServer?, (string, string)>(
             key: ("deploy-default-server", apiToken),
             fetcher: async (_, ct) => (await client.GetServersAsync(apiToken)).FirstOrDefault());
+
+        // When user came from deploy button (draft present), ensure project "Ivy" exists and use it.
+        var needIvyProject = draft is not null;
+        var ivyProjectQuery = this.UseQuery<SliplaneProject?, (string, bool)>(
+            key: (apiToken, needIvyProject),
+            fetcher: async (key, ct) =>
+            {
+                var (token, needIvy) = key;
+                if (!needIvy) return null;
+                var projects = await client.GetProjectsAsync(token);
+                var ivy = projects.FirstOrDefault(p => p.Name.Equals("Ivy", StringComparison.OrdinalIgnoreCase));
+                return ivy ?? await client.CreateProjectAsync(token, "Ivy");
+            });
+
         var firstProjectQuery = this.UseQuery<SliplaneProject?, (string, string)>(
             key: ("deploy-default-project", apiToken),
             fetcher: async (_, ct) => (await client.GetProjectsAsync(apiToken)).FirstOrDefault());
 
-        // Pre-seed the lookup-cache keys that DeployView.LookupServer/LookupProject use (reloadCounter=0).
-        // DeployView's AsyncSelect calls these to display the selected option's label.
-        // By seeding them here (with already-loaded data) and waiting for them, DeployView's first render
-        // already has the label data in cache — no "Select a server" flash.
-        var preServerId  = firstServerQuery.Value?.Id  ?? "";
-        var preProjectId = firstProjectQuery.Value?.Id ?? "";
+        // When draft present: use Ivy project (created if missing). Otherwise use first project.
+        var ivyProject   = needIvyProject ? ivyProjectQuery.Value : null;
+        var preServerId  = firstServerQuery.Value?.Id ?? "";
+        var preProjectId = (needIvyProject ? ivyProject?.Id : firstProjectQuery.Value?.Id) ?? "";
 
         var serverLookupPreload = this.UseQuery<Option<string>?, (string, string?, int)>(
             key: ("deploy-server-lookup", string.IsNullOrEmpty(preServerId) ? null : preServerId, 0),
@@ -72,11 +83,13 @@ public class SliplaneDeployApp : ViewBase
             key: ("deploy-project-lookup", string.IsNullOrEmpty(preProjectId) ? null : preProjectId, 0),
             fetcher: async _ => string.IsNullOrEmpty(preProjectId)
                 ? null
-                : new Option<string>(firstProjectQuery.Value!.Name, preProjectId));
+                : new Option<string>((needIvyProject ? ivyProject?.Name : firstProjectQuery.Value?.Name) ?? "Ivy", preProjectId));
 
         var needDefaults     = draft is not null;
         var serversReady     = !firstServerQuery.Loading   || firstServerQuery.Value   != null;
-        var projectsReady    = !firstProjectQuery.Loading  || firstProjectQuery.Value  != null;
+        var projectsReady    = needIvyProject
+            ? (!ivyProjectQuery.Loading || ivyProjectQuery.Value != null)
+            : (!firstProjectQuery.Loading || firstProjectQuery.Value != null);
         var serverLkpReady   = string.IsNullOrEmpty(preServerId)  || !serverLookupPreload.Loading  || serverLookupPreload.Value  != null;
         var projectLkpReady  = string.IsNullOrEmpty(preProjectId) || !projectLookupPreload.Loading || projectLookupPreload.Value != null;
 
