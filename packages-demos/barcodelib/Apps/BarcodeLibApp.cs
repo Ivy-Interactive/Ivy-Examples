@@ -42,7 +42,7 @@ namespace BarcodeLibExample.Apps
             }, "image/png", "barcode.png");
 
             var typeItems = Symbologies
-                .Select((item, idx) => MenuItem.Default(item.Label).HandleSelect(() => typeIndex.Value = idx))
+                .Select((item, idx) => MenuItem.Default(item.Label).OnSelect(() => typeIndex.Value = idx))
                 .ToArray();
 
             var typeDropDown = new Button(Symbologies[typeIndex.Value].Label)
