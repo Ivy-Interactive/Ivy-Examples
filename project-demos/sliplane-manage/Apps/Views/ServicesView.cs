@@ -64,9 +64,17 @@ public class ServicesView : ViewBase
         options: new QueryOptions
         {
             KeepPrevious = true,
-            RefreshInterval = TimeSpan.FromSeconds(1),
+            RefreshInterval = TimeSpan.FromSeconds(3),
             RevalidateOnMount = true
         });
+
+    // ── React to SliplaneRefreshSignal (sent by Create/Edit sheets) ──────────
+    var signalReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
+    this.UseEffect(() => signalReceiver.Receive(_ =>
+    {
+        overviewQuery.Mutator.Revalidate();
+        return new Unit();
+    }));
 
     // Current data for the table derived directly from overviewQuery
     var overview = overviewQuery.Value;
@@ -108,7 +116,7 @@ public class ServicesView : ViewBase
         }
 
         await client.PauseServiceAsync(_apiToken, projectId, svc.Id);
-        refreshToken.Refresh();
+        overviewQuery.Mutator.Revalidate();
     }
 
     async Task ResumeServiceAsync(string projectId, SliplaneService svc)
@@ -127,7 +135,7 @@ public class ServicesView : ViewBase
         }
 
         await client.UnpauseServiceAsync(_apiToken, projectId, svc.Id);
-        refreshToken.Refresh();
+        overviewQuery.Mutator.Revalidate();
     }
 
     var selectedForEdit = serviceDetailSelection.Value;
@@ -274,7 +282,7 @@ public class ServicesView : ViewBase
             deleteCommandError.Set((string?)null);
             await client.DeleteServiceAsync(_apiToken, del.ProjectId, del.Service.Id);
             CloseDeleteDialog();
-            refreshToken.Refresh();
+            overviewQuery.Mutator.Revalidate();
         }
 
         void CloseDeleteDialog()
@@ -1022,18 +1030,21 @@ public class EditServiceSheet : ViewBase
 /// <summary>
 /// Sheet to create a new service with all Sliplane API fields (deployment, network, cmd, healthcheck, env, volumes).
 /// Uses FooterLayout and plain sections (no Cards).
+/// When fixedProjectId is set, project selector is disabled (used from Projects view).
 /// </summary>
 public class CreateServiceSheet : ViewBase
 {
     private readonly IState<bool> _isOpen;
     private readonly string _apiToken;
     private readonly List<SliplaneProject> _projects;
+    private readonly string? _fixedProjectId;
 
-    public CreateServiceSheet(IState<bool> isOpen, string apiToken, List<SliplaneProject> projects)
+    public CreateServiceSheet(IState<bool> isOpen, string apiToken, List<SliplaneProject> projects, string? fixedProjectId = null)
     {
         _isOpen = isOpen;
         _apiToken = apiToken;
         _projects = projects;
+        _fixedProjectId = fixedProjectId;
     }
 
     public override object? Build()
@@ -1041,7 +1052,7 @@ public class CreateServiceSheet : ViewBase
         var client = this.UseService<SliplaneApiClient>();
         var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
         var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
-        var selectedProjectId = this.UseState(string.Empty);
+        var selectedProjectId = this.UseState(_fixedProjectId ?? string.Empty);
         var name = this.UseState(string.Empty);
         var serverId = this.UseState(string.Empty);
         var gitRepo = this.UseState(string.Empty);
@@ -1183,9 +1194,10 @@ public class CreateServiceSheet : ViewBase
             }
         }
 
+        var projectInput = selectedProjectId.ToAsyncSelectInput(QueryProjects, LookupProject, placeholder: "Search project...");
         var basicSection = Layout.Vertical()
             | Text.H4("Basic")
-            | selectedProjectId.ToAsyncSelectInput(QueryProjects, LookupProject, placeholder: "Search project...")
+            | (_fixedProjectId != null ? projectInput.Disabled() : projectInput)
             | name.ToTextInput().Placeholder("Service name")
             | serverId.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server...");
 

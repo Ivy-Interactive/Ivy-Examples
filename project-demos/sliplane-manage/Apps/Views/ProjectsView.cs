@@ -4,733 +4,716 @@ using SliplaneManage.Models;
 using SliplaneManage.Services;
 using Ivy.Helpers;
 
-/// <summary>
-/// Full projects management view: list, create, rename, delete.
-/// </summary>
+// ProjectsView: Blades, left = project list, right = details.
+
+/// <summary>Projects view — Blades master-detail navigation.</summary>
 public class ProjectsView : ViewBase
 {
     private readonly string _apiToken;
 
-    public ProjectsView(string apiToken)
+    public ProjectsView(string apiToken) => _apiToken = apiToken;
+
+    public override object? Build() =>
+        this.UseBlades(() => new ProjectListBlade(_apiToken), "Projects");
+}
+
+
+/// <summary>Project list with service-count badges, add-project dialog.</summary>
+public class ProjectListBlade : ViewBase
+{
+    private readonly string _apiToken;
+    public ProjectListBlade(string apiToken) => _apiToken = apiToken;
+
+    public override object? Build()
     {
-        _apiToken = apiToken;
+        var client       = this.UseService<SliplaneApiClient>();
+        var blades       = this.UseContext<IBladeService>();
+        var refreshToken = this.UseRefreshToken();
+
+        var filter = this.UseState(string.Empty);
+        var version = this.UseState(0);
+        var overviewQuery = this.UseQuery<SliplaneOverview?, (string, int)>(
+            key: ("projects-overview", version.Value),
+            fetcher: async ct => await client.GetOverviewAsync(_apiToken),
+            options: new QueryOptions
+            {
+                RefreshInterval   = TimeSpan.FromSeconds(15),
+                RevalidateOnMount = true,
+                KeepPrevious      = true
+            });
+
+        // Reload on child blade change
+        this.UseEffect(() =>
+        {
+            if (refreshToken.IsRefreshed)
+                version.Set(version.Value + 1);
+        }, [refreshToken]);
+
+        var showAddDialog  = this.UseState(false);
+        var newProjectName = this.UseState(string.Empty);
+        var addBusy        = this.UseState(false);
+        var addError       = this.UseState<string?>(() => null);
+
+        async Task CreateProjectAsync()
+        {
+            if (addBusy.Value) return;
+            if (string.IsNullOrWhiteSpace(newProjectName.Value)) { addError.Set("Enter project name."); return; }
+            addError.Set((string?)null);
+            addBusy.Set(true);
+            try
+            {
+                await client.CreateProjectAsync(_apiToken, newProjectName.Value.Trim());
+                newProjectName.Set(string.Empty);
+                showAddDialog.Set(false);
+                version.Set(version.Value + 1);
+            }
+            catch (Exception ex) { addError.Set(ex.Message); }
+            finally { addBusy.Set(false); }
+        }
+
+        var headerBar = Layout.Horizontal().Gap(1)
+            | filter.ToSearchInput().Placeholder("Search projects…").Width(Size.Grow())
+            | new Button().Icon(Icons.Plus).Ghost()
+                .OnClick(_ =>
+                {
+                    newProjectName.Set(string.Empty);
+                    addError.Set((string?)null);
+                    showAddDialog.Set(true);
+                });
+
+        object listContent;
+        if (overviewQuery.Loading && overviewQuery.Value == null)
+        {
+            listContent = Layout.Center() | Text.Muted("Loading projects…");
+        }
+        else if (overviewQuery.Error is { } qErr)
+        {
+            listContent = new Callout($"Error: {qErr.Message}", variant: CalloutVariant.Error);
+        }
+        else
+        {
+            var overview = overviewQuery.Value;
+            var projects = overview?.Projects ?? new List<SliplaneProject>();
+            var servers  = overview?.Servers  ?? new List<SliplaneServer>();
+            var servicesByProject = overview?.ServicesByProject
+                                    ?? new Dictionary<string, List<SliplaneService>>();
+
+            if (!string.IsNullOrWhiteSpace(filter.Value))
+            {
+                var term = filter.Value.Trim();
+                projects = projects
+                    .Where(p => p.Name?.Contains(term, StringComparison.OrdinalIgnoreCase) == true)
+                    .ToList();
+            }
+
+            if (projects.Count == 0)
+            {
+                listContent = new Callout("No projects yet. Click \"Add project\" to create one.", variant: CalloutVariant.Info);
+            }
+            else
+            {
+                var items = projects.Select(p =>
+                {
+                    servicesByProject.TryGetValue(p.Id, out var svcList);
+                    svcList ??= new List<SliplaneService>();
+                    var count = svcList.Count;
+
+                    string? serverLabel = null;
+                    var firstServerId = svcList.FirstOrDefault()?.ServerId;
+                    if (!string.IsNullOrWhiteSpace(firstServerId))
+                    {
+                        serverLabel = servers.FirstOrDefault(s => s.Id == firstServerId)?.Name
+                                      ?? firstServerId;
+                    }
+
+                    var subtitle = $"{count} service" + (count == 1 ? string.Empty : "s");
+                    var icon = count > 0 ? Icons.FolderOpen : Icons.Folder;
+
+                    return new ListItem(
+                        title:    p.Name,
+                        subtitle: subtitle,
+                        icon:     icon,
+                        onClick:  _ => blades.Push(this, new ProjectDetailsBlade(_apiToken, p, refreshToken), p.Name, width: Size.Units(260)));
+                });
+
+                listContent = new List(items);
+            }
+        }
+
+                Dialog? addDialog = null;
+        if (showAddDialog.Value)
+        {
+            addDialog = new Dialog(
+                onClose: (Event<Dialog> _) =>
+                {
+                    showAddDialog.Set(false);
+                    addError.Set((string?)null);
+                },
+                header: new DialogHeader("Add project"),
+                body: new DialogBody(
+                    Layout.Vertical()
+                    | newProjectName.ToTextInput().Placeholder("Project name")
+                    | (addError.Value is { Length: > 0 } e
+                        ? (object)new Callout(e, variant: CalloutVariant.Error)
+                        : Layout.Vertical())),
+                footer: new DialogFooter(
+                    new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => showAddDialog.Set(false)),
+                    new Button("Create").Icon(Icons.Plus).Primary().Loading(addBusy.Value)
+                        .OnClick(async _ => await CreateProjectAsync()))
+            ).Width(Size.Units(120));
+        }
+
+        return new Fragment()
+               | new BladeHeader(headerBar)
+               | listContent
+               | addDialog;
+    }
+}
+/// <summary>Project details: services DataTable, edit/create sheets, logs/events.</summary>
+public class ProjectDetailsBlade : ViewBase
+{
+    private readonly string         _apiToken;
+    private readonly SliplaneProject _project;
+    private readonly RefreshToken   _parentRefreshToken;
+
+    public ProjectDetailsBlade(string apiToken, SliplaneProject project, RefreshToken parentRefreshToken)
+    {
+        _apiToken           = apiToken;
+        _project            = project;
+        _parentRefreshToken = parentRefreshToken;
     }
 
     public override object? Build()
     {
-        var client   = this.UseService<SliplaneApiClient>();
-        var refreshSender   = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
-        var refreshReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
-        var projects = this.UseState<List<SliplaneProject>>();
-        var loading  = this.UseState(true);
-        var error    = this.UseState<string?>();
-        var creating = this.UseState(false);
-        var newName  = this.UseState(string.Empty);
-        var busy     = this.UseState(false);
-        var serviceCounts = this.UseState<Dictionary<string, int>>(() => new Dictionary<string, int>());
-        var servers = this.UseState<List<SliplaneServer>>();
-        var selectedProject = this.UseState<SliplaneProject?>(() => null);
-        var services = this.UseState<List<SliplaneService>?>(() => null);
-        var servicesLoading = this.UseState(false);
-        var servicesError = this.UseState<string?>();
-        var selectedServiceForEdit = this.UseState<SliplaneService?>(() => null);
-        var selectedServiceForLogs = this.UseState<SliplaneService?>(() => null);
-        var selectedServiceForView = this.UseState<SliplaneService?>(() => null);
-        var selectedServiceForEvents = this.UseState<SliplaneService?>(() => null);
-        var editSheetOpen = this.UseState(false);
-        var logsSheetOpen = this.UseState(false);
-        var viewSheetOpen = this.UseState(false);
-        var eventsSheetOpen = this.UseState(false);
-        var serviceLogs = this.UseState<List<SliplaneServiceLog>?>(() => null);
-        var serviceLogsLoading = this.UseState(false);
-        var serviceLogsError = this.UseState<string?>();
-        var serviceDetailsForView = this.UseState<SliplaneService?>(() => null);
-        var serviceDetailsForViewLoading = this.UseState(false);
-        var serviceDetailsForViewError = this.UseState<string?>();
-        var viewSheetBusy = this.UseState(false);
-        var serviceEvents = this.UseState<List<SliplaneServiceEvent>?>(() => null);
-        var serviceEventsLoading = this.UseState(false);
-        var serviceEventsError = this.UseState<string?>();
-        var createServiceSheetOpen = this.UseState(false);
-        var refreshTick = this.UseState(0);
-        var showAddProjectDialog = this.UseState(false);
-        var newProjectName = this.UseState(string.Empty);
-        var addProjectBusy = this.UseState(false);
-        var addProjectError = this.UseState<string?>(() => (string?)null);
+        var client    = this.UseService<SliplaneApiClient>();
+        var blades    = this.UseContext<IBladeService>();
+        var (alertView, showAlert) = this.UseAlert();
+        var refreshToken = this.UseRefreshToken();
 
-        async Task LoadProjectsAsync()
+                var overviewQuery = this.UseQuery<SliplaneOverview?, (string, string)>(
+            key: ("proj-detail-overview", _project.Id),
+            fetcher: async ct =>
+            {
+                var result = await client.GetOverviewAsync(_apiToken);
+                // Refresh DataTable rows
+                refreshToken.Refresh();
+                return result;
+            },
+            options: new QueryOptions
+            {
+                RefreshInterval   = TimeSpan.FromSeconds(3),
+                RevalidateOnMount = true,
+                KeepPrevious      = true
+            });
+
+        var overview = overviewQuery.Value;
+        List<SliplaneService>? rawServices = null;
+        overview?.ServicesByProject.TryGetValue(_project.Id, out rawServices);
+        var services        = rawServices ?? new List<SliplaneService>();
+        var servers         = overview?.Servers ?? new List<SliplaneServer>();
+        var eventsByService = overview?.EventsByService ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+
+        void Reload()
         {
-            try
-            {
-                var list = await client.GetProjectsAsync(_apiToken);
-                projects.Set(list);
-            }
-            catch (Exception ex)
-            {
-                error.Set(ex.Message);
-            }
-            finally
-            {
-                loading.Set(false);
-            }
+            overviewQuery.Mutator.Revalidate();
+            _parentRefreshToken.Refresh();
         }
 
-        this.UseEffect(async () => await LoadProjectsAsync());
-        this.UseEffect(async () => await LoadProjectsAsync(), refreshTick);
+                var createSheetOpen  = this.UseState(false);
+        var editSheetOpen    = this.UseState(false);
+        var selectedForEdit  = this.UseState<SliplaneService?>(() => null);
+        var logsSheetOpen    = this.UseState(false);
+        var logsSelection    = this.UseState<(string ServiceName, string ServiceId)?>(() => null);
+        var eventsSheetOpen  = this.UseState(false);
+        var eventsSelection  = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
+        var deleteDialogOpen = this.UseState(false);
+        var deleteSelection  = this.UseState<SliplaneService?>(() => null);
+        var deleteInput      = this.UseState(string.Empty);
+        var deleteInputError = this.UseState<string?>(() => null);
+        var deleteBusy       = this.UseState(false);
+        var deleteProjectDialogOpen = this.UseState(false);
+        var deleteProjectInput      = this.UseState(string.Empty);
+        var deleteProjectInputError = this.UseState<string?>(() => null);
 
-        this.UseEffect(() => refreshReceiver.Receive(_ =>
+        object? createSheet = createSheetOpen.Value
+            ? new CreateServiceSheet(createSheetOpen, _apiToken, [], _project.Id)
+            : null;
+
+        var selectionState = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
+        this.UseEffect(() =>
         {
-            refreshTick.Set(refreshTick.Value + 1);
+            if (selectedForEdit.Value is { } svc)
+                selectionState.Set((_project.Id, _project.Name ?? string.Empty, svc));
+            else
+                selectionState.Set(((string, string, SliplaneService)?)null);
+        }, [selectedForEdit]);
+        this.UseEffect(() =>
+        {
+            if (!editSheetOpen.Value)
+            {
+                selectionState.Set(((string, string, SliplaneService)?)null);
+                selectedForEdit.Set((SliplaneService?)null);
+            }
+        }, [editSheetOpen]);
+
+        var signalReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
+        this.UseEffect(() => signalReceiver.Receive(_ =>
+        {
+            Reload();
             return new Unit();
         }));
 
-        // Load all servers once so we can resolve server names for services AND populate the create-service sheet
-        this.UseEffect(async () =>
+        object? editSheet = editSheetOpen.Value && selectedForEdit.Value is { } svcEdit
+            ? new EditServiceSheet(
+                editSheetOpen, _apiToken, _project.Id, _project.Name ?? string.Empty, svcEdit,
+                selectionState, servers)
+            : null;
+
+        object? logsSheet = logsSelection.Value is { } logsSel && logsSheetOpen.Value
+            ? new ServiceLogsSheet(logsSheetOpen, _apiToken, _project.Id, logsSel.ServiceId, logsSel.ServiceName)
+            : null;
+
+        object? eventsSheet = eventsSelection.Value is { } evtSel && eventsSheetOpen.Value
+            ? new ServiceEventsSheet(eventsSheetOpen, evtSel.ServiceName, evtSel.Events)
+            : null;
+
+                async Task ConfirmDeleteProjectAsync()
         {
+            if (!string.Equals(deleteProjectInput.Value?.Trim(), _project.Name, StringComparison.Ordinal))
+            {
+                deleteProjectInputError.Set("Project name does not match. Please type it exactly.");
+                return;
+            }
+            deleteProjectInputError.Set((string?)null);
+            deleteBusy.Set(true);
             try
             {
-                var list = await client.GetServersAsync(_apiToken);
-                servers.Set(list);
+                await client.DeleteProjectAsync(_apiToken, _project.Id);
+                deleteProjectDialogOpen.Set(false);
+                deleteProjectInput.Set(string.Empty);
+                _parentRefreshToken.Refresh();
+                blades.Pop(this);
             }
-            catch
-            {
-                servers.Set(new List<SliplaneServer>());
-            }
-        });
+            finally { deleteBusy.Set(false); }
+        }
 
-        // Preload service counts per project so they are visible on cards
-        this.UseEffect(async () =>
+        void CloseDeleteProjectDialog()
         {
-            var current = projects.Value;
-            if (current == null || current.Count == 0) return;
+            deleteProjectDialogOpen.Set(false);
+            deleteProjectInput.Set(string.Empty);
+            deleteProjectInputError.Set((string?)null);
+        }
 
-            var map = new Dictionary<string, int>();
+                bool IsPaused(string? s) =>
+            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
 
-            foreach (var p in current)
-            {
-                try
+        async Task PauseAsync(SliplaneService svc)
+        {
+            if (IsPaused(svc.Status)) { showAlert($"Service \"{svc.Name}\" is already paused.", async _ => { }, "Pause"); return; }
+            await client.PauseServiceAsync(_apiToken, _project.Id, svc.Id);
+            Reload();
+        }
+
+        async Task ResumeAsync(SliplaneService svc)
+        {
+            if (!IsPaused(svc.Status)) { showAlert($"Service \"{svc.Name}\" is already running.", async _ => { }, "Resume"); return; }
+            await client.UnpauseServiceAsync(_apiToken, _project.Id, svc.Id);
+            Reload();
+        }
+
+                var headerBar = Layout.Horizontal()
+            | new Button("Add service").Icon(Icons.Plus).Secondary()
+                .OnClick(_ => createSheetOpen.Set(true))
+            | new Button("Delete project")
+                .Icon(Icons.Trash2)
+                .Variant(ButtonVariant.Destructive)
+                .OnClick(_ =>
                 {
-                    var svcs = await client.GetServicesAsync(_apiToken, p.Id);
-                    map[p.Id] = svcs?.Count ?? 0;
-                }
-                catch
-                {
-                    map[p.Id] = 0;
-                }
-            }
+                    deleteProjectInput.Set(string.Empty);
+                    deleteProjectInputError.Set((string?)null);
+                    deleteProjectDialogOpen.Set(true);
+                });
 
-            serviceCounts.Set(map);
-        }, [projects]);
+                var rows = BuildServiceRows(services, servers, eventsByService);
 
-        // Load services for the currently selected project (for the dialog)
-        this.UseEffect(async () =>
+                object mainContent;
+        if (overviewQuery.Loading && overview == null)
         {
-            var project = selectedProject.Value;
-
-            if (project is null)
-            {
-                servicesLoading.Set(false);
-                servicesError.Set((string?)null);
-                services.Set((List<SliplaneService>?)null);
-                return;
-            }
-
-            servicesLoading.Set(true);
-            servicesError.Set((string?)null);
-            services.Set((List<SliplaneService>?)null);
-
-            try
-            {
-                var list = await client.GetServicesAsync(_apiToken, project.Id);
-                services.Set(list);
-            }
-            catch (Exception ex)
-            {
-                servicesError.Set(ex.Message);
-            }
-            finally
-            {
-                servicesLoading.Set(false);
-            }
-        }, [selectedProject]);
-
-        // Load logs for the currently selected service (within the selected project)
-        this.UseEffect(async () =>
+            mainContent = Layout.Center() | Text.Muted("Loading services…");
+        }
+        else if (overviewQuery.Error is { } svcErr)
         {
-            var project = selectedProject.Value;
-            var svc = selectedServiceForLogs.Value;
-
-            if (project is null || svc is null)
-            {
-                serviceLogsLoading.Set(false);
-                serviceLogsError.Set((string?)null);
-                serviceLogs.Set((List<SliplaneServiceLog>?)null);
-                return;
-            }
-
-            serviceLogsLoading.Set(true);
-            serviceLogsError.Set((string?)null);
-            serviceLogs.Set((List<SliplaneServiceLog>?)null);
-
-            try
-            {
-                var logs = await client.GetServiceLogsAsync(_apiToken, project.Id, svc.Id);
-                serviceLogs.Set(logs);
-            }
-            catch (Exception ex)
-            {
-                serviceLogsError.Set(ex.Message);
-            }
-            finally
-            {
-                serviceLogsLoading.Set(false);
-            }
-        }, [selectedProject, selectedServiceForLogs]);
-
-        // Load full service details for View sheet
-        this.UseEffect(async () =>
+            mainContent = new Callout($"Error: {svcErr.Message}", variant: CalloutVariant.Error);
+        }
+        else if (rows.Length == 0)
         {
-            var project = selectedProject.Value;
-            var svc = selectedServiceForView.Value;
-
-            if (project is null || svc is null)
-            {
-                serviceDetailsForViewLoading.Set(false);
-                serviceDetailsForViewError.Set((string?)null);
-                serviceDetailsForView.Set(default(SliplaneService?));
-                return;
-            }
-
-            serviceDetailsForViewLoading.Set(true);
-            serviceDetailsForViewError.Set((string?)null);
-            serviceDetailsForView.Set(default(SliplaneService?));
-
-            try
-            {
-                var full = await client.GetServiceAsync(_apiToken, project.Id, svc.Id);
-                serviceDetailsForView.Set(full);
-            }
-            catch (Exception ex)
-            {
-                serviceDetailsForViewError.Set(ex.Message);
-            }
-            finally
-            {
-                serviceDetailsForViewLoading.Set(false);
-            }
-        }, [selectedProject, selectedServiceForView]);
-
-        // Load events for Events sheet
-        this.UseEffect(async () =>
-        {
-            var project = selectedProject.Value;
-            var svc = selectedServiceForEvents.Value;
-
-            if (project is null || svc is null)
-            {
-                serviceEventsLoading.Set(false);
-                serviceEventsError.Set((string?)null);
-                serviceEvents.Set((List<SliplaneServiceEvent>?)null);
-                return;
-            }
-
-            serviceEventsLoading.Set(true);
-            serviceEventsError.Set((string?)null);
-            serviceEvents.Set((List<SliplaneServiceEvent>?)null);
-
-            try
-            {
-                var list = await client.GetServiceEventsAsync(_apiToken, project.Id, svc.Id);
-                serviceEvents.Set(list);
-            }
-            catch (Exception ex)
-            {
-                serviceEventsError.Set(ex.Message);
-            }
-            finally
-            {
-                serviceEventsLoading.Set(false);
-            }
-        }, [selectedProject, selectedServiceForEvents]);
-
-        if (loading.Value)
-            return Layout.Center() | Text.Muted("Loading projects...");
-
-        if (error.Value is { Length: > 0 })
-            return new Callout($"Error: {error.Value}", variant: CalloutVariant.Error);
-
-        var list = projects.Value ?? new List<SliplaneProject>();
-
-        object projectsBlock;
-        if (list.Count == 0)
-        {
-            projectsBlock = new Callout("No projects yet. Create one above.", variant: CalloutVariant.Info);
+            mainContent = new Callout("No services yet. Click \"Add service\" to create one.", variant: CalloutVariant.Info);
         }
         else
         {
-            var cards = list
-                .Select(p =>
+            mainContent = rows
+                .AsQueryable()
+                .ToDataTable(r => r.ServiceId)
+                .RefreshToken(refreshToken)
+                .Height(Size.Full())
+                .Hidden(r => r.ServiceId)
+                .Header(r => r.Name,        "Service")
+                .Header(r => r.Server,       "Server")
+                .Header(r => r.StatusIcon,   "Icon")
+                .Header(r => r.Status,       "Status")
+                .Header(r => r.DeployStatus, "Deploy log")
+                .Header(r => r.Url,          "URL")
+                .Width(r => r.StatusIcon,   Size.Px(50))
+                .Width(r => r.Status,       Size.Px(120))
+                .Width(r => r.DeployStatus, Size.Px(200))
+                .Renderer(r => r.Url, new LinkDisplayRenderer { Type = LinkDisplayType.Url })
+                .Config(c =>
                 {
-                    var hasCount = serviceCounts.Value.TryGetValue(p.Id, out var svcCount);
-                    var svcCountNum = hasCount ? svcCount : 0;
-                    var label = hasCount
-                        ? $"{svcCount} Service" + (svcCount == 1 ? string.Empty : "s")
-                        : "0 Services";
-
-                    var header = Layout.Horizontal().Align(Align.Center)
-                        | (Layout.Vertical().Align(Align.Left)
-                            | Text.H3(p.Name))
-                        | (Layout.Vertical().Align(Align.Right).Width(Size.Fit())
-                            | (svcCountNum > 0 ? Icons.FolderOpen.ToIcon() : Icons.Folder.ToIcon()));
-
-                    var servicesRow = Layout.Horizontal()
-                        | Icons.Box.ToIcon()
-                        | Text.Block(label);
-
-                    var body = Layout.Vertical()
-                        | header
-                        | servicesRow;
-
-                    return new Card(body)
-                        .OnClick(_ => selectedProject.Set(p));
+                    c.AllowSorting    = true;
+                    c.AllowFiltering  = true;
+                    c.ShowSearch      = true;
+                    c.SelectionMode   = SelectionModes.Rows;
+                    c.ShowIndexColumn = false;
                 })
-                .ToArray();
-
-            projectsBlock = Layout.Grid().Columns(3) | cards;
-        }
-
-        Dialog? projectDetailDialog = null;
-        object? createServiceSheetView = null;
-        object? editSheetView = null;
-        object? logsSheetView = null;
-        object? viewSheetView = null;
-        object? eventsSheetView = null;
-        if (selectedProject.Value is { } project)
-        {
-            async Task DeleteProjectAsync()
-            {
-                if (busy.Value) return;
-                busy.Set(true);
-                try
+                .RowActions(
+                    MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
+                    MenuItem.Default(Icons.Trash2, "delete").Tag("delete"),
+                    MenuItem.Default(Icons.EllipsisVertical, "more")
+                        .Children([
+                            MenuItem.Default(Icons.Pause,    "pause").Label("Pause").Tag("pause"),
+                            MenuItem.Default(Icons.Play,     "resume").Label("Resume").Tag("resume"),
+                            MenuItem.Default(Icons.FileText, "logs").Label("Logs").Tag("logs"),
+                            MenuItem.Default(Icons.Calendar, "events").Label("Events").Tag("events")
+                        ]))
+                .OnRowAction(e =>
                 {
-                    await client.DeleteProjectAsync(_apiToken, project.Id);
-                    await refreshSender.Send("projects");
-                    selectedProject.Set((SliplaneProject?)null);
-                    var list = await client.GetProjectsAsync(_apiToken);
-                    projects.Set(list);
-                }
-                catch (Exception ex)
-                {
-                    error.Set(ex.Message);
-                }
-                finally
-                {
-                    busy.Set(false);
-                }
-            }
+                    var args = e.Value;
+                    if (args is null) return ValueTask.CompletedTask;
+                    var tag = args.Tag?.ToString();
+                    var id  = args.Id?.ToString() ?? string.Empty;
+                    var svc = services.FirstOrDefault(s => s.Id == id);
+                    if (svc == null) return ValueTask.CompletedTask;
 
-            object body;
-            if (servicesLoading.Value)
-            {
-                body = Text.Muted("Loading project services...");
-            }
-            else if (servicesError.Value is { Length: > 0 })
-            {
-                body = new Callout($"Error loading services: {servicesError.Value}", variant: CalloutVariant.Error);
-            }
-            else if (services.Value == null || services.Value.Count == 0)
-            {
-                body = new Callout("No services in this project yet.", variant: CalloutVariant.Info);
-            }
-            else
-            {
-                var tableItems = services.Value
-                    .Select(s =>
+                    if (tag == "edit")
                     {
-                        var customDomain = s.Network?.CustomDomains?.FirstOrDefault()?.Domain
-                                           ?? s.Network?.ManagedDomain
-                                           ?? "—";
-                        var internalDomain = string.IsNullOrWhiteSpace(s.Network?.InternalDomain)
-                            ? "—"
-                            : s.Network!.InternalDomain;
-                        var repoUrl = s.Deployment?.Url ?? s.GitRepo ?? "—";
-
-                        string serverLabel;
-                        if (!string.IsNullOrWhiteSpace(s.ServerId))
-                        {
-                            var server = servers.Value?.FirstOrDefault(sv => sv.Id == s.ServerId);
-                            serverLabel = server != null ? server.Name : s.ServerId!;
-                        }
-                        else
-                        {
-                            serverLabel = "—";
-                        }
-
-                        return new
-                        {
-                            s.Name,
-                            Status = string.IsNullOrWhiteSpace(s.Status) ? "—" : s.Status,
-                            Server = serverLabel,
-                            Domain = customDomain,
-                            InternalDomain = internalDomain,
-                            RepoUrl = repoUrl
-                        };
-                    })
-                    .ToList();
-
-                body = tableItems
-                    .AsQueryable()
-                    .ToDataTable(idSelector: x => x.Name)
-                    .Height(Size.Units(100))
-                    .Header(x => x.Name, "Service")
-                    .Header(x => x.Status, "Status")
-                    .Header(x => x.Server, "Server")
-                    .Header(x => x.Domain, "Domain")
-                    .Header(x => x.InternalDomain, "Internal domain")
-                    .Header(x => x.RepoUrl, "Repo URL")
-                    .Width(x => x.Status, Size.Px(60))
-                    .Width(x => x.Domain, Size.Px(210))
-                    .Width(x => x.InternalDomain, Size.Px(170))
-                    .Width(x => x.Server, Size.Px(60))
-                    .RowActions(
-                        MenuItem.Default(Icons.Eye, "View").Tag("view"),
-                        MenuItem.Default(Icons.Pencil, "Edit").Tag("edit"),
-                        MenuItem.Default(Icons.FileText, "Logs").Tag("logs"),
-                        MenuItem.Default(Icons.Calendar, "Events").Tag("events")
-                    )
-                    .OnRowAction(e =>
+                        selectedForEdit.Set(svc);
+                        editSheetOpen.Set(true);
+                    }
+                    else if (tag == "delete")
                     {
-                        var args = e.Value;
-                        var tag = args.Tag?.ToString();
-                        var name = args.Id?.ToString();
-                        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(tag))
-                            return ValueTask.CompletedTask;
-
-                        var svc = services.Value?.FirstOrDefault(s => s.Name == name);
-                        if (svc == null)
-                            return ValueTask.CompletedTask;
-
-                        if (tag == "edit")
-                        {
-                            selectedServiceForEdit.Set(svc);
-                            editSheetOpen.Set(true);
-                        }
-                        else if (tag == "logs")
-                        {
-                            selectedServiceForLogs.Set(svc);
-                            logsSheetOpen.Set(true);
-                        }
-                        else if (tag == "view")
-                        {
-                            selectedServiceForView.Set(svc);
-                            viewSheetOpen.Set(true);
-                        }
-                        else if (tag == "events")
-                        {
-                            selectedServiceForEvents.Set(svc);
-                            eventsSheetOpen.Set(true);
-                        }
-
-                        return ValueTask.CompletedTask;
-                    })
-                    .Config(c =>
+                        deleteSelection.Set(svc);
+                        deleteInput.Set(string.Empty);
+                        deleteInputError.Set((string?)null);
+                        deleteDialogOpen.Set(true);
+                    }
+                    else if (tag == "pause")
                     {
-                        c.AllowSorting = true;
-                        c.AllowFiltering = true;
-                        c.ShowSearch = true;
-                    });
-            }
-
-            projectDetailDialog = new Dialog(
-                onClose: (Event<Dialog> _) => selectedProject.Set((SliplaneProject?)null),
-                header: new DialogHeader(project.Name),
-                body: new DialogBody(body),
-                footer: new DialogFooter(
-                    new Button("Cancel")
-                        .OnClick(_ => selectedProject.Set((SliplaneProject?)null))
-                        .Secondary(),
-                    new Button("Create service")
-                        .Icon(Icons.Plus)
-                        .Primary()
-                        .OnClick(_ => createServiceSheetOpen.Set(true)),
-                    new Button("Delete project", onClick: async _ => await DeleteProjectAsync())
-                        .Icon(Icons.Trash)
-                        .Variant(ButtonVariant.Destructive)
-                        .Loading(busy.Value)
-                        .WithConfirm("Are you sure you want to delete this project?", "Delete project")
-                    )
-            ).Width(Size.Units(220));
-
-            if (createServiceSheetOpen.Value)
-            {
-                createServiceSheetView = new ProjectCreateServiceSheet(
-                    createServiceSheetOpen,
-                    _apiToken,
-                    project.Id,
-                    project.Name,
-                    servers.Value ?? new List<SliplaneServer>(),
-                    onCreated: async () =>
+                        _ = PauseAsync(svc);
+                    }
+                    else if (tag == "resume")
                     {
-                        var list = await client.GetServicesAsync(_apiToken, project.Id);
-                        services.Set(list);
-                    },
-                    onClose: () => { });
-            }
-
-            if (editSheetOpen.Value && selectedServiceForEdit.Value is { } svcEdit)
-            {
-                editSheetView = new ProjectServiceEditSheet(
-                    editSheetOpen,
-                    _apiToken,
-                    project.Id,
-                    project.Name,
-                    svcEdit,
-                    onSaved: async () =>
+                        _ = ResumeAsync(svc);
+                    }
+                    else if (tag == "logs")
                     {
-                        var list = await client.GetServicesAsync(_apiToken, project.Id);
-                        services.Set(list);
-                    },
-                    onClose: () => selectedServiceForEdit.Set(default(SliplaneService?)));
-            }
-
-            if (logsSheetOpen.Value && selectedServiceForLogs.Value is { } svcLogs)
-            {
-                object logsBody;
-                if (serviceLogsLoading.Value)
-                    logsBody = Text.Muted("Loading logs...");
-                else if (serviceLogsError.Value is { Length: > 0 })
-                    logsBody = new Callout($"Error: {serviceLogsError.Value}", variant: CalloutVariant.Error);
-                else if (serviceLogs.Value == null || serviceLogs.Value.Count == 0)
-                    logsBody = Text.Muted("No logs found.");
-                else
-                    logsBody = new CodeBlock(
-                        string.Join(Environment.NewLine,
-                            serviceLogs.Value.TakeLast(200).Select(l => $"{l.Timestamp:yyyy-MM-dd HH:mm:ss}  {l.Line}")),
-                        Languages.Text).ShowLineNumbers().ShowCopyButton().Width(Size.Full()).Height(Size.Units(200));
-
-                var logsFooter = Layout.Horizontal()
-                    | new Button("Close", onClick: _ => { logsSheetOpen.Set(false); selectedServiceForLogs.Set(default(SliplaneService?)); }).Variant(ButtonVariant.Outline);
-                logsSheetView = new Sheet(
-                    _ => { logsSheetOpen.Set(false); selectedServiceForLogs.Set(default(SliplaneService?)); },
-                    new FooterLayout(logsFooter, logsBody),
-                    title: $"Logs: {svcLogs.Name}").Width(Size.Fraction(1 / 2f));
-            }
-
-            if (viewSheetOpen.Value && selectedServiceForView.Value is { } svcView)
-            {
-                object viewBody;
-                object viewFooter;
-                bool isPausedStatus(string? s) =>
-                    string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
-
-                if (serviceDetailsForViewLoading.Value)
-                {
-                    viewBody = Text.Muted("Loading service details...");
-                    viewFooter = Layout.Horizontal()
-                        | new Button("Close", onClick: _ => { viewSheetOpen.Set(false); selectedServiceForView.Set(default(SliplaneService?)); }).Variant(ButtonVariant.Outline);
-                }
-                else if (serviceDetailsForViewError.Value is { Length: > 0 })
-                {
-                    viewBody = new Callout($"Error: {serviceDetailsForViewError.Value}", variant: CalloutVariant.Error);
-                    viewFooter = Layout.Horizontal()
-                        | new Button("Close", onClick: _ => { viewSheetOpen.Set(false); selectedServiceForView.Set(default(SliplaneService?)); }).Variant(ButtonVariant.Outline);
-                }
-                else if (serviceDetailsForView.Value is not { } full)
-                {
-                    viewBody = Text.Muted("No details.");
-                    viewFooter = Layout.Horizontal()
-                        | new Button("Close", onClick: _ => { viewSheetOpen.Set(false); selectedServiceForView.Set(default(SliplaneService?)); }).Variant(ButtonVariant.Outline);
-                }
-                else
-                {
-                    var dep = full.Deployment;
-                    var net = full.Network;
-                    var basicModel = new
+                        logsSelection.Set((svc.Name ?? svc.Id, svc.Id));
+                        logsSheetOpen.Set(true);
+                    }
+                    else if (tag == "events")
                     {
-                        Project = project.Name,
-                        Name = full.Name,
-                        Status = full.Status,
-                        ServerId = full.ServerId,
-                        Image = full.Image ?? "—",
-                        Port = full.Port?.ToString() ?? "—",
-                        Created = full.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
-                        Updated = full.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—"
-                    };
-                    var deploymentModel = new
-                    {
-                        Url = dep?.Url ?? "—",
-                        Branch = dep?.Branch ?? "—",
-                        Dockerfile = dep?.DockerfilePath ?? "—",
-                        Context = dep?.DockerContext ?? "—",
-                        AutoDeploy = dep?.AutoDeploy == true ? "Yes" : "No"
-                    };
-                    var networkModel = new
-                    {
-                        Public = net?.Public == true ? "Yes" : "No",
-                        Protocol = net?.Protocol ?? "—",
-                        ManagedDomain = net?.ManagedDomain ?? "—",
-                        InternalDomain = net?.InternalDomain ?? "—"
-                    };
-                    viewBody = Layout.Vertical()
-                        | basicModel.ToDetails()
-                        | Text.H4("Deployment")
-                        | deploymentModel.ToDetails()
-                        | Text.H4("Network")
-                        | networkModel.ToDetails()
-                        | (full.Domains?.Count > 0 == true
-                            ? Layout.Vertical()
-                                | Text.H4("Domains")
-                                | (Layout.Vertical() | full.Domains.Select(d => Text.Block($"{d.Domain} (custom: {d.IsCustom})")).ToArray<object>())
-                            : Layout.Vertical());
-
-                    async Task PauseUnpauseAsync()
-                    {
-                        if (viewSheetBusy.Value) return;
-                        viewSheetBusy.Set(true);
-                        try
-                        {
-                            if (isPausedStatus(full.Status))
-                                await client.UnpauseServiceAsync(_apiToken, project.Id, full.Id);
-                            else
-                                await client.PauseServiceAsync(_apiToken, project.Id, full.Id);
-                            var updated = await client.GetServiceAsync(_apiToken, project.Id, full.Id);
-                            if (updated != null)
-                                serviceDetailsForView.Set(updated);
-                            var list = await client.GetServicesAsync(_apiToken, project.Id);
-                            services.Set(list);
-                        }
-                        finally { viewSheetBusy.Set(false); }
+                        var evts = eventsByService.TryGetValue(svc.Id, out var ev) ? ev : new List<SliplaneServiceEvent>();
+                        eventsSelection.Set((svc.Name ?? svc.Id, evts));
+                        eventsSheetOpen.Set(true);
                     }
 
-                    async Task DeleteAsync()
-                    {
-                        if (viewSheetBusy.Value) return;
-                        viewSheetBusy.Set(true);
-                        try
-                        {
-                            await client.DeleteServiceAsync(_apiToken, project.Id, full.Id);
-                            viewSheetOpen.Set(false);
-                            selectedServiceForView.Set(default(SliplaneService?));
-                            var list = await client.GetServicesAsync(_apiToken, project.Id);
-                            services.Set(list);
-                        }
-                        finally { viewSheetBusy.Set(false); }
-                    }
-
-                    var pauseLabel = isPausedStatus(full.Status) ? "Resume" : "Pause";
-                    viewFooter = Layout.Horizontal()
-                        | new Button("Edit").Icon(Icons.Pencil).Variant(ButtonVariant.Outline).OnClick(_ => { selectedServiceForEdit.Set(full); editSheetOpen.Set(true); })
-                        | new Button(pauseLabel).Icon(isPausedStatus(full.Status) ? Icons.Play : Icons.Pause).Variant(ButtonVariant.Outline).Loading(viewSheetBusy.Value).OnClick(async _ => await PauseUnpauseAsync())
-                        | new Button("Delete", onClick: async _ => await DeleteAsync())
-                            .Icon(Icons.Trash).Variant(ButtonVariant.Destructive).Loading(viewSheetBusy.Value)
-                            .WithConfirm("Are you sure you want to delete this service?", "Delete service")
-                        | new Button("Close", onClick: _ => { viewSheetOpen.Set(false); selectedServiceForView.Set(default(SliplaneService?)); }).Variant(ButtonVariant.Outline);
-                }
-
-                viewSheetView = new Sheet(
-                    _ => { viewSheetOpen.Set(false); selectedServiceForView.Set(default(SliplaneService?)); },
-                    new FooterLayout(viewFooter, viewBody),
-                    title: $"View: {svcView.Name}").Width(Size.Fraction(1 / 3f));
-            }
-
-            if (eventsSheetOpen.Value && selectedServiceForEvents.Value is { } svcEvents)
-            {
-                object eventsBody;
-                if (serviceEventsLoading.Value)
-                    eventsBody = Text.Muted("Loading events...");
-                else if (serviceEventsError.Value is { Length: > 0 })
-                    eventsBody = new Callout($"Error: {serviceEventsError.Value}", variant: CalloutVariant.Error);
-                else if (serviceEvents.Value == null || serviceEvents.Value.Count == 0)
-                    eventsBody = Text.Muted("No events.");
-                else
-                {
-                    var rows = serviceEvents.Value
-                        .OrderByDescending(ev => ev.CreatedAt)
-                        .Take(200)
-                        .Select(ev => new TableRow(
-                            new TableCell(ev.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")),
-                            new TableCell(ev.Type),
-                            new TableCell(ev.Message)))
-                        .ToArray();
-                    var headerRow = new TableRow(
-                        new TableCell("Time").IsHeader(),
-                        new TableCell("Type").IsHeader(),
-                        new TableCell("Message").IsHeader());
-                    eventsBody = new Table(new[] { headerRow }.Concat(rows).ToArray()).Width(Size.Full());
-                }
-                var eventsFooter = Layout.Horizontal()
-                    | new Button("Close", onClick: _ => { eventsSheetOpen.Set(false); selectedServiceForEvents.Set(default(SliplaneService?)); }).Variant(ButtonVariant.Outline);
-                eventsSheetView = new Sheet(
-                    _ => { eventsSheetOpen.Set(false); selectedServiceForEvents.Set(default(SliplaneService?)); },
-                    new FooterLayout(eventsFooter, eventsBody),
-                    title: $"Events: {svcEvents.Name}").Width(Size.Fraction(1 / 2f));
-            }
+                    return ValueTask.CompletedTask;
+                });
         }
 
-        var addProjectBtn = new Button("Add project").Icon(Icons.Plus).Large().Secondary().BorderRadius(BorderRadius.Full).OnClick(_ => showAddProjectDialog.Set(true));
-        var addProjectFloat = new FloatingPanel(addProjectBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
-
-        Dialog? addProjectDialog = null;
-        if (showAddProjectDialog.Value)
+                Dialog? deleteDialog = null;
+        if (deleteDialogOpen.Value && deleteSelection.Value is { } del)
         {
-            async Task CreateProjectAsync()
+            async Task ConfirmDeleteAsync()
             {
-                if (addProjectBusy.Value) return;
-                if (string.IsNullOrWhiteSpace(newProjectName.Value))
+                if (!string.Equals(deleteInput.Value?.Trim(), del.Name, StringComparison.Ordinal))
                 {
-                    addProjectError.Set("Enter project name.");
+                    deleteInputError.Set("Service name does not match. Please type it exactly.");
                     return;
                 }
-                addProjectError.Set((string?)null);
-                addProjectBusy.Set(true);
-                try
-                {
-                    await client.CreateProjectAsync(_apiToken, newProjectName.Value.Trim());
-                    await refreshSender.Send("projects");
-                    newProjectName.Set(string.Empty);
-                    showAddProjectDialog.Set(false);
-                    var list = await client.GetProjectsAsync(_apiToken);
-                    projects.Set(list);
-                }
-                catch (Exception ex)
-                {
-                    addProjectError.Set(ex.Message);
-                }
-                finally
-                {
-                    addProjectBusy.Set(false);
-                }
+                deleteInputError.Set((string?)null);
+                await client.DeleteServiceAsync(_apiToken, _project.Id, del.Id);
+                deleteDialogOpen.Set(false);
+                deleteSelection.Set((SliplaneService?)null);
+                Reload();
             }
 
-            var addProjectForm = Layout.Vertical()
-                | newProjectName.ToTextInput().Placeholder("Project name");
+            void CloseDeleteDialog()
+            {
+                deleteDialogOpen.Set(false);
+                deleteSelection.Set((SliplaneService?)null);
+                deleteInput.Set(string.Empty);
+                deleteInputError.Set((string?)null);
+            }
 
-            addProjectDialog = new Dialog(
-                onClose: (Event<Dialog> _) => { showAddProjectDialog.Set(false); addProjectError.Set((string?)null); },
-                header: new DialogHeader("Add project"),
-                body: new DialogBody(addProjectForm),
+            deleteDialog = new Dialog(
+                onClose: (Event<Dialog> _) => CloseDeleteDialog(),
+                header: new DialogHeader($"Delete service \"{del.Name}\"?"),
+                body: new DialogBody(
+                    Layout.Vertical()
+                    | Text.Markdown($"Type the service name to confirm: **`{del.Name}`**")
+                    | deleteInput.ToTextInput().Placeholder("Service name")
+                    | (deleteInputError.Value is { Length: > 0 } errMsg
+                        ? (object)new Callout(errMsg, variant: CalloutVariant.Error)
+                        : Layout.Vertical())),
                 footer: new DialogFooter(
-                    new Button("Cancel").OnClick(_ => showAddProjectDialog.Set(false)).Secondary(),
-                    new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(addProjectBusy.Value).OnClick(async _ => await CreateProjectAsync()))
-            ).Width(Size.Units(120));
+                    new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => CloseDeleteDialog()),
+                    new Button("Delete").Destructive().Icon(Icons.Trash2)
+                        .OnClick(async _ => await ConfirmDeleteAsync()))
+            );
+        }
+
+                Dialog? deleteProjectDialog = null;
+        if (deleteProjectDialogOpen.Value)
+        {
+            deleteProjectDialog = new Dialog(
+                onClose: (Event<Dialog> _) => CloseDeleteProjectDialog(),
+                header: new DialogHeader($"Delete project \"{_project.Name}\"?"),
+                body: new DialogBody(
+                    Layout.Vertical()
+                    | Text.Markdown($"Type the project name to confirm: **`{_project.Name}`**")
+                    | deleteProjectInput.ToTextInput().Placeholder("Project name")
+                    | (deleteProjectInputError.Value is { Length: > 0 } errMsg
+                        ? (object)new Callout(errMsg, variant: CalloutVariant.Error)
+                        : Layout.Vertical())),
+                footer: new DialogFooter(
+                    new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => CloseDeleteProjectDialog()),
+                    new Button("Delete").Destructive().Icon(Icons.Trash2).Loading(deleteBusy.Value)
+                        .OnClick(async _ => await ConfirmDeleteProjectAsync()))
+            );
         }
 
         return new Fragment(
-            Layout.Vertical()
-                | Text.H2("Projects")
-                | projectsBlock
-                | projectDetailDialog
-                | addProjectFloat
-                | addProjectDialog,
-            editSheetView,
-            logsSheetView,
-            viewSheetView,
-            eventsSheetView,
-            createServiceSheetView
-        );
+            new BladeHeader(headerBar),
+            mainContent,
+            createSheet,
+            editSheet,
+            logsSheet,
+            eventsSheet,
+            alertView,
+            deleteDialog,
+            deleteProjectDialog);
+    }
+
+        private sealed record ServiceRow(
+        string ServiceId,
+        string Name,
+        string Server,
+        string Status,
+        Icons  StatusIcon,
+        string DeployStatus,
+        string Url);
+
+        private static ServiceRow[] BuildServiceRows(
+        List<SliplaneService> services,
+        List<SliplaneServer> servers,
+        Dictionary<string, List<SliplaneServiceEvent>> eventsByService)
+    {
+        return services.Select(svc =>
+        {
+            var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId) ? "—"
+                : servers.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId!;
+
+            var events = eventsByService.TryGetValue(svc.Id, out var ev) ? ev : new List<SliplaneServiceEvent>();
+            var (statusLabel, statusIcon, _) = ServicesView.GetServiceStatus(svc, events);
+
+            var lastUpdatedInstant = svc.UpdatedAt ?? svc.CreatedAt;
+
+            string deployStatus = "—";
+            if (events.Count > 0)
+            {
+                deployStatus = string.Join("\n\n",
+                    events.OrderByDescending(e => e.CreatedAt).Take(10)
+                        .Select(e =>
+                        {
+                            var label = string.IsNullOrWhiteSpace(e.Message)
+                                ? FormatEventType(e.Type)
+                                : e.Message;
+                            var dateStr = e.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy, HH:mm:ss");
+                            return $"{label}\n{dateStr}";
+                        }));
+            }
+
+            var rawDomain = svc.Network?.CustomDomains?.FirstOrDefault()?.Domain
+                            ?? svc.Network?.ManagedDomain ?? string.Empty;
+            var url = string.IsNullOrWhiteSpace(rawDomain) ? string.Empty
+                : (rawDomain.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? rawDomain : "https://" + rawDomain);
+
+            return new ServiceRow(
+                ServiceId:    svc.Id,
+                Name:         svc.Name,
+                Server:       serverLabel,
+                Status:       statusLabel,
+                StatusIcon:   statusIcon,
+                DeployStatus: deployStatus,
+                Url:          url);
+        }).ToArray();
+    }
+
+    private static string FormatEventType(string? type) => type switch
+    {
+        "service_resume_success"  => "Service resumed",
+        "service_resume"          => "Resume requested",
+        "service_suspend_success" => "Service suspended",
+        "service_suspend"         => "Suspend requested",
+        "service_deploy_success"  => "Deployed successfully",
+        "service_deploy"          => "Deploy started",
+        "service_deploy_failed"   => "Deploy failed",
+        _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
+    };
+}
+
+
+/// <summary>Service logs in CodeBlock, polls every 5s.</summary>
+public class ServiceLogsBlade : ViewBase
+{
+    private readonly string _apiToken;
+    private readonly string _projectId;
+    private readonly string _serviceId;
+    private readonly string _serviceName;
+
+    public ServiceLogsBlade(string apiToken, string projectId, string serviceId, string serviceName)
+    {
+        _apiToken    = apiToken;
+        _projectId   = projectId;
+        _serviceId   = serviceId;
+        _serviceName = serviceName;
+    }
+
+    public override object? Build()
+    {
+        var client = this.UseService<SliplaneApiClient>();
+
+        var logsQuery = this.UseQuery<List<SliplaneServiceLog>, string>(
+            key: $"logs:{_serviceId}",
+            fetcher: async ct =>
+                await client.GetServiceLogsAsync(_apiToken, _projectId, _serviceId)
+                ?? new List<SliplaneServiceLog>(),
+            options: new QueryOptions
+            {
+                RefreshInterval   = TimeSpan.FromSeconds(5),
+                RevalidateOnMount = true
+            });
+
+        string logsText;
+        if (logsQuery.Loading && logsQuery.Value == null)
+        {
+            logsText = "Loading logs…";
+        }
+        else if (logsQuery.Error is { } err)
+        {
+            logsText = $"Error: {err.Message}";
+        }
+        else
+        {
+            var logs = logsQuery.Value ?? new List<SliplaneServiceLog>();
+            logsText = logs.Count == 0
+                ? "No logs available."
+                : string.Join("\n", logs
+                    .OrderBy(l => l.Timestamp)
+                    .Select(l => $"[{l.Timestamp.ToLocalTime():yyyy-MM-dd HH:mm:ss}] {l.Line}"));
+        }
+
+        return Layout.Vertical().Height(Size.Full())
+            | new CodeBlock(logsText)
+                .Language(Languages.Text)
+                .ShowCopyButton()
+                .Width(Size.Full())
+                .Height(Size.Full());
     }
 }
+
+
+/// <summary>Service events in CodeBlock.</summary>
+public class ServiceEventsBlade : ViewBase
+{
+    private readonly string _apiToken;
+    private readonly string _projectId;
+    private readonly string _serviceId;
+    private readonly string _serviceName;
+
+    public ServiceEventsBlade(string apiToken, string projectId, string serviceId, string serviceName)
+    {
+        _apiToken    = apiToken;
+        _projectId   = projectId;
+        _serviceId   = serviceId;
+        _serviceName = serviceName;
+    }
+
+    public override object? Build()
+    {
+        var client = this.UseService<SliplaneApiClient>();
+
+        var eventsQuery = this.UseQuery<List<SliplaneServiceEvent>, string>(
+            key: $"events:{_serviceId}",
+            fetcher: async ct =>
+                await client.GetServiceEventsAsync(_apiToken, _projectId, _serviceId)
+                ?? new List<SliplaneServiceEvent>(),
+            options: new QueryOptions
+            {
+                RefreshInterval   = TimeSpan.FromSeconds(10),
+                RevalidateOnMount = true
+            });
+
+        string eventsText;
+        if (eventsQuery.Loading && eventsQuery.Value == null)
+        {
+            eventsText = "Loading events…";
+        }
+        else if (eventsQuery.Error is { } err)
+        {
+            eventsText = $"Error loading events: {err.Message}";
+        }
+        else
+        {
+            var events = eventsQuery.Value ?? new List<SliplaneServiceEvent>();
+            eventsText = events.Count == 0
+                ? "No events recorded for this service."
+                : string.Join("\n\n", events
+                    .OrderByDescending(e => e.CreatedAt)
+                    .Select(e =>
+                    {
+                        var date  = e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                        var label = FormatEventType(e.Type);
+                        var msg   = string.IsNullOrWhiteSpace(e.Message)
+                            ? string.Empty
+                            : $"\n  Message: {e.Message}";
+                        return $"[{date}]  {label}{msg}";
+                    }));
+        }
+
+        return Layout.Vertical().Height(Size.Full())
+            | new CodeBlock(eventsText)
+                .Language(Languages.Text)
+                .ShowCopyButton()
+                .Width(Size.Full())
+                .Height(Size.Full());
+    }
+
+    private static string FormatEventType(string? type) => type switch
+    {
+        "service_resume_success"  => "Service resumed successfully",
+        "service_resume"          => "Service resume requested",
+        "service_suspend_success" => "Service suspended successfully",
+        "service_suspend"         => "Service suspension requested",
+        "service_deploy_success"  => "Service deployed successfully",
+        "service_deploy"          => "Service deploy started",
+        "service_deploy_failed"   => "Service deploy failed",
+        _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
+    };
+}
+
+// ServiceRequestFactory
 
 internal static class ServiceRequestFactory
 {
@@ -796,471 +779,5 @@ internal static class ServiceRequestFactory
             Env: envList,
             Volumes: volumes
         );
-    }
-}
-
-/// <summary>
-/// Sheet to edit a service from the Projects view (PATCH). Refreshes the services list via onSaved.
-/// </summary>
-public class ProjectServiceEditSheet : ViewBase
-{
-    private readonly IState<bool> _isOpen;
-    private readonly string _apiToken;
-    private readonly string _projectId;
-    private readonly string _projectName;
-    private readonly SliplaneService _service;
-    private readonly Func<Task> _onSaved;
-    private readonly Action _onClose;
-
-    public ProjectServiceEditSheet(
-        IState<bool> isOpen,
-        string apiToken,
-        string projectId,
-        string projectName,
-        SliplaneService service,
-        Func<Task> onSaved,
-        Action onClose)
-    {
-        _isOpen = isOpen;
-        _apiToken = apiToken;
-        _projectId = projectId;
-        _projectName = projectName;
-        _service = service;
-        _onSaved = onSaved;
-        _onClose = onClose;
-    }
-
-    public override object? Build()
-    {
-        var client = this.UseService<SliplaneApiClient>();
-        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
-        var dep = _service.Deployment;
-        var name = this.UseState(_service.Name ?? string.Empty);
-        var deployUrl = this.UseState(dep?.Url ?? string.Empty);
-        var branch = this.UseState(dep?.Branch ?? "main");
-        var dockerfilePath = this.UseState(dep?.DockerfilePath ?? "Dockerfile");
-        var dockerContext = this.UseState(dep?.DockerContext ?? ".");
-        var autoDeploy = this.UseState(dep?.AutoDeploy ?? true);
-        var cmd = this.UseState(string.Empty);
-        var healthcheck = this.UseState(string.Empty);
-        var busy = this.UseState(false);
-        var error = this.UseState<string?>(() => (string?)null);
-        var envList = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
-        var showAddEnvDialog = this.UseState(false);
-        var addEnvKey = this.UseState(string.Empty);
-        var addEnvValue = this.UseState(string.Empty);
-
-        async Task SaveAsync()
-        {
-            if (busy.Value) return;
-            if (string.IsNullOrWhiteSpace(name.Value)) { error.Set("Enter service name."); return; }
-            if (string.IsNullOrWhiteSpace(deployUrl.Value)) { error.Set("Enter deployment URL."); return; }
-            error.Set((string?)null);
-            busy.Set(true);
-            try
-            {
-                var request = ServiceRequestFactory.BuildUpdateRequest(
-                    name: name.Value,
-                    deployUrl: deployUrl.Value,
-                    branch: branch.Value,
-                    dockerfilePath: dockerfilePath.Value,
-                    dockerContext: dockerContext.Value,
-                    autoDeploy: autoDeploy.Value,
-                    cmd: cmd.Value,
-                    healthcheck: healthcheck.Value,
-                    env: envList.Value
-                );
-                await client.UpdateServiceAsync(_apiToken, _projectId, _service.Id, request);
-                await _onSaved();
-                _isOpen.Set(false);
-                _onClose();
-                await refreshSender.Send("services");
-            }
-            catch (Exception ex)
-            {
-                error.Set(ex.Message);
-            }
-            finally
-            {
-                busy.Set(false);
-            }
-        }
-
-        void CloseSheet()
-        {
-            _isOpen.Set(false);
-            _onClose();
-        }
-
-        var envItems = envList.Value ?? new List<EnvironmentVariable>();
-        var envHeaderRow = new TableRow(
-            new TableCell("Key").IsHeader(),
-            new TableCell("Value").IsHeader(),
-            new TableCell("Actions").IsHeader().Width(Size.Fit()));
-        var envDataRows = envItems
-            .Select((e, idx) =>
-            {
-                var index = idx;
-                return new TableRow(
-                    new TableCell(e.Key),
-                    new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
-                    {
-                        var next = envList.Value.Where((_, i) => i != index).ToList();
-                        envList.Set(next);
-                    })).Width(Size.Fit()));
-            })
-            .ToArray();
-        object envTableContent = envDataRows.Length == 0
-            ? (object)Text.Muted("No variables.")
-            : new Table(new[] { envHeaderRow }.Concat(envDataRows).ToArray()).Width(Size.Full());
-
-        var content = Layout.Vertical()
-            | Text.H4("Basic")
-            | name.ToTextInput().Placeholder("Service name")
-            | Text.H4("Deployment")
-            | deployUrl.ToTextInput().Placeholder("Repository or image URL")
-            | branch.ToTextInput().Placeholder("Branch")
-            | dockerfilePath.ToTextInput().Placeholder("Dockerfile path")
-            | dockerContext.ToTextInput().Placeholder("Docker context")
-            | autoDeploy.ToBoolInput().Label("Auto-deploy on push")
-            | Text.H4("Optional")
-            | cmd.ToTextInput().Placeholder("Start command (e.g. npm start)")
-            | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)")
-            | Text.H4("Environment variables")
-            | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true))
-            | (error.Value is { Length: > 0 } err ? (object)new Callout(err, variant: CalloutVariant.Error) : Layout.Vertical());
-
-        var footer = Layout.Horizontal()
-            | new Button("Cancel", onClick: _ => CloseSheet()).Variant(ButtonVariant.Outline)
-            | new Button("Save").Icon(Icons.Check).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await SaveAsync());
-
-        Dialog? addEnvDialog = null;
-        if (showAddEnvDialog.Value)
-        {
-            void SaveEnv()
-            {
-                if (string.IsNullOrWhiteSpace(addEnvKey.Value)) return;
-                var next = (envList.Value ?? new List<EnvironmentVariable>()).ToList();
-                next.Add(new EnvironmentVariable(addEnvKey.Value.Trim(), addEnvValue.Value ?? string.Empty, false));
-                envList.Set(next);
-                addEnvKey.Set(string.Empty);
-                addEnvValue.Set(string.Empty);
-                showAddEnvDialog.Set(false);
-            }
-            var envForm = Layout.Vertical()
-                | addEnvKey.ToTextInput().Placeholder("Key")
-                | addEnvValue.ToTextInput().Placeholder("Value");
-            addEnvDialog = new Dialog(
-                onClose: (Event<Dialog> _) => showAddEnvDialog.Set(false),
-                header: new DialogHeader("Add environment variable"),
-                body: new DialogBody(envForm),
-                footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
-                    new Button("Cancel").OnClick(_ => showAddEnvDialog.Set(false))
-                )).Width(Size.Units(220));
-        }
-
-        if (!_isOpen.Value)
-            return null;
-
-        var sheetBody = new FooterLayout(footer, content);
-        object sheetContent = addEnvDialog != null ? new Fragment(sheetBody, addEnvDialog) : sheetBody;
-        return new Sheet(_ => CloseSheet(), sheetContent, title: $"Edit: {_service.Name}").Width(Size.Fraction(1 / 3f));
-    }
-}
-
-/// <summary>
-/// Sheet to create a new service from the Projects view. Full CreateServiceRequest: Basic, Deployment, Network, Optional (cmd, healthcheck), Env, Volumes.
-/// </summary>
-public class ProjectCreateServiceSheet : ViewBase
-{
-    private readonly IState<bool> _isOpen;
-    private readonly string _apiToken;
-    private readonly string _projectId;
-    private readonly string _projectName;
-    private readonly List<SliplaneServer> _servers;
-    private readonly Func<Task> _onCreated;
-    private readonly Action _onClose;
-
-    public ProjectCreateServiceSheet(
-        IState<bool> isOpen,
-        string apiToken,
-        string projectId,
-        string projectName,
-        List<SliplaneServer> servers,
-        Func<Task> onCreated,
-        Action onClose)
-    {
-        _isOpen = isOpen;
-        _apiToken = apiToken;
-        _projectId = projectId;
-        _projectName = projectName;
-        _servers = servers;
-        _onCreated = onCreated;
-        _onClose = onClose;
-    }
-
-    public override object? Build()
-    {
-        var client = this.UseService<SliplaneApiClient>();
-        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
-        var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
-        var name = this.UseState(string.Empty);
-        var serverId = this.UseState(string.Empty);
-        var gitRepo = this.UseState(string.Empty);
-        var branch = this.UseState("main");
-        var dockerfilePath = this.UseState("Dockerfile");
-        var dockerContext = this.UseState(".");
-        var autoDeploy = this.UseState(true);
-        var cmd = this.UseState(string.Empty);
-        var healthcheck = this.UseState(string.Empty);
-        var networkPublic = this.UseState(true);
-        var networkProtocol = this.UseState("http");
-        var busy = this.UseState(false);
-        var error = this.UseState<string?>(() => (string?)null);
-        var envList = this.UseState<List<EnvironmentVariable>>(() => new List<EnvironmentVariable>());
-        var showAddEnvDialog = this.UseState(false);
-        var addEnvKey = this.UseState(string.Empty);
-        var addEnvValue = this.UseState(string.Empty);
-        var volumeMountsList = this.UseState<List<(string VolumeId, string MountPath)>>(() => new List<(string, string)>());
-        var showAddVolumeDialog = this.UseState(false);
-        var addVolumeId = this.UseState(string.Empty);
-        var addMountPath = this.UseState(string.Empty);
-
-        this.UseEffect(async () =>
-        {
-            if (string.IsNullOrWhiteSpace(serverId.Value))
-            {
-                serverVolumes.Set(new List<SliplaneVolume>());
-                return;
-            }
-            try
-            {
-                var vols = await client.GetServerVolumesAsync(_apiToken, serverId.Value);
-                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
-            }
-            catch
-            {
-                serverVolumes.Set(new List<SliplaneVolume>());
-            }
-        }, serverId);
-
-        var serverOptions = _servers.Select(s => new Option<string>(s.Name, s.Id)).ToArray();
-        var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
-        var volumeOptions = (serverVolumes.Value ?? new List<SliplaneVolume>()).Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id)).ToArray();
-
-        async Task CreateAsync()
-        {
-            if (busy.Value) return;
-            if (string.IsNullOrWhiteSpace(name.Value)) { error.Set("Enter service name."); return; }
-            if (string.IsNullOrWhiteSpace(gitRepo.Value)) { error.Set("Enter repository or image URL."); return; }
-            if (string.IsNullOrWhiteSpace(serverId.Value)) { error.Set("Select a server."); return; }
-            error.Set((string?)null);
-            busy.Set(true);
-            try
-            {
-                var request = ServiceRequestFactory.BuildCreateRequest(
-                    name: name.Value,
-                    serverId: serverId.Value,
-                    gitRepo: gitRepo.Value,
-                    branch: branch.Value,
-                    dockerfilePath: dockerfilePath.Value,
-                    dockerContext: dockerContext.Value,
-                    autoDeploy: autoDeploy.Value,
-                    networkPublic: networkPublic.Value,
-                    networkProtocol: networkProtocol.Value,
-                    cmd: cmd.Value,
-                    healthcheck: healthcheck.Value,
-                    env: envList.Value,
-                    volumeMounts: volumeMountsList.Value
-                );
-                await client.CreateServiceAsync(_apiToken, _projectId, request);
-                await _onCreated();
-                _isOpen.Set(false);
-                _onClose();
-                await refreshSender.Send("services");
-            }
-            catch (Exception ex)
-            {
-                error.Set(ex.Message);
-            }
-            finally
-            {
-                busy.Set(false);
-            }
-        }
-
-        void CloseSheet()
-        {
-            _isOpen.Set(false);
-            _onClose();
-        }
-
-        var basicSection = Layout.Vertical()
-            | Text.H4("Basic")
-            | Text.Block($"Project: {_projectName}").Muted()
-            | name.ToTextInput().Placeholder("Service name")
-            | serverId.ToSelectInput(serverOptions).Placeholder("Select server");
-
-        var deploymentSection = Layout.Vertical()
-            | Text.H4("Deployment (source and build)")
-            | gitRepo.ToTextInput().Placeholder("Repository URL or Docker image")
-            | branch.ToTextInput().Placeholder("Branch (default: main)")
-            | dockerfilePath.ToTextInput().Placeholder("Dockerfile path")
-            | dockerContext.ToTextInput().Placeholder("Docker context")
-            | autoDeploy.ToBoolInput().Label("Auto-deploy on push");
-
-        var optionalSection = Layout.Vertical()
-            | Text.H4("Optional (command, healthcheck)")
-            | cmd.ToTextInput().Placeholder("Start command (e.g. npm start)")
-            | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)");
-
-        var networkSection = Layout.Vertical()
-            | Text.H4("Network")
-            | networkPublic.ToBoolInput().Label("Public access")
-            | networkProtocol.ToSelectInput(protocolOptions);
-
-        var envItems = envList.Value ?? new List<EnvironmentVariable>();
-        var envHeaderRow = new TableRow(
-            new TableCell("Key").IsHeader(),
-            new TableCell("Value").IsHeader(),
-            new TableCell("Actions").IsHeader().Width(Size.Fit()));
-        var envDataRows = envItems
-            .Select((e, idx) =>
-            {
-                var index = idx;
-                return new TableRow(
-                    new TableCell(e.Key),
-                    new TableCell(e.Value ?? ""),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
-                    {
-                        var next = envList.Value.Where((_, i) => i != index).ToList();
-                        envList.Set(next);
-                    })).Width(Size.Fit()));
-            })
-            .ToArray();
-        object envTableContent = envDataRows.Length == 0
-            ? (object)Text.Muted("No variables.")
-            : new Table(new[] { envHeaderRow }.Concat(envDataRows).ToArray()).Width(Size.Full());
-        var envSection = Layout.Vertical()
-            | Text.H4("Environment variables")
-            | envTableContent
-            | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true));
-
-        var vols = serverVolumes.Value ?? new List<SliplaneVolume>();
-        var volItems = volumeMountsList.Value ?? new List<(string VolumeId, string MountPath)>();
-        var volHeaderRow = new TableRow(
-            new TableCell("Volume").IsHeader(),
-            new TableCell("Mount path").IsHeader(),
-            new TableCell("Actions").IsHeader().Width(Size.Fit()));
-        var volDataRows = volItems
-            .Select((v, idx) =>
-            {
-                var index = idx;
-                var volName = vols.FirstOrDefault(vol => vol.Id == v.VolumeId)?.Name ?? v.VolumeId;
-                return new TableRow(
-                    new TableCell(volName),
-                    new TableCell(v.MountPath),
-                    new TableCell(new Button("Remove").Variant(ButtonVariant.Outline).OnClick(_ =>
-                    {
-                        var next = volumeMountsList.Value.Where((_, i) => i != index).ToList();
-                        volumeMountsList.Set(next);
-                    })));
-            })
-            .ToArray();
-        object volTableContent = volDataRows.Length == 0
-            ? (object)Text.Muted("No volume mounts. Select a server first, then add.")
-            : new Table(new[] { volHeaderRow }.Concat(volDataRows).ToArray()).Width(Size.Full());
-        var volumesSection = Layout.Vertical()
-            | Text.H4("Volumes (attach server volumes)")
-            | volTableContent
-            | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddVolumeDialog.Set(true));
-
-        var errorBlock = error.Value is { Length: > 0 } err
-            ? (object)new Callout(err, variant: CalloutVariant.Error)
-            : Layout.Vertical();
-
-        var content = Layout.Vertical()
-            | basicSection
-            | deploymentSection
-            | optionalSection
-            | networkSection
-            | envSection
-            | volumesSection
-            | errorBlock;
-
-        var footer = Layout.Horizontal()
-            | new Button("Cancel", onClick: _ => CloseSheet()).Variant(ButtonVariant.Outline)
-            | new Button("Create").Icon(Icons.Plus).Variant(ButtonVariant.Primary).Loading(busy.Value).OnClick(async _ => await CreateAsync());
-
-        Dialog? addEnvDialog = null;
-        if (showAddEnvDialog.Value)
-        {
-            void SaveEnv()
-            {
-                if (string.IsNullOrWhiteSpace(addEnvKey.Value)) return;
-                var next = (envList.Value ?? new List<EnvironmentVariable>()).ToList();
-                next.Add(new EnvironmentVariable(addEnvKey.Value.Trim(), addEnvValue.Value ?? string.Empty, false));
-                envList.Set(next);
-                addEnvKey.Set(string.Empty);
-                addEnvValue.Set(string.Empty);
-                showAddEnvDialog.Set(false);
-            }
-            var envForm = Layout.Vertical()
-                | addEnvKey.ToTextInput().Placeholder("Key")
-                | addEnvValue.ToTextInput().Placeholder("Value");
-            addEnvDialog = new Dialog(
-                onClose: (Event<Dialog> _) => showAddEnvDialog.Set(false),
-                header: new DialogHeader("Add environment variable"),
-                body: new DialogBody(envForm),
-                footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveEnv()),
-                    new Button("Cancel"). OnClick(_ => showAddEnvDialog.Set(false))
-                )).Width(Size.Units(220));
-        }
-
-        Dialog? addVolumeDialog = null;
-        if (showAddVolumeDialog.Value)
-        {
-            void SaveVolume()
-            {
-                if (string.IsNullOrWhiteSpace(addVolumeId.Value) || string.IsNullOrWhiteSpace(addMountPath.Value)) return;
-                var next = (volumeMountsList.Value ?? new List<(string, string)>()).ToList();
-                next.Add((addVolumeId.Value, addMountPath.Value.Trim()));
-                volumeMountsList.Set(next);
-                addVolumeId.Set(string.Empty);
-                addMountPath.Set(string.Empty);
-                showAddVolumeDialog.Set(false);
-            }
-            var volForm = Layout.Vertical()
-                | addVolumeId.ToSelectInput(volumeOptions)
-                | addMountPath.ToTextInput().Placeholder("Mount path (e.g. /data)");
-            addVolumeDialog = new Dialog(
-                onClose: (Event<Dialog> _) => showAddVolumeDialog.Set(false),
-                header: new DialogHeader("Add volume mount"),
-                body: new DialogBody(volForm),
-                footer: new DialogFooter(
-                    new Button("Save").Variant(ButtonVariant.Primary).OnClick(_ => SaveVolume()),
-                    new Button("Cancel").OnClick(_ => showAddVolumeDialog.Set(false))
-                )).Width(Size.Units(220));
-        }
-
-        if (!_isOpen.Value)
-            return null;
-
-        var sheetBody = new FooterLayout(footer, content);
-        object sheetContent;
-        if (addEnvDialog != null && addVolumeDialog != null)
-            sheetContent = new Fragment(sheetBody, addEnvDialog, addVolumeDialog);
-        else if (addEnvDialog != null)
-            sheetContent = new Fragment(sheetBody, addEnvDialog);
-        else if (addVolumeDialog != null)
-            sheetContent = new Fragment(sheetBody, addVolumeDialog);
-        else
-            sheetContent = sheetBody;
-
-        return new Sheet(_ => CloseSheet(), sheetContent, title: "Create service", description: $"Project: {_projectName}").Width(Size.Fraction(1 / 3f));
     }
 }
