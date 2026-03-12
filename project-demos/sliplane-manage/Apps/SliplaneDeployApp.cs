@@ -28,13 +28,11 @@ public class SliplaneDeployApp : ViewBase
         var draftStore = this.UseService<DeploymentDraftStore>();
         var args       = this.UseArgs<DeployArgs>();
 
-        // Stored in state so ReadAndClearDraft() is called only once (one-shot store).
-        // Without UseState, every re-render caused by query loading would call ReadAndClearDraft() again
-        // and get null, losing the draft before DeployView ever mounts.
+        // UseState ensures we read the draft once per app instance; LastDraft never clears (data always saved).
         var draftState = this.UseState<DeployDraft?>(() =>
             args is not null
                 ? DeploymentDraftStore.ParseGitHubUrl(args.Repo)
-                : draftStore.ReadAndClearDraft());
+                : draftStore.LastDraft);
         var draft = draftState.Value;
 
         if (string.IsNullOrWhiteSpace(apiToken))
