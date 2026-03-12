@@ -48,20 +48,20 @@ public class BarcodeApp : ViewBase
     var typeDropDown = new Button(encodeType.Value.ToString()).Primary()
       .Icon(Icons.ChevronDown)
       .WithDropDown(
-        MenuItem.Default("QR").HandleSelect(() => encodeType.Value = EncodeTypes.QR),
-        MenuItem.Default("Pdf417").HandleSelect(() => encodeType.Value = EncodeTypes.Pdf417),
-        MenuItem.Default("Code128").HandleSelect(() => encodeType.Value = EncodeTypes.Code128),
-        MenuItem.Default("DataMatrix").HandleSelect(() => encodeType.Value = EncodeTypes.DataMatrix),
-        MenuItem.Default("DotCode").HandleSelect(() => encodeType.Value = EncodeTypes.DotCode),
-        MenuItem.Default("ISBN").HandleSelect(() => encodeType.Value = EncodeTypes.ISBN)
+        MenuItem.Default("QR").OnSelect(() => encodeType.Value = EncodeTypes.QR),
+        MenuItem.Default("Pdf417").OnSelect(() => encodeType.Value = EncodeTypes.Pdf417),
+        MenuItem.Default("Code128").OnSelect(() => encodeType.Value = EncodeTypes.Code128),
+        MenuItem.Default("DataMatrix").OnSelect(() => encodeType.Value = EncodeTypes.DataMatrix),
+        MenuItem.Default("DotCode").OnSelect(() => encodeType.Value = EncodeTypes.DotCode),
+        MenuItem.Default("ISBN").OnSelect(() => encodeType.Value = EncodeTypes.ISBN)
       );
 
     var sizeDropDown = new Button(size.Value.ToString()).Primary()
       .Icon(Icons.ChevronDown)
       .WithDropDown(
-        MenuItem.Default("Small").HandleSelect(() => size.Value = DemoSize.Small),
-        MenuItem.Default("Medium").HandleSelect(() => size.Value = DemoSize.Medium),
-        MenuItem.Default("Large").HandleSelect(() => size.Value = DemoSize.Large)
+        MenuItem.Default("Small").OnSelect(() => size.Value = DemoSize.Small),
+        MenuItem.Default("Medium").OnSelect(() => size.Value = DemoSize.Medium),
+        MenuItem.Default("Large").OnSelect(() => size.Value = DemoSize.Large)
       );
 
     var controls = Layout.Horizontal().Gap(2).Align(Align.Center)
