@@ -43,6 +43,8 @@ public class ServicesView : ViewBase
         var deleteSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
         var deleteCommandInput = this.UseState(string.Empty);
         var deleteCommandError = this.UseState<string?>(() => (string?)null);
+        // Services currently transitioning (pause/resume) — show pending optimistically.
+        var transitioningServiceIds = this.UseState<HashSet<string>>(() => new HashSet<string>());
         // ── Logs / Events sheets ───────────────────────────────────────────────
         var logsSheetOpen      = this.UseState(false);
         var logsSelection      = this.UseState<(string ProjectId, string ServiceName, string ServiceId)?>(() => null);
@@ -78,6 +80,39 @@ public class ServicesView : ViewBase
 
     // Current data for the table derived directly from overviewQuery
     var overview = overviewQuery.Value;
+        // Accumulate events per service across refreshes so logs don't "blink" or disappear
+        // when the API returns a shorter window of events.
+        var eventsStore = this.UseState<Dictionary<string, List<SliplaneServiceEvent>>>(() =>
+            new Dictionary<string, List<SliplaneServiceEvent>>());
+        if (overview?.EventsByService is { Count: > 0 } latestEvents)
+        {
+            var current = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+            foreach (var kvp in latestEvents)
+            {
+                var serviceId = kvp.Key;
+                var freshList = kvp.Value ?? new List<SliplaneServiceEvent>();
+                if (!current.TryGetValue(serviceId, out var existing) || existing is null || existing.Count == 0)
+                {
+                    current[serviceId] = freshList
+                        .OrderBy(e => e.CreatedAt)
+                        .ToList();
+                    continue;
+                }
+
+                var merged = existing
+                    .Concat(freshList)
+                    .GroupBy(e => new { e.CreatedAt, e.Type, e.Message })
+                    .Select(g => g.First())
+                    .OrderBy(e => e.CreatedAt)
+                    .ToList();
+
+                // Keep a reasonable history per service
+                current[serviceId] = merged.TakeLast(200).ToList();
+            }
+
+            eventsStore.Set(current);
+        }
+
         var currentServices = overview == null
             ? new List<(string ProjectId, string ProjectName, SliplaneService Service)>()
             : overview.ServicesByProject
@@ -88,10 +123,31 @@ public class ServicesView : ViewBase
                 })
                 .ToList();
     var currentServers  = overview?.Servers ?? new List<SliplaneServer>();
-    var eventsByService = overview?.EventsByService ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+    var eventsByService = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+
+    // Clear transitioning when we see success events for those services
+    this.UseEffect(() =>
+    {
+        var ids = transitioningServiceIds.Value;
+        if (ids.Count == 0) return;
+        var toRemove = new List<string>();
+        foreach (var sid in ids)
+        {
+            if (!eventsByService.TryGetValue(sid, out var evts) || evts.Count == 0) continue;
+            var last = evts.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+            if (last?.Type is "service_suspend_success" or "service_resume_success")
+                toRemove.Add(sid);
+        }
+        if (toRemove.Count > 0)
+        {
+            var next = new HashSet<string>(ids);
+            foreach (var id in toRemove) next.Remove(id);
+            transitioningServiceIds.Set(next);
+        }
+    }, EffectTrigger.OnBuild());
 
     // ── build rows (pure – no hooks) ──────────────────────────────────────
-    var rows = BuildServiceRows(currentServices, currentServers, eventsByService);
+    var rows = BuildServiceRows(currentServices, currentServers, eventsByService, transitioningServiceIds.Value);
 
     // ── UI ────────────────────────────────────────────────────────────────
     void ShowServiceSheet(string projectId, string projectName, SliplaneService svc)
@@ -115,6 +171,7 @@ public class ServicesView : ViewBase
             return;
         }
 
+        transitioningServiceIds.Set(new HashSet<string>(transitioningServiceIds.Value) { svc.Id });
         await client.PauseServiceAsync(_apiToken, projectId, svc.Id);
         overviewQuery.Mutator.Revalidate();
     }
@@ -134,6 +191,7 @@ public class ServicesView : ViewBase
             return;
         }
 
+        transitioningServiceIds.Set(new HashSet<string>(transitioningServiceIds.Value) { svc.Id });
         await client.UnpauseServiceAsync(_apiToken, projectId, svc.Id);
         overviewQuery.Mutator.Revalidate();
     }
@@ -345,8 +403,11 @@ public class ServicesView : ViewBase
     // ── static helpers (no hooks) ──────────────────────────────────────────────
 
     internal static (string Label, Icons Icon, string? EventType) GetServiceStatus(
-        SliplaneService svc, List<SliplaneServiceEvent> events)
+        SliplaneService svc, List<SliplaneServiceEvent> events, HashSet<string>? transitioningIds = null)
     {
+        if (transitioningIds?.Contains(svc.Id) == true)
+            return ("pending", Icons.Clock, null);
+
         var rawStatus = svc.Status ?? string.Empty;
 
         // Only show error if the most recent deploy-related event is a failure.
@@ -408,7 +469,8 @@ public class ServicesView : ViewBase
     private static ServiceRow[] BuildServiceRows(
         List<(string ProjectId, string ProjectName, SliplaneService Service)> currentServices,
         List<SliplaneServer> serverList,
-        Dictionary<string, List<SliplaneServiceEvent>> eventsByService)
+        Dictionary<string, List<SliplaneServiceEvent>> eventsByService,
+        HashSet<string>? transitioningIds = null)
     {
         return currentServices
             .Select(t =>
@@ -423,7 +485,7 @@ public class ServicesView : ViewBase
                     ? ev
                     : new List<SliplaneServiceEvent>();
 
-                var (statusLabel, statusIcon, _) = GetServiceStatus(svc, events);
+                var (statusLabel, statusIcon, _) = GetServiceStatus(svc, events, transitioningIds);
 
                 var lastUpdatedInstant = svc.UpdatedAt ?? svc.CreatedAt;
 
