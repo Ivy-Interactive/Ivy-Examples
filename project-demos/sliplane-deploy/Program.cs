@@ -32,9 +32,4 @@ server.AddConnectionsFromAssembly();
 
 server.UseAuth<SliplaneAuthProvider>();
 
-var chromeSettings = new ChromeSettings()
-    .WallpaperApp<SliplaneDeployApp>()
-    .UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
-
 await server.RunAsync();
