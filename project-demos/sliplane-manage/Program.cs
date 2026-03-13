@@ -16,12 +16,6 @@ server.Services.AddHttpClient("Sliplane", client =>
 // Ensure IConfiguration is available to apps
 server.Services.AddSingleton(server.Configuration);
 
-// Register IHttpContextAccessor (required by DeploymentDraftStore for per-user isolation)
-server.Services.AddHttpContextAccessor();
-
-// Register per-user deployment draft store (scoped = one instance per HTTP request/connection)
-server.Services.AddScoped<DeploymentDraftStore>();
-
 // Register Sliplane API client
 server.Services.AddScoped<SliplaneApiClient>();
 
@@ -29,9 +23,6 @@ Server.ConfigureAuthCookieOptions = options =>
 {
     options.Expires = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(30));
 };
-
-// Captures ?repo= from the initial HTTP GET before Ivy SPA strips query params.
-server.Services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, SliplaneManage.Services.RepoCaptureFilter>();
 
 #if DEBUG
 server.UseHotReload();
@@ -43,7 +34,7 @@ server.AddConnectionsFromAssembly();
 server.UseAuth<SliplaneAuthProvider>();
 
 var chromeSettings = new ChromeSettings()
-    .WallpaperApp<SliplaneDeployApp>()          // show Deploy app as wallpaper when no tabs are open
+    .DefaultApp<SliplaneServicesApp>()        // show Servers app as wallpaper when no tabs are open
     .UseTabs(preventDuplicates: true);
 server.UseChrome(chromeSettings);
 

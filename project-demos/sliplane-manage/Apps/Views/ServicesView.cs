@@ -349,10 +349,14 @@ public class ServicesView : ViewBase
     {
         var rawStatus = svc.Status ?? string.Empty;
 
-        var deployFailed = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault(e =>
-            e.Type is "service_deploy_failed" or "service_build_failed");
-        if (deployFailed != null)
-            return ("error", Icons.CircleX, deployFailed.Type);
+        // Only show error if the most recent deploy-related event is a failure.
+        // A later service_deploy_success means the service recovered.
+        var lastDeployEvent = events
+            .Where(e => e.Type is "service_deploy_failed" or "service_build_failed" or "service_deploy_success" or "service_deploy")
+            .OrderByDescending(e => e.CreatedAt)
+            .FirstOrDefault();
+        if (lastDeployEvent?.Type is "service_deploy_failed" or "service_build_failed")
+            return ("error", Icons.CircleX, lastDeployEvent.Type);
 
         var ev = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault(e =>
             e.Type is "service_suspend" or "service_suspend_success"
