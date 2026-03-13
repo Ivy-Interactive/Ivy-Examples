@@ -569,6 +569,7 @@ public class ProjectDetailsBlade : ViewBase
         "service_deploy_success"  => "Deployed successfully",
         "service_deploy"          => "Deploy started",
         "service_deploy_failed"   => "Deploy failed",
+        "service_build_failed"    => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 }

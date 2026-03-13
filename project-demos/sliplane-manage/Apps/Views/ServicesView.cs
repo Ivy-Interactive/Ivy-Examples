@@ -349,6 +349,11 @@ public class ServicesView : ViewBase
     {
         var rawStatus = svc.Status ?? string.Empty;
 
+        var deployFailed = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault(e =>
+            e.Type is "service_deploy_failed" or "service_build_failed");
+        if (deployFailed != null)
+            return ("error", Icons.CircleX, deployFailed.Type);
+
         var ev = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault(e =>
             e.Type is "service_suspend" or "service_suspend_success"
                    or "service_resume"  or "service_resume_success");
@@ -388,6 +393,7 @@ public class ServicesView : ViewBase
         "service_deploy_success"  => "Service deployed successfully",
         "service_deploy"          => "Service deploy started",
         "service_deploy_failed"   => "Service deploy failed",
+        "service_build_failed"    => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 
@@ -618,6 +624,7 @@ public class ServiceEventsSheet : ViewBase
         "service_deploy_success"  => "Service deployed successfully",
         "service_deploy"          => "Service deploy started",
         "service_deploy_failed"   => "Service deploy failed",
+        "service_build_failed"    => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 }
