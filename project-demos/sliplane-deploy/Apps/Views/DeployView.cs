@@ -42,9 +42,12 @@ public class DeployView : ViewBase
         _defaultProjectId = defaultProjectId;
     }
 
+    private const string ManageServicesUrl = "https://ivy-sliplane-management.sliplane.app/";
+
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
+        var ivyClient = this.UseService<IClientProvider>();
         var model = this.UseState(() => new DeployFormModel
         {
             ServerId = _defaultServerId,
@@ -162,7 +165,12 @@ public class DeployView : ViewBase
         }
 
         var card = new Card(cardContent).Width(Size.Fraction(0.35f));
-        return Layout.Center() | card;
+        var manageBtn = new Button("Manage services").Icon(Icons.Settings)
+            .Outline().Large().BorderRadius(BorderRadius.Full)
+            .OnClick(_ => ivyClient.OpenUrl(ManageServicesUrl));
+        var manageFloat = new FloatingPanel(manageBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
+
+        return new Fragment(Layout.Center() | card, manageFloat);
     }
 
     private static string DeriveServiceName(string repoUrl, string dockerContext = ".")
