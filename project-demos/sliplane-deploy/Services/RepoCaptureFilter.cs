@@ -1,12 +1,11 @@
-namespace SliplaneManage.Services;
+namespace SliplaneDeploy.Services;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Captures ?repo= from the initial GET /sliplane-deploy-app before Ivy SPA strips query params.
+/// Captures ?repo= from the initial GET before Ivy SPA strips query params.
 /// Parses GitHub URLs (including /tree/branch/subpath) and stores a <see cref="DeployDraft"/>.
 /// </summary>
 public class RepoCaptureFilter : IStartupFilter
@@ -17,8 +16,6 @@ public class RepoCaptureFilter : IStartupFilter
         {
             app.Use(async (context, nextMiddleware) =>
             {
-                // Capture ?repo= on any initial request (/, /sliplane-deploy-app, etc.)
-                // so the Deploy app can pre-fill from wallpaper or direct app route.
                 var raw = context.Request.Query["repo"].ToString();
                 if (!string.IsNullOrWhiteSpace(raw))
                 {

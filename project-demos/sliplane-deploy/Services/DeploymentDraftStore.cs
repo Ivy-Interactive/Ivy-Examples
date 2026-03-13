@@ -1,4 +1,4 @@
-namespace SliplaneManage.Services;
+namespace SliplaneDeploy.Services;
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Http;
 /// </summary>
 public record DeployDraft(
     string RepoUrl,
-    string Branch       = "main",
+    string Branch = "main",
     string DockerContext = ".",
     string DockerfilePath = "Dockerfile");
 
@@ -55,31 +55,27 @@ public class DeploymentDraftStore
     {
         input = input.Trim().TrimEnd('/');
 
-        // https://github.com/owner/repo/tree/branch/sub/path
         var treeMatch = Regex.Match(input,
             @"^https://github\.com/(?<owner>[^/]+)/(?<repo>[^/]+)/tree/(?<branch>[^/]+)(?:/(?<path>.+))?$");
 
         if (treeMatch.Success)
         {
-            var repoUrl  = $"https://github.com/{treeMatch.Groups["owner"].Value}/{treeMatch.Groups["repo"].Value}";
-            var branch   = treeMatch.Groups["branch"].Value;
-            var subPath  = treeMatch.Groups["path"].Value.TrimEnd('/');
+            var repoUrl = $"https://github.com/{treeMatch.Groups["owner"].Value}/{treeMatch.Groups["repo"].Value}";
+            var branch = treeMatch.Groups["branch"].Value;
+            var subPath = treeMatch.Groups["path"].Value.TrimEnd('/');
 
             if (string.IsNullOrWhiteSpace(subPath))
                 return new DeployDraft(repoUrl, branch);
 
             return new DeployDraft(
-                RepoUrl:       repoUrl,
-                Branch:        branch,
+                RepoUrl: repoUrl,
+                Branch: branch,
                 DockerContext: subPath,
                 DockerfilePath: $"{subPath}/Dockerfile");
         }
 
-        // Plain repo URL: https://github.com/owner/repo
         return new DeployDraft(input);
     }
-
-    // ── private helpers ──────────────────────────────────────────────────────
 
     private DeployDraft? GetDraft()
     {
@@ -116,7 +112,7 @@ public class DeploymentDraftStore
         {
             HttpOnly = true,
             SameSite = SameSiteMode.Lax,
-            Expires  = DateTimeOffset.UtcNow.AddHours(2),
+            Expires = DateTimeOffset.UtcNow.AddHours(2),
         });
 
         return newKey;

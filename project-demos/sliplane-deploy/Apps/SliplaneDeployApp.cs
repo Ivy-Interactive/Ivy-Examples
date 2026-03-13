@@ -1,33 +1,32 @@
-namespace SliplaneManage.Apps;
+namespace SliplaneDeploy.Apps;
 
-using SliplaneManage.Apps.Views;
-using SliplaneManage.Services;
-using SliplaneManage.Models;
+using SliplaneDeploy.Apps.Views;
+using SliplaneDeploy.Models;
+using SliplaneDeploy.Services;
 
 /// <summary>
 /// Route: /sliplane-deploy-app
-/// Opened via the "Host your Ivy app on Sliplane" button.
+/// One-click deploy: Server + Service name, Deploy button, status check at the end.
 /// ?repo= is captured by RepoCaptureFilter, parsed into a DeployDraft, and pre-fills the form.
 /// </summary>
 [App(
     icon: Icons.Rocket,
     title: "Deploy on Sliplane",
-    isVisible: false)]
+    isVisible: true)]
 public class SliplaneDeployApp : ViewBase
 {
     public override object? Build()
     {
-        var config   = this.UseService<IConfiguration>();
-        var auth     = this.UseService<IAuthService>();
-        var session  = auth.GetAuthSession();
+        var config = this.UseService<IConfiguration>();
+        var auth = this.UseService<IAuthService>();
+        var session = auth.GetAuthSession();
         var apiToken = config["Sliplane:ApiToken"]
                        ?? session.AuthToken?.AccessToken
                        ?? string.Empty;
 
         var draftStore = this.UseService<DeploymentDraftStore>();
-        var args       = this.UseArgs<DeployArgs>();
+        var args = this.UseArgs<DeployArgs>();
 
-        // UseState ensures we read the draft once per app instance; LastDraft never clears (data always saved).
         var draftState = this.UseState<DeployDraft?>(() =>
             args is not null
                 ? DeploymentDraftStore.ParseGitHubUrl(args.Repo)
@@ -51,7 +50,6 @@ public class SliplaneDeployApp : ViewBase
             key: ("deploy-default-server", apiToken),
             fetcher: async (_, ct) => (await client.GetServersAsync(apiToken)).FirstOrDefault());
 
-        // When user came from deploy button (draft present), ensure project "Ivy" exists and use it.
         var needIvyProject = draft is not null;
         var ivyProjectQuery = this.UseQuery<SliplaneProject?, (string, bool)>(
             key: (apiToken, needIvyProject),
@@ -68,9 +66,8 @@ public class SliplaneDeployApp : ViewBase
             key: ("deploy-default-project", apiToken),
             fetcher: async (_, ct) => (await client.GetProjectsAsync(apiToken)).FirstOrDefault());
 
-        // When draft present: use Ivy project (created if missing). Otherwise use first project.
-        var ivyProject   = needIvyProject ? ivyProjectQuery.Value : null;
-        var preServerId  = firstServerQuery.Value?.Id ?? "";
+        var ivyProject = needIvyProject ? ivyProjectQuery.Value : null;
+        var preServerId = firstServerQuery.Value?.Id ?? "";
         var preProjectId = (needIvyProject ? ivyProject?.Id : firstProjectQuery.Value?.Id) ?? "";
 
         var serverLookupPreload = this.UseQuery<Option<string>?, (string, string?, int)>(
@@ -85,25 +82,23 @@ public class SliplaneDeployApp : ViewBase
                 ? null
                 : new Option<string>((needIvyProject ? ivyProject?.Name : firstProjectQuery.Value?.Name) ?? "Ivy", preProjectId));
 
-        var needDefaults     = draft is not null;
-        var serversReady     = !firstServerQuery.Loading   || firstServerQuery.Value   != null;
-        var projectsReady    = needIvyProject
+        var needDefaults = draft is not null;
+        var serversReady = !firstServerQuery.Loading || firstServerQuery.Value != null;
+        var projectsReady = needIvyProject
             ? (!ivyProjectQuery.Loading || ivyProjectQuery.Value != null)
             : (!firstProjectQuery.Loading || firstProjectQuery.Value != null);
-        var serverLkpReady   = string.IsNullOrEmpty(preServerId)  || !serverLookupPreload.Loading  || serverLookupPreload.Value  != null;
-        var projectLkpReady  = string.IsNullOrEmpty(preProjectId) || !projectLookupPreload.Loading || projectLookupPreload.Value != null;
+        var serverLkpReady = string.IsNullOrEmpty(preServerId) || !serverLookupPreload.Loading || serverLookupPreload.Value != null;
+        var projectLkpReady = string.IsNullOrEmpty(preProjectId) || !projectLookupPreload.Loading || projectLookupPreload.Value != null;
 
-        if (needDefaults && (!serversReady || !projectsReady || !serverLkpReady || !projectLkpReady))
+        if (!serversReady || !projectsReady || !serverLkpReady || !projectLkpReady)
             return Layout.Center() | Text.Muted("Loading…");
 
-        // Pre-fill server/project only when we came from the deploy button (draft present).
-        // On refresh or opening Deploy from sidebar without repo → draft is empty → form starts blank.
-        var defaultServerId  = needDefaults ? preServerId  : "";
-        var defaultProjectId = needDefaults ? preProjectId : "";
+        var defaultServerId = needDefaults ? preServerId : (firstServerQuery.Value?.Id ?? "");
+        var defaultProjectId = needDefaults ? preProjectId : ((needIvyProject ? ivyProject?.Id : firstProjectQuery.Value?.Id) ?? "");
 
         return new DeployView(apiToken, draft ?? new DeployDraft(string.Empty), defaultServerId, defaultProjectId);
     }
 }
 
-/// <summary>Arguments for internal Ivy navigation to SliplaneDeployApp.</summary>
+/// <summary>Arguments for navigation to SliplaneDeployApp with ?repo=.</summary>
 public record DeployArgs(string Repo);

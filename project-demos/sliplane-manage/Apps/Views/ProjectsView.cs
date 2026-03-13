@@ -72,7 +72,7 @@ public class ProjectListBlade : ViewBase
         }
 
         var headerBar = Layout.Horizontal().Gap(1)
-            | filter.ToSearchInput().Placeholder("Search projectsвЂ¦").Width(Size.Grow())
+            | filter.ToSearchInput().Placeholder("Search projects...").Width(Size.Grow())
             | new Button().Icon(Icons.Plus).Ghost()
                 .OnClick(_ =>
                 {
@@ -569,6 +569,7 @@ public class ProjectDetailsBlade : ViewBase
         "service_deploy_success"  => "Deployed successfully",
         "service_deploy"          => "Deploy started",
         "service_deploy_failed"   => "Deploy failed",
+        "service_build_failed"    => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 }
