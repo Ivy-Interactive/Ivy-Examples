@@ -1,0 +1,24 @@
+global using Ivy;
+global using Ivy.Apps;
+global using Ivy.Auth;
+global using Ivy.Chrome;
+global using Ivy.Client;
+global using Ivy.Core;
+global using Ivy.Core.Hooks;
+global using Ivy.Helpers;
+global using Ivy.Hooks;
+global using Ivy.Shared;
+global using Ivy.Services;
+global using Ivy.Views;
+global using Ivy.Views.Alerts;
+global using Ivy.Views.Blades;
+global using Ivy.Views.Builders;
+global using Ivy.Views.Forms;
+global using Ivy.Widgets.Inputs;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using System.ComponentModel.DataAnnotations;
+global using System.Globalization;
+global using System.Text.Json;
+
+namespace SliplaneDeploy;
