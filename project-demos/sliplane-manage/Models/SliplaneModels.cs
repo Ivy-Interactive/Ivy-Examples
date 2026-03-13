@@ -64,13 +64,25 @@ public record SliplaneService(
     SliplaneServiceResources? Resources,
     [property: JsonPropertyName("network")] SliplaneServiceNetwork? Network,
     [property: JsonPropertyName("deployment")] SliplaneServiceDeployment? Deployment,
-    [property: JsonPropertyName("serverId")] string? ServerId
+    [property: JsonPropertyName("serverId")] string? ServerId,
+    [property: JsonPropertyName("healthcheck")] string? Healthcheck = null,
+    [property: JsonPropertyName("cmd")] string? Cmd = null,
+    [property: JsonPropertyName("env")] List<EnvironmentVariable>? Env = null,
+    [property: JsonPropertyName("volumes")] List<SliplaneServiceVolumeInfo>? Volumes = null,
+    [property: JsonPropertyName("webhook")] string? Webhook = null
 );
 
 public record SliplaneServiceDomain(
     string Id,
     string Domain,
     bool IsCustom
+);
+
+/// <summary>Volume info as returned in GET /projects/{id}/services/{id} response.</summary>
+public record SliplaneServiceVolumeInfo(
+    string Id,
+    string Name,
+    string MountPath
 );
 
 public record SliplaneServiceResources(
@@ -166,7 +178,8 @@ public record UpdateServiceRequest(
     string? Cmd = null,
     string? Healthcheck = null,
     UpdateServiceDeployment? Deployment = null,
-    List<EnvironmentVariable>? Env = null
+    List<EnvironmentVariable>? Env = null,
+    List<ServiceVolumeMount>? Volumes = null
 );
 
 /// <summary>Deployment section for PATCH service.</summary>
@@ -210,5 +223,6 @@ public record UpdateRegistryCredentialRequest(
 public record SliplaneOverview(
     List<SliplaneProject> Projects,
     List<SliplaneServer> Servers,
-    Dictionary<string, List<SliplaneService>> ServicesByProject
+    Dictionary<string, List<SliplaneService>> ServicesByProject,
+    Dictionary<string, List<SliplaneServiceEvent>>? EventsByService = null
 );

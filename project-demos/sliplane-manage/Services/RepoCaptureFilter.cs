@@ -17,15 +17,14 @@ public class RepoCaptureFilter : IStartupFilter
         {
             app.Use(async (context, nextMiddleware) =>
             {
-                if (context.Request.Path.StartsWithSegments("/sliplane-deploy-app", StringComparison.OrdinalIgnoreCase))
+                // Capture ?repo= on any initial request (/, /sliplane-deploy-app, etc.)
+                // so the Deploy app can pre-fill from wallpaper or direct app route.
+                var raw = context.Request.Query["repo"].ToString();
+                if (!string.IsNullOrWhiteSpace(raw))
                 {
-                    var raw = context.Request.Query["repo"].ToString();
-                    if (!string.IsNullOrWhiteSpace(raw))
-                    {
-                        var draft = DeploymentDraftStore.ParseGitHubUrl(Uri.UnescapeDataString(raw));
-                        var store = context.RequestServices.GetRequiredService<DeploymentDraftStore>();
-                        store.SaveDraft(draft);
-                    }
+                    var draft = DeploymentDraftStore.ParseGitHubUrl(Uri.UnescapeDataString(raw));
+                    var store = context.RequestServices.GetRequiredService<DeploymentDraftStore>();
+                    store.SaveDraft(draft);
                 }
 
                 await nextMiddleware(context);
