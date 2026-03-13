@@ -63,6 +63,7 @@ public class DeployView : ViewBase
         var reloadCounter = this.UseState(0);
         var deployedService = this.UseState<(string ProjectId, SliplaneService Service)?>(() => null);
         var deployError = this.UseState<string?>(() => null);
+        var validationFailed = this.UseState(false);
 
         QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string q) =>
             ctx.UseQuery<Option<string>[], (string, string, int)>(
@@ -99,7 +100,12 @@ public class DeployView : ViewBase
             (string ProjectId, SliplaneService Service)? noSvc = null;
             deployError.Set(noErr);
             deployedService.Set(noSvc);
-            if (!await onSubmit()) return;
+            validationFailed.Set(false);
+            if (!await onSubmit())
+            {
+                validationFailed.Set(true);
+                return;
+            }
 
             var m = model.Value;
             try
@@ -129,33 +135,33 @@ public class DeployView : ViewBase
 
         var actionsRow = Layout.Vertical()
             | (Layout.Horizontal().Align(Align.Center)
-                | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading)
-                    .OnClick(async _ => await HandleDeploy())
-                | validationView);
+                | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading).Width(Size.Fraction(0.5f))
+                    .OnClick(async _ => await HandleDeploy()))
+            | (validationFailed.Value
+                ? new Callout(validationView, "Please fix the following", CalloutVariant.Error)
+                : validationView);
 
         var cardContent = Layout.Vertical()
             | headerSection
             | new Separator()
             | formView
-            | new Separator()
+            | new Spacer()
             | actionsRow;
 
         var deployed = deployedService.Value;
         if (deployed != null)
         {
             cardContent = cardContent
-                | new Separator()
                 | new DeployStatusView(_apiToken, deployed.Value.ProjectId, deployed.Value.Service);
         }
 
         if (deployError.Value != null)
         {
             cardContent = cardContent
-                | new Separator()
                 | new Callout(deployError.Value, variant: CalloutVariant.Error);
         }
 
-        var card = new Card(cardContent).Width(Size.Fraction(0.4f));
+        var card = new Card(cardContent).Width(Size.Fraction(0.35f));
         return Layout.Center() | card;
     }
 

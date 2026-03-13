@@ -65,7 +65,7 @@ public class DeployStatusView : ViewBase
 
         var content = Layout.Vertical().Gap(4) | header;
         if (eventsList != null)
-            content = content | new Separator() | eventsList;
+            content = content | eventsList;
 
         return content;
     }
