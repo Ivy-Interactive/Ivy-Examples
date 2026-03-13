@@ -33,6 +33,7 @@ public class DeployStatusView : ViewBase
 
         var events = eventsQuery.Value ?? [];
         var status = DeriveStatus(events);
+        var failureMessage = GetFailureMessage(events);
         var statusText = status switch
         {
             DeployStatus.Success => "Deploy succeeded",
@@ -74,16 +75,26 @@ public class DeployStatusView : ViewBase
             progressBar = new Progress().Indeterminate().Goal("Building and deploying…");
         }
 
+        object? errorSection = null;
+        if (status == DeployStatus.Failed)
+        {
+            errorSection = Text.Block(!string.IsNullOrEmpty(failureMessage)
+                ? failureMessage
+                : "Deployment failed. Check the service logs in Sliplane dashboard.");
+        }
+
         object? linkSection = null;
         if (status == DeployStatus.Success && !string.IsNullOrEmpty(siteUrlAbsolute))
         {
             linkSection = (Layout.Horizontal().Align(Align.Left)| Text.Block("URL:").Bold() | new Button(siteUrl).Link().Url(siteUrlAbsolute).Width(Size.Fit()));
         }
 
-        var content = Layout.Vertical().Align(Align.Left)
+        var content = Layout.Vertical().Gap(1).Align(Align.Left)
             | header;
         if (progressBar != null)
             content = content | progressBar;
+        if (errorSection != null)
+            content = content | errorSection;
         if (linkSection != null)
             content = content | linkSection;
 
@@ -94,17 +105,25 @@ public class DeployStatusView : ViewBase
 
     private static DeployStatus DeriveStatus(List<SliplaneServiceEvent> events)
     {
+        if (events.Any(e => e.Type == "service_deploy_success")) return DeployStatus.Success;
+        if (events.Any(e => e.Type == "service_deploy_failed" || e.Type == "service_build_failed")) return DeployStatus.Failed;
+
         var last = events.LastOrDefault();
         if (last == null) return DeployStatus.Unknown;
 
         return last.Type switch
         {
             "service_deploy_success" => DeployStatus.Success,
-            "service_deploy_failed" => DeployStatus.Failed,
+            "service_deploy_failed" or "service_build_failed" => DeployStatus.Failed,
             "service_deploy" => DeployStatus.Deploying,
-            _ => events.Any(e => e.Type == "service_deploy_success") ? DeployStatus.Success
-                 : events.Any(e => e.Type == "service_deploy_failed") ? DeployStatus.Failed
-                 : DeployStatus.Deploying,
+            _ => DeployStatus.Deploying,
         };
+    }
+
+    private static string? GetFailureMessage(List<SliplaneServiceEvent> events)
+    {
+        var failed = events.LastOrDefault(e =>
+            e.Type == "service_deploy_failed" || e.Type == "service_build_failed");
+        return string.IsNullOrWhiteSpace(failed?.Message) ? null : failed.Message;
     }
 }
