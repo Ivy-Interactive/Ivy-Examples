@@ -42,7 +42,7 @@ public class LeadCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             .Builder(e => e.LeadStageId, e => e.ToAsyncSelectInput<int>(QueryLeadStages, LookupLeadStage, placeholder: "Select Lead Stage"))
             .Builder(e => e.ManagerId, e => e.ToAsyncSelectInput<int?>(QueryManagers, LookupManager, placeholder: "Select Manager"))
             .Builder(e => e.Priority, e => e.ToNumberInput())
-            .Builder(e => e.Notes, e => e.ToTextAreaInput())
+            .Builder(e => e.Notes, e => e.ToTextareaInput())
             .ToDialog(isOpen, title: "Create Lead", submitTitle: "Create");
     }
 

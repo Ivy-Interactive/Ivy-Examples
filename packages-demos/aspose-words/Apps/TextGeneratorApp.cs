@@ -36,7 +36,7 @@ public class TextGeneratorApp : ViewBase
                 Layout.Vertical().Gap(3).Padding(2)
                 | Text.H2("Text to DOCX")
                 | Text.Block("Enter your text below and generate a Word document instantly.")
-                | inputText.ToTextAreaInput(placeholder: "Type your text here...").Height(Size.Units(35))
+                | inputText.ToTextareaInput(placeholder: "Type your text here...").Height(Size.Units(35))
                 | new Spacer()
                 | (generatedDoc.Value == null && !isGenerating.Value
                     ? new Button("Generate Document", _ =>

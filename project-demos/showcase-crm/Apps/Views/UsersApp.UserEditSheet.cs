@@ -25,7 +25,7 @@ public class UserEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int u
             .Builder(e => e.Name, e => e.ToTextInput())
             .Builder(e => e.Email, e => e.ToEmailInput())
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToSheet(isOpen, "Edit User");
 
         async Task OnSubmit(User? request)

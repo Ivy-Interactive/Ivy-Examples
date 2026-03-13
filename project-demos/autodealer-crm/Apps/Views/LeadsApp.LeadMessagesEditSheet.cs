@@ -18,7 +18,7 @@ public class LeadMessagesEditSheet(IState<bool> isOpen, RefreshToken refreshToke
 
         return message
             .ToForm()
-            .Builder(e => e.Content, e => e.ToTextAreaInput())
+            .Builder(e => e.Content, e => e.ToTextareaInput())
             .Builder(e => e.MessageChannelId, e => e.ToAsyncSelectInput<int?>(QueryMessageChannels, LookupMessageChannel, placeholder: "Select Message Channel"))
             .Builder(e => e.MessageDirectionId, e => e.ToAsyncSelectInput<int?>(QueryMessageDirections, LookupMessageDirection, placeholder: "Select Message Direction"))
             .Builder(e => e.MessageTypeId, e => e.ToAsyncSelectInput<int?>(QueryMessageTypes, LookupMessageType, placeholder: "Select Message Type"))

@@ -72,7 +72,7 @@ public class NodaTimeApp : ViewBase
         // Ivy SearchSelect
         var tzSelect = tzState
             .ToSelectInput(tzOptions)
-            .Variant(SelectInputs.Select)
+            .Variant(SelectInputVariants.Select)
             .Placeholder("Search timezone...")
             .WithLabel("Timezone");
 

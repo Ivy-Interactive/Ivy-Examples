@@ -24,7 +24,7 @@ public class LeadEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int l
             .Builder(e => e.LeadIntentId, e => e.ToAsyncSelectInput<int?>(QueryLeadIntents, LookupLeadIntent, placeholder: "Select Lead Intent"))
             .Builder(e => e.LeadStageId, e => e.ToAsyncSelectInput<int?>(QueryLeadStages, LookupLeadStage, placeholder: "Select Lead Stage"))
             .Builder(e => e.Priority, e => e.ToNumberInput())
-            .Builder(e => e.Notes, e => e.ToTextAreaInput())
+            .Builder(e => e.Notes, e => e.ToTextareaInput())
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
             .ToSheet(isOpen, "Edit Lead");
     }

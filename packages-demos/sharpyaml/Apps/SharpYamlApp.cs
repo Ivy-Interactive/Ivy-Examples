@@ -104,7 +104,7 @@ public class SharpYamlApp : ViewBase
         
         var convertBtn = new Button("Convert")
             .Primary()
-            .HandleClick(_ =>
+            .OnClick(_ =>
             {
                 string error;
                 var output = GenerateOutput(modelState.Value, out error);

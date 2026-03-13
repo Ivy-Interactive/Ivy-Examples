@@ -32,7 +32,7 @@ public class MainMenuBlade : ViewBase
                         | new Button("Try It")
                             .Variant(ButtonVariant.Primary)
                             .Disabled(string.IsNullOrWhiteSpace(selectedModel.Value) || string.IsNullOrWhiteSpace(openAiApiKey.Value))
-                            .HandleClick(_ => blades.Push(this, new SimpleChatBlade(openAiApiKey.Value, selectedModel.Value), "Simple Chat")))
+                            .OnClick(_ => blades.Push(this, new SimpleChatBlade(openAiApiKey.Value, selectedModel.Value), "Simple Chat")))
                 )
                 | new Card(
                     Layout.Horizontal().Gap(3)
@@ -44,7 +44,7 @@ public class MainMenuBlade : ViewBase
                         | new Button("Try It")
                             .Variant(ButtonVariant.Primary)
                             .Disabled(string.IsNullOrWhiteSpace(selectedModel.Value) || string.IsNullOrWhiteSpace(openAiApiKey.Value))
-                            .HandleClick(_ => blades.Push(this, new AgentChatBlade(openAiApiKey.Value, selectedModel.Value), "Agent Chat")))
+                            .OnClick(_ => blades.Push(this, new AgentChatBlade(openAiApiKey.Value, selectedModel.Value), "Agent Chat")))
                 );
 
         return new Fragment()

@@ -74,13 +74,13 @@ public class ScribanApp : ViewBase
 		var modelEditor = modelState.ToCodeInput().Language(Languages.Json).Height(Size.Fit());
 		var templateEditor = templateState.ToCodeInput().Language(Languages.Markdown).Height(Size.Fit());
 		var outputViewer = string.IsNullOrEmpty(outputState.Value)
-			? outputState.ToTextAreaInput("Output will appear here after generation...").Disabled().Height(Size.Units(50))
-			: outputState.ToTextAreaInput().Height(Size.Units(50));
+			? outputState.ToTextareaInput("Output will appear here after generation...").Disabled().Height(Size.Units(50))
+			: outputState.ToTextareaInput().Height(Size.Units(50));
 		
 
         var generateBtn = new Button("Generate")
             .Primary()
-            .HandleClick(_ =>
+            .OnClick(_ =>
             {
 				string error;
 				var output = GenerateOutput(modelState.Value, templateState.Value, out error);

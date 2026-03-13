@@ -206,7 +206,7 @@ public class ShopifySharpApp : ViewBase
             | Text.Label("Sort direction")
             | sortDirection.ToSelectInput(new[] { "ASC", "DESC" }.ToOptions()).Placeholder("Sort direction").Disabled(searchControlsDisabled)
             | Text.Label("Filter query")
-            | queryFilter.ToTextInput().Placeholder("Filter query (e.g. tag:'summer')").Variant(TextInputs.Search).Disabled(searchControlsDisabled)
+            | queryFilter.ToTextInput().Placeholder("Filter query (e.g. tag:'summer')").Variant(TextInputVariants.Search).Disabled(searchControlsDisabled)
             | new Button("Get Products", onClick: async _ => await LoadProducts()).Disabled(isLoading.Value).Width(Size.Full())
             | Text.Block("This demo uses ShopifySharp library to fetch the full product catalog from your Shopify store.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ShopifySharp](https://github.com/nozzlegear/ShopifySharp)")

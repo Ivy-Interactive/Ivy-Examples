@@ -38,7 +38,7 @@ public class MessageCreateDialog(IState<bool> isOpen, RefreshToken refreshToken)
             .Builder(e => e.MessageChannelId, e => e.ToNumberInput())
             .Builder(e => e.MessageDirectionId, e => e.ToNumberInput())
             .Builder(e => e.MessageTypeId, e => e.ToNumberInput())
-            .Builder(e => e.Content, e => e.ToTextAreaInput())
+            .Builder(e => e.Content, e => e.ToTextareaInput())
             .Builder(e => e.SentAt, e => e.ToDateTimeInput())
             .ToDialog(isOpen, title: "Create Message", submitTitle: "Create");
     }

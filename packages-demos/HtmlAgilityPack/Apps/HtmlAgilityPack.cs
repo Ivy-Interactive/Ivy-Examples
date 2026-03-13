@@ -263,7 +263,7 @@ public class HtmlAgilityPackApp : ViewBase
                 | Text.Muted("HTML parser extracts website data: title, images, structure, links, and social media info")
                 | urlState.ToSearchInput().WithLabel("Enter Site URL:")
                 | dataTypesSelect.ToSelectInput(dataTypeOptions)
-                    .Variant(SelectInputs.Toggle)
+                    .Variant(SelectInputVariants.Toggle)
                     .WithLabel("Select data to extract:")
                 | new Button("Parse Site HTML", eventHandler).Loading(parsingState.Value)
                 | (errorState.Value.Length > 0 ? Text.Block(errorState.Value) : null)

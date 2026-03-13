@@ -23,12 +23,12 @@ public class CompanyEditSheet(IState<bool> isOpen, RefreshToken refreshToken, in
         return companyQuery.Value
             .ToForm()
             .Builder(e => e.Name, e => e.ToTextInput())
-            .Builder(e => e.Address, e => e.ToTextAreaInput())
+            .Builder(e => e.Address, e => e.ToTextareaInput())
             .Builder(e => e.Phone, e => e.ToTelInput())
             .Builder(e => e.Website, e => e.ToUrlInput())
             .Place(e => e.Name, e => e.Address, e => e.Phone, e => e.Website)
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToSheet(isOpen, "Edit Company");
 
         async Task OnSubmit(Company? request)

@@ -32,7 +32,7 @@ public class CompanyDealsCreateDialog(IState<bool> isOpen, RefreshToken refreshT
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(UseLeadSearchForCompany, UseLeadLookup, placeholder: "Select Lead"))
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
             .Builder(e => e.CloseDate, e => e.ToDateInput())
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create Deal", submitTitle: "Create");
 
         async Task OnSubmit(DealCreateRequest request)

@@ -27,7 +27,7 @@ public class CompanyContactsEditSheet(IState<bool> isOpen, RefreshToken refreshT
             .Builder(e => e.Email, e => e.ToEmailInput())
             .Builder(e => e.Phone, e => e.ToTelInput())
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToSheet(isOpen, "Edit Contact");
 
         async Task OnSubmit(Contact? request)

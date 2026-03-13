@@ -55,7 +55,7 @@ public class StartupDetailsBlade(int startupId) : ViewBase
                     FoundedAt = startupValue.FoundedAt?.ToString("yyyy-MM-dd")
                 }.ToDetails()
                 .RemoveEmpty()
-                .MultiLine(e => e.Description)
+                .Multiline(e => e.Description)
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
                     | dropDown

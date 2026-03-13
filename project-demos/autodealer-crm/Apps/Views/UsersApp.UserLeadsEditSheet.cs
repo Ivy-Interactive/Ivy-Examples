@@ -18,7 +18,7 @@ public class UserLeadsEditSheet(IState<bool> isOpen, RefreshToken refreshToken, 
 
         return lead
             .ToForm()
-            .Builder(e => e.Notes, e => e.ToTextAreaInput())
+            .Builder(e => e.Notes, e => e.ToTextareaInput())
             .Builder(e => e.Priority, e => e.ToNumberInput())
             .Builder(e => e.CustomerId, e => e.ToAsyncSelectInput<int?>(QueryCustomers, LookupCustomer, placeholder: "Select Customer"))
             .Builder(e => e.ManagerId, e => e.ToAsyncSelectInput<int?>(QueryManagers, LookupManager, placeholder: "Select Manager"))

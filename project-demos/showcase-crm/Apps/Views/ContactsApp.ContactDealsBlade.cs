@@ -76,7 +76,7 @@ public class ContactDealsBlade(int contactId) : ViewBase
                 MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
                 MenuItem.Default(Icons.Trash2, "delete").Tag("delete")
             )
-            .HandleRowAction(e =>
+            .OnRowAction(e =>
             {
                 var args = e.Value;
                 var tag = args.Tag?.ToString();

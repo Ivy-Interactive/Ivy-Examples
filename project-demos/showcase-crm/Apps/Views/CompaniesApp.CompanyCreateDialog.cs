@@ -22,10 +22,10 @@ public class CompanyCreateDialog(IState<bool> isOpen, RefreshToken refreshToken)
         return company
             .ToForm()
             .Builder(e => e.Name, e => e.ToTextInput())
-            .Builder(e => e.Address, e => e.ToTextAreaInput())
+            .Builder(e => e.Address, e => e.ToTextareaInput())
             .Builder(e => e.Phone, e => e.ToTelInput())
             .Builder(e => e.Website, e => e.ToUrlInput())
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create Company", submitTitle: "Create");
 
         async Task OnSubmit(CompanyCreateRequest request)

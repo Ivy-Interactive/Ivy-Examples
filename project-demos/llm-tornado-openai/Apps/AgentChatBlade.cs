@@ -161,7 +161,7 @@ public class AgentChatBlade : ViewBase
 
 
         var instructionsDialog = _instructionsForm.ToForm()
-            .Builder(m => m.Instructions, m => m.ToTextAreaInput(placeholder: "Enter instructions for the agent...")
+            .Builder(m => m.Instructions, m => m.ToTextareaInput(placeholder: "Enter instructions for the agent...")
                 .Height(Size.Units(100)))
             .Label(m => m.Instructions, "Agent Instructions")
             .ToDialog(_showSettings,

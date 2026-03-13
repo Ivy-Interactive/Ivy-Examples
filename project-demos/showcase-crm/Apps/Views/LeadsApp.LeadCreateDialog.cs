@@ -25,7 +25,7 @@ public class LeadCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             .Builder(e => e.CompanyId, e => e.ToAsyncSelectInput(UseCompanySearch, UseCompanyLookup, placeholder: "Select Company"))
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(UseContactSearch, UseContactLookup, placeholder: "Select Contact"))
             .Builder(e => e.Source, e => e.ToTextInput())
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create Lead", submitTitle: "Create");
 
         async Task OnSubmit(LeadCreateRequest request)

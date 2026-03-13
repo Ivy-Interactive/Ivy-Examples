@@ -19,7 +19,7 @@ public class UserCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
         return user
             .ToForm()
             .Builder(e => e.Email, e => e.ToEmailInput())
-            .HandleSubmit(OnSubmit)
+            .OnSubmit(OnSubmit)
             .ToDialog(isOpen, title: "Create User", submitTitle: "Create");
 
         async Task OnSubmit(UserCreateRequest request)

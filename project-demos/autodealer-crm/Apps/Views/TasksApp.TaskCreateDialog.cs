@@ -39,7 +39,7 @@ public class TaskCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput<int>(QueryLeads, LookupLead, placeholder: "Select Lead"))
             .Builder(e => e.ManagerId, e => e.ToAsyncSelectInput<int>(QueryManagers, LookupManager, placeholder: "Select Manager"))
             .Builder(e => e.Title, e => e.ToTextInput())
-            .Builder(e => e.Description, e => e.ToTextAreaInput())
+            .Builder(e => e.Description, e => e.ToTextareaInput())
             .Builder(e => e.DueDate, e => e.ToDateTimeInput())
             .Builder(e => e.Completed, e => e.ToFeedbackInput())
             .ToDialog(isOpen, title: "Create Task", submitTitle: "Create");
