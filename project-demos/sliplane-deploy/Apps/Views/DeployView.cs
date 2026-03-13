@@ -67,6 +67,7 @@ public class DeployView : ViewBase
         var deployedService = this.UseState<(string ProjectId, SliplaneService Service)?>(() => null);
         var deployError = this.UseState<string?>(() => null);
         var validationFailed = this.UseState(false);
+        var isDeploying = this.UseState(false);
 
         QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string q) =>
             ctx.UseQuery<Option<string>[], (string, string, int)>(
@@ -111,6 +112,7 @@ public class DeployView : ViewBase
             }
 
             var m = model.Value;
+            isDeploying.Set(true);
             try
             {
                 var service = await client.CreateServiceAsync(_apiToken, m.ProjectId,
@@ -129,6 +131,10 @@ public class DeployView : ViewBase
             {
                 deployError.Set(ex.Message);
             }
+            finally
+            {
+                isDeploying.Set(false);
+            }
         }
 
         var headerSection = Layout.Vertical().Align(Align.Center).Gap(4)
@@ -138,7 +144,9 @@ public class DeployView : ViewBase
 
         var actionsRow = Layout.Vertical()
             | (Layout.Horizontal().Align(Align.Center)
-                | new Button("Deploy").Icon(Icons.Rocket).Primary().Large().Loading(loading).Width(Size.Fraction(0.5f))
+                | new Button("Deploy").Icon(Icons.Rocket).Primary().Large()
+                    .Loading(loading || isDeploying.Value).Disabled(loading || isDeploying.Value)
+                    .Width(Size.Fraction(0.5f))
                     .OnClick(async _ => await HandleDeploy()))
             | (validationFailed.Value
                 ? new Callout(validationView, "Please fix the following", CalloutVariant.Error)
@@ -151,11 +159,23 @@ public class DeployView : ViewBase
             | new Spacer()
             | actionsRow;
 
-        var deployed = deployedService.Value;
-        if (deployed != null)
+        if (isDeploying.Value && deployedService.Value == null)
         {
             cardContent = cardContent
-                | new DeployStatusView(_apiToken, deployed.Value.ProjectId, deployed.Value.Service);
+                | new Separator()
+                | new Callout(
+                    Layout.Vertical()
+                        | Text.Block("Creating service on Sliplane…").Bold()
+                        | new Progress().Indeterminate().Goal("Please wait…"),
+                    "Deploying",
+                    CalloutVariant.Info)
+                .Icon(Icons.Rocket);
+        }
+        else if (deployedService.Value is { } deployed)
+        {
+            cardContent = cardContent
+                | new Separator()
+                | new DeployStatusView(_apiToken, deployed.ProjectId, deployed.Service);
         }
 
         if (deployError.Value != null)

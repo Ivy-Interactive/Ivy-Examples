@@ -41,33 +41,53 @@ public class DeployStatusView : ViewBase
             _ => "Initializing…",
         };
 
-        var statusColor = status switch
+        var calloutVariant = status switch
         {
-            DeployStatus.Success => Colors.Success,
-            DeployStatus.Failed => Colors.Destructive,
-            _ => Colors.Muted,
+            DeployStatus.Success => CalloutVariant.Success,
+            DeployStatus.Failed => CalloutVariant.Error,
+            _ => CalloutVariant.Info,
         };
 
-        var header = Layout.Vertical().Align(Align.Center).Gap(2)
-            | Text.H2(statusText).Color(statusColor)
-            | Text.Muted($"Service: {_service.Name}");
+        var serviceQuery = this.UseQuery<SliplaneService?, (string, string, string)>(
+            key: ("deploy-service-details", _projectId, _service.Id),
+            fetcher: async ct => await client.GetServiceAsync(_apiToken, _projectId, _service.Id),
+            options: new QueryOptions { KeepPrevious = true });
 
-        object? eventsList = null;
-        if (events.Count > 0)
+        var serviceForUrl = status == DeployStatus.Success ? serviceQuery.Value : _service;
+        var siteUrl = serviceForUrl?.Network?.CustomDomains?.FirstOrDefault()?.Domain
+                   ?? serviceForUrl?.Network?.ManagedDomain
+                   ?? string.Empty;
+        var siteUrlAbsolute = string.IsNullOrWhiteSpace(siteUrl)
+            ? string.Empty
+            : (siteUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+               || siteUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                ? siteUrl
+                : "https://" + siteUrl);
+
+        var header = status == DeployStatus.Success
+            ? (Layout.Vertical().Gap(1) | Text.H3(statusText))
+            : (Layout.Vertical().Gap(1) | Text.H3(statusText));
+
+        object? progressBar = null;
+        if (status is DeployStatus.Deploying or DeployStatus.Unknown)
         {
-            var list = Layout.Vertical().Gap(1);
-            foreach (var e in events.TakeLast(5).Reverse())
-            {
-                list = list | Text.Block($"{e.CreatedAt:HH:mm:ss} {e.Type}: {e.Message}").Muted();
-            }
-            eventsList = list;
+            progressBar = new Progress().Indeterminate().Goal("Building and deploying…");
         }
 
-        var content = Layout.Vertical().Gap(4) | header;
-        if (eventsList != null)
-            content = content | eventsList;
+        object? linkSection = null;
+        if (status == DeployStatus.Success && !string.IsNullOrEmpty(siteUrlAbsolute))
+        {
+            linkSection = (Layout.Horizontal().Align(Align.Left)| Text.Block("URL:").Bold() | new Button(siteUrl).Link().Url(siteUrlAbsolute).Width(Size.Fit()));
+        }
 
-        return content;
+        var content = Layout.Vertical().Align(Align.Left)
+            | header;
+        if (progressBar != null)
+            content = content | progressBar;
+        if (linkSection != null)
+            content = content | linkSection;
+
+        return new Callout(content, "Deployment status", calloutVariant).Icon(Icons.Rocket);
     }
 
     private enum DeployStatus { Unknown, Deploying, Success, Failed }
