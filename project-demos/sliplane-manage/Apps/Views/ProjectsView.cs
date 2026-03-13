@@ -6,7 +6,7 @@ using Ivy.Helpers;
 
 // ProjectsView: Blades, left = project list, right = details.
 
-/// <summary>Projects view вЂ” Blades master-detail navigation.</summary>
+/// <summary>Projects view — Blades master-detail navigation.</summary>
 public class ProjectsView : ViewBase
 {
     private readonly string _apiToken;
@@ -84,7 +84,7 @@ public class ProjectListBlade : ViewBase
         object listContent;
         if (overviewQuery.Loading && overviewQuery.Value == null)
         {
-            listContent = Layout.Center() | Text.Muted("Loading projectsвЂ¦");
+            listContent = Layout.Center() | Text.Muted("Loading projects...");
         }
         else if (overviewQuery.Error is { } qErr)
         {
@@ -340,7 +340,7 @@ public class ProjectDetailsBlade : ViewBase
                 object mainContent;
         if (overviewQuery.Loading && overview == null)
         {
-            mainContent = Layout.Center() | Text.Muted("Loading servicesвЂ¦");
+            mainContent = Layout.Center() | Text.Muted("Loading services...");
         }
         else if (overviewQuery.Error is { } svcErr)
         {
@@ -521,7 +521,7 @@ public class ProjectDetailsBlade : ViewBase
     {
         return services.Select(svc =>
         {
-            var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId) ? "вЂ”"
+            var serverLabel = string.IsNullOrWhiteSpace(svc.ServerId) ? "—"
                 : servers.FirstOrDefault(s => s.Id == svc.ServerId)?.Name ?? svc.ServerId!;
 
             var events = eventsByService.TryGetValue(svc.Id, out var ev) ? ev : new List<SliplaneServiceEvent>();
@@ -529,7 +529,7 @@ public class ProjectDetailsBlade : ViewBase
 
             var lastUpdatedInstant = svc.UpdatedAt ?? svc.CreatedAt;
 
-            string deployStatus = "вЂ”";
+            string deployStatus = "—";
             if (events.Count > 0)
             {
                 deployStatus = string.Join("\n\n",
@@ -609,7 +609,7 @@ public class ServiceLogsBlade : ViewBase
         string logsText;
         if (logsQuery.Loading && logsQuery.Value == null)
         {
-            logsText = "Loading logsвЂ¦";
+            logsText = "Loading logs...";
         }
         else if (logsQuery.Error is { } err)
         {
@@ -669,7 +669,7 @@ public class ServiceEventsBlade : ViewBase
         string eventsText;
         if (eventsQuery.Loading && eventsQuery.Value == null)
         {
-            eventsText = "Loading eventsвЂ¦";
+            eventsText = "Loading events...";
         }
         else if (eventsQuery.Error is { } err)
         {
