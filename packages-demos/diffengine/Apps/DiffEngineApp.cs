@@ -86,7 +86,7 @@ public class DiffEngineApp : ViewBase
             | rightText.ToCodeInput(placeholder: "Enter right text here...");
 
         var textExtItems = Extensions
-            .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => textExtIndex.Value = idx))
+            .Select((ext, idx) => MenuItem.Default(ext).OnSelect(() => textExtIndex.Value = idx))
             .ToArray();
 
         var textTabContent =
@@ -122,7 +122,7 @@ public class DiffEngineApp : ViewBase
             | rightFile.ToInput(placeholder: @"e.g. C:\temp\rightPath.*");
 
         var fileExtItems = Extensions
-            .Select((ext, idx) => MenuItem.Default(ext).HandleSelect(() => fileExtIndex.Value = idx))
+            .Select((ext, idx) => MenuItem.Default(ext).OnSelect(() => fileExtIndex.Value = idx))
             .ToArray();
 
         var fileExtDropdown = new Button(Extensions[fileExtIndex.Value])
