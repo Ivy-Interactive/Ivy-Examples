@@ -92,7 +92,7 @@ public class BarcodeApp : ViewBase
       | controls
       | Text.Block("This demo uses Aspose.BarCode for .NET to generate barcodes.")
       | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.BarCode for .NET](https://products.aspose.com/barcode/net/)")
-    ).Width(Size.Fraction(0.45f)).Height(130);
+    ).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
     var rightCardBody = Layout.Vertical().Gap(4)
       | Text.H2("Barcode")
@@ -102,7 +102,7 @@ public class BarcodeApp : ViewBase
           ? new Image(uri) // Use intrinsic size to avoid scaling blur
           : Text.Muted("No preview")));
 
-    var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(130);
+    var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
     return Layout.Horizontal().Gap(6).Align(Align.Center)
           | leftCard
