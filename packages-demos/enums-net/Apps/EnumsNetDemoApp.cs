@@ -406,7 +406,7 @@ namespace EnumsNetApp.Apps
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                 | selectedDemo.ToSelectInput(new[] { "Enumeration", "StringFormatting", "FlagOperations", "Parsing" }.ToOptions())
-                                    .Variant(SelectInputVariants.Toggle)
+                                    .Variant(SelectInputVariant.Toggle)
                                 | validationResult.Value)
                     );
 
@@ -422,13 +422,13 @@ namespace EnumsNetApp.Apps
                                     | Text.Muted("Interactive demonstrations of flag operations on DaysOfWeek enum")
                                     | flagOperationsAndManipulation
                                     | validationAndErrorHandling
-                            ).Width("50%")
+                            ).Width(Size.Fraction(0.5f))
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                     | Text.H4("Enum Viewer")
                                     | Text.Muted("Select an enum type to view its members with descriptions and symbols")
                                     | simpleEnumViewer
-                            ).Width("50%"))
+                            ).Width(Size.Fraction(0.5f)))
                         | new Spacer().Height(Size.Units(10))
                         | Text.Block("This demo uses the Enums.NET library to work with enums and flags.")
                         | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Enums.NET](https://github.com/TylerBrinkley/Enums.NET)")
