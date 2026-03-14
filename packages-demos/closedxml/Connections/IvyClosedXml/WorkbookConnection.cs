@@ -1,5 +1,4 @@
 using Ivy;
-using Ivy.Connections;
 using System.Data;
 
 /// <summary>
@@ -101,10 +100,16 @@ public class WorkbookConnection : IConnection
 
     public string GetNamespace() => typeof(WorkbookConnection).Namespace;
 
-    public void RegisterServices(IServiceCollection services)
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
+    {
+        // In-memory workbook repository - no external connection to test
+        return Task.FromResult<(bool, string?)>((true, null));
+    }
+
+    public void RegisterServices(Server server)
     {
         // Register the static WorkbookRepository instance as Singleton - single shared database for the entire application
-        services.AddSingleton<WorkbookRepository>(_ => _sharedRepository);
-        services.AddSingleton<WorkbookConnection>();
+        server.Services.AddSingleton<WorkbookRepository>(_ => _sharedRepository);
+        server.Services.AddSingleton<WorkbookConnection>();
     }
 }
