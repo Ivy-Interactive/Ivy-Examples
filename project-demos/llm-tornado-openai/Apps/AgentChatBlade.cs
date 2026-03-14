@@ -171,7 +171,7 @@ public class AgentChatBlade : ViewBase
 
         var header = Layout.Horizontal().Gap(2)
                     | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
-                        | new Icon(Icons.Bot).Size(8))
+                        | new Icon(Icons.Bot).Size(Size.Units(8)))
                     | Text.H4($"Agent Chat - {_modelName}")
                     | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
                         | new Button("Settings", icon: Icons.Settings, onClick: _ =>
