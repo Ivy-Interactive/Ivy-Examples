@@ -73,7 +73,7 @@ public class TestAuthApp : ViewBase
                    | new Card(Layout.Vertical().Gap(4)
                        | (Layout.Vertical().Gap(2).Align(Align.Center)
                           | new Avatar(userInfo.Value.FullName ?? userInfo.Value.Id, userInfo.Value.AvatarUrl)
-                              .Height(60).Width(60)
+                              .Height(Size.Units(60)).Width(Size.Units(60))
                           | Text.H3($"Welcome, {userInfo.Value.FullName ?? userInfo.Value.Id}!"))
                        | (new
                        {
