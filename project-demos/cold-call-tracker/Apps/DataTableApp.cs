@@ -731,11 +731,10 @@ public class DataTableApp : ViewBase
                     new StackLayout([
                         Text.H2(responseTitle),
                         Text.Block("GET /websets/v0/websets/{id}/items"),
-                        new WrapLayout([
-                            new Button("Back to Data", _ => showExampleData.Set(_ => false))
-                                .Variant(ButtonVariant.Outline),
-                            Text.Muted($"{leadsState.Value.Count} leads loaded")
-                        ], gap: 12)
+                        Layout.Horizontal().Gap(12)
+                            | new Button("Back to Data", _ => showExampleData.Set(_ => false))
+                                .Variant(ButtonVariant.Outline)
+                            | Text.Muted($"{leadsState.Value.Count} leads loaded")
                     ], gap: 8)
                 ),
                 new CodeBlock(responseToShow, Languages.Json)
