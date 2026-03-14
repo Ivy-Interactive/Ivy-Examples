@@ -1,13 +1,6 @@
-#:package Ivy@1.2.6
+#:package Ivy@1.2.18
 
 global using Ivy;
-global using Ivy.Apps;
-global using Ivy.Chrome;
-global using Ivy.Core;
-global using Ivy.Hooks;
-global using Ivy.Shared;
-global using Ivy.Views;
-global using Ivy.Widgets.Inputs;
 global using System.Globalization;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
