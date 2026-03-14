@@ -36,7 +36,7 @@ public class PartnerDetailsBlade(int partnerId) : ViewBase
             .ToButton()
             .Ghost()
             .WithDropDown(
-                MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(onDelete)
+                MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(onDelete)
             );
 
         var editBtn = new Button("Edit")
