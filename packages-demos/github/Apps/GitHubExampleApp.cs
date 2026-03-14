@@ -112,8 +112,8 @@ public class GitHubExampleApp : ViewBase
 				Layout.Vertical().Gap(1)
 					| Layout.Horizontal().Gap(2)
 						| new Avatar(u.Name ?? u.Login, u.AvatarUrl)
-							.Height(60)
-							.Width(60)
+							.Height(Size.Units(60))
+							.Width(Size.Units(60))
 						| Text.H3($"{u.Name ?? u.Login}'s GitHub Stats")
 					| details
 			).Width(Size.Fraction(0.35f));
