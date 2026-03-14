@@ -2,7 +2,6 @@ namespace SliplaneManage.Apps.Views;
 
 using SliplaneManage.Models;
 using SliplaneManage.Services;
-using Ivy.Helpers;
 
 /// <summary>
 /// Servers view: list all servers with metrics, reboot, and delete.
@@ -201,7 +200,7 @@ public class ServersView : ViewBase
                         Layout.Horizontal()
                         | Text.Block(v.Name)
                         | Text.Block($"{v.SizeGb} GB")
-                        | Text.InlineCode(v.MountPath)
+                        | Text.Code(v.MountPath)
                     ).ToArray())
                 : Text.Muted("No volumes attached."))
         );

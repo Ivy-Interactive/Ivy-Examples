@@ -3,7 +3,6 @@ namespace SliplaneManage.Apps.Views;
 using System.Text.Json;
 using SliplaneManage.Models;
 using SliplaneManage.Services;
-using Ivy.Helpers;
 
 /// <summary>
 /// Services view: list all services in a DataTable; details/create/edit in sheets.
@@ -729,7 +728,7 @@ public class EditServiceSheet : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
-        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
+        var refreshSender = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
         var dep = _service.Deployment;
         var name = this.UseState(_service.Name ?? string.Empty);
         var deployUrl = this.UseState(dep?.Url ?? string.Empty);
@@ -1123,7 +1122,7 @@ public class CreateServiceSheet : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
-        var refreshSender = this.CreateSignal<SliplaneRefreshSignal, string, Unit>();
+        var refreshSender = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
         var serverVolumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
         var selectedProjectId = this.UseState(_fixedProjectId ?? string.Empty);
         var name = this.UseState(string.Empty);
