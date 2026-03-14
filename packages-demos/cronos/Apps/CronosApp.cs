@@ -123,7 +123,7 @@ public class CronosApp : ViewBase
                     .WithLabel("Predefined Examples"),
 
                 includeSeconds
-                    .ToBoolInput(variant: BoolInputVariants.Checkbox)
+                    .ToBoolInput(variant: BoolInputVariant.Checkbox)
                     .Label("Include seconds"),
 
                 new Button("Try parse", onClick: TryParseCron)
