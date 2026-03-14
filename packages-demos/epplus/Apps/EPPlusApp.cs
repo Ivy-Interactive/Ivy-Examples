@@ -1,8 +1,4 @@
-﻿using Ivy.Client;
-using Ivy.Core.Hooks;
-using Ivy.Views.Forms;
-
-namespace EPPlusExample.Apps;
+﻿namespace EPPlusExample.Apps;
 
 [App(icon: Icons.Box, title: "EPPlus")]
 public class EPPlusApp : ViewBase
