@@ -1,7 +1,6 @@
 ﻿global using Ivy;
 global using Ivy.Core;
 global using Ivy.Core.Hooks;
-global using Ivy.Shared;
 global using Ivy.Views;
 global using Ivy.Views.Builders;
 global using Microsoft.Extensions.Configuration;
