@@ -78,41 +78,41 @@ public class QuestPdfApp : ViewBase
             | (
               Layout.Horizontal().Gap(3)
               | new Button($"Page: {pageSize.Value}").Outline().Icon(Icons.ChevronDown).WithDropDown(
-                    MenuItem.Default("A4").HandleSelect(() => pageSize.Value = "A4"),
-                    MenuItem.Default("Letter").HandleSelect(() => pageSize.Value = "Letter")
+                    MenuItem.Default("A4").OnSelect(() => pageSize.Value = "A4"),
+                    MenuItem.Default("Letter").OnSelect(() => pageSize.Value = "Letter")
                 )
               | new Button(landscape.Value ? "Landscape" : "Portrait").Outline().Icon(Icons.ChevronDown).WithDropDown(
-                    MenuItem.Default("Portrait").HandleSelect(() => landscape.Value = false),
-                    MenuItem.Default("Landscape").HandleSelect(() => landscape.Value = true)
+                    MenuItem.Default("Portrait").OnSelect(() => landscape.Value = false),
+                    MenuItem.Default("Landscape").OnSelect(() => landscape.Value = true)
                 )
               | new Button($"Margins: {margins.Value}").Outline().Icon(Icons.ChevronDown).WithDropDown(
-                    MenuItem.Default("15").HandleSelect(() => margins.Value = 15),
-                    MenuItem.Default("30").HandleSelect(() => margins.Value = 30),
-                    MenuItem.Default("50").HandleSelect(() => margins.Value = 50)
+                    MenuItem.Default("15").OnSelect(() => margins.Value = 15),
+                    MenuItem.Default("30").OnSelect(() => margins.Value = 30),
+                    MenuItem.Default("50").OnSelect(() => margins.Value = 50)
                 )
               | new Button($"Type: {insertType.Value}").Outline().Icon(Icons.ChevronDown).WithDropDown(
-                    MenuItem.Default("Heading 1").HandleSelect(() => { insertType.Value = "Heading 1"; InsertSnippetByType("Heading 1"); }),
-                    MenuItem.Default("Heading 2").HandleSelect(() => { insertType.Value = "Heading 2"; InsertSnippetByType("Heading 2"); }),
-                    MenuItem.Default("Heading 3").HandleSelect(() => { insertType.Value = "Heading 3"; InsertSnippetByType("Heading 3"); }),
-                    MenuItem.Default("Bullet").HandleSelect(() => { insertType.Value = "Bullet"; InsertSnippetByType("Bullet"); }),
-                    MenuItem.Default("Numbered").HandleSelect(() => { insertType.Value = "Numbered"; InsertSnippetByType("Numbered"); }),
-                    MenuItem.Default("Quote").HandleSelect(() => { insertType.Value = "Quote"; InsertSnippetByType("Quote"); }),
-                    MenuItem.Default("Checkbox").HandleSelect(() => { insertType.Value = "Checkbox"; InsertSnippetByType("Checkbox"); }),
-                    MenuItem.Default("Table").HandleSelect(() => { insertType.Value = "Table"; InsertSnippetByType("Table"); })
+                    MenuItem.Default("Heading 1").OnSelect(() => { insertType.Value = "Heading 1"; InsertSnippetByType("Heading 1"); }),
+                    MenuItem.Default("Heading 2").OnSelect(() => { insertType.Value = "Heading 2"; InsertSnippetByType("Heading 2"); }),
+                    MenuItem.Default("Heading 3").OnSelect(() => { insertType.Value = "Heading 3"; InsertSnippetByType("Heading 3"); }),
+                    MenuItem.Default("Bullet").OnSelect(() => { insertType.Value = "Bullet"; InsertSnippetByType("Bullet"); }),
+                    MenuItem.Default("Numbered").OnSelect(() => { insertType.Value = "Numbered"; InsertSnippetByType("Numbered"); }),
+                    MenuItem.Default("Quote").OnSelect(() => { insertType.Value = "Quote"; InsertSnippetByType("Quote"); }),
+                    MenuItem.Default("Checkbox").OnSelect(() => { insertType.Value = "Checkbox"; InsertSnippetByType("Checkbox"); }),
+                    MenuItem.Default("Table").OnSelect(() => { insertType.Value = "Table"; InsertSnippetByType("Table"); })
                 )
               | new Button("Download").Primary().Icon(Icons.Download).Url(downloadUrl.Value)
             )
-          | body.ToCodeInput().Language(Languages.Markdown).Width(Ivy.Shared.Size.Full()).Height(Ivy.Shared.Size.Units(90)).Placeholder("Body (Markdown)")
+          | body.ToCodeInput().Language(Languages.Markdown).Width(Ivy.Size.Full()).Height(Ivy.Size.Units(90)).Placeholder("Body (Markdown)")
           | new Spacer()
           | Text.Block("This demo uses the QuestPDF NuGet package to generate PDFs.")
           | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [QuestPDF](https://github.com/QuestPDF/QuestPDF)")
-        ).Height(Ivy.Shared.Size.Full());
+        ).Height(Ivy.Size.Full());
     
     var rightPreview = new Card(
           Layout.Vertical()
           | (string.IsNullOrEmpty(previewDataUrl)
               ? Text.Muted("Generating preview...")
-              : new Iframe(previewDataUrl, refreshToken).Height(Ivy.Shared.Size.Screen()))
+              : new Iframe(previewDataUrl, refreshToken).Height(Ivy.Size.Screen()))
         );
     
     return Layout.Horizontal().Gap(4).Padding(4)
