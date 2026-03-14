@@ -10,10 +10,31 @@ public class SnowflakeConnection : IConnection
     public string GetName() => nameof(SnowflakeConnection);
     public string GetNamespace() => typeof(SnowflakeConnection).Namespace ?? "";
 
-    public void RegisterServices(IServiceCollection services)
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
     {
-        services.AddSingleton<SnowflakeConnection>(this);
-        services.AddScoped<SnowflakeService>(sp =>
+        var account = configuration["Snowflake:Account"];
+        var user = configuration["Snowflake:User"];
+        var password = configuration["Snowflake:Password"];
+        if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, "Snowflake credentials not configured (Account, User, Password)"));
+
+        try
+        {
+            var connStr = $"account={account};user={user};password={password};";
+            using var connection = new Snowflake.Data.Client.SnowflakeDbConnection(connStr);
+            connection.Open();
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((true, null));
+        }
+        catch (Exception ex)
+        {
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, ex.Message));
+        }
+    }
+
+    public void RegisterServices(Server server)
+    {
+        server.Services.AddSingleton<SnowflakeConnection>(this);
+        server.Services.AddScoped<SnowflakeService>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();
             var account = configuration["Snowflake:Account"];
