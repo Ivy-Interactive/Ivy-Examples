@@ -67,7 +67,7 @@ public class SmartFormatNetApp : ViewBase
                 | Text.Label("Examples")
                 | selectedExampleIndex
                     .ToSelectInput(exampleOptions)
-                    .Variant(SelectInputVariants.Toggle)
+                    .Variant(SelectInputVariant.Toggle)
 
                 | Text.Label("Template")
                 | templateInput
