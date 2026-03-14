@@ -39,7 +39,7 @@ public class ImageToTextApp : ViewBase
                 })
             | Text.Block("This demo uses Aspose.OCR for .NET to recognize text.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.OCR for .NET](https://products.aspose.com/ocr/net/)")
-        ).Width(Size.Fraction(0.45f)).Height(130);
+        ).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
         var rightCardBody = Layout.Vertical().Gap(4)
             | Text.H2("Recognized Text")
@@ -49,7 +49,7 @@ public class ImageToTextApp : ViewBase
                 .Height(Size.Units(70))
                 .Language(Languages.Text);
 
-        var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(130);
+        var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
         return Layout.Horizontal().Gap(6).Align(Align.Center)
             | leftCard
