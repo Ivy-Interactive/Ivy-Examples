@@ -26,6 +26,6 @@ server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
 // Configure GitHub Auth Provider
-server.UseAuth<GitHubAuthProvider>(c => c.UseGitHub());
+server.UseAuth<GitHubAuthProvider>();
 
 await server.RunAsync();

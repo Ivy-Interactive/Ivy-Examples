@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 
 public class RepositoriesSlide : ViewBase
 {
@@ -105,9 +104,9 @@ public class RepositoriesSlide : ViewBase
                   | Text.Block(subheadline).Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer().Height(5)
+                   | Layout.Vertical().Height(Size.Units(5))
                    | BuildRepoList(client, maxCommits)
-                   | new Spacer().Height(5)
+                   | Layout.Vertical().Height(Size.Units(5))
                    | BuildInsights(topRepo, _targetTotalRepos, _targetTopRepoCommits))
                  .Width(Size.Fraction(0.8f));
     }

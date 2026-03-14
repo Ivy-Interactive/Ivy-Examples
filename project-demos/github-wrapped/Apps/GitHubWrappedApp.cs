@@ -3,7 +3,6 @@ namespace GitHubWrapped.Apps;
 using GitHubWrapped.Models;
 using GitHubWrapped.Services;
 using GitHubWrapped.Apps.Views;
-using Ivy.Helpers;
 
 [App(icon: Icons.Github, title: "GitHub Wrapped 2025")]
 public class GitHubWrappedApp : ViewBase

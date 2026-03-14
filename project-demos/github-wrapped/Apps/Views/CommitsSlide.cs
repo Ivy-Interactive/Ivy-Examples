@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 
 public class CommitsSlide : ViewBase
 {
@@ -97,9 +96,9 @@ public class CommitsSlide : ViewBase
                   | Text.Block($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildMonthlyChart(maxCommits)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildInsights(activeMonths, activeMonthsPercentage, peakMonth.Key, peakMonth.Value, monthsAfterPeak))
                  .Width(Size.Fraction(0.8f));
     }
