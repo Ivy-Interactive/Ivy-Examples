@@ -9,7 +9,7 @@ public class DnsLookupForm : ViewBase
 { 
     public override object? Build()
     {
-        var signal = this.Context.CreateSignal<DnsQueryResultsSignal, DnsQueryResponse?, bool>();
+        var signal = this.Context.UseSignal<DnsQueryResultsSignal, DnsQueryResponse?, bool>();
 
         var lookup = this.UseState<LookupModel>(() => new LookupModel("samples.ivy.app", QueryType.A));
 
