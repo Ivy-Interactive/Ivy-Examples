@@ -233,7 +233,7 @@ public class SliplaneApiClient
     // ─── Dashboard aggregation ────────────────────────────────────────────────
 
     /// <summary>
-    /// Fetches all projects, servers, and services in parallel for the dashboard overview.
+    /// Fetches all projects, servers, services, and service events in parallel for the dashboard overview.
     /// </summary>
     public async Task<SliplaneOverview> GetOverviewAsync(string apiToken)
     {
@@ -245,11 +245,31 @@ public class SliplaneApiClient
         var servers  = await serversTask;
 
         // Fetch services for all projects in parallel
-        var serviceTasks = projects.Select(p => GetServicesAsync(apiToken, p.Id).ContinueWith(t => (p.Id, t.Result)));
+        var serviceTasks = projects.Select(p => GetServicesAsync(apiToken, p.Id).ContinueWith(t => (ProjectId: p.Id, Services: t.Result)));
         var serviceResults = await Task.WhenAll(serviceTasks);
-        var servicesByProject = serviceResults.ToDictionary(r => r.Id, r => r.Result);
+        var servicesByProject = serviceResults.ToDictionary(r => r.ProjectId, r => r.Services);
 
-        return new SliplaneOverview(projects, servers, servicesByProject);
+        // Fetch events for every service in parallel (best-effort, ignore failures)
+        var allServices = serviceResults
+            .SelectMany(r => r.Services.Select(svc => (r.ProjectId, Service: svc)))
+            .ToList();
+
+        var eventTasks = allServices.Select(async entry =>
+        {
+            try
+            {
+                var evts = await GetServiceEventsAsync(apiToken, entry.ProjectId, entry.Service.Id);
+                return (ServiceId: entry.Service.Id, Events: evts);
+            }
+            catch
+            {
+                return (ServiceId: entry.Service.Id, Events: new List<SliplaneServiceEvent>());
+            }
+        });
+        var eventResults = await Task.WhenAll(eventTasks);
+        var eventsByService = eventResults.ToDictionary(r => r.ServiceId, r => r.Events);
+
+        return new SliplaneOverview(projects, servers, servicesByProject, eventsByService);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────

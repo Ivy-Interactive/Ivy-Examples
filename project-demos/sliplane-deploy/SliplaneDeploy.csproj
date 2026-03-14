@@ -5,16 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
-    <RootNamespace>SliplaneManage</RootNamespace>
+    <RootNamespace>SliplaneDeploy</RootNamespace>
     <UserSecretsId>3901cf22-a0ae-47ab-879c-682515e69029</UserSecretsId>
   </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Assets/**/*" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Apps" />
-    <Folder Include="Connections" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.2.17" />
     <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.17" />
