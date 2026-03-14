@@ -71,7 +71,7 @@ namespace PuppeteerSharpExample
                 .WithDropDown(
                     MenuItem.Default("Save as Screenshot")
                         .Icon(Icons.Image)
-                        .HandleSelect(() =>
+                        .OnSelect(() =>
                         {
                             if (!string.IsNullOrEmpty(screenshotDownloadPath.Value))
                             {
@@ -81,7 +81,7 @@ namespace PuppeteerSharpExample
                         .Disabled(string.IsNullOrEmpty(screenshotDownloadPath.Value)),
                     MenuItem.Default("Save as PDF")
                         .Icon(Icons.FileText)
-                        .HandleSelect(() =>
+                        .OnSelect(() =>
                         {
                             if (!string.IsNullOrEmpty(pdfPath.Value))
                             {
