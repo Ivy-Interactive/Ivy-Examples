@@ -1,6 +1,3 @@
-using Ivy.Connections;
-using Ivy.Services;
-
 namespace ShowcaseCrm.Connections.ShowcaseCrm;
 
 public class ShowcaseCrmConnection : IConnection, IHaveSecrets
@@ -32,16 +29,29 @@ public class ShowcaseCrmConnection : IConnection, IHaveSecrets
             .ToArray();
     }
 
-    public void RegisterServices(IServiceCollection services)
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
     {
-        services.AddSingleton<ShowcaseCrmContextFactory>();
+        try
+        {
+            var options = new DbContextOptionsBuilder<ShowcaseCrmContext>()
+                .UseSqlite("Data Source=db.sqlite")
+                .Options;
+            using var ctx = new ShowcaseCrmContext(options);
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>(ctx.Database.CanConnect() ? (true, null) : (false, "Cannot connect to database"));
+        }
+        catch (Exception ex)
+        {
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, ex.Message));
+        }
     }
 
-   public Ivy.Services.Secret[] GetSecrets()
-   {
-       return
-       [
-           
-       ];
-   }
+    public void RegisterServices(Server server)
+    {
+        server.Services.AddSingleton<ShowcaseCrmContextFactory>();
+    }
+
+    public Secret[] GetSecrets()
+    {
+        return [];
+    }
 }
