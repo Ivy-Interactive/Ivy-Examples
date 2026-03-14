@@ -1,10 +1,23 @@
-using Ivy.Connections;
-using Ivy.Services;
-
 namespace AutodealerCrm.Connections.AutodealerCrm;
 
 public class AutodealerCrmConnection : IConnection, IHaveSecrets
 {
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
+    {
+        try
+        {
+            var options = new DbContextOptionsBuilder<AutodealerCrmContext>()
+                .UseSqlite("Data Source=db.sqlite")
+                .Options;
+            using var ctx = new AutodealerCrmContext(options);
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>(ctx.Database.CanConnect() ? (true, null) : (false, "Cannot connect to database"));
+        }
+        catch (Exception ex)
+        {
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, ex.Message));
+        }
+    }
+
     public string GetContext(string connectionPath)
     {
         var connectionFile = nameof(AutodealerCrmConnection) + ".cs";
@@ -32,16 +45,13 @@ public class AutodealerCrmConnection : IConnection, IHaveSecrets
             .ToArray();
     }
 
-    public void RegisterServices(IServiceCollection services)
+    public void RegisterServices(Server server)
     {
-        services.AddSingleton<AutodealerCrmContextFactory>();
+        server.Services.AddSingleton<AutodealerCrmContextFactory>();
     }
 
-   public Ivy.Services.Secret[] GetSecrets()
-   {
-       return
-       [
-           
-       ];
-   }
+    public Secret[] GetSecrets()
+    {
+        return [];
+    }
 }

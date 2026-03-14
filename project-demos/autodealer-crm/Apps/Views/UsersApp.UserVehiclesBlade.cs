@@ -47,7 +47,7 @@ public class UserVehiclesBlade(int? managerId) : ViewBase
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
-                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete(v.Id)))
+                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(OnDelete(v.Id)))
                     | Icons.ChevronRight
                         .ToButton()
                         .Outline()

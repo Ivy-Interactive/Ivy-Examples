@@ -50,7 +50,7 @@ public class UserMessagesBlade(int? managerId) : ViewBase
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
-                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete(m.Id)))
+                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(OnDelete(m.Id)))
                     | Icons.ChevronRight
                         .ToButton()
                         .Outline()
