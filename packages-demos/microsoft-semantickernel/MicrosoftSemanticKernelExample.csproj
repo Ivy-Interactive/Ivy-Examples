@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -18,7 +18,7 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.18" />
+    <PackageReference Include="Ivy" Version="1.2.19" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.71.0" />
   </ItemGroup>
 
