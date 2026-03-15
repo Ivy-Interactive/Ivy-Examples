@@ -60,11 +60,11 @@
                 | Text.Label("Expression editor:")
                 | expressionState.ToTextInput()
                     .Placeholder("Enter arithmetic expression")
-                    .Width("100%")
+                    .Width(Size.Full())
                 | new Button("Calculate", eventHandler)
                     .Loading(parsingState.Value)
                     .Variant(ButtonVariant.Primary)
-                    .Width("100%")
+                    .Width(Size.Full())
                 | Text.Block("This demo uses Superpower library to evaluate the expression.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Superpower](https://github.com/datalust/superpower)")
             );

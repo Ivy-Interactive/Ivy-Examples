@@ -26,6 +26,6 @@ var chromeSettings = new ChromeSettings()
 server.UseChrome(chromeSettings);
 
 // Configure GitHub Auth Provider - UseAuth will create the provider via DI
-server.UseAuth<GitHubAuthProvider>(c => c.UseGitHub());
+server.UseAuth<GitHubAuthProvider>();
 
 await server.RunAsync();

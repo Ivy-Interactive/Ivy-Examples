@@ -9,7 +9,7 @@
     <UserSecretsId>3901cf22-a0ae-47ab-879c-682515e69029</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.17" />
-    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.17" />
+    <PackageReference Include="Ivy" Version="1.2.18" />
+    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.18" />
   </ItemGroup>
 </Project>

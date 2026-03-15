@@ -1,16 +1,9 @@
-#:package Ivy@1.2.6
+#:package Ivy@1.2.18
 #:package ClickHouse.Driver@0.9.0
 
 global using Ivy;
-global using Ivy.Apps;
-global using Ivy.Chrome;
 global using Ivy.Core;
 global using Ivy.Core.Hooks;
-global using Ivy.Hooks;
-global using Ivy.Shared;
-global using Ivy.Views;
-global using Ivy.Views.Charts;
-global using Ivy.Views.DataTables;
 global using ClickHouse.Driver.ADO;
 global using System.Data;
 global using System.Globalization;
@@ -387,7 +380,7 @@ public class DashboardApp : ViewBase
             {
                 isLoading.Value = false;
             }
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         if (isLoading.Value)
         {

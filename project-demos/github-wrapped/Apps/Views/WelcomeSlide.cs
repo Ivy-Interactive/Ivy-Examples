@@ -17,8 +17,8 @@ public class WelcomeSlide : ViewBase
 
         return Layout.Vertical().Gap(5).Align(Align.Center).Width(Size.Fraction(0.8f))
                    | (Layout.Vertical().Gap(4).Align(Align.Center)
-                      | new Avatar(userName, _stats.UserInfo.AvatarUrl)
-                          .Height(100).Width(100)
+                      | (Layout.Vertical().Height(Size.Units(100)).Width(Size.Units(100))
+                          | new Avatar(userName, _stats.UserInfo.AvatarUrl))
                       | Text.H1($"Hey, {userName}, your year on GitHub — wrapped.").Bold()
                       | Text.H2("Commits, pull requests, and the work you shipped in 2025.").Muted()
                       | Text.H3("Let's break down what made your year.").Muted());

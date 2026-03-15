@@ -2,7 +2,6 @@ namespace SliplaneManage.Apps.Views;
 
 using SliplaneManage.Models;
 using SliplaneManage.Services;
-using Ivy.Helpers;
 
 // ProjectsView: Blades, left = project list, right = details.
 

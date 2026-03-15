@@ -126,7 +126,7 @@ public class RestSharpApp : ViewBase
                 .Outline()
                 .WithDropDown(
                     Methods
-                        .Select(o => MenuItem.Default(o.Label).HandleSelect(() =>
+                        .Select(o => MenuItem.Default(o.Label).OnSelect(() =>
                         {
                             method.Set(o.Label);
                             updateUrlForMethod(o.Label);
@@ -134,7 +134,7 @@ public class RestSharpApp : ViewBase
                         .ToArray()
                 ),
             new TextInput(url, placeholder: "URL")
-                .Variant(TextInputVariants.Url)
+                .Variant(TextInputVariant.Url)
         };
 
         if (RequiresResourceId(method.Value))
@@ -142,7 +142,7 @@ public class RestSharpApp : ViewBase
             requestControls.Add(new TextInput(resourceId, placeholder: "ID"));
         }
 
-        requestControls.Add(new Button("Send", onClick: onSend).Width(50));
+        requestControls.Add(new Button("Send", _ => onSend()).Width(Size.Units(50)));
 
         var statusCallout = string.IsNullOrWhiteSpace(statusCode.Value)
             ? null

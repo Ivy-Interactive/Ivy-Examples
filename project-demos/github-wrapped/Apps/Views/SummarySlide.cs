@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 using SkiaSharp;
 
 public class SummarySlide : ViewBase
@@ -509,7 +508,7 @@ public class SummarySlide : ViewBase
     {
         return new Card(Layout.Horizontal().Gap(3).Height(Size.Full())
             | (Layout.Vertical().Gap(3).Align(Align.Center).Width(Size.Fit()).Padding(3)
-                | Icons.Trophy.ToIcon().Height(40).Width(40))
+                | (Layout.Vertical().Height(Size.Units(40)).Width(Size.Units(40)) | Icons.Trophy.ToIcon()))
             | (Layout.Vertical().Gap(3).Align(Align.Center)
                 | Text.Block("Your Developer Status — 2025").Muted()
                 | Text.H1(userStatus.Title.ToUpper()).Bold()

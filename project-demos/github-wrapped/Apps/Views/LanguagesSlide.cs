@@ -1,8 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Charts;
-using Ivy.Helpers;
 
 public class LanguagesSlide : ViewBase
 {
@@ -104,9 +102,9 @@ public class LanguagesSlide : ViewBase
                   | Text.Block(subheadline).Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildLanguageChart(maxBytes)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildInsights(_topLanguage, languagesCount, _targetTotalCommits))
                  .Width(Size.Fraction(0.8f));
     }

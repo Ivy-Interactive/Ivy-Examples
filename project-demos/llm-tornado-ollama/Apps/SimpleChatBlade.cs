@@ -42,7 +42,7 @@ public class SimpleChatBlade : ViewBase
 
         var header = Layout.Horizontal().Gap(2)
                 | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
-                    | new Icon(Icons.MessageSquare).Size(8))
+                    | new Icon(Icons.MessageSquare).Size(Size.Units(8)))
                 | Text.H4($"Simple Chat - {_modelName}");
 
         var chatContent = Layout.Horizontal()

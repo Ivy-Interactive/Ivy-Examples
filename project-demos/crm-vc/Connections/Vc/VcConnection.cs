@@ -1,5 +1,3 @@
-using Ivy.Connections;
-
 namespace Vc.Connections.Vc;
 
 public class VcConnection : IConnection
@@ -30,8 +28,22 @@ public class VcConnection : IConnection
             .ToArray();
     }
 
-    public void RegisterServices(IServiceCollection services)
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
     {
-        services.AddSingleton<VcContextFactory>();
+        try
+        {
+            var factory = new VcContextFactory(new ServerArgs());
+            using var ctx = factory.CreateDbContext();
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>(ctx.Database.CanConnect() ? (true, null) : (false, "Cannot connect to database"));
+        }
+        catch (Exception ex)
+        {
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, ex.Message));
+        }
+    }
+
+    public void RegisterServices(Server server)
+    {
+        server.Services.AddSingleton<VcContextFactory>();
     }
 }

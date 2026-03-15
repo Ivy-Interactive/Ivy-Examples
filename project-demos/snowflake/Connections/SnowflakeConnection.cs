@@ -29,14 +29,35 @@ public class SnowflakeConnection : IConnection
 
     public string GetNamespace() => typeof(SnowflakeConnection).Namespace ?? "";
 
-    public void RegisterServices(IServiceCollection services)
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
+    {
+        var account = configuration["Snowflake:Account"];
+        var user = configuration["Snowflake:User"];
+        var password = configuration["Snowflake:Password"];
+        if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, "Snowflake credentials not configured (Account, User, Password)"));
+
+        try
+        {
+            var connStr = GetConnectionString(configuration, account, user, password);
+            using var connection = new Snowflake.Data.Client.SnowflakeDbConnection(connStr);
+            connection.Open();
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((true, null));
+        }
+        catch (Exception ex)
+        {
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, ex.Message));
+        }
+    }
+
+    public void RegisterServices(Server server)
     {
         // Register this connection as singleton
-        services.AddSingleton<SnowflakeConnection>(this);
+        server.Services.AddSingleton<SnowflakeConnection>(this);
         
         // SnowflakeService will be created in components with credentials from UseState
         // Register as scoped but with empty connection string - components will create their own instances
-        services.AddScoped<SnowflakeService>(sp => new SnowflakeService(""));
+        server.Services.AddScoped<SnowflakeService>(sp => new SnowflakeService(""));
     }
     
     public string GetConnectionString(IConfiguration configuration, string account, string user, string password)

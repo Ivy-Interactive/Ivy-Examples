@@ -1,6 +1,5 @@
 using BarcodeLibExample.Apps;
 using Ivy;
-using Ivy.Chrome;
 using System.Globalization;
 
 var culture = new CultureInfo("en-US");

@@ -1,6 +1,3 @@
-using Ivy.Hooks;
-using Ivy.Views.Kanban;
-
 namespace ShowcaseCrm.Apps.Views;
 
 public class DealsKanbanBlade : ViewBase
@@ -112,7 +109,7 @@ public class DealsKanbanBlade : ViewBase
             .OnClick(() => showSheet(deal.Id)))
             .ColumnOrder<int>(d => StageOrder(d.StageDescription))
             .Width(Size.Full())
-            .HandleMove(moveData =>
+            .OnMove(moveData =>
             {
                 var cardId = moveData.CardId?.ToString();
                 if (string.IsNullOrEmpty(cardId) || !int.TryParse(cardId, out int id)) return;
