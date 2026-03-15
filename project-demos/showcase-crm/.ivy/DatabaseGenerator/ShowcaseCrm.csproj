@@ -7,7 +7,6 @@
     <RootNamespace>ShowcaseCrm</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy.Database.Generator.Toolkit" Version="1.2.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
