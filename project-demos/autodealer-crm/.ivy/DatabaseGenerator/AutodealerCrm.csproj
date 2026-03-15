@@ -6,7 +6,4 @@
     <Nullable>enable</Nullable>
     <RootNamespace>AutodealerCrm</RootNamespace>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Ivy.Database.Generator.Toolkit" Version="1.2.17" />
-  </ItemGroup>
 </Project>
