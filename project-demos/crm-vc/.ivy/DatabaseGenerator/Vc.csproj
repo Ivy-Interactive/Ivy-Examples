@@ -6,7 +6,4 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Vc</RootNamespace>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Ivy.Database.Generator.Toolkit" Version="1.2.19" />
-  </ItemGroup>
 </Project>
