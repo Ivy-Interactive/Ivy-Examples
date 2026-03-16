@@ -7,6 +7,7 @@ public class ContactsApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new ContactListBlade(), "Search");
+        var blades = this.UseBlades(() => new ContactListBlade(), "Search");
+        return blades;
     }
 }
