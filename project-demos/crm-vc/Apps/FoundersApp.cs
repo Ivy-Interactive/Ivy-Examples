@@ -7,6 +7,7 @@ public class FoundersApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new FounderListBlade(), "Search");
+        var blades = this.UseBlades(() => new FounderListBlade(), "Search");
+        return blades;
     }
 }
