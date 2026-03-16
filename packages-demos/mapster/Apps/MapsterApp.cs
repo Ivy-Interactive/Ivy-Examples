@@ -5,8 +5,6 @@ namespace MapsterExample
     {
         public override object? Build()
         {
-            TypeAdapterConfig.GlobalSettings.Scan(typeof(MapsterConfig).Assembly);
-
             var personJsonState = UseState(ToPrettyJson(new Person
             {
                 FirstName = "Jane",
@@ -19,6 +17,8 @@ namespace MapsterExample
                 FullName = "Jane Doe",
                 IsAdult = true
             }));
+
+            TypeAdapterConfig.GlobalSettings.Scan(typeof(MapsterConfig).Assembly);
 
             // Helper function to validate DTO
             string? GetValidationError()
