@@ -86,10 +86,10 @@ public class GitHubApiClient
 
             var calendar = contributions.GetProperty("contributionCalendar");
             var totalContributions = calendar.GetProperty("totalContributions").GetInt32();
-            
+
             // Get all contribution days
             var contributionDays = new List<DateTime>();
-            
+
             foreach (var week in calendar.GetProperty("weeks").EnumerateArray())
             {
                 foreach (var day in week.GetProperty("contributionDays").EnumerateArray())
@@ -102,9 +102,9 @@ public class GitHubApiClient
                     }
                 }
             }
-            
+
             var (longestStreak, currentStreak) = CalculateStreakFromDays(contributionDays);
-            
+
             return (longestStreak, currentStreak, contributionDays.Count);
         }
         catch (Exception)
@@ -168,13 +168,13 @@ public class GitHubApiClient
     /// This is the official way GitHub calculates contributions
     /// </summary>
     public async Task<List<GitHubCommit>> GetCommitsAsync(
-        string accessToken, 
-        string username, 
+        string accessToken,
+        string username,
         GitHubStatsOptions options)
     {
         // Try GraphQL first (official GitHub way)
         var commits = await GetCommitsViaGraphQLAsync(accessToken, username, options);
-        
+
         if (commits.Count > 0)
         {
             return commits;
@@ -275,13 +275,13 @@ public class GitHubApiClient
             var ownedCommits = reposByType.Where(r => !r.IsFork).Sum(r => r.Count);
 
             // Filter out forks if needed
-            var reposToFetch = options.IncludeForks 
-                ? reposByType 
+            var reposToFetch = options.IncludeForks
+                ? reposByType
                 : reposByType.Where(r => !r.IsFork).ToList();
 
             // Now fetch detailed commits from each repo
             var commits = await FetchCommitsFromRepositoriesAsync(httpClient, accessToken, username, reposToFetch.Select(r => r.Name).ToList(), options);
-            
+
             return commits;
         }
         catch (Exception)
@@ -427,13 +427,13 @@ public class GitHubApiClient
     /// This is the official way GitHub calculates PR contributions
     /// </summary>
     public async Task<List<GitHubPullRequest>> GetPullRequestsAsync(
-        string accessToken, 
-        string username, 
+        string accessToken,
+        string username,
         GitHubStatsOptions options)
     {
         // Try GraphQL first (official GitHub way)
         var pullRequests = await GetPullRequestsViaGraphQLAsync(accessToken, username, options);
-        
+
         if (pullRequests.Count > 0)
         {
             return pullRequests;
@@ -548,9 +548,9 @@ public class GitHubApiClient
                 foreach (var node in prNodes)
                 {
                     var pr = node.GetProperty("pullRequest");
-                    
+
                     var createdAt = pr.GetProperty("createdAt").GetDateTime();
-                    
+
                     // Double-check date range
                     if (createdAt < options.StartDate || createdAt > options.EndDate)
                     {
@@ -636,7 +636,7 @@ public class GitHubApiClient
         for (int i = 1; i < contributionDays.Count; i++)
         {
             var daysDiff = (contributionDays[i] - contributionDays[i - 1]).Days;
-            
+
             if (daysDiff == 1)
             {
                 tempStreak++;
@@ -651,7 +651,7 @@ public class GitHubApiClient
         // Calculate current streak (from today backwards)
         var today = DateTime.UtcNow.Date;
         var yesterday = today.AddDays(-1);
-        
+
         // Check if there's activity today or yesterday
         if (!contributionDays.Any(d => d.Date == today || d.Date == yesterday))
         {
@@ -661,13 +661,13 @@ public class GitHubApiClient
         {
             // Find the most recent contribution date
             var lastContribution = contributionDays.Max();
-            
+
             // If last contribution is today or yesterday, calculate streak
             if ((today - lastContribution.Date).Days <= 1)
             {
                 currentStreak = 1;
                 var checkDate = lastContribution.Date.AddDays(-1);
-                
+
                 while (contributionDays.Any(d => d.Date == checkDate))
                 {
                     currentStreak++;
@@ -717,9 +717,9 @@ public class GitHubApiClient
     }
 
     private async Task EnrichWithLanguagesAsync(
-        HttpClient httpClient, 
-        string accessToken, 
-        List<GitHubRepository> repos, 
+        HttpClient httpClient,
+        string accessToken,
+        List<GitHubRepository> repos,
         GitHubStatsOptions options)
     {
         var reposToFetch = repos

@@ -165,7 +165,7 @@ public class RepositoriesSlide : ViewBase
         // Arrange cards: first row with 2 cards, second row with 3 cards
         var cardsList = repoCards.ToList();
         var rows = new List<object>();
-        
+
         // First row: 2 cards
         if (cardsList.Count > 0)
         {
@@ -175,7 +175,7 @@ public class RepositoriesSlide : ViewBase
                 rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | firstRow);
             }
         }
-        
+
         // Second row: 3 cards
         if (cardsList.Count > 2)
         {
@@ -185,7 +185,7 @@ public class RepositoriesSlide : ViewBase
                 rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | secondRow);
             }
         }
-        
+
         // Remaining cards (if more than 5)
         if (cardsList.Count > 5)
         {

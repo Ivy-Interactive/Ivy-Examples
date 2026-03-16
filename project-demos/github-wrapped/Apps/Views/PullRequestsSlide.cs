@@ -14,7 +14,7 @@ public class PullRequestsSlide : ViewBase
         _stats = stats;
         _targetCreated = stats.PullRequestsCreated;
         _targetMerged = stats.PullRequestsMerged;
-        _targetMergeRate = _targetCreated > 0 
+        _targetMergeRate = _targetCreated > 0
             ? (int)Math.Round(_targetMerged * 100.0 / _targetCreated)
             : 0;
     }
