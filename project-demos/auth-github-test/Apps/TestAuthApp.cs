@@ -23,7 +23,11 @@ public class TestAuthApp : ViewBase
         var userInfo = this.UseState<UserInfo?>();
         var repositories = this.UseState<List<GitHubRepo>?>();
         var loading = this.UseState<bool>(true);
-
+        
+        var client = this.UseService<IClientProvider>();
+        var isSheetOpen = this.UseState<bool>(false);
+        var searchText = this.UseState<string>("");
+        
         this.UseEffect(async () =>
         {
             try
@@ -63,10 +67,6 @@ public class TestAuthApp : ViewBase
                        | Text.Block("Please login via navigation bar to authenticate with GitHub."))
                      .Width(Size.Fraction(0.4f));
         }
-
-        var client = this.UseService<IClientProvider>();
-        var isSheetOpen = this.UseState<bool>(false);
-        var searchText = this.UseState<string>("");
 
         return new Fragment()
                | (Layout.Center()
