@@ -16,7 +16,7 @@ public class MainMenuBlade : ViewBase
         var blades = UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
         var configuration = UseService<IConfiguration>();
-        
+
         // Get OpenAI API key and model from configuration (dotnet secrets)
         var openAiApiKey = UseState(configuration["OpenAI:ApiKey"] ?? "");
         var selectedModel = UseState<string>(configuration["OpenAI:Model"] ?? "");
