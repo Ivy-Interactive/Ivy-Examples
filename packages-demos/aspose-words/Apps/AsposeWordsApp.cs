@@ -11,63 +11,61 @@ public class CreateNewDocumentApp : ViewBase
 
     public override object? Build()
     {
-        // 1. Hooks must be at the top
         var generatedDocuments = UseState<Dictionary<string, Document>>(new Dictionary<string, Document>());
         var isGenerating = UseState<string?>(null);
         var errorMessages = UseState<Dictionary<string, string>>(new Dictionary<string, string>());
+
+        var simpleLetterDownload = this.UseDownload(
+            () => GetDocumentBytes("Simple Letter", GenerateSimpleLetter, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"simple-letter-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+        var tableReportDownload = this.UseDownload(
+            () => GetDocumentBytes("Table Report", GenerateTableReport, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"table-report-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+        var invoiceDownload = this.UseDownload(
+            () => GetDocumentBytes("Invoice", GenerateInvoice, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"invoice-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+        var formLetterDownload = this.UseDownload(
+            () => GetDocumentBytes("Form Letter", GenerateFormLetter, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"form-letter-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+
+        var downloads = new Dictionary<string, IState<string?>>
+        {
+            ["Simple Letter"] = simpleLetterDownload,
+            ["Table Report"] = tableReportDownload,
+            ["Invoice"] = invoiceDownload,
+            ["Form Letter"] = formLetterDownload
+        };
 
         var templates = new[]
         {
             new DocumentTemplate(
                 "Simple Letter",
                 "A basic business letter template",
-                () => GenerateSimpleLetter()
+                GenerateSimpleLetter
             ),
             new DocumentTemplate(
                 "Table Report",
                 "Document with formatted tables and data",
-                () => GenerateTableReport()
+                GenerateTableReport
             ),
             new DocumentTemplate(
                 "Invoice",
                 "Professional invoice template",
-                () => GenerateInvoice()
+                GenerateInvoice
             ),
             new DocumentTemplate(
                 "Form Letter",
                 "Mail merge style form letter",
-                () => GenerateFormLetter()
+                GenerateFormLetter
             )
-        };
-
-        // Create download functionality for each template at top level (unconditional)
-        var simpleLetterDownload = this.UseDownload(
-            () => GetDocumentBytes("Simple Letter", templates[0].Generator, generatedDocuments.Value),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            $"simple-letter-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
-        );
-        var tableReportDownload = this.UseDownload(
-            () => GetDocumentBytes("Table Report", templates[1].Generator, generatedDocuments.Value),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            $"table-report-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
-        );
-        var invoiceDownload = this.UseDownload(
-            () => GetDocumentBytes("Invoice", templates[2].Generator, generatedDocuments.Value),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            $"invoice-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
-        );
-        var formLetterDownload = this.UseDownload(
-            () => GetDocumentBytes("Form Letter", templates[3].Generator, generatedDocuments.Value),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            $"form-letter-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
-        );
-
-        var downloads = new Dictionary<string, State<string>>
-        {
-            ["Simple Letter"] = simpleLetterDownload,
-            ["Table Report"] = tableReportDownload,
-            ["Invoice"] = invoiceDownload,
-            ["Form Letter"] = formLetterDownload
         };
 
         return new StackLayout([
