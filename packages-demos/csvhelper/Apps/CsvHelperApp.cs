@@ -51,17 +51,11 @@ public class CsvHelperApp : ViewBase
             $"products-{DateTime.UtcNow:yyyy-MM-dd}.csv"
         );
 
-        // Import CSV using documented upload flow
         var uploadState = UseState<FileUpload<byte[]>?>();
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept(".csv")
-            .MaxFileSize(10 * 1024 * 1024);
-
-        // State for dialog open/close
+        var uploadContextBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
         var product = UseState(() => new ProductModel());
         var isDialogOpen = UseState(false);
-        
-        // When a file is uploaded, parse and import
+
         UseEffect(() =>
         {
             if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
@@ -89,12 +83,10 @@ public class CsvHelperApp : ViewBase
                 }
             }
         }, [uploadState]);
-        
-        // Handle product submission
+
         UseEffect(() =>
         {
-            // Check if form was submitted (non-empty required fields)
-            if (!string.IsNullOrEmpty(product.Value.Name) && 
+            if (!string.IsNullOrEmpty(product.Value.Name) &&
                 product.Value.Price > 0 &&
                 !string.IsNullOrEmpty(product.Value.Category))
             {
@@ -106,6 +98,8 @@ public class CsvHelperApp : ViewBase
                 isDialogOpen.Set(false);
             }
         }, [product]);
+
+        var uploadContext = uploadContextBase.Accept(".csv").MaxFileSize(10 * 1024 * 1024);
 
         // Delete action
         var deleteProduct = new Action<Guid>((id) =>
