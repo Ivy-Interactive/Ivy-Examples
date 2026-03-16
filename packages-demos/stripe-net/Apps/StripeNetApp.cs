@@ -13,11 +13,6 @@
         {
             var configuration = UseService<IConfiguration>();
             var client = UseService<IClientProvider>();
-
-            var apiKey = configuration["Stripe:SecretKey"]
-                ?? throw new InvalidOperationException("Stripe secret key is not configured.");
-            var baseUrl = "http://localhost:5010/stripe-net-example";
-
             var productName = UseState("Test Product");
             var amount = UseState(20.00m);
             var quantity = UseState(1);
@@ -25,6 +20,10 @@
             var checkoutUrl = UseState(string.Empty);
             var isCreatingCheckout = UseState(false);
 
+            
+            var apiKey = configuration["Stripe:SecretKey"]
+                ?? throw new InvalidOperationException("Stripe secret key is not configured.");
+            var baseUrl = "http://localhost:5010/stripe-net-example";
             var currencyOptions = new[]
             {
                 new Option<string>("USD • US Dollar", "usd"),
