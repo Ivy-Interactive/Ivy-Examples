@@ -20,6 +20,20 @@ public class TimeZoneConverterApp : ViewBase
         var windowsSearchTerm = UseState<string>("");
         var railsSearchTerm = UseState<string>("");
 
+        UseEffect(() =>
+        {
+            try
+            {
+                var timeZoneInfo = TZConvert.GetTimeZoneInfo(ianaZoneState.Value);
+                currentTimeState.Set(TimeZoneInfo.ConvertTime(DateTime.Now, timeZoneInfo)
+                    .ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+            catch
+            {
+                currentTimeState.Set("Invalid time zone");
+            }
+        }, [ianaZoneState]);
+
         // Initialize time zone lists
         var allIanaZones = TZConvert.KnownIanaTimeZoneNames.OrderBy(x => x).ToArray();
         var allWindowsZones = TZConvert.KnownWindowsTimeZoneIds.OrderBy(x => x).ToArray();
@@ -43,21 +57,6 @@ public class TimeZoneConverterApp : ViewBase
             : allRailsZones
                 .Where(z => z.Contains(railsSearchTerm.Value, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-
-        // Update time on mount and when IANA zone changes
-        UseEffect(() =>
-        {
-            try
-            {
-                var timeZoneInfo = TZConvert.GetTimeZoneInfo(ianaZoneState.Value);
-                currentTimeState.Set(TimeZoneInfo.ConvertTime(DateTime.Now, timeZoneInfo)
-                    .ToString("yyyy-MM-dd HH:mm:ss"));
-            }
-            catch
-            {
-                currentTimeState.Set("Invalid time zone");
-            }
-        }, [ianaZoneState]);
 
         // Update time function
         var updateTime = () =>
