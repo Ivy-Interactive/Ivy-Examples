@@ -6,19 +6,6 @@ public class MicrosoftSemanticKernelApp : ViewBase
 
     public override object? Build()
     {
-        // Get API key from environment variable
-        // Set it using: $env:APIKEY = "your-api-key-here" (PowerShell)
-        var apiKey = Environment.GetEnvironmentVariable("APIKEY")
-            ?? throw new InvalidOperationException("APIKEY environment variable is not configured. Please set $env:APIKEY with your OpenAI API key.");
-
-        // Initialize OpenAI kernel
-        var kernel = Kernel.CreateBuilder()
-            .AddOpenAIChatCompletion("gpt-4o-mini", apiKey)
-            .Build();
-
-        // Create the function for extracting an action list from meeting notes
-        var extractTasks = kernel.CreateFunctionFromPrompt("Extract action items as a list without title \n{{$input}}");
-
         var notesFromMeeting = UseState(() => @"Meeting Notes - Q4 Planning Session
 
 Date: November 15, 2024
@@ -44,12 +31,18 @@ Next steps: Everyone should update their progress in the project management tool
         var triggerRefresh = UseState(0);
         var tasks = UseState<string[]>([]);
         
-        // Execute the extraction function asynchronously
         UseEffect(async () =>
         {
             isLoading.Set(true);
             try
             {
+                var apiKey = Environment.GetEnvironmentVariable("APIKEY")
+                    ?? throw new InvalidOperationException("APIKEY environment variable is not configured. Please set $env:APIKEY with your OpenAI API key.");
+                var kernel = Kernel.CreateBuilder()
+                    .AddOpenAIChatCompletion("gpt-4o-mini", apiKey)
+                    .Build();
+                var extractTasks = kernel.CreateFunctionFromPrompt("Extract action items as a list without title \n{{$input}}");
+
                 var extractedTasks = await kernel.InvokeAsync(extractTasks, new() { ["input"] = notesFromMeeting.Value });
                 var taskLines = extractedTasks.GetValue<string>()
                     .Split('\n', StringSplitOptions.RemoveEmptyEntries)
