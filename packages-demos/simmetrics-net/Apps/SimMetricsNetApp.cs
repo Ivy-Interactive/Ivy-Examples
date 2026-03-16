@@ -5,11 +5,6 @@ public class SimMetricsNetApp : ViewBase
 {
     public override object? Build()
     {
-        List<NameSimilarity> CreateInitialNameList() =>
-            Enumerable.Range(1, 10)
-                .Select(_ => new NameSimilarity(new Faker().Name.FullName(), 0.0))
-                .ToList();
-
         var inputString = UseState(string.Empty);
         var inputMetric = UseState<SimMetricType?>(() => null);
         var shortDescription = UseState(string.Empty);
@@ -39,6 +34,13 @@ public class SimMetricsNetApp : ViewBase
 
             nameList.Set(results);
         }, inputString, inputMetric);
+
+        
+        List<NameSimilarity> CreateInitialNameList() =>
+            Enumerable.Range(1, 10)
+                .Select(_ => new NameSimilarity(new Faker().Name.FullName(), 0.0))
+                .ToList();
+
 
         var hasInput = !string.IsNullOrWhiteSpace(inputString.Value);
         var hasMetric = inputMetric.Value is SimMetricType;
