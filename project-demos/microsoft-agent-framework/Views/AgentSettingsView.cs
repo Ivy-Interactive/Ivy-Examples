@@ -35,27 +35,22 @@ public class AgentSettingsView : ViewBase
         var instState = UseState(form.Value.Instructions);
         var modelState = UseState(form.Value.OllamaModel);
 
-        // Available Ollama models - loaded dynamically
         var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
-        
-        // Load models from Ollama API
-        async Task LoadModels()
+
+        UseEffect(async () =>
         {
             if (string.IsNullOrWhiteSpace(_ollamaUrl)) return;
             try
             {
-                using var client = new OllamaApiClient(new Uri(_ollamaUrl));
-                availableModels.Set((await client.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
+                using var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl));
+                availableModels.Set((await ollamaClient.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
             }
-            catch 
-            { 
-                availableModels.Set(ImmutableArray<string>.Empty); 
+            catch
+            {
+                availableModels.Set(ImmutableArray<string>.Empty);
             }
-        }
+        }, EffectTrigger.OnMount());
         
-        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
-        
-        // Query function for AsyncSelectInput
         QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
         {
             return context.UseQuery<Option<string>[], (string, string)>(

@@ -8,9 +8,7 @@ public class MagickNetApp : ViewBase
         // State management
         var resultState = UseState("Welcome to Magick.NET Image Studio! Upload an image to start creating amazing effects.");
         var uploadState = UseState<FileUpload<byte[]>?>();
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept("image/*")
-            .MaxFileSize(50 * 1024 * 1024);
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
         var uploadedImageBytes = UseState<byte[]?>(() => null);
         var processedImageBytes = UseState<byte[]?>(() => null);
         var processedImageDataUri = UseState<string?>(() => null);
@@ -65,8 +63,19 @@ public class MagickNetApp : ViewBase
             }
         }, [uploadState]);
 
+        var downloadUrl = this.UseDownload(
+            () =>
+            {
+                ProcessImage();
+                return processedImageBytes.Value ?? [];
+            },
+            $"image/{selectedFormat.Value}",
+            $"processed-image.{selectedFormat.Value}");
+
+        var uploadContext = uploadBase.Accept("image/*").MaxFileSize(50 * 1024 * 1024);
+
         // Function to process image with selected effect
-        var processImage = () =>
+        void ProcessImage()
         {
             try
             {
@@ -199,18 +208,7 @@ public class MagickNetApp : ViewBase
                 client.Toast($"Error processing image: {ex.Message}", "Processing Error");
                 processedImageBytes.Value = null;
             }
-        };
-
-        // Download handler
-        var downloadUrl = this.UseDownload(
-            () =>
-            {
-                processImage();
-                return processedImageBytes.Value ?? [];
-            },
-            $"image/{selectedFormat.Value}",
-            $"processed-image.{selectedFormat.Value}"
-        );
+        }
 
         // Left Card - Controls Panel
         var leftCard = new Card(
@@ -245,38 +243,38 @@ public class MagickNetApp : ViewBase
                            ? Layout.Vertical()
                              | (Layout.Horizontal().Gap(4)
                                | Text.Block("Width:")
-                               | new NumberInput<int>(widthState)
+                               | widthState.ToNumberInput()
                                | Text.Block("Height:")
-                               | new NumberInput<int>(heightState))
+                               | heightState.ToNumberInput())
                              | maintainAspectRatio.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Maintain aspect ratio")
                            : selectedEffect.Value == "blur"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Blur Radius:")
-                             | new NumberInput<double>(blurRadius).Min(0).Max(50).Step(0.5)
+                             | blurRadius.ToNumberInput().Min(0).Max(50).Step(0.5)
                            : selectedEffect.Value == "sharpen"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Sharpen Radius:")
-                             | new NumberInput<double>(sharpenRadius).Min(0).Max(10).Step(0.1)
+                             | sharpenRadius.ToNumberInput().Min(0).Max(10).Step(0.1)
                            : selectedEffect.Value == "brightness"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Brightness:")
-                             | new NumberInput<double>(brightness).Min(-100).Max(100).Step(1)
+                             | brightness.ToNumberInput().Min(-100).Max(100).Step(1)
                            : selectedEffect.Value == "contrast"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Contrast:")
-                             | new NumberInput<double>(contrast).Min(0).Max(3).Step(0.1)
+                             | contrast.ToNumberInput().Min(0).Max(3).Step(0.1)
                            : selectedEffect.Value == "saturation"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Saturation:")
-                             | new NumberInput<double>(saturation).Min(0).Max(3).Step(0.1)
+                             | saturation.ToNumberInput().Min(0).Max(3).Step(0.1)
                            : selectedEffect.Value == "hue"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Hue Shift:")
-                             | new NumberInput<double>(hue).Min(0).Max(180).Step(1)
+                             | hue.ToNumberInput().Min(0).Max(180).Step(1)
                            : selectedEffect.Value == "rotate"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Rotation (degrees):")
-                             | new NumberInput<double>(rotation).Min(-360).Max(360).Step(1)
+                             | rotation.ToNumberInput().Min(-360).Max(360).Step(1)
                            : selectedEffect.Value == "flip"
                            ? Layout.Vertical().Gap(2)
                              | flipHorizontal.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Flip horizontally")
@@ -296,12 +294,12 @@ public class MagickNetApp : ViewBase
                        | (selectedFormat.Value == "jpeg" || selectedFormat.Value == "webp"
                            ? Layout.Horizontal().Gap(4)
                              | Text.Block("Quality:")
-                             | new NumberInput<int>(quality).Min(1).Max(100).Step(1)
+                             | quality.ToNumberInput().Min(1).Max(100).Step(1)
                            : Text.Block(""))
                            
                        | (Layout.Horizontal().Gap(4)
                        | (uploadedImageBytes.Value != null
-                           ? new Button("Magic Image", onClick: () => processImage())
+                           ? new Button("Magic Image", onClick: ProcessImage)
                            : new Button("Magic Image").Disabled())
                        | new Button("Download")
                            .Primary()

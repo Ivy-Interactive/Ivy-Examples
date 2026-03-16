@@ -4,26 +4,51 @@ public class ModelListBlade : ViewBase
 {
     private const string Url = "http://localhost:11434";
     private record ModelListRecord(string Name);
-    
-    private IState<ImmutableArray<ModelListRecord>> _models;
-    private IState<bool> _modelsLoaded;
+
     private OllamaApiClient? _ollamaApiClient;
 
     public override object? Build()
     {
         var blades = UseContext<IBladeService>();
-        
-        _models = UseState(ImmutableArray.Create<ModelListRecord>());
-        _modelsLoaded = UseState(false);
-
+        var client = UseService<IClientProvider>();
+        var models = UseState(ImmutableArray.Create<ModelListRecord>());
+        var modelsLoaded = UseState(false);
         // Automatically load models on first render
         UseEffect(async () =>
         {
-            if (!_modelsLoaded.Value && _models.Value.IsEmpty)
+            if (!modelsLoaded.Value && models.Value.IsEmpty)
             {
                 await OnRefreshClicked();
             }
-        }, EffectTrigger.OnMount());
+        }, []);
+
+        async Task OnRefreshClicked()
+        {
+            _ollamaApiClient?.Dispose();
+            _ollamaApiClient = new OllamaApiClient(Url);
+            var connected = await _ollamaApiClient.IsRunningAsync();
+
+            if (!connected)
+            {
+                client.Toast($"Ollama API is not running at {Url}", "Connection Error");
+                modelsLoaded.Set(false);
+                models.Set(ImmutableArray.Create<ModelListRecord>());
+                return;
+            }
+
+            var ollamaModels = await _ollamaApiClient.ListLocalModelsAsync();
+            models.Set(ollamaModels.Select(m => new ModelListRecord(m.Name)).ToImmutableArray());
+            modelsLoaded.Set(true);
+
+            if (ollamaModels.Any())
+            {
+                client.Toast($"Loaded {ollamaModels.Count()} model(s)", "Models Loaded");
+            }
+            else
+            {
+                client.Toast("No models found. Please download a model using 'ollama pull <model-name>'", "No Models");
+            }
+        }
 
         var onItemClicked = new Action<Event<ListItem>>(e =>
         {
@@ -37,14 +62,14 @@ public class ModelListBlade : ViewBase
             return item;
         }
 
-        if (_models.Value.IsEmpty && !_modelsLoaded.Value)
+        if (models.Value.IsEmpty && !modelsLoaded.Value)
         {
             return Layout.Vertical().Gap(6).Padding(2)
                 | Text.H3("Models")
                 | Text.Muted("Loading models...");
         }
 
-        if (_models.Value.IsEmpty)
+        if (models.Value.IsEmpty)
         {
             return Layout.Vertical().Gap(6).Padding(2)
                 | Text.H3("Models")
@@ -52,7 +77,17 @@ public class ModelListBlade : ViewBase
         }
 
         return new FilteredListView<ModelListRecord>(
-            fetchRecords: (filter) => FetchModels(filter),
+            fetchRecords: (filter) =>
+            {
+                var filtered = models.Value;
+                if (!string.IsNullOrWhiteSpace(filter))
+                {
+                    filter = filter.Trim();
+                    filtered = filtered.Where(m => m.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                        .ToImmutableArray();
+                }
+                return Task.FromResult(filtered.ToArray());
+            },
             createItem: CreateItem,
             onFilterChanged: _ =>
             {
@@ -60,49 +95,4 @@ public class ModelListBlade : ViewBase
             }
         );
     }
-
-    private Task<ModelListRecord[]> FetchModels(string filter)
-    {
-        var models = _models.Value;
-        
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            filter = filter.Trim();
-            models = models.Where(m => m.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                .ToImmutableArray();
-        }
-
-        return Task.FromResult(models.ToArray());
-    }
-
-    private async ValueTask OnRefreshClicked()
-    {
-        var client = UseService<IClientProvider>();
-        
-        _ollamaApiClient?.Dispose();
-        _ollamaApiClient = new OllamaApiClient(Url);
-        var connected = await _ollamaApiClient.IsRunningAsync();
-        
-        if (!connected)
-        {
-            client.Toast($"Ollama API is not running at {Url}", "Connection Error");
-            _modelsLoaded.Set(false);
-            _models.Set(ImmutableArray.Create<ModelListRecord>());
-            return;
-        }
-
-        var ollamaModels = await _ollamaApiClient.ListLocalModelsAsync();
-        _models.Set(ollamaModels.Select(m => new ModelListRecord(m.Name)).ToImmutableArray());
-        _modelsLoaded.Set(true);
-        
-        if (ollamaModels.Any())
-        {
-            client.Toast($"Loaded {ollamaModels.Count()} model(s)", "Models Loaded");
-        }
-        else
-        {
-            client.Toast("No models found. Please download a model using 'ollama pull <model-name>'", "No Models");
-        }
-    }
 }
-

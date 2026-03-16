@@ -80,13 +80,13 @@ public class CompanyDetailsBlade(int companyId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    companyValue.Id,
-                    companyValue.Name,
-                    companyValue.Address,
-                    companyValue.Phone,
-                    companyValue.Website
-                }.ToDetails()
+            {
+                companyValue.Id,
+                companyValue.Name,
+                companyValue.Address,
+                companyValue.Phone,
+                companyValue.Website
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

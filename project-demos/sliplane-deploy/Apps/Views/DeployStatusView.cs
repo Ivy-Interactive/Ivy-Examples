@@ -30,6 +30,10 @@ public class DeployStatusView : ViewBase
                 RefreshInterval = TimeSpan.FromSeconds(2),
                 KeepPrevious = true,
             });
+        var serviceQuery = this.UseQuery<SliplaneService?, (string, string, string)>(
+            key: ("deploy-service-details", _projectId, _service.Id),
+            fetcher: async ct => await client.GetServiceAsync(_apiToken, _projectId, _service.Id),
+            options: new QueryOptions { KeepPrevious = true });
 
         var events = eventsQuery.Value ?? [];
         var status = DeriveStatus(events);
@@ -48,11 +52,6 @@ public class DeployStatusView : ViewBase
             DeployStatus.Failed => CalloutVariant.Error,
             _ => CalloutVariant.Info,
         };
-
-        var serviceQuery = this.UseQuery<SliplaneService?, (string, string, string)>(
-            key: ("deploy-service-details", _projectId, _service.Id),
-            fetcher: async ct => await client.GetServiceAsync(_apiToken, _projectId, _service.Id),
-            options: new QueryOptions { KeepPrevious = true });
 
         var serviceForUrl = status == DeployStatus.Success ? serviceQuery.Value : _service;
         var siteUrl = serviceForUrl?.Network?.CustomDomains?.FirstOrDefault()?.Domain

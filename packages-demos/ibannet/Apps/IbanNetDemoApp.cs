@@ -26,7 +26,7 @@
 
             var countries = _registry.OrderBy(c => c.TwoLetterISORegionName).Select(c => c.TwoLetterISORegionName).ToArray();
             var countrySelect = selectedCountry.ToSelectInput(countries.ToOptions());
-            var ibanInput = new TextInput(ibanState.Value, e => HandleIbanChanged(e.Value), placeholder: "Enter IBAN here")
+            var ibanInput = ibanState.ToTextInput(placeholder: "Enter IBAN here")
                 .Invalid(string.IsNullOrEmpty(outputState.Value) ? null : outputState.Value);
             bool hasValidIban = _parser.TryParse(ibanState.Value, out var iban);
 

@@ -18,7 +18,16 @@ public class QuestPdfApp : ViewBase
     var landscape = UseState(false);
     var margins = UseState(30);
     var insertType = UseState("Heading 1");
+    
+    var downloadUrl = this.UseDownload(() => GeneratePdf(), "application/pdf", "report.pdf");
 
+    var previewBytes = UseState<byte[]?>(() => GeneratePdf());
+    this.UseEffect(async () =>
+    {
+      await Task.Delay(350);
+      previewBytes.Set(GeneratePdf());
+    }, title, body, pageSize, margins, landscape);
+    
     void InsertSnippetByType(string type)
     {
       string snippet = type switch
@@ -49,15 +58,6 @@ public class QuestPdfApp : ViewBase
 
       return _pdfService.GeneratePdf(title.Value, body.Value ?? string.Empty, settings);
     }
-
-    var downloadUrl = this.UseDownload(() => GeneratePdf(), "application/pdf", "report.pdf");
-
-    var previewBytes = UseState<byte[]?>(() => GeneratePdf());
-    this.UseEffect(async () =>
-    {
-      await Task.Delay(350);
-      previewBytes.Set(GeneratePdf());
-    }, title, body, pageSize, margins, landscape);
 
     var previewDataUrl = previewBytes.Value is null
       ? string.Empty

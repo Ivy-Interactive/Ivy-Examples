@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,7 +16,12 @@
   
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.2.19" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="OllamaSharp" Version="5.4.12" />
   </ItemGroup>
 
 </Project>
+

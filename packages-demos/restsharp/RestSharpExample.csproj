@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -15,7 +15,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ivy" Version="1.2.19" />
+		<PackageReference Include="Ivy" Version="1.2.22" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
 		<PackageReference Include="RestSharp" Version="113.0.0" />
 	</ItemGroup>
 
@@ -25,3 +29,4 @@
 	</ItemGroup>
 
 </Project>
+

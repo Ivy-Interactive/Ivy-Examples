@@ -69,6 +69,14 @@ public class DeployView : ViewBase
         var validationFailed = this.UseState(false);
         var isDeploying = this.UseState(false);
 
+        var (onSubmit, formView, validationView, loading) = this.UseForm(() => model.ToForm("Deploy")
+            .Place(m => m.ServerId, m => m.Name)
+            .Builder(m => m.ServerId, s => s.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server..."))
+            .Builder(m => m.Name, s => s.ToTextInput().Placeholder("e.g. yamldotnet"))
+            .Remove(m => m.ProjectId, m => m.GitRepo, m => m.Branch, m => m.DockerfilePath, m => m.DockerContext,
+                m => m.AutoDeploy, m => m.NetworkPublic, m => m.NetworkProtocol, m => m.Healthcheck, m => m.Cmd)
+            .Required(m => m.ProjectId, m => m.Name, m => m.ServerId, m => m.GitRepo));
+
         QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string q) =>
             ctx.UseQuery<Option<string>[], (string, string, int)>(
                 key: ("deploy-servers", q, reloadCounter.Value),
@@ -89,14 +97,6 @@ public class DeployView : ViewBase
 
         _ = QueryServers(this.Context, "");
         _ = LookupServer(this.Context, model.Value.ServerId);
-
-        var (onSubmit, formView, validationView, loading) = this.UseForm(() => model.ToForm("Deploy")
-            .Place(m => m.ServerId, m => m.Name)
-            .Builder(m => m.ServerId, s => s.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server..."))
-            .Builder(m => m.Name, s => s.ToTextInput().Placeholder("e.g. yamldotnet"))
-            .Remove(m => m.ProjectId, m => m.GitRepo, m => m.Branch, m => m.DockerfilePath, m => m.DockerContext,
-                m => m.AutoDeploy, m => m.NetworkPublic, m => m.NetworkProtocol, m => m.Healthcheck, m => m.Cmd)
-            .Required(m => m.ProjectId, m => m.Name, m => m.ServerId, m => m.GitRepo));
 
         async ValueTask HandleDeploy()
         {

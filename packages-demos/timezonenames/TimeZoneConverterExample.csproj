@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -15,6 +15,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.2.19" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="TimeZoneConverter" Version="7.2.0" />
   </ItemGroup>
   <ItemGroup>

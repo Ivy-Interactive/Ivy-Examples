@@ -1,4 +1,4 @@
-﻿namespace EPPlusExample.Apps;
+namespace EPPlusExample.Apps;
 
 [App(icon: Icons.Box, title: "EPPlus")]
 public class EPPlusApp : ViewBase
@@ -17,28 +17,24 @@ public class EPPlusApp : ViewBase
     }
     public override object? Build()
     {
-        var filePath = GetExcelFilePath();
         var client = UseService<IClientProvider>();
-
-        // Ensure file exists
-        EnsureExcelFileExists(filePath);
-
-        var booksState = UseState<List<Book>>(() => ExcelManipulation.ReadExcel());
-
-
-        var downloadUrl = this.UseDownload(
-        async () =>
+        var booksState = UseState<List<Book>>(() =>
         {
-            // Read the file into memory
-            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+            var path = GetExcelFilePath();
+            EnsureExcelFileExists(path);
+            return ExcelManipulation.ReadExcel();
+        });
+        var book = UseState(() => new Book());
+        var downloadUrl = this.UseDownload(
+            async () =>
+            {
+                var filePath = GetExcelFilePath();
+                return await File.ReadAllBytesAsync(filePath);
+            },
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"books-{DateTime.UtcNow:yyyy-MM-dd}.xlsx");
 
-            // Return as bytes
-            return fileBytes;
-        },
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    $"books-{DateTime.UtcNow:yyyy-MM-dd}.xlsx"
-       );
-
+        var filePath = GetExcelFilePath();
         var hasBooks = (booksState.Value?.Count ?? 0) > 0;
 
         var downloadBtn = hasBooks
@@ -73,7 +69,7 @@ public class EPPlusApp : ViewBase
                 .Icon(Icons.FileText)
                 .OnClick(_ => ExcelManipulation.WriteExcel(booksState));
 
-        var book = UseState(() => new Book());
+        
         var formBuilder = book.ToForm().Remove(x => x.ID)
             .Label(m => m.Title, "Title")
             .Builder(m => m.Title, s => s.ToTextInput().Placeholder("Insert title..."))

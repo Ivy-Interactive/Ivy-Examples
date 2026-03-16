@@ -31,9 +31,9 @@ public class ServicesView : ViewBase
     public override object? Build()
     {
         // ── infrastructure ────────────────────────────────────────────────────
-        var client          = this.UseService<SliplaneApiClient>();
-        var refreshToken    = this.UseRefreshToken();
-        var serviceDetailOpen      = this.UseState(false);
+        var client = this.UseService<SliplaneApiClient>();
+        var refreshToken = this.UseRefreshToken();
+        var serviceDetailOpen = this.UseState(false);
         var serviceDetailSelection = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
         var (createSheetView, openCreateSheet) = this.UseTrigger(
             (IState<bool> isOpen) => new CreateServiceSheet(isOpen, _apiToken, _projects));
@@ -45,44 +45,60 @@ public class ServicesView : ViewBase
         // Services currently transitioning (pause/resume) — show pending optimistically.
         var transitioningServiceIds = this.UseState<HashSet<string>>(() => new HashSet<string>());
         // ── Logs / Events sheets ───────────────────────────────────────────────
-        var logsSheetOpen      = this.UseState(false);
-        var logsSelection      = this.UseState<(string ProjectId, string ServiceName, string ServiceId)?>(() => null);
-        var eventsSheetOpen    = this.UseState(false);
-        var eventsSelection    = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
-
-    // ── 1) data loading: UseQuery with polling ───────────────────────────────
-    var overviewKey = $"overview:{_apiToken}";
-    var overviewQuery = this.UseQuery<SliplaneOverview?, string>(
-        key: overviewKey,
-        fetcher: async ct =>
-        {
-            var result = await client.GetOverviewAsync(_apiToken);
-
-            // Tell the DataTable to re-read rows after each successful fetch.
-            refreshToken.Refresh();
-            return result;
-        },
-        options: new QueryOptions
-        {
-            KeepPrevious = true,
-            RefreshInterval = TimeSpan.FromSeconds(3),
-            RevalidateOnMount = true
-        });
-
-    // ── React to SliplaneRefreshSignal (sent by Create/Edit sheets) ──────────
-    var signalReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
-    this.UseEffect(() => signalReceiver.Receive(_ =>
-    {
-        overviewQuery.Mutator.Revalidate();
-        return new Unit();
-    }));
-
-    // Current data for the table derived directly from overviewQuery
-    var overview = overviewQuery.Value;
-        // Accumulate events per service across refreshes so logs don't "blink" or disappear
-        // when the API returns a shorter window of events.
+        var logsSheetOpen = this.UseState(false);
+        var logsSelection = this.UseState<(string ProjectId, string ServiceName, string ServiceId)?>(() => null);
+        var eventsSheetOpen = this.UseState(false);
+        var eventsSelection = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
         var eventsStore = this.UseState<Dictionary<string, List<SliplaneServiceEvent>>>(() =>
             new Dictionary<string, List<SliplaneServiceEvent>>());
+
+        var overviewQuery = this.UseQuery<SliplaneOverview?, string>(
+            key: $"overview:{_apiToken}",
+            fetcher: async ct =>
+            {
+                var result = await client.GetOverviewAsync(_apiToken);
+
+                // Tell the DataTable to re-read rows after each successful fetch.
+                refreshToken.Refresh();
+                return result;
+            },
+            options: new QueryOptions
+            {
+                KeepPrevious = true,
+                RefreshInterval = TimeSpan.FromSeconds(3),
+                RevalidateOnMount = true
+            });
+
+        // ── React to SliplaneRefreshSignal (sent by Create/Edit sheets) ──────────
+        var signalReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
+        this.UseEffect(() => signalReceiver.Receive(_ =>
+        {
+            overviewQuery.Mutator.Revalidate();
+            return new Unit();
+        }));
+        this.UseEffect(() =>
+        {
+            var ids = transitioningServiceIds.Value;
+            if (ids.Count == 0) return;
+            var evtsBySvc = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+            var toRemove = new List<string>();
+            foreach (var sid in ids)
+            {
+                if (!evtsBySvc.TryGetValue(sid, out var evts) || evts.Count == 0) continue;
+                var last = evts.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+                if (last?.Type is "service_suspend_success" or "service_resume_success")
+                    toRemove.Add(sid);
+            }
+            if (toRemove.Count > 0)
+            {
+                var next = new HashSet<string>(ids);
+                foreach (var id in toRemove) next.Remove(id);
+                transitioningServiceIds.Set(next);
+            }
+        }, EffectTrigger.OnBuild());
+
+        // Current data for the table derived directly from overviewQuery
+        var overview = overviewQuery.Value;
         if (overview?.EventsByService is { Count: > 0 } latestEvents)
         {
             var current = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
@@ -121,270 +137,249 @@ public class ServicesView : ViewBase
                     return kv.Value.Select(svc => (ProjectId: kv.Key, ProjectName: projectName, Service: svc));
                 })
                 .ToList();
-    var currentServers  = overview?.Servers ?? new List<SliplaneServer>();
-    var eventsByService = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+        var currentServers = overview?.Servers ?? new List<SliplaneServer>();
+        var eventsByService = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
 
-    // Clear transitioning when we see success events for those services
-    this.UseEffect(() =>
-    {
-        var ids = transitioningServiceIds.Value;
-        if (ids.Count == 0) return;
-        var toRemove = new List<string>();
-        foreach (var sid in ids)
+        // ── build rows (pure – no hooks) ──────────────────────────────────────
+        var rows = BuildServiceRows(currentServices, currentServers, eventsByService, transitioningServiceIds.Value);
+
+        // ── UI ────────────────────────────────────────────────────────────────
+        void ShowServiceSheet(string projectId, string projectName, SliplaneService svc)
         {
-            if (!eventsByService.TryGetValue(sid, out var evts) || evts.Count == 0) continue;
-            var last = evts.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
-            if (last?.Type is "service_suspend_success" or "service_resume_success")
-                toRemove.Add(sid);
-        }
-        if (toRemove.Count > 0)
-        {
-            var next = new HashSet<string>(ids);
-            foreach (var id in toRemove) next.Remove(id);
-            transitioningServiceIds.Set(next);
-        }
-    }, EffectTrigger.OnBuild());
-
-    // ── build rows (pure – no hooks) ──────────────────────────────────────
-    var rows = BuildServiceRows(currentServices, currentServers, eventsByService, transitioningServiceIds.Value);
-
-    // ── UI ────────────────────────────────────────────────────────────────
-    void ShowServiceSheet(string projectId, string projectName, SliplaneService svc)
-    {
-        serviceDetailSelection.Set((projectId, projectName, svc));
-        serviceDetailOpen.Set(true);
-    }
-
-    async Task PauseServiceAsync(string projectId, SliplaneService svc)
-    {
-        bool IsPausedStatus(string? s) =>
-            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
-
-        if (IsPausedStatus(svc.Status))
-        {
-            showAlert(
-                $"Service \"{svc.Name}\" is already paused.",
-                async _ => { await Task.CompletedTask; },
-                "Pause service");
-            return;
+            serviceDetailSelection.Set((projectId, projectName, svc));
+            serviceDetailOpen.Set(true);
         }
 
-        transitioningServiceIds.Set(new HashSet<string>(transitioningServiceIds.Value) { svc.Id });
-        await client.PauseServiceAsync(_apiToken, projectId, svc.Id);
-        overviewQuery.Mutator.Revalidate();
-    }
-
-    async Task ResumeServiceAsync(string projectId, SliplaneService svc)
-    {
-        bool IsPausedStatus(string? s) =>
-            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
-
-        if (!IsPausedStatus(svc.Status))
+        async Task PauseServiceAsync(string projectId, SliplaneService svc)
         {
-            showAlert(
-                $"Service \"{svc.Name}\" is already running.",
-                async _ => { await Task.CompletedTask; },
-                "Resume service");
-            return;
-        }
+            bool IsPausedStatus(string? s) =>
+                string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
 
-        transitioningServiceIds.Set(new HashSet<string>(transitioningServiceIds.Value) { svc.Id });
-        await client.UnpauseServiceAsync(_apiToken, projectId, svc.Id);
-        overviewQuery.Mutator.Revalidate();
-    }
-
-    var selectedForEdit = serviceDetailSelection.Value;
-    object? editSheetView = selectedForEdit is { } sel && serviceDetailOpen.Value
-        ? new EditServiceSheet(serviceDetailOpen, _apiToken, sel.ProjectId, sel.ProjectName, sel.Service, serviceDetailSelection, currentServers)
-        : null;
-
-    // ── Logs sheet ────────────────────────────────────────────────────────────
-    object? logsSheetView = logsSelection.Value is { } logsSel && logsSheetOpen.Value
-        ? new ServiceLogsSheet(logsSheetOpen, _apiToken, logsSel.ProjectId, logsSel.ServiceId, logsSel.ServiceName)
-        : null;
-
-    // ── Events sheet ──────────────────────────────────────────────────────────
-    object? eventsSheetView = eventsSelection.Value is { } evtSel && eventsSheetOpen.Value
-        ? new ServiceEventsSheet(eventsSheetOpen, evtSel.ServiceName, evtSel.Events)
-        : null;
-
-    // Use overviewQuery directly for loading/error state to avoid stale local flags.
-    if (overviewQuery.Loading && overviewQuery.Value == null && currentServices.Count == 0)
-        return Layout.Center() | Text.Muted("Loading all services...");
-
-    if (overviewQuery.Error is { } errEx)
-        return new Callout($"Error: {errEx.Message}", variant: CalloutVariant.Error);
-
-    var headerRow      = Layout.Horizontal().Height(Size.Fit()) | Text.H2("Services");
-    var addServiceBtn  = new Button("Add service").Icon(Icons.Plus).OnClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
-    var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
-
-    // ── DataTable + RefreshToken as in the official example ───────────────
-    var table = rows
-        .AsQueryable()
-        .ToDataTable(r => r.ServiceId)
-        .RefreshToken(refreshToken)
-        .Height(Size.Full())
-        .Hidden(r => r.ServiceId)
-        .Header(r => r.Name, "Service")
-        .Header(r => r.Project, "Project")
-        .Header(r => r.Server, "Server")
-        .Header(r => r.StatusIcon, "Icon")
-        .Header(r => r.Status, "Name")
-        .Header(r => r.LastUpdated, "Last updated")
-        .Header(r => r.DeployStatus, "Logs")
-        .Header(r => r.Url, "URL")
-        .Group(r => r.Name, "Identity")
-        .Group(r => r.Project, "Identity")
-        .Group(r => r.Server, "Identity")
-        .Group(r => r.StatusIcon, "Status")
-        .Group(r => r.Status, "Status")
-        .Group(r => r.LastUpdated, "Deploy")
-        .Group(r => r.DeployStatus, "Deploy")
-        .Group(r => r.Url, "Routing")
-        .Width(r => r.StatusIcon, Size.Px(50))
-        .Width(r => r.Status, Size.Px(120))
-        .Width(r => r.LastUpdated, Size.Px(130))
-        .Width(r => r.DeployStatus, Size.Px(200))
-        .Config(config =>
-        {
-            config.ShowGroups      = true;
-            config.ShowIndexColumn = false;
-            config.AllowSorting    = true;
-            config.AllowFiltering  = true;
-            config.ShowSearch      = true;
-            config.SelectionMode   = SelectionModes.Rows;
-        })
-        .RowActions(
-            MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
-            MenuItem.Default(Icons.Trash2, "delete").Tag("delete"),
-            MenuItem.Default(Icons.EllipsisVertical, "more")
-                .Children([
-                    MenuItem.Default(Icons.Pause, "pause").Label("Pause").Tag("pause"),
-                    MenuItem.Default(Icons.Play, "resume").Label("Resume").Tag("resume"),
-                    MenuItem.Default(Icons.FileText, "logs").Label("Logs").Tag("logs"),
-                    MenuItem.Default(Icons.Calendar, "events").Label("Events").Tag("events")
-                ]))
-        .OnRowAction(e =>
-        {
-            var args = e.Value;
-            if (args is null) return ValueTask.CompletedTask;
-            var tag = args.Tag?.ToString();
-            var id = args.Id?.ToString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(id)) return ValueTask.CompletedTask;
-
-            var match = currentServices.FirstOrDefault(cs => cs.Service.Id == id);
-            if (match.Service == null || string.IsNullOrWhiteSpace(match.ProjectId)) return ValueTask.CompletedTask;
-
-            if (tag == "edit")
+            if (IsPausedStatus(svc.Status))
             {
-                ShowServiceSheet(match.ProjectId, match.ProjectName, match.Service);
-                return ValueTask.CompletedTask;
-            }
-
-            if (tag == "delete")
-            {
-                deleteSelection.Set((match.ProjectId, match.ProjectName, match.Service));
-                deleteCommandInput.Set(string.Empty);
-                deleteCommandError.Set((string?)null);
-                deleteDialogOpen.Set(true);
-                return ValueTask.CompletedTask;
-            }
-
-            if (tag == "pause")
-            {
-                _ = PauseServiceAsync(match.ProjectId, match.Service);
-                return ValueTask.CompletedTask;
-            }
-
-            if (tag == "resume")
-            {
-                _ = ResumeServiceAsync(match.ProjectId, match.Service);
-                return ValueTask.CompletedTask;
-            }
-
-            if (tag == "logs")
-            {
-                logsSelection.Set((match.ProjectId, match.Service.Name ?? match.Service.Id, match.Service.Id));
-                logsSheetOpen.Set(true);
-                return ValueTask.CompletedTask;
-            }
-
-            if (tag == "events")
-            {
-                var evts = eventsByService.TryGetValue(match.Service.Id, out var ev) ? ev : new List<SliplaneServiceEvent>();
-                eventsSelection.Set((match.Service.Name ?? match.Service.Id, evts));
-                eventsSheetOpen.Set(true);
-                return ValueTask.CompletedTask;
-            }
-
-            return ValueTask.CompletedTask;
-        })
-        .Renderer(e => e.Url, new LinkDisplayRenderer { Type = LinkDisplayType.Url });
-
-    Dialog? deleteDialog = null;
-    if (deleteDialogOpen.Value && deleteSelection.Value is { } del)
-    {
-        async Task ConfirmDeleteAsync()
-        {
-            var expectedName = del.Service.Name ?? string.Empty;
-            if (!string.Equals(deleteCommandInput.Value?.Trim(), expectedName, StringComparison.Ordinal))
-            {
-                deleteCommandError.Set("Service name does not match. Please type it exactly.");
+                showAlert(
+                    $"Service \"{svc.Name}\" is already paused.",
+                    async _ => { await Task.CompletedTask; },
+                    "Pause service");
                 return;
             }
 
-            deleteCommandError.Set((string?)null);
-            await client.DeleteServiceAsync(_apiToken, del.ProjectId, del.Service.Id);
-            CloseDeleteDialog();
+            transitioningServiceIds.Set(new HashSet<string>(transitioningServiceIds.Value) { svc.Id });
+            await client.PauseServiceAsync(_apiToken, projectId, svc.Id);
             overviewQuery.Mutator.Revalidate();
         }
 
-        void CloseDeleteDialog()
+        async Task ResumeServiceAsync(string projectId, SliplaneService svc)
         {
-            deleteDialogOpen.Set(false);
-            deleteSelection.Set(((string ProjectId, string ProjectName, SliplaneService Service)?)null);
-            deleteCommandInput.Set(string.Empty);
-            deleteCommandError.Set((string?)null);
+            bool IsPausedStatus(string? s) =>
+                string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
+
+            if (!IsPausedStatus(svc.Status))
+            {
+                showAlert(
+                    $"Service \"{svc.Name}\" is already running.",
+                    async _ => { await Task.CompletedTask; },
+                    "Resume service");
+                return;
+            }
+
+            transitioningServiceIds.Set(new HashSet<string>(transitioningServiceIds.Value) { svc.Id });
+            await client.UnpauseServiceAsync(_apiToken, projectId, svc.Id);
+            overviewQuery.Mutator.Revalidate();
         }
 
-        var deleteBody = Layout.Vertical()
-            | Text.Markdown($"If you want to delete this service, type the following service name: **`{del.Service.Name}`**")
-            | deleteCommandInput.ToTextInput().Placeholder("Enter service name here")
-            | (deleteCommandError.Value is { Length: > 0 } errMsg
-                ? (object)new Callout(errMsg, variant: CalloutVariant.Error)
-                : Layout.Vertical());
+        var selectedForEdit = serviceDetailSelection.Value;
+        object? editSheetView = selectedForEdit is { } sel && serviceDetailOpen.Value
+            ? new EditServiceSheet(serviceDetailOpen, _apiToken, sel.ProjectId, sel.ProjectName, sel.Service, serviceDetailSelection, currentServers)
+            : null;
 
-        var deleteFooter = new DialogFooter(
-            new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => CloseDeleteDialog()),
-            new Button("Delete")
-                .Destructive()
-                .Icon(Icons.Trash2)
-                .OnClick(async _ => await ConfirmDeleteAsync()));
+        // ── Logs sheet ────────────────────────────────────────────────────────────
+        object? logsSheetView = logsSelection.Value is { } logsSel && logsSheetOpen.Value
+            ? new ServiceLogsSheet(logsSheetOpen, _apiToken, logsSel.ProjectId, logsSel.ServiceId, logsSel.ServiceName)
+            : null;
 
-        deleteDialog = new Dialog(
-            onClose: (Event<Dialog> _) => CloseDeleteDialog(),
-            header: new DialogHeader("Are you sure you want to delete this service?"),
-            body: new DialogBody(deleteBody),
-            footer: deleteFooter);
+        // ── Events sheet ──────────────────────────────────────────────────────────
+        object? eventsSheetView = eventsSelection.Value is { } evtSel && eventsSheetOpen.Value
+            ? new ServiceEventsSheet(eventsSheetOpen, evtSel.ServiceName, evtSel.Events)
+            : null;
+
+        // Use overviewQuery directly for loading/error state to avoid stale local flags.
+        if (overviewQuery.Loading && overviewQuery.Value == null && currentServices.Count == 0)
+            return Layout.Center() | Text.Muted("Loading all services...");
+
+        if (overviewQuery.Error is { } errEx)
+            return new Callout($"Error: {errEx.Message}", variant: CalloutVariant.Error);
+
+        var headerRow = Layout.Horizontal().Height(Size.Fit()) | Text.H2("Services");
+        var addServiceBtn = new Button("Add service").Icon(Icons.Plus).OnClick(_ => openCreateSheet()).Large().Secondary().BorderRadius(BorderRadius.Full);
+        var addServiceFloat = new FloatingPanel(addServiceBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
+
+        // ── DataTable + RefreshToken as in the official example ───────────────
+        var table = rows
+            .AsQueryable()
+            .ToDataTable(r => r.ServiceId)
+            .RefreshToken(refreshToken)
+            .Height(Size.Full())
+            .Hidden(r => r.ServiceId)
+            .Header(r => r.Name, "Service")
+            .Header(r => r.Project, "Project")
+            .Header(r => r.Server, "Server")
+            .Header(r => r.StatusIcon, "Icon")
+            .Header(r => r.Status, "Name")
+            .Header(r => r.LastUpdated, "Last updated")
+            .Header(r => r.DeployStatus, "Logs")
+            .Header(r => r.Url, "URL")
+            .Group(r => r.Name, "Identity")
+            .Group(r => r.Project, "Identity")
+            .Group(r => r.Server, "Identity")
+            .Group(r => r.StatusIcon, "Status")
+            .Group(r => r.Status, "Status")
+            .Group(r => r.LastUpdated, "Deploy")
+            .Group(r => r.DeployStatus, "Deploy")
+            .Group(r => r.Url, "Routing")
+            .Width(r => r.StatusIcon, Size.Px(50))
+            .Width(r => r.Status, Size.Px(120))
+            .Width(r => r.LastUpdated, Size.Px(130))
+            .Width(r => r.DeployStatus, Size.Px(200))
+            .Config(config =>
+            {
+                config.ShowGroups = true;
+                config.ShowIndexColumn = false;
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.ShowSearch = true;
+                config.SelectionMode = SelectionModes.Rows;
+            })
+            .RowActions(
+                MenuItem.Default(Icons.Pencil, "edit").Tag("edit"),
+                MenuItem.Default(Icons.Trash2, "delete").Tag("delete"),
+                MenuItem.Default(Icons.EllipsisVertical, "more")
+                    .Children([
+                        MenuItem.Default(Icons.Pause, "pause").Label("Pause").Tag("pause"),
+                    MenuItem.Default(Icons.Play, "resume").Label("Resume").Tag("resume"),
+                    MenuItem.Default(Icons.FileText, "logs").Label("Logs").Tag("logs"),
+                    MenuItem.Default(Icons.Calendar, "events").Label("Events").Tag("events")
+                    ]))
+            .OnRowAction(e =>
+            {
+                var args = e.Value;
+                if (args is null) return ValueTask.CompletedTask;
+                var tag = args.Tag?.ToString();
+                var id = args.Id?.ToString() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(id)) return ValueTask.CompletedTask;
+
+                var match = currentServices.FirstOrDefault(cs => cs.Service.Id == id);
+                if (match.Service == null || string.IsNullOrWhiteSpace(match.ProjectId)) return ValueTask.CompletedTask;
+
+                if (tag == "edit")
+                {
+                    ShowServiceSheet(match.ProjectId, match.ProjectName, match.Service);
+                    return ValueTask.CompletedTask;
+                }
+
+                if (tag == "delete")
+                {
+                    deleteSelection.Set((match.ProjectId, match.ProjectName, match.Service));
+                    deleteCommandInput.Set(string.Empty);
+                    deleteCommandError.Set((string?)null);
+                    deleteDialogOpen.Set(true);
+                    return ValueTask.CompletedTask;
+                }
+
+                if (tag == "pause")
+                {
+                    _ = PauseServiceAsync(match.ProjectId, match.Service);
+                    return ValueTask.CompletedTask;
+                }
+
+                if (tag == "resume")
+                {
+                    _ = ResumeServiceAsync(match.ProjectId, match.Service);
+                    return ValueTask.CompletedTask;
+                }
+
+                if (tag == "logs")
+                {
+                    logsSelection.Set((match.ProjectId, match.Service.Name ?? match.Service.Id, match.Service.Id));
+                    logsSheetOpen.Set(true);
+                    return ValueTask.CompletedTask;
+                }
+
+                if (tag == "events")
+                {
+                    var evts = eventsByService.TryGetValue(match.Service.Id, out var ev) ? ev : new List<SliplaneServiceEvent>();
+                    eventsSelection.Set((match.Service.Name ?? match.Service.Id, evts));
+                    eventsSheetOpen.Set(true);
+                    return ValueTask.CompletedTask;
+                }
+
+                return ValueTask.CompletedTask;
+            })
+            .Renderer(e => e.Url, new LinkDisplayRenderer { Type = LinkDisplayType.Url });
+
+        Dialog? deleteDialog = null;
+        if (deleteDialogOpen.Value && deleteSelection.Value is { } del)
+        {
+            async Task ConfirmDeleteAsync()
+            {
+                var expectedName = del.Service.Name ?? string.Empty;
+                if (!string.Equals(deleteCommandInput.Value?.Trim(), expectedName, StringComparison.Ordinal))
+                {
+                    deleteCommandError.Set("Service name does not match. Please type it exactly.");
+                    return;
+                }
+
+                deleteCommandError.Set((string?)null);
+                await client.DeleteServiceAsync(_apiToken, del.ProjectId, del.Service.Id);
+                CloseDeleteDialog();
+                overviewQuery.Mutator.Revalidate();
+            }
+
+            void CloseDeleteDialog()
+            {
+                deleteDialogOpen.Set(false);
+                deleteSelection.Set(((string ProjectId, string ProjectName, SliplaneService Service)?)null);
+                deleteCommandInput.Set(string.Empty);
+                deleteCommandError.Set((string?)null);
+            }
+
+            var deleteBody = Layout.Vertical()
+                | Text.Markdown($"If you want to delete this service, type the following service name: **`{del.Service.Name}`**")
+                | deleteCommandInput.ToTextInput().Placeholder("Enter service name here")
+                | (deleteCommandError.Value is { Length: > 0 } errMsg
+                    ? (object)new Callout(errMsg, variant: CalloutVariant.Error)
+                    : Layout.Vertical());
+
+            var deleteFooter = new DialogFooter(
+                new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => CloseDeleteDialog()),
+                new Button("Delete")
+                    .Destructive()
+                    .Icon(Icons.Trash2)
+                    .OnClick(async _ => await ConfirmDeleteAsync()));
+
+            deleteDialog = new Dialog(
+                onClose: (Event<Dialog> _) => CloseDeleteDialog(),
+                header: new DialogHeader("Are you sure you want to delete this service?"),
+                body: new DialogBody(deleteBody),
+                footer: deleteFooter);
+        }
+
+        object content = currentServices.Count == 0
+            ? (object)(Layout.Vertical() | headerRow | new Callout("No services found.", variant: CalloutVariant.Info) | table)
+            : Layout.Vertical().Height(Size.Full()) | headerRow | table;
+
+        return new Fragment(
+            content,
+            addServiceFloat,
+            editSheetView,
+            createSheetView,
+            logsSheetView,
+            eventsSheetView,
+            alertView,
+            deleteDialog);
     }
-
-    object content = currentServices.Count == 0
-        ? (object)(Layout.Vertical() | headerRow | new Callout("No services found.", variant: CalloutVariant.Info) | table)
-        : Layout.Vertical().Height(Size.Full()) | headerRow | table;
-
-    return new Fragment(
-        content,
-        addServiceFloat,
-        editSheetView,
-        createSheetView,
-        logsSheetView,
-        eventsSheetView,
-        alertView,
-        deleteDialog);
-}
 
     // ── pure data types ────────────────────────────────────────────────────────
 
@@ -394,7 +389,7 @@ public class ServicesView : ViewBase
         string Project,
         string Server,
         string Status,
-        Icons  StatusIcon,
+        Icons StatusIcon,
         string LastUpdated,
         string DeployStatus,
         string Url);
@@ -420,27 +415,27 @@ public class ServicesView : ViewBase
 
         var ev = events.OrderByDescending(e => e.CreatedAt).FirstOrDefault(e =>
             e.Type is "service_suspend" or "service_suspend_success"
-                   or "service_resume"  or "service_resume_success");
+                   or "service_resume" or "service_resume_success");
 
         if (ev != null)
         {
             var msg = ev.Message ?? string.Empty;
             return ev.Type switch
             {
-                "service_suspend"         => ("pending",   Icons.Clock, ev.Type),
-                "service_resume"          => ("pending",   Icons.Clock, ev.Type),
-                "service_suspend_success" => ("suspended", Icons.Pause,  ev.Type),
-                "service_resume_success"  => ("live",      Icons.Play,   ev.Type),
-                _                         => (rawStatus,   Icons.MonitorStop, ev.Type)
+                "service_suspend" => ("pending", Icons.Clock, ev.Type),
+                "service_resume" => ("pending", Icons.Clock, ev.Type),
+                "service_suspend_success" => ("suspended", Icons.Pause, ev.Type),
+                "service_resume_success" => ("live", Icons.Play, ev.Type),
+                _ => (rawStatus, Icons.MonitorStop, ev.Type)
             };
         }
 
         return rawStatus.ToLowerInvariant() switch
         {
-            "live"                   => ("live",      Icons.Play,    null),
-            "suspended" or "paused"  => ("suspended", Icons.Pause,   null),
-            "error"      or "failed" => ("error",     Icons.CircleX, null),
-            "pending"                => ("pending",   Icons.Clock,   null),
+            "live" => ("live", Icons.Play, null),
+            "suspended" or "paused" => ("suspended", Icons.Pause, null),
+            "error" or "failed" => ("error", Icons.CircleX, null),
+            "pending" => ("pending", Icons.Clock, null),
             _ => (string.IsNullOrWhiteSpace(rawStatus) ? "—" : rawStatus, Icons.MonitorStop, null)
         };
     }
@@ -450,14 +445,14 @@ public class ServicesView : ViewBase
     /// </summary>
     private static string FormatEventType(string? type) => type switch
     {
-        "service_resume_success"  => "Service resumed successfully",
-        "service_resume"          => "Service resume requested",
+        "service_resume_success" => "Service resumed successfully",
+        "service_resume" => "Service resume requested",
         "service_suspend_success" => "Service suspended successfully",
-        "service_suspend"         => "Service suspension requested",
-        "service_deploy_success"  => "Service deployed successfully",
-        "service_deploy"          => "Service deploy started",
-        "service_deploy_failed"   => "Service deploy failed",
-        "service_build_failed"    => "Build failed",
+        "service_suspend" => "Service suspension requested",
+        "service_deploy_success" => "Service deployed successfully",
+        "service_deploy" => "Service deploy started",
+        "service_deploy_failed" => "Service deploy failed",
+        "service_build_failed" => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 
@@ -520,15 +515,15 @@ public class ServicesView : ViewBase
                 {
                     SortKey = lastUpdatedInstant,
                     Row = new ServiceRow(
-                        ServiceId:    svc.Id,
-                        Name:         svc.Name,
-                        Project:      projectName,
-                        Server:       serverLabel,
-                        Status:       statusLabel,
-                        StatusIcon:   statusIcon,
-                        LastUpdated:  lastUpdatedInstant.ToString("yyyy-MM-dd HH:mm"),
+                        ServiceId: svc.Id,
+                        Name: svc.Name,
+                        Project: projectName,
+                        Server: serverLabel,
+                        Status: statusLabel,
+                        StatusIcon: statusIcon,
+                        LastUpdated: lastUpdatedInstant.ToString("yyyy-MM-dd HH:mm"),
                         DeployStatus: deployStatus,
-                        Url:          siteUrlAbsolute)
+                        Url: siteUrlAbsolute)
                 };
             })
             .OrderByDescending(x => x.SortKey)
@@ -569,10 +564,7 @@ public class ServiceLogsSheet : ViewBase
 
     public override object? Build()
     {
-        if (!_isOpen.Value) return null;
-
         var client = this.UseService<SliplaneApiClient>();
-
         var logsQuery = this.UseQuery<List<SliplaneServiceLog>, string>(
             key: $"logs:{_serviceId}",
             fetcher: async ct =>
@@ -585,6 +577,8 @@ public class ServiceLogsSheet : ViewBase
                 RefreshInterval = TimeSpan.FromSeconds(5),
                 RevalidateOnMount = true
             });
+
+        if (!_isOpen.Value) return null;
 
         string logsText;
         if (logsQuery.Loading && logsQuery.Value == null)
@@ -656,9 +650,9 @@ public class ServiceEventsSheet : ViewBase
                 .OrderByDescending(e => e.CreatedAt)
                 .Select(e =>
                 {
-                    var date  = e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                    var date = e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
                     var label = FormatEventType(e.Type);
-                    var msg   = string.IsNullOrWhiteSpace(e.Message)
+                    var msg = string.IsNullOrWhiteSpace(e.Message)
                         ? string.Empty
                         : $"\n  Message: {e.Message}";
                     return $"[{date}]  {label}{msg}";
@@ -682,14 +676,14 @@ public class ServiceEventsSheet : ViewBase
 
     private static string FormatEventType(string? type) => type switch
     {
-        "service_resume_success"  => "Service resumed successfully",
-        "service_resume"          => "Service resume requested",
+        "service_resume_success" => "Service resumed successfully",
+        "service_resume" => "Service resume requested",
         "service_suspend_success" => "Service suspended successfully",
-        "service_suspend"         => "Service suspension requested",
-        "service_deploy_success"  => "Service deployed successfully",
-        "service_deploy"          => "Service deploy started",
-        "service_deploy_failed"   => "Service deploy failed",
-        "service_build_failed"    => "Build failed",
+        "service_suspend" => "Service suspension requested",
+        "service_deploy_success" => "Service deployed successfully",
+        "service_deploy" => "Service deploy started",
+        "service_deploy_failed" => "Service deploy failed",
+        "service_build_failed" => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 }
@@ -729,13 +723,12 @@ public class EditServiceSheet : ViewBase
     {
         var client = this.UseService<SliplaneApiClient>();
         var refreshSender = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
-        var dep = _service.Deployment;
         var name = this.UseState(_service.Name ?? string.Empty);
-        var deployUrl = this.UseState(dep?.Url ?? string.Empty);
-        var branch = this.UseState(dep?.Branch ?? "main");
-        var dockerfilePath = this.UseState(dep?.DockerfilePath ?? "Dockerfile");
-        var dockerContext = this.UseState(dep?.DockerContext ?? ".");
-        var autoDeploy = this.UseState(dep?.AutoDeploy ?? true);
+        var deployUrl = this.UseState(_service.Deployment?.Url ?? string.Empty);
+        var branch = this.UseState(_service.Deployment?.Branch ?? "main");
+        var dockerfilePath = this.UseState(_service.Deployment?.DockerfilePath ?? "Dockerfile");
+        var dockerContext = this.UseState(_service.Deployment?.DockerContext ?? ".");
+        var autoDeploy = this.UseState(_service.Deployment?.AutoDeploy ?? true);
         var cmd = this.UseState(_service.Cmd ?? string.Empty);
         var healthcheck = this.UseState(_service.Healthcheck ?? string.Empty);
         var busy = this.UseState(false);
@@ -774,6 +767,9 @@ public class EditServiceSheet : ViewBase
             }
             catch { serverVolumes.Set(new List<SliplaneVolume>()); }
         });
+
+        if (!_isOpen.Value)
+            return null;
 
         async Task SaveAsync()
         {
@@ -1006,9 +1002,6 @@ public class EditServiceSheet : ViewBase
                 )).Width(Size.Units(220));
         }
 
-        if (!_isOpen.Value)
-            return null;
-
         var sheetBody = new FooterLayout(footer, content);
         var dialogs = new[] { addEnvDialog, editEnvDialog, addVolumeDialog }
             .Where(d => d != null).Cast<object>().ToArray();
@@ -1047,10 +1040,10 @@ public class EditServiceSheet : ViewBase
                             .Destructive()
                             .OnClick(_ =>
                             {
-                                    var next = volumesList.Value.Where((_, i) => i != index).ToList();
-                                    volumesList.Set(next);
-                                    volumesModified.Set(true);
-                                })));
+                                var next = volumesList.Value.Where((_, i) => i != index).ToList();
+                                volumesList.Set(next);
+                                volumesModified.Set(true);
+                            })));
             })
             .ToArray();
 
@@ -1078,13 +1071,13 @@ public class EditServiceSheet : ViewBase
 
         var model = new
         {
-            DeployHook       = svc.Webhook,
+            DeployHook = svc.Webhook,
             InternalEndpoint = svc.Network?.InternalDomain,
-            PublicEndpoint   = publicEndpointUrl,
-            Repository       = repoUrl,
-            Project          = projectName,
-            Server           = serverName,
-            CreatedAt        = svc.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+            PublicEndpoint = publicEndpointUrl,
+            Repository = repoUrl,
+            Project = projectName,
+            Server = serverName,
+            CreatedAt = svc.CreatedAt.ToString("dd.MM.yyyy HH:mm")
         };
 
         return Layout.Vertical()
@@ -1149,6 +1142,27 @@ public class CreateServiceSheet : ViewBase
         var addVolumeId = this.UseState(string.Empty);
         var addMountPath = this.UseState(string.Empty);
 
+        this.UseEffect(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(serverId.Value))
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+                return;
+            }
+            try
+            {
+                var vols = await client.GetServerVolumesAsync(_apiToken, serverId.Value);
+                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
+            }
+            catch
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+            }
+        }, serverId);
+
+        if (!_isOpen.Value)
+            return null;
+
         QueryResult<Option<string>[]> QueryProjects(IViewContext ctx, string query)
         {
             return ctx.UseQuery<Option<string>[], (string, string, int)>(
@@ -1204,24 +1218,6 @@ public class CreateServiceSheet : ViewBase
                     return server != null ? new Option<string>(server.Name, server.Id) : null;
                 });
         }
-
-        this.UseEffect(async () =>
-        {
-            if (string.IsNullOrWhiteSpace(serverId.Value))
-            {
-                serverVolumes.Set(new List<SliplaneVolume>());
-                return;
-            }
-            try
-            {
-                var vols = await client.GetServerVolumesAsync(_apiToken, serverId.Value);
-                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
-            }
-            catch
-            {
-                serverVolumes.Set(new List<SliplaneVolume>());
-            }
-        }, serverId);
 
         var volumeOptions = (serverVolumes.Value ?? new List<SliplaneVolume>()).Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id)).ToArray();
         var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
@@ -1418,9 +1414,6 @@ public class CreateServiceSheet : ViewBase
                     new Button("Cancel").OnClick(_ => showAddVolumeDialog.Set(false))
                 )).Width(Size.Units(220));
         }
-
-        if (!_isOpen.Value)
-            return null;
 
         var sheetBody = new FooterLayout(footer, content);
         object sheetContent;

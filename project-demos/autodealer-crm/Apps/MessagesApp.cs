@@ -7,6 +7,7 @@ public class MessagesApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new MessageListBlade(), "Search");
+        var blades = this.UseBlades(() => new MessageListBlade(), "Search");
+        return blades;
     }
 }

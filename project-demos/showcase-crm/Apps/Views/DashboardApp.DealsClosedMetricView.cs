@@ -50,7 +50,7 @@ public class DealsClosedMetricView(DateTime fromDate, DateTime toDate) : ViewBas
                 double? trend = ((double)currentPeriodDealsClosed - previousPeriodDealsClosed) / previousPeriodDealsClosed;
 
                 var goal = previousPeriodDealsClosed * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentPeriodDealsClosed / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentPeriodDealsClosed / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentPeriodDealsClosed.ToString("N0"),

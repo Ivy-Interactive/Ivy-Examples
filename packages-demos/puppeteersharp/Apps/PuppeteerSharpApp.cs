@@ -3,21 +3,15 @@ namespace PuppeteerSharpExample
     [App(icon: Icons.Image, title: "PuppeteerSharp")]
     public class PuppeteerSharpApp : ViewBase
     {
-        private IState<string> url = null!;
-        private IState<string?> screenshotPath = null!;
-        private IState<string?> screenshotDownloadPath = null!;
-        private IState<string?> pdfPath = null!;
-        private IState<bool> isLoading = null!;
-
         public override object? Build()
         {
             // initialize states
-            url = this.UseState("");
-            screenshotPath = this.UseState<string?>();
-            screenshotDownloadPath = this.UseState<string?>();
-            pdfPath = this.UseState<string?>();
-            isLoading = this.UseState(false);
-            
+            var url = this.UseState("");
+            var screenshotPath = this.UseState<string?>();
+            var screenshotDownloadPath = this.UseState<string?>();
+            var pdfPath = this.UseState<string?>();
+            var isLoading = this.UseState(false);
+
             // Get client provider in Build method
             var client = this.UseService<IClientProvider>();
 
@@ -26,32 +20,37 @@ namespace PuppeteerSharpExample
                     Layout.Vertical()
                     | Text.H2("Website Renderer")
                     | Text.Muted("Enter a URL and render the website using PuppeteerSharp.")
-                    | RenderUrlInput()
+                    | RenderUrlInput(url)
                     | (Layout.Horizontal()
-                        | RenderCaptureButton(client)
-                        | (RenderDownloadButton(client) ?? null))
+                        | RenderCaptureButton(url, screenshotPath, screenshotDownloadPath, pdfPath, isLoading, client)
+                        | (RenderDownloadButton(screenshotDownloadPath, pdfPath, client) ?? null))
                     | new Spacer()
                     | Text.Block("This demo uses PuppeteerSharp library for rendering websites.")
                     | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [PuppeteerSharp](https://github.com/hardkoded/puppeteer-sharp)")
-                   
                 )
 
                 | new Card(
                     Layout.Vertical()
-                    | RenderScreenshotCard()
+                    | RenderScreenshotCard(screenshotPath)
                 ).Width(Size.Fit().Min(Size.Fraction(0.6f))).Height(Size.Fit().Min(Size.Full()));
         }
 
-        private IView RenderUrlInput() =>
+        private IView RenderUrlInput(IState<string> url) =>
             Layout.Vertical(
                 url.ToTextInput(placeholder: "https://example.com").Width(Size.Full())
             );
 
-        private IWidget RenderCaptureButton(IClientProvider client)
+        private IWidget RenderCaptureButton(
+            IState<string> url,
+            IState<string?> screenshotPath,
+            IState<string?> screenshotDownloadPath,
+            IState<string?> pdfPath,
+            IState<bool> isLoading,
+            IClientProvider client)
         {
             return new Button("Render the website", async _ =>
             {
-                await CaptureScreenshot(client);
+                await CaptureScreenshot(url, screenshotPath, screenshotDownloadPath, pdfPath, isLoading, client);
             })
             .Icon(Icons.Camera)
             .Variant(ButtonVariant.Primary)
@@ -59,7 +58,10 @@ namespace PuppeteerSharpExample
             .Loading(isLoading.Value);
         }
 
-        private IWidget? RenderDownloadButton(IClientProvider client)
+        private IWidget? RenderDownloadButton(
+            IState<string?> screenshotDownloadPath,
+            IState<string?> pdfPath,
+            IClientProvider client)
         {
             if (string.IsNullOrEmpty(screenshotDownloadPath.Value) && string.IsNullOrEmpty(pdfPath.Value))
                 return null;
@@ -92,7 +94,7 @@ namespace PuppeteerSharpExample
                 );
         }
 
-        private IView RenderScreenshotCard()
+        private IView RenderScreenshotCard(IState<string?> screenshotPath)
         {
             if (string.IsNullOrEmpty(screenshotPath.Value))
             {
@@ -113,7 +115,13 @@ namespace PuppeteerSharpExample
 
         // --- Action ---
 
-        private async Task CaptureScreenshot(IClientProvider client)
+        private async Task CaptureScreenshot(
+            IState<string> url,
+            IState<string?> screenshotPath,
+            IState<string?> screenshotDownloadPath,
+            IState<string?> pdfPath,
+            IState<bool> isLoading,
+            IClientProvider client)
         {
             var inputUrl = (url.Value ?? "").Trim();
             if (string.IsNullOrEmpty(inputUrl))
@@ -123,7 +131,7 @@ namespace PuppeteerSharpExample
             }
 
             // Basic URL validation
-            if (!Uri.TryCreate(inputUrl, UriKind.Absolute, out var uri) || 
+            if (!Uri.TryCreate(inputUrl, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
                 client.Toast("Please enter a valid HTTP or HTTPS URL", "Invalid URL");
@@ -171,8 +179,8 @@ namespace PuppeteerSharpExample
             catch (PuppeteerException ex)
             {
                 Console.WriteLine("Puppeteer Error: " + ex.Message);
-                var errorMessage = ex.Message.Contains("net::ERR") 
-                    ? "Failed to load the website. Please check if the URL is correct and accessible." 
+                var errorMessage = ex.Message.Contains("net::ERR")
+                    ? "Failed to load the website. Please check if the URL is correct and accessible."
                     : $"Failed to render website: {ex.Message}";
                 client.Toast(errorMessage, "Error");
                 screenshotPath.Set((string?)null);
@@ -194,4 +202,5 @@ namespace PuppeteerSharpExample
         }
     }
 }
+
 

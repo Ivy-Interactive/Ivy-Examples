@@ -45,13 +45,13 @@ public class GitHubStatsService
         var repositories = await _apiClient.GetRepositoriesAsync(token, _options);
         var commits = await _apiClient.GetCommitsAsync(token, username, _options);
         var pullRequests = await _apiClient.GetPullRequestsAsync(token, username, _options);
-        
+
         // Get contribution streak from GraphQL (official GitHub calculation)
         var (longestStreak, currentStreak, totalDays) = await _apiClient.GetContributionStreakAsync(token, username, _options);
 
         // Calculate statistics
         var calculator = new GitHubStatsCalculator(_options);
-        
+
         var commitsByMonth = calculator.CalculateCommitsByMonth(commits);
         var languageBreakdown = calculator.CalculateLanguageBreakdown(repositories);
         var topRepos = calculator.CalculateTopRepos(repositories, commits);

@@ -37,16 +37,9 @@ public class ExcelDataReaderApp : ViewBase
         var isAnalyzing = UseState(false);
         var selectedSheetIndex = UseState(0);
         var client = UseService<IClientProvider>();
-        
-        // Upload state for files
         var uploadState = UseState<FileUpload<byte[]>?>();
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept(".xlsx,.xls,.csv")
-            .MaxFileSize(50 * 1024 * 1024);
-        
-        var fileName = uploadState.Value?.FileName;
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
 
-        // When a file is uploaded, save it to temp file
         UseEffect(() =>
         {
             if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
@@ -128,6 +121,9 @@ public class ExcelDataReaderApp : ViewBase
                 selectedSheetIndex.Set(0);
             }
         }, filePath);
+
+        var uploadContext = uploadBase.Accept(".xlsx,.xls,.csv").MaxFileSize(50 * 1024 * 1024);
+        var fileName = uploadState.Value?.FileName;
 
         return Layout.Horizontal(
             // Left Card - Functionality and File Input

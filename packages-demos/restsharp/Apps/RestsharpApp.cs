@@ -133,13 +133,14 @@ public class RestSharpApp : ViewBase
                         }))
                         .ToArray()
                 ),
-            new TextInput(url, placeholder: "URL")
+            url.ToTextInput()
                 .Variant(TextInputVariant.Url)
+                .Placeholder("URL")
         };
 
         if (RequiresResourceId(method.Value))
         {
-            requestControls.Add(new TextInput(resourceId, placeholder: "ID"));
+            requestControls.Add(resourceId.ToTextInput().Placeholder("ID"));
         }
 
         requestControls.Add(new Button("Send", _ => onSend()).Width(Size.Units(50)));

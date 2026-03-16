@@ -47,11 +47,11 @@ public class UserDetailsBlade(int userId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    Id = userValue.Id,
-                    Name = userValue.Name,
-                    Email = userValue.Email,
-                }
+            {
+                Id = userValue.Id,
+                Name = userValue.Name,
+                Email = userValue.Email,
+            }
                 .ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),

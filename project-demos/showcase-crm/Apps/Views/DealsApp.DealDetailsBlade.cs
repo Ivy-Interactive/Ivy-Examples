@@ -52,15 +52,15 @@ public class DealDetailsBlade(int dealId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    Id = dealValue.Id,
-                    Company = dealValue.Company.Name,
-                    Contact = $"{dealValue.Contact.FirstName} {dealValue.Contact.LastName}",
-                    Lead = dealValue.Lead?.Source ?? "N/A",
-                    Stage = dealValue.Stage.DescriptionText,
-                    Amount = dealValue.Amount?.ToString("C") ?? "N/A",
-                    CloseDate = dealValue.CloseDate?.ToString("d") ?? "N/A"
-                }
+            {
+                Id = dealValue.Id,
+                Company = dealValue.Company.Name,
+                Contact = $"{dealValue.Contact.FirstName} {dealValue.Contact.LastName}",
+                Lead = dealValue.Lead?.Source ?? "N/A",
+                Stage = dealValue.Stage.DescriptionText,
+                Amount = dealValue.Amount?.ToString("C") ?? "N/A",
+                CloseDate = dealValue.CloseDate?.ToString("d") ?? "N/A"
+            }
                 .ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),

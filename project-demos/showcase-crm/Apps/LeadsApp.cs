@@ -7,6 +7,7 @@ public class LeadsApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new LeadListBlade(), "Search");
+        var blades = this.UseBlades(() => new LeadListBlade(), "Search");
+        return blades;
     }
 }

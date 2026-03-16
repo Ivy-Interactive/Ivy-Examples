@@ -50,7 +50,7 @@ public class NewLeadsGeneratedMetricView(DateTime fromDate, DateTime toDate) : V
                 double? trend = ((double)currentPeriodLeads - previousPeriodLeads) / previousPeriodLeads;
 
                 var goal = previousPeriodLeads * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentPeriodLeads / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentPeriodLeads / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentPeriodLeads.ToString("N0"),

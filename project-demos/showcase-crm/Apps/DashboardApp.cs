@@ -10,8 +10,7 @@ public class DashboardApp : ViewBase
 
     public override object? Build()
     {
-        var initialDate = DateTime.UtcNow.Date.AddDays(-30);
-        var range = this.UseState(() => (fromDate: initialDate, toDate: DateTime.UtcNow.Date));
+        var range = this.UseState(() => (fromDate: DateTime.UtcNow.Date.AddDays(-30), toDate: DateTime.UtcNow.Date));
         var dataReady = this.UseState(() => _hasLoadedOnce);
 
         this.UseEffect(async () =>
@@ -39,7 +38,7 @@ public class DashboardApp : ViewBase
                 | new NewContactsAddedMetricView(fromDate, toDate).Key(fromDate, toDate)
                 | new PipelineValueMetricView(fromDate, toDate).Key(fromDate, toDate)
             : Layout.Grid().Columns(4)
-                | new Skeleton().Height(Size.Units(50)).Width(Size.Full())  
+                | new Skeleton().Height(Size.Units(50)).Width(Size.Full())
                 | new Skeleton().Height(Size.Units(50)).Width(Size.Full())
                 | new Skeleton().Height(Size.Units(50)).Width(Size.Full())
                 | new Skeleton().Height(Size.Units(50)).Width(Size.Full())

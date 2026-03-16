@@ -7,9 +7,11 @@ public class DashboardApp : ViewBase
 {
     public override object? Build()
     {
-        // Set initial date (e.g., 01.11.2025)
-        var initialDate = new DateTime(2025, 11, 1);
-        var range = this.UseState(() => (fromDate: initialDate, toDate: initialDate.AddDays(30)));
+        var range = this.UseState(() =>
+        {
+            var initialDate = new DateTime(2025, 11, 1);
+            return (fromDate: initialDate, toDate: initialDate.AddDays(30));
+        });
         
         var header = Layout.Horizontal().Align(Align.Right)
                     | range.ToDateRangeInput();

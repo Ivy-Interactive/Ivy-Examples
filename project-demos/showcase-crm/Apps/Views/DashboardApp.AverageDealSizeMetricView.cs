@@ -60,7 +60,7 @@ public class AverageDealSizeMetricView(DateTime fromDate, DateTime toDate) : Vie
                 double? trend = (currentAverageDealSize - previousAverageDealSize) / previousAverageDealSize;
 
                 var goal = previousAverageDealSize * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentAverageDealSize / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentAverageDealSize / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentAverageDealSize.ToString("C2"),

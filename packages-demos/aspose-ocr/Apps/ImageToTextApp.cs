@@ -1,4 +1,4 @@
-﻿using Aspose.OCR;
+using Aspose.OCR;
 using System.IO;
 
 namespace AsposeOcrExample.Apps;
@@ -12,9 +12,8 @@ public class ImageToTextApp : ViewBase
 
         var error = UseState<string?>(() => null);
         var uploadedFile = UseState<FileUpload<byte[]>?>();
-        var upload = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile))
-            .Accept("image/*")
-            .MaxFileSize(1 * 1024 * 1024);
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile));
+        var upload = uploadBase.Accept("image/*").MaxFileSize(1 * 1024 * 1024);
 
         var leftCard = new Card(
             Layout.Vertical().Gap(6).Padding(3)

@@ -4,7 +4,7 @@ public static class StudentService
 {
     // Global event for notifying all views about data changes
     public static event Action? DataChanged;
-    
+
     // Static callback for MiniExcelViewApp to refresh data
     private static Action? _refreshCallback;
 
@@ -12,7 +12,7 @@ public static class StudentService
     {
         _refreshCallback = callback;
     }
-    
+
     public static void UnregisterRefreshCallback()
     {
         _refreshCallback = null;

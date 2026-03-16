@@ -19,33 +19,20 @@ public class SliplaneDeployApp : ViewBase
     {
         var config = this.UseService<IConfiguration>();
         var auth = this.UseService<IAuthService>();
-        var session = auth.GetAuthSession();
-        var apiToken = config["Sliplane:ApiToken"]
-                       ?? session.AuthToken?.AccessToken
-                       ?? string.Empty;
-
         var draftStore = this.UseService<DeploymentDraftStore>();
         var args = this.UseArgs<DeployArgs>();
-
         var draftState = this.UseState<DeployDraft?>(() =>
             args is not null
                 ? DeploymentDraftStore.ParseGitHubUrl(args.Repo)
                 : draftStore.LastDraft);
-        var draft = draftState.Value;
-
-        if (string.IsNullOrWhiteSpace(apiToken))
-        {
-            return Layout.Center()
-                | (Layout.Vertical().Align(Align.Center).Gap(6)
-                    | Icons.Rocket.ToIcon()
-                    | Text.H2("Deploy to Sliplane")
-                    | (draft is not null
-                        ? Text.Muted($"Repository: {draft.RepoUrl}")
-                        : Text.Muted("Sign in with Sliplane to deploy your Ivy app."))
-                    | Text.Muted("No API token. Please sign in or configure Sliplane:ApiToken."));
-        }
 
         var client = this.UseService<SliplaneApiClient>();
+        var session = auth.GetAuthSession();
+        var apiToken = config["Sliplane:ApiToken"]
+                       ?? session.AuthToken?.AccessToken
+                       ?? string.Empty;
+        var draft = draftState.Value;
+
         var firstServerQuery = this.UseQuery<SliplaneServer?, (string, string)>(
             key: ("deploy-default-server", apiToken),
             fetcher: async (_, ct) => (await client.GetServersAsync(apiToken)).FirstOrDefault());
@@ -81,6 +68,18 @@ public class SliplaneDeployApp : ViewBase
             fetcher: async _ => string.IsNullOrEmpty(preProjectId)
                 ? null
                 : new Option<string>((needIvyProject ? ivyProject?.Name : firstProjectQuery.Value?.Name) ?? "Ivy", preProjectId));
+
+        if (string.IsNullOrWhiteSpace(apiToken))
+        {
+            return Layout.Center()
+                | (Layout.Vertical().Align(Align.Center).Gap(6)
+                    | Icons.Rocket.ToIcon()
+                    | Text.H2("Deploy to Sliplane")
+                    | (draft is not null
+                        ? Text.Muted($"Repository: {draft.RepoUrl}")
+                        : Text.Muted("Sign in with Sliplane to deploy your Ivy app."))
+                    | Text.Muted("No API token. Please sign in or configure Sliplane:ApiToken."));
+        }
 
         var needDefaults = draft is not null;
         var serversReady = !firstServerQuery.Loading || firstServerQuery.Value != null;

@@ -52,7 +52,7 @@ public class TotalRevenueMetricView(DateTime fromDate, DateTime toDate) : ViewBa
                 double? trend = (currentPeriodRevenue - previousPeriodRevenue) / previousPeriodRevenue;
 
                 var goal = previousPeriodRevenue * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentPeriodRevenue / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentPeriodRevenue / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentPeriodRevenue.ToString("C0"),

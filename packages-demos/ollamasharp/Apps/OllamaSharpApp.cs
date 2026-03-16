@@ -5,7 +5,8 @@ public class OllamaSharpChatApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new ModelListBlade(), "Models");
+        var blades =this.UseBlades(() => new ModelListBlade(), "Models");
+        return blades;
     }
 }
 

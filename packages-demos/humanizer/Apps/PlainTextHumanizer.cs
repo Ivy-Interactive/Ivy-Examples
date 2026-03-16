@@ -22,7 +22,7 @@ public class PlainTextHumanizerApp : ViewBase
                     | inputText.ToTextInput(placeholder: "Enter text here...")
                         .Size(Size.Full())
                         .WithLabel("Enter your text to transform:")
-                    | new NumberInput<int>(truncateValue)
+                    | truncateValue.ToNumberInput()
                         .Min(0)
                         .Max(100)
                         .Disabled(!selectedTransformation.Value.Contains("Truncate"))

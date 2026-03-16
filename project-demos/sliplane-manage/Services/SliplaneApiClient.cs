@@ -238,11 +238,11 @@ public class SliplaneApiClient
     public async Task<SliplaneOverview> GetOverviewAsync(string apiToken)
     {
         var projectsTask = GetProjectsAsync(apiToken);
-        var serversTask  = GetServersAsync(apiToken);
+        var serversTask = GetServersAsync(apiToken);
         await Task.WhenAll(projectsTask, serversTask);
 
         var projects = await projectsTask;
-        var servers  = await serversTask;
+        var servers = await serversTask;
 
         // Fetch services for all projects in parallel
         var serviceTasks = projects.Select(p => GetServicesAsync(apiToken, p.Id).ContinueWith(t => (ProjectId: p.Id, Services: t.Result)));
