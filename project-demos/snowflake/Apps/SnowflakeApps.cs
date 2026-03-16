@@ -889,7 +889,7 @@ public class SnowflakeApp : ViewBase
                             .WithField()
                             .Label("Sort order:")
                             .Width(Size.Full())
-                        | new NumberInput<int>(limit).Min(1).Max(100)
+                        | limit.ToNumberInput().Min(1).Max(100)
                             .WithField()
                             .Label("Limit (number of brands):")
                             .Width(Size.Full())));
