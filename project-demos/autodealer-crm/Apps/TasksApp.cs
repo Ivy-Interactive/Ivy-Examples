@@ -7,6 +7,7 @@ public class TasksApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new TaskListBlade(), "Search");
+        var blades = this.UseBlades(() => new TaskListBlade(), "Search");
+        return blades;
     }
 }

@@ -7,6 +7,7 @@ public class CallRecordsApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new CallRecordListBlade(), "Search");
+        var blades = this.UseBlades(() => new CallRecordListBlade(), "Search");
+        return blades;
     }
 }
