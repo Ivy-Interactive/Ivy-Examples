@@ -18,10 +18,10 @@ public class ProfileApp : ViewBase
     public override object? Build()
     {
         var profile = UseState(() => new ProfileModel("", "", "", null, null, null));
-        var qrCodeService = new QrCodeService();
         var qrCodeBase64 = UseState<string>("");
         var profileSubmitted = UseState<bool>(false);
-
+        
+        var qrCodeService = new QrCodeService();
         var formBuilder = profile.ToForm()
             .Required(m => m.FirstName, m => m.LastName, m => m.Email)
             .Place(m => m.FirstName)
