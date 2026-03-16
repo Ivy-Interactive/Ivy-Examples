@@ -23,16 +23,11 @@ public class LanguagesSlide : ViewBase
 
     public override object? Build()
     {
-        var maxBytes = _stats.LanguageBreakdown.Values.DefaultIfEmpty(0L).Max();
-        var languagesCount = _stats.LanguageBreakdown.Count;
-
-        // Animated values
         var animatedTotalCommits = this.UseState(0);
         var animatedTopLanguagePercentage = this.UseState(0.0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
 
-        // Animate numbers on first render
         this.UseEffect(() =>
         {
             if (hasAnimated.Value) return;
@@ -81,6 +76,9 @@ public class LanguagesSlide : ViewBase
 
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
+
+        var maxBytes = _stats.LanguageBreakdown.Values.DefaultIfEmpty(0L).Max();
+        var languagesCount = _stats.LanguageBreakdown.Count;
 
         // Generate dynamic headline based on percentage (avoid repeating language name)
         var languageName = _topLanguage.Key ?? "N/A";

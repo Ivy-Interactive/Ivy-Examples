@@ -98,7 +98,7 @@ public class GitHubWrappedApp : ViewBase
         }
     }
 
-    private object BuildShareButton(IState<string> downloadUrl)
+    private object BuildShareButton(IState<string?> downloadUrl)
     {
         var shareButton = new Button("Share").Icon(Icons.Share2);
         if (!string.IsNullOrEmpty(downloadUrl.Value))

@@ -14,13 +14,6 @@ public class SummarySlide : ViewBase
 
     public override object? Build()
     {
-        var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
-        var userStatus = DetermineUserStatus(_stats);
-        var topLanguage = _stats.LanguageBreakdown
-            .OrderByDescending(kvp => kvp.Value)
-            .FirstOrDefault();
-
-        // Animated values
         var animatedCommits = this.UseState(0);
         var animatedPRs = this.UseState(0);
         var animatedStreak = this.UseState(0);
@@ -58,6 +51,12 @@ public class SummarySlide : ViewBase
 
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
+
+        var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
+        var userStatus = DetermineUserStatus(_stats);
+        var topLanguage = _stats.LanguageBreakdown
+            .OrderByDescending(kvp => kvp.Value)
+            .FirstOrDefault();
 
         return Layout.Vertical().Gap(4).Align(Align.Center)
                 | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
