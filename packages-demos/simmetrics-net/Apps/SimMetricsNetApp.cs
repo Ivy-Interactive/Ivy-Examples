@@ -59,7 +59,7 @@ public class SimMetricsNetApp : ViewBase
             | new Card(Layout.Vertical()
                     | Text.H3("Similarity Setup")
                     | Text.Muted("Compare custom input against randomly generated names using configurable string similarity algorithms from SimMetrics.Net.")
-                    | new TextInput(inputString)
+                    | inputString.ToTextInput()
                         .Placeholder("Input a name here...")
                         .Invalid(inputError)
                         .WithField()
