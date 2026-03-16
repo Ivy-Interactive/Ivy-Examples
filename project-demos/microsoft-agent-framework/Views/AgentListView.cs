@@ -34,9 +34,6 @@ public class AgentListView : ViewBase
             BingApiKey = _bingApiKey.Value ?? string.Empty
         });
 
-        var hasOllamaConfig = !string.IsNullOrWhiteSpace(_ollamaUrl.Value) && !string.IsNullOrWhiteSpace(_ollamaModel.Value);
-
-        // Handle settings save
         UseEffect(() =>
         {
             if (!isSettingsOpen.Value)
@@ -55,6 +52,8 @@ public class AgentListView : ViewBase
                 }
             }
         }, [isSettingsOpen]);
+
+        var hasOllamaConfig = !string.IsNullOrWhiteSpace(_ollamaUrl.Value) && !string.IsNullOrWhiteSpace(_ollamaModel.Value);
 
         void StartChat(AgentConfiguration agent)
         {
