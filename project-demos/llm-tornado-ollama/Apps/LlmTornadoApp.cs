@@ -20,7 +20,7 @@ public class MainMenuBlade : ViewBase
         var selectedModel = UseState<string?>(() => null);
         var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
         var isLoadingModels = UseState(false);
-        
+
         // Load models on initialization and when URL changes
         UseEffect(async () => await LoadModels(), []);
         UseEffect(async () => await LoadModels(), [ollamaUrl]);
@@ -83,19 +83,19 @@ public class MainMenuBlade : ViewBase
         async Task LoadModels()
         {
             if (string.IsNullOrWhiteSpace(ollamaUrl.Value)) return;
-            
+
             isLoadingModels.Set(true);
             try
             {
                 var url = $"{ollamaUrl.Value.TrimEnd('/')}/api/tags";
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                 var response = await httpClient.GetAsync(url);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     using var doc = System.Text.Json.JsonDocument.Parse(json);
-                    
+
                     if (doc.RootElement.TryGetProperty("models", out var modelsElement) && modelsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
                     {
                         var modelNames = modelsElement.EnumerateArray()
@@ -103,9 +103,9 @@ public class MainMenuBlade : ViewBase
                             .Where(name => !string.IsNullOrEmpty(name))
                             .Cast<string>()
                             .ToImmutableArray();
-                        
+
                         availableModels.Set(modelNames);
-                        
+
                         // Auto-select first model if no model is selected
                         if (modelNames.Length > 0 && (selectedModel.Value == null || !modelNames.Contains(selectedModel.Value)))
                         {
