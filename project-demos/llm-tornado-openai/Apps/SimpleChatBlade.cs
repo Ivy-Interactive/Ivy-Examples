@@ -5,7 +5,6 @@ public class SimpleChatBlade : ViewBase
     private readonly string _openAiApiKey;
     private readonly string _modelName;
 
-    private IState<ImmutableArray<ChatMessage>> _messages;
     private TornadoApi? _api;
 
     public SimpleChatBlade(string openAiApiKey, string modelName)
