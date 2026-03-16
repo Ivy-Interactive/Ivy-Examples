@@ -44,11 +44,11 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             .Place(e => e.CloseDate)
             .Builder(e => e.CompanyId, e => e.ToAsyncSelectInput(UseCompanySearch, UseCompanyLookup, placeholder: "Select Company"))
             .Builder(e => e.ContactId, e => e.ToAsyncSelectInput(
-                (ctx, q) => UseContactSearchForCompany(ctx, q, deal.Value.CompanyId),
+                (ctx, q) => SearchContactsForCompany(ctx, q, deal.Value.CompanyId),
                 UseContactLookup,
                 placeholder: "Select Contact"))
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput(
-                (ctx, q) => UseLeadSearchForCompany(ctx, q, deal.Value.CompanyId),
+                (ctx, q) => SearchLeadsForCompany(ctx, q, deal.Value.CompanyId),
                 UseLeadLookup,
                 placeholder: "Select Lead"))
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
@@ -120,12 +120,12 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             });
     }
 
-    private static QueryResult<Option<int?>[]> UseContactSearchForCompany(IViewContext context, string query, int companyId)
+    private static QueryResult<Option<int?>[]> SearchContactsForCompany(IViewContext context, string query, int companyId)
     {
         var factory = context.UseService<ShowcaseCrmContextFactory>();
         var searchTerm = query?.Trim() ?? "";
         return context.UseQuery(
-            key: (nameof(UseContactSearchForCompany), companyId, searchTerm),
+            key: (nameof(SearchContactsForCompany), companyId, searchTerm),
             fetcher: async ct =>
             {
                 await using var db = factory.CreateDbContext();
@@ -158,12 +158,12 @@ public class DealCreateDialog(IState<bool> isOpen, RefreshToken refreshToken) : 
             });
     }
 
-    private static QueryResult<Option<int?>[]> UseLeadSearchForCompany(IViewContext context, string query, int companyId)
+    private static QueryResult<Option<int?>[]> SearchLeadsForCompany(IViewContext context, string query, int companyId)
     {
         var factory = context.UseService<ShowcaseCrmContextFactory>();
         var searchTerm = query?.Trim() ?? "";
         return context.UseQuery(
-            key: (nameof(UseLeadSearchForCompany), companyId, searchTerm),
+            key: (nameof(SearchLeadsForCompany), companyId, searchTerm),
             fetcher: async ct =>
             {
                 await using var db = factory.CreateDbContext();

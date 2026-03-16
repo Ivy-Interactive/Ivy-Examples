@@ -68,12 +68,12 @@ public class ContactDetailsBlade(int contactId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    FullName = $"{contactValue.FirstName} {contactValue.LastName}",
-                    contactValue.Email,
-                    contactValue.Phone,
-                    CompanyName = contactValue.Company.Name
-                }.ToDetails()
+            {
+                FullName = $"{contactValue.FirstName} {contactValue.LastName}",
+                contactValue.Email,
+                contactValue.Phone,
+                CompanyName = contactValue.Company.Name
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.FullName, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

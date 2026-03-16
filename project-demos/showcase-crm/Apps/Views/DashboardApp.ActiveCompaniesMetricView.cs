@@ -56,7 +56,7 @@ public class ActiveCompaniesMetricView(DateTime fromDate, DateTime toDate) : Vie
                 double? trend = ((double)currentPeriodActiveCompanies - previousPeriodActiveCompanies) / previousPeriodActiveCompanies;
 
                 var goal = previousPeriodActiveCompanies * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentPeriodActiveCompanies / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentPeriodActiveCompanies / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentPeriodActiveCompanies.ToString("N0"),

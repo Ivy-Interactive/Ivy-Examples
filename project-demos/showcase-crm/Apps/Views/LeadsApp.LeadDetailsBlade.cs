@@ -60,13 +60,13 @@ public class LeadDetailsBlade(int leadId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    leadValue.Id,
-                    CompanyName = leadValue.Company?.Name ?? "N/A",
-                    ContactName = $"{leadValue.Contact?.FirstName} {leadValue.Contact?.LastName}".Trim(),
-                    Status = leadValue.Status.DescriptionText,
-                    Source = leadValue.Source ?? "Unknown"
-                }.ToDetails()
+            {
+                leadValue.Id,
+                CompanyName = leadValue.Company?.Name ?? "N/A",
+                ContactName = $"{leadValue.Contact?.FirstName} {leadValue.Contact?.LastName}".Trim(),
+                Status = leadValue.Status.DescriptionText,
+                Source = leadValue.Source ?? "Unknown"
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

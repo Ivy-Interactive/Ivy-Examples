@@ -50,7 +50,7 @@ public class NewContactsAddedMetricView(DateTime fromDate, DateTime toDate) : Vi
                 double? trend = ((double)currentPeriodContacts - previousPeriodContacts) / previousPeriodContacts;
 
                 var goal = previousPeriodContacts * 1.1;
-                double? goalAchievement = goal > 0 ? (double?)(currentPeriodContacts / goal ): null;
+                double? goalAchievement = goal > 0 ? (double?)(currentPeriodContacts / goal) : null;
 
                 return new MetricRecord(
                     MetricFormatted: currentPeriodContacts.ToString("N0"),
