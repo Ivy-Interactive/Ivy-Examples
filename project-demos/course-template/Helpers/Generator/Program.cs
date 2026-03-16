@@ -190,7 +190,7 @@ class Program
             var content = contentBuilder.ToString().Trim();
             if (!string.IsNullOrEmpty(content))
             {
-                AppendAsMultiLineString(3, content, codeBuilder, "| new Markdown(", ").HandleLinkClick(onLinkClick)");
+                AppendAsMultiLineString(3, content, codeBuilder, "| new Markdown(", ").OnLinkClick(onLinkClick)");
             }
 
             codeBuilder.AppendTab(3).AppendLine(";");
