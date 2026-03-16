@@ -1,4 +1,5 @@
 #:package Ivy@1.2.18
+#:package Ivy.Analyser@1.2.21
 #:package Microsoft.Data.Sqlite@8.0.0
 
 global using Ivy;
@@ -343,6 +344,7 @@ public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
     {
         var volume = UseService<IVolume>();
         var blades = UseContext<IBladeService>();
+        var client = UseService<IClientProvider>();
         var task = UseState<TaskItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -376,7 +378,7 @@ public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
                 await Database.SaveTaskAsync(volume, taskValue with { IsCompleted = !taskValue.IsCompleted });
                 token.Refresh();
             }
-            catch (Exception ex) { UseService<IClientProvider>().Toast(ex.Message, "Error"); }
+            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
         };
 
         var dropDown = Icons.Ellipsis
