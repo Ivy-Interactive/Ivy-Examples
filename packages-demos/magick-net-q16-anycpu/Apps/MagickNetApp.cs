@@ -8,9 +8,7 @@ public class MagickNetApp : ViewBase
         // State management
         var resultState = UseState("Welcome to Magick.NET Image Studio! Upload an image to start creating amazing effects.");
         var uploadState = UseState<FileUpload<byte[]>?>();
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept("image/*")
-            .MaxFileSize(50 * 1024 * 1024);
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
         var uploadedImageBytes = UseState<byte[]?>(() => null);
         var processedImageBytes = UseState<byte[]?>(() => null);
         var processedImageDataUri = UseState<string?>(() => null);
@@ -65,8 +63,19 @@ public class MagickNetApp : ViewBase
             }
         }, [uploadState]);
 
+        var downloadUrl = this.UseDownload(
+            () =>
+            {
+                ProcessImage();
+                return processedImageBytes.Value ?? [];
+            },
+            $"image/{selectedFormat.Value}",
+            $"processed-image.{selectedFormat.Value}");
+
+        var uploadContext = uploadBase.Accept("image/*").MaxFileSize(50 * 1024 * 1024);
+
         // Function to process image with selected effect
-        var processImage = () =>
+        void ProcessImage()
         {
             try
             {
@@ -199,18 +208,7 @@ public class MagickNetApp : ViewBase
                 client.Toast($"Error processing image: {ex.Message}", "Processing Error");
                 processedImageBytes.Value = null;
             }
-        };
-
-        // Download handler
-        var downloadUrl = this.UseDownload(
-            () =>
-            {
-                processImage();
-                return processedImageBytes.Value ?? [];
-            },
-            $"image/{selectedFormat.Value}",
-            $"processed-image.{selectedFormat.Value}"
-        );
+        }
 
         // Left Card - Controls Panel
         var leftCard = new Card(
@@ -301,7 +299,7 @@ public class MagickNetApp : ViewBase
                            
                        | (Layout.Horizontal().Gap(4)
                        | (uploadedImageBytes.Value != null
-                           ? new Button("Magic Image", onClick: () => processImage())
+                           ? new Button("Magic Image", onClick: ProcessImage)
                            : new Button("Magic Image").Disabled())
                        | new Button("Download")
                            .Primary()
