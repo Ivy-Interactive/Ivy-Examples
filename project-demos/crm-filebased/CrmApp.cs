@@ -1,4 +1,4 @@
-#:package Ivy@1.2.18
+#:package Ivy@1.2.21
 #:package Ivy.Analyser@1.2.21
 #:package Microsoft.Data.Sqlite@8.0.0
 
