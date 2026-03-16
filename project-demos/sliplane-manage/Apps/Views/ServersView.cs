@@ -17,16 +17,16 @@ public class ServersView : ViewBase
 
     public override object? Build()
     {
-        var client  = this.UseService<SliplaneApiClient>();
+        var client = this.UseService<SliplaneApiClient>();
         var servers = this.UseState<List<SliplaneServer>>();
         var loading = this.UseState(true);
-        var error   = this.UseState<string?>();
-        var busy    = this.UseState(false);
+        var error = this.UseState<string?>();
+        var busy = this.UseState(false);
         var refresh = this.UseRefreshToken();
         var reloadCounter = this.UseState(0);
         var (sheetView, showSheet) = this.UseTrigger(
             (IState<bool> isOpen, SliplaneServer server) => new ServerDetailsSheet(isOpen, _apiToken, server, reloadCounter));
-        var volumeCounts   = this.UseState<Dictionary<string, int>>(() => new Dictionary<string, int>());
+        var volumeCounts = this.UseState<Dictionary<string, int>>(() => new Dictionary<string, int>());
         var totalServices = this.UseState(0);
 
         async Task LoadServersAsync()
@@ -126,7 +126,7 @@ public class ServersView : ViewBase
                     "sin" or "sin1" => "Singapore",
                     "hel" or "hel1" => "Helsinki, FI",
                     "nbg" or "nbg1" => "Nuremberg, DE",
-                    _               => s.Region
+                    _ => s.Region
                 };
 
                 var regionRow = Layout.Horizontal()
@@ -176,35 +176,6 @@ public class ServersView : ViewBase
         );
     }
 
-    private object BuildServerDetail(SliplaneApiClient client, SliplaneServer server)
-    {
-        var metrics = this.UseState<SliplaneServerMetrics?>();
-        var volumes = this.UseState<List<SliplaneVolume>>();
-
-        async Task LoadServerDetailsAsync()
-        {
-            var m = await client.GetServerMetricsAsync(_apiToken, server.Id);
-            var v = await client.GetServerVolumesAsync(_apiToken, server.Id);
-            metrics.Set(m);
-            volumes.Set(v);
-        }
-
-        this.UseEffect(async () => await LoadServerDetailsAsync());
-
-        return new Card(
-            Layout.Vertical()
-            | Text.H4($"Server: {server.Name}")
-            | (volumes.Value?.Count > 0
-                ? (object)(Layout.Vertical()
-                    | volumes.Value!.Select(v =>
-                        Layout.Horizontal()
-                        | Text.Block(v.Name)
-                        | Text.Block($"{v.SizeGb} GB")
-                        | Text.Code(v.MountPath)
-                    ).ToArray())
-                : Text.Muted("No volumes attached."))
-        );
-    }
 }
 
 public class ServerDetailsSheet : ViewBase
@@ -224,10 +195,10 @@ public class ServerDetailsSheet : ViewBase
 
     public override object? Build()
     {
-        var client  = this.UseService<SliplaneApiClient>();
-        var metrics  = this.UseState<SliplaneServerMetrics?>();
-        var volumes  = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
-        var busy     = this.UseState(false);
+        var client = this.UseService<SliplaneApiClient>();
+        var metrics = this.UseState<SliplaneServerMetrics?>();
+        var volumes = this.UseState<List<SliplaneVolume>>(() => new List<SliplaneVolume>());
+        var busy = this.UseState(false);
 
         this.UseEffect(async () =>
         {

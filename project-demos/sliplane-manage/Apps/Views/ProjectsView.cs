@@ -25,8 +25,8 @@ public class ProjectListBlade : ViewBase
 
     public override object? Build()
     {
-        var client       = this.UseService<SliplaneApiClient>();
-        var blades       = this.UseContext<IBladeService>();
+        var client = this.UseService<SliplaneApiClient>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
 
         var filter = this.UseState(string.Empty);
@@ -36,9 +36,9 @@ public class ProjectListBlade : ViewBase
             fetcher: async ct => await client.GetOverviewAsync(_apiToken),
             options: new QueryOptions
             {
-                RefreshInterval   = TimeSpan.FromSeconds(15),
+                RefreshInterval = TimeSpan.FromSeconds(15),
                 RevalidateOnMount = true,
-                KeepPrevious      = true
+                KeepPrevious = true
             });
 
         // Reload on child blade change
@@ -48,10 +48,10 @@ public class ProjectListBlade : ViewBase
                 version.Set(version.Value + 1);
         }, [refreshToken]);
 
-        var showAddDialog  = this.UseState(false);
+        var showAddDialog = this.UseState(false);
         var newProjectName = this.UseState(string.Empty);
-        var addBusy        = this.UseState(false);
-        var addError       = this.UseState<string?>(() => null);
+        var addBusy = this.UseState(false);
+        var addError = this.UseState<string?>(() => null);
 
         async Task CreateProjectAsync()
         {
@@ -93,7 +93,7 @@ public class ProjectListBlade : ViewBase
         {
             var overview = overviewQuery.Value;
             var projects = overview?.Projects ?? new List<SliplaneProject>();
-            var servers  = overview?.Servers  ?? new List<SliplaneServer>();
+            var servers = overview?.Servers ?? new List<SliplaneServer>();
             var servicesByProject = overview?.ServicesByProject
                                     ?? new Dictionary<string, List<SliplaneService>>();
 
@@ -129,17 +129,17 @@ public class ProjectListBlade : ViewBase
                     var icon = count > 0 ? Icons.FolderOpen : Icons.Folder;
 
                     return new ListItem(
-                        title:    p.Name,
+                        title: p.Name,
                         subtitle: subtitle,
-                        icon:     icon,
-                        onClick:  _ => blades.Push(this, new ProjectDetailsBlade(_apiToken, p, refreshToken), p.Name, width: Size.Units(260)));
+                        icon: icon,
+                        onClick: _ => blades.Push(this, new ProjectDetailsBlade(_apiToken, p, refreshToken), p.Name, width: Size.Units(260)));
                 });
 
                 listContent = new List(items);
             }
         }
 
-                Dialog? addDialog = null;
+        Dialog? addDialog = null;
         if (showAddDialog.Value)
         {
             addDialog = new Dialog(
@@ -171,45 +171,45 @@ public class ProjectListBlade : ViewBase
 /// <summary>Project details: services DataTable, edit/create sheets, logs/events.</summary>
 public class ProjectDetailsBlade : ViewBase
 {
-    private readonly string         _apiToken;
+    private readonly string _apiToken;
     private readonly SliplaneProject _project;
-    private readonly RefreshToken   _parentRefreshToken;
+    private readonly RefreshToken _parentRefreshToken;
 
     public ProjectDetailsBlade(string apiToken, SliplaneProject project, RefreshToken parentRefreshToken)
     {
-        _apiToken           = apiToken;
-        _project            = project;
+        _apiToken = apiToken;
+        _project = project;
         _parentRefreshToken = parentRefreshToken;
     }
 
     public override object? Build()
     {
-        var client    = this.UseService<SliplaneApiClient>();
-        var blades    = this.UseContext<IBladeService>();
+        var client = this.UseService<SliplaneApiClient>();
+        var blades = this.UseContext<IBladeService>();
         var (alertView, showAlert) = this.UseAlert();
         var refreshToken = this.UseRefreshToken();
 
-                var overviewQuery = this.UseQuery<SliplaneOverview?, (string, string)>(
-            key: ("proj-detail-overview", _project.Id),
-            fetcher: async ct =>
-            {
-                var result = await client.GetOverviewAsync(_apiToken);
-                // Refresh DataTable rows
-                refreshToken.Refresh();
-                return result;
-            },
-            options: new QueryOptions
-            {
-                RefreshInterval   = TimeSpan.FromSeconds(3),
-                RevalidateOnMount = true,
-                KeepPrevious      = true
-            });
+        var overviewQuery = this.UseQuery<SliplaneOverview?, (string, string)>(
+    key: ("proj-detail-overview", _project.Id),
+    fetcher: async ct =>
+    {
+        var result = await client.GetOverviewAsync(_apiToken);
+        // Refresh DataTable rows
+        refreshToken.Refresh();
+        return result;
+    },
+    options: new QueryOptions
+    {
+        RefreshInterval = TimeSpan.FromSeconds(3),
+        RevalidateOnMount = true,
+        KeepPrevious = true
+    });
 
         var overview = overviewQuery.Value;
         List<SliplaneService>? rawServices = null;
         overview?.ServicesByProject.TryGetValue(_project.Id, out rawServices);
-        var services        = rawServices ?? new List<SliplaneService>();
-        var servers         = overview?.Servers ?? new List<SliplaneServer>();
+        var services = rawServices ?? new List<SliplaneService>();
+        var servers = overview?.Servers ?? new List<SliplaneServer>();
         var eventsByService = overview?.EventsByService ?? new Dictionary<string, List<SliplaneServiceEvent>>();
 
         void Reload()
@@ -218,20 +218,20 @@ public class ProjectDetailsBlade : ViewBase
             _parentRefreshToken.Refresh();
         }
 
-                var createSheetOpen  = this.UseState(false);
-        var editSheetOpen    = this.UseState(false);
-        var selectedForEdit  = this.UseState<SliplaneService?>(() => null);
-        var logsSheetOpen    = this.UseState(false);
-        var logsSelection    = this.UseState<(string ServiceName, string ServiceId)?>(() => null);
-        var eventsSheetOpen  = this.UseState(false);
-        var eventsSelection  = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
+        var createSheetOpen = this.UseState(false);
+        var editSheetOpen = this.UseState(false);
+        var selectedForEdit = this.UseState<SliplaneService?>(() => null);
+        var logsSheetOpen = this.UseState(false);
+        var logsSelection = this.UseState<(string ServiceName, string ServiceId)?>(() => null);
+        var eventsSheetOpen = this.UseState(false);
+        var eventsSelection = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
         var deleteDialogOpen = this.UseState(false);
-        var deleteSelection  = this.UseState<SliplaneService?>(() => null);
-        var deleteInput      = this.UseState(string.Empty);
+        var deleteSelection = this.UseState<SliplaneService?>(() => null);
+        var deleteInput = this.UseState(string.Empty);
         var deleteInputError = this.UseState<string?>(() => null);
-        var deleteBusy       = this.UseState(false);
+        var deleteBusy = this.UseState(false);
         var deleteProjectDialogOpen = this.UseState(false);
-        var deleteProjectInput      = this.UseState(string.Empty);
+        var deleteProjectInput = this.UseState(string.Empty);
         var deleteProjectInputError = this.UseState<string?>(() => null);
 
         object? createSheet = createSheetOpen.Value
@@ -276,7 +276,7 @@ public class ProjectDetailsBlade : ViewBase
             ? new ServiceEventsSheet(eventsSheetOpen, evtSel.ServiceName, evtSel.Events)
             : null;
 
-                async Task ConfirmDeleteProjectAsync()
+        async Task ConfirmDeleteProjectAsync()
         {
             if (!string.Equals(deleteProjectInput.Value?.Trim(), _project.Name, StringComparison.Ordinal))
             {
@@ -303,9 +303,9 @@ public class ProjectDetailsBlade : ViewBase
             deleteProjectInputError.Set((string?)null);
         }
 
-                bool IsPaused(string? s) =>
-            string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
+        bool IsPaused(string? s) =>
+    string.Equals(s, "paused", StringComparison.OrdinalIgnoreCase) ||
+    string.Equals(s, "suspended", StringComparison.OrdinalIgnoreCase);
 
         async Task PauseAsync(SliplaneService svc)
         {
@@ -321,22 +321,22 @@ public class ProjectDetailsBlade : ViewBase
             Reload();
         }
 
-                var headerBar = Layout.Horizontal()
-            | new Button("Add service").Icon(Icons.Plus).Secondary()
-                .OnClick(_ => createSheetOpen.Set(true))
-            | new Button("Delete project")
-                .Icon(Icons.Trash2)
-                .Variant(ButtonVariant.Destructive)
-                .OnClick(_ =>
-                {
-                    deleteProjectInput.Set(string.Empty);
-                    deleteProjectInputError.Set((string?)null);
-                    deleteProjectDialogOpen.Set(true);
-                });
+        var headerBar = Layout.Horizontal()
+    | new Button("Add service").Icon(Icons.Plus).Secondary()
+        .OnClick(_ => createSheetOpen.Set(true))
+    | new Button("Delete project")
+        .Icon(Icons.Trash2)
+        .Variant(ButtonVariant.Destructive)
+        .OnClick(_ =>
+        {
+            deleteProjectInput.Set(string.Empty);
+            deleteProjectInputError.Set((string?)null);
+            deleteProjectDialogOpen.Set(true);
+        });
 
-                var rows = BuildServiceRows(services, servers, eventsByService);
+        var rows = BuildServiceRows(services, servers, eventsByService);
 
-                object mainContent;
+        object mainContent;
         if (overviewQuery.Loading && overview == null)
         {
             mainContent = Layout.Center() | Text.Muted("Loading services...");
@@ -357,22 +357,22 @@ public class ProjectDetailsBlade : ViewBase
                 .RefreshToken(refreshToken)
                 .Height(Size.Full())
                 .Hidden(r => r.ServiceId)
-                .Header(r => r.Name,        "Service")
-                .Header(r => r.Server,       "Server")
-                .Header(r => r.StatusIcon,   "Icon")
-                .Header(r => r.Status,       "Status")
+                .Header(r => r.Name, "Service")
+                .Header(r => r.Server, "Server")
+                .Header(r => r.StatusIcon, "Icon")
+                .Header(r => r.Status, "Status")
                 .Header(r => r.DeployStatus, "Deploy log")
-                .Header(r => r.Url,          "URL")
-                .Width(r => r.StatusIcon,   Size.Px(50))
-                .Width(r => r.Status,       Size.Px(120))
+                .Header(r => r.Url, "URL")
+                .Width(r => r.StatusIcon, Size.Px(50))
+                .Width(r => r.Status, Size.Px(120))
                 .Width(r => r.DeployStatus, Size.Px(200))
                 .Renderer(r => r.Url, new LinkDisplayRenderer { Type = LinkDisplayType.Url })
                 .Config(c =>
                 {
-                    c.AllowSorting    = true;
-                    c.AllowFiltering  = true;
-                    c.ShowSearch      = true;
-                    c.SelectionMode   = SelectionModes.Rows;
+                    c.AllowSorting = true;
+                    c.AllowFiltering = true;
+                    c.ShowSearch = true;
+                    c.SelectionMode = SelectionModes.Rows;
                     c.ShowIndexColumn = false;
                 })
                 .RowActions(
@@ -390,7 +390,7 @@ public class ProjectDetailsBlade : ViewBase
                     var args = e.Value;
                     if (args is null) return ValueTask.CompletedTask;
                     var tag = args.Tag?.ToString();
-                    var id  = args.Id?.ToString() ?? string.Empty;
+                    var id = args.Id?.ToString() ?? string.Empty;
                     var svc = services.FirstOrDefault(s => s.Id == id);
                     if (svc == null) return ValueTask.CompletedTask;
 
@@ -504,19 +504,19 @@ public class ProjectDetailsBlade : ViewBase
             deleteProjectDialog);
     }
 
-        private sealed record ServiceRow(
-        string ServiceId,
-        string Name,
-        string Server,
-        string Status,
-        Icons  StatusIcon,
-        string DeployStatus,
-        string Url);
+    private sealed record ServiceRow(
+    string ServiceId,
+    string Name,
+    string Server,
+    string Status,
+    Icons StatusIcon,
+    string DeployStatus,
+    string Url);
 
-        private static ServiceRow[] BuildServiceRows(
-        List<SliplaneService> services,
-        List<SliplaneServer> servers,
-        Dictionary<string, List<SliplaneServiceEvent>> eventsByService)
+    private static ServiceRow[] BuildServiceRows(
+    List<SliplaneService> services,
+    List<SliplaneServer> servers,
+    Dictionary<string, List<SliplaneServiceEvent>> eventsByService)
     {
         return services.Select(svc =>
         {
@@ -549,26 +549,26 @@ public class ProjectDetailsBlade : ViewBase
                 : (rawDomain.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? rawDomain : "https://" + rawDomain);
 
             return new ServiceRow(
-                ServiceId:    svc.Id,
-                Name:         svc.Name,
-                Server:       serverLabel,
-                Status:       statusLabel,
-                StatusIcon:   statusIcon,
+                ServiceId: svc.Id,
+                Name: svc.Name,
+                Server: serverLabel,
+                Status: statusLabel,
+                StatusIcon: statusIcon,
                 DeployStatus: deployStatus,
-                Url:          url);
+                Url: url);
         }).ToArray();
     }
 
     private static string FormatEventType(string? type) => type switch
     {
-        "service_resume_success"  => "Service resumed",
-        "service_resume"          => "Resume requested",
+        "service_resume_success" => "Service resumed",
+        "service_resume" => "Resume requested",
         "service_suspend_success" => "Service suspended",
-        "service_suspend"         => "Suspend requested",
-        "service_deploy_success"  => "Deployed successfully",
-        "service_deploy"          => "Deploy started",
-        "service_deploy_failed"   => "Deploy failed",
-        "service_build_failed"    => "Build failed",
+        "service_suspend" => "Suspend requested",
+        "service_deploy_success" => "Deployed successfully",
+        "service_deploy" => "Deploy started",
+        "service_deploy_failed" => "Deploy failed",
+        "service_build_failed" => "Build failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 }
@@ -584,9 +584,9 @@ public class ServiceLogsBlade : ViewBase
 
     public ServiceLogsBlade(string apiToken, string projectId, string serviceId, string serviceName)
     {
-        _apiToken    = apiToken;
-        _projectId   = projectId;
-        _serviceId   = serviceId;
+        _apiToken = apiToken;
+        _projectId = projectId;
+        _serviceId = serviceId;
         _serviceName = serviceName;
     }
 
@@ -601,7 +601,7 @@ public class ServiceLogsBlade : ViewBase
                 ?? new List<SliplaneServiceLog>(),
             options: new QueryOptions
             {
-                RefreshInterval   = TimeSpan.FromSeconds(5),
+                RefreshInterval = TimeSpan.FromSeconds(5),
                 RevalidateOnMount = true
             });
 
@@ -644,9 +644,9 @@ public class ServiceEventsBlade : ViewBase
 
     public ServiceEventsBlade(string apiToken, string projectId, string serviceId, string serviceName)
     {
-        _apiToken    = apiToken;
-        _projectId   = projectId;
-        _serviceId   = serviceId;
+        _apiToken = apiToken;
+        _projectId = projectId;
+        _serviceId = serviceId;
         _serviceName = serviceName;
     }
 
@@ -661,7 +661,7 @@ public class ServiceEventsBlade : ViewBase
                 ?? new List<SliplaneServiceEvent>(),
             options: new QueryOptions
             {
-                RefreshInterval   = TimeSpan.FromSeconds(10),
+                RefreshInterval = TimeSpan.FromSeconds(10),
                 RevalidateOnMount = true
             });
 
@@ -683,9 +683,9 @@ public class ServiceEventsBlade : ViewBase
                     .OrderByDescending(e => e.CreatedAt)
                     .Select(e =>
                     {
-                        var date  = e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                        var date = e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
                         var label = FormatEventType(e.Type);
-                        var msg   = string.IsNullOrWhiteSpace(e.Message)
+                        var msg = string.IsNullOrWhiteSpace(e.Message)
                             ? string.Empty
                             : $"\n  Message: {e.Message}";
                         return $"[{date}]  {label}{msg}";
@@ -702,13 +702,13 @@ public class ServiceEventsBlade : ViewBase
 
     private static string FormatEventType(string? type) => type switch
     {
-        "service_resume_success"  => "Service resumed successfully",
-        "service_resume"          => "Service resume requested",
+        "service_resume_success" => "Service resumed successfully",
+        "service_resume" => "Service resume requested",
         "service_suspend_success" => "Service suspended successfully",
-        "service_suspend"         => "Service suspension requested",
-        "service_deploy_success"  => "Service deployed successfully",
-        "service_deploy"          => "Service deploy started",
-        "service_deploy_failed"   => "Service deploy failed",
+        "service_suspend" => "Service suspension requested",
+        "service_deploy_success" => "Service deployed successfully",
+        "service_deploy" => "Service deploy started",
+        "service_deploy_failed" => "Service deploy failed",
         _ => string.IsNullOrWhiteSpace(type) ? "Event" : type
     };
 }
