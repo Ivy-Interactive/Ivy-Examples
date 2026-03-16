@@ -24,12 +24,12 @@ public class ColumnInfo
 public class SnowflakeService
 {
     private readonly string? _connectionString;
-    
+
     public SnowflakeService(string? connectionString)
     {
         _connectionString = connectionString;
     }
-    
+
     /// <summary>
     /// Execute a SQL query and return results as DataTable
     /// </summary>
@@ -39,20 +39,20 @@ public class SnowflakeService
         {
             throw new InvalidOperationException("Snowflake connection string is not configured. Please enter your credentials.");
         }
-        
+
         using var connection = new SnowflakeDbConnection(_connectionString);
         await connection.OpenAsync();
-        
+
         using var command = connection.CreateCommand();
         command.CommandText = sql;
-        
+
         using var reader = await command.ExecuteReaderAsync();
         var dataTable = new System.Data.DataTable();
         dataTable.Load(reader);
-        
+
         return dataTable;
     }
-    
+
     /// <summary>
     /// Execute a SQL query and return scalar value
     /// </summary>
@@ -62,16 +62,16 @@ public class SnowflakeService
         {
             throw new InvalidOperationException("Snowflake connection string is not configured. Please enter your credentials.");
         }
-        
+
         using var connection = new SnowflakeDbConnection(_connectionString);
         await connection.OpenAsync();
-        
+
         using var command = connection.CreateCommand();
         command.CommandText = sql;
-        
+
         return await command.ExecuteScalarAsync();
     }
-    
+
     /// <summary>
     /// Get list of all databases
     /// </summary>
@@ -79,7 +79,7 @@ public class SnowflakeService
     {
         var sql = "SHOW DATABASES";
         var dataTable = await ExecuteQueryAsync(sql);
-        
+
         var databases = new List<string>();
         foreach (DataRow row in dataTable.Rows)
         {
@@ -89,20 +89,20 @@ public class SnowflakeService
                 databases.Add(dbName);
             }
         }
-        
+
         return databases;
     }
-    
+
     /// <summary>
     /// Get list of available schemas in a database
     /// </summary>
     public async Task<List<string>> GetSchemasAsync(string? database = null)
     {
-        var sql = database != null 
+        var sql = database != null
             ? $"SHOW SCHEMAS IN DATABASE {database}"
             : "SHOW SCHEMAS";
         var dataTable = await ExecuteQueryAsync(sql);
-        
+
         var schemas = new List<string>();
         foreach (DataRow row in dataTable.Rows)
         {
@@ -112,10 +112,10 @@ public class SnowflakeService
                 schemas.Add(schemaName);
             }
         }
-        
+
         return schemas;
     }
-    
+
     /// <summary>
     /// Get list of tables in a schema
     /// </summary>
@@ -123,7 +123,7 @@ public class SnowflakeService
     {
         var sql = $"SHOW TABLES IN SCHEMA {database}.{schema}";
         var dataTable = await ExecuteQueryAsync(sql);
-        
+
         var tables = new List<string>();
         foreach (DataRow row in dataTable.Rows)
         {
@@ -133,26 +133,26 @@ public class SnowflakeService
                 tables.Add(tableName);
             }
         }
-        
+
         return tables;
     }
-    
+
     /// <summary>
     /// Get table information including row count and columns
     /// </summary>
     public async Task<TableInfo> GetTableInfoAsync(string database, string schema, string table)
     {
         var fullTableName = $"{database}.{schema}.{table}";
-        
+
         // Get row count
         var countSql = $"SELECT COUNT(*) as ROW_COUNT FROM {fullTableName}";
         var countResult = await ExecuteScalarAsync(countSql);
         var rowCount = countResult != null ? Convert.ToInt64(countResult) : 0;
-        
+
         // Get columns
         var columnsSql = $"DESCRIBE TABLE {fullTableName}";
         var columnsTable = await ExecuteQueryAsync(columnsSql);
-        
+
         var columns = new List<ColumnInfo>();
         foreach (DataRow row in columnsTable.Rows)
         {
@@ -163,7 +163,7 @@ public class SnowflakeService
                 Nullable = row["null?"]?.ToString()?.ToUpper() == "Y"
             });
         }
-        
+
         return new TableInfo
         {
             Database = database,
@@ -174,7 +174,7 @@ public class SnowflakeService
             Columns = columns
         };
     }
-    
+
     /// <summary>
     /// Get preview data from a table (first N rows)
     /// </summary>
@@ -184,7 +184,7 @@ public class SnowflakeService
         var sql = $"SELECT * FROM {fullTableName} LIMIT {limit}";
         return await ExecuteQueryAsync(sql);
     }
-    
+
     /// <summary>
     /// Test connection to Snowflake
     /// </summary>
@@ -194,7 +194,7 @@ public class SnowflakeService
         {
             return false;
         }
-        
+
         try
         {
             var result = await ExecuteScalarAsync("SELECT 1");

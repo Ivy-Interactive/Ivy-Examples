@@ -18,19 +18,19 @@ public class SnowflakeApp : ViewBase
     {
         var refreshToken = this.UseRefreshToken();
         var configuration = this.UseService<IConfiguration>();
-        
+
         // ========== SHARED CREDENTIALS STATE (UseState - available to all sections!) ==========
         var account = this.UseState("");
         var user = this.UseState("");
         var password = this.UseState("");
         var isVerified = this.UseState(false);
-        
+
         // UI state for credentials form
         var isDialogOpen = this.UseState(false);
         var credentialsForm = this.UseState(() => new SnowflakeCredentialsRequest());
         var verificationStatus = this.UseState<string?>(() => null);
         var isVerifying = this.UseState(false);
-        
+
         // Active tab: 0 = Settings, 1 = Database Explorer, 2 = Brand Dashboard
         var activeTab = this.UseState(0);
 
@@ -80,9 +80,9 @@ public class SnowflakeApp : ViewBase
             var configAccount = configuration["Snowflake:Account"];
             var configUser = configuration["Snowflake:User"];
             var configPassword = configuration["Snowflake:Password"];
-            
-            if (!string.IsNullOrWhiteSpace(configAccount) 
-                && !string.IsNullOrWhiteSpace(configUser) 
+
+            if (!string.IsNullOrWhiteSpace(configAccount)
+                && !string.IsNullOrWhiteSpace(configUser)
                 && !string.IsNullOrWhiteSpace(configPassword)
                 && !isVerified.Value)
             {
@@ -174,7 +174,7 @@ public class SnowflakeApp : ViewBase
             if (!isVerified.Value || activeTab.Value != 1) return;
             var service = CreateSnowflakeService(configuration, account, user, password);
             if (service == null) return;
-            
+
             errorMessage.Value = null;
             var dbList = await TryAsync(() => service.GetDatabasesAsync(), "Error loading databases");
             if (dbList != null) databases.Value = dbList;
@@ -186,7 +186,7 @@ public class SnowflakeApp : ViewBase
             if (!isVerified.Value || activeTab.Value != 1) return;
             var service = CreateSnowflakeService(configuration, account, user, password);
             if (service == null) return;
-            
+
             if (string.IsNullOrEmpty(selectedDatabase.Value))
             {
                 schemas.Value = new List<string>();
@@ -205,7 +205,7 @@ public class SnowflakeApp : ViewBase
             if (!isVerified.Value || activeTab.Value != 1) return;
             var service = CreateSnowflakeService(configuration, account, user, password);
             if (service == null) return;
-            
+
             if (!string.IsNullOrEmpty(selectedDatabase.Value) && !string.IsNullOrEmpty(selectedSchema.Value))
             {
                 await LoadTables(service, selectedDatabase.Value, selectedSchema.Value);
@@ -225,10 +225,10 @@ public class SnowflakeApp : ViewBase
         {
             if (!isVerified.Value || activeTab.Value != 1) return;
             if (string.IsNullOrEmpty(selectedDatabase.Value) || string.IsNullOrEmpty(selectedSchema.Value) || string.IsNullOrEmpty(selectedTable.Value)) return;
-            
+
             var service = CreateSnowflakeService(configuration, account, user, password);
             if (service == null) return;
-            
+
             dataTab.Value = 0;
             await LoadTablePreview(service, selectedDatabase.Value, selectedSchema.Value, selectedTable.Value);
         }, selectedTable);
@@ -239,7 +239,7 @@ public class SnowflakeApp : ViewBase
             if (!isVerified.Value || activeTab.Value != 2) return;
             var service = CreateSnowflakeService(configuration, account, user, password);
             if (service == null) return;
-            
+
             isLoadingBrands.Value = true;
             errorMessageBrands.Value = null;
 
@@ -301,7 +301,7 @@ public class SnowflakeApp : ViewBase
                 isLoadingBrands.Value = false;
             }
         }, [isVerified, activeTab]);
-        
+
         this.UseEffect(async () =>
         {
             if (brandData.Value.Count == 0 || activeTab.Value != 2) return;
@@ -350,7 +350,7 @@ public class SnowflakeApp : ViewBase
                 int tablesCount = 0;
                 int schemasAllCount = 0;
                 int tablesAllCount = 0;
-                
+
                 if (database == null)
                 {
                     databasesCount = databases.Value.Count;
@@ -392,7 +392,7 @@ public class SnowflakeApp : ViewBase
                     schemasAllCount = totalSchemasAll.Value;
                     tablesAllCount = totalTablesAll.Value;
                 }
-                
+
                 await Task.Yield();
                 totalDatabases.Value = databasesCount;
                 totalSchemas.Value = schemasCount;
@@ -473,9 +473,9 @@ public class SnowflakeApp : ViewBase
                     "Brand" => "P_BRAND",
                     _ => "COUNT(*)"
                 };
-                
+
                 var orderDirection = sortOrder.Value == "ASC" ? "ASC" : "DESC";
-                
+
                 var sql = $@"
                     SELECT 
                         P_BRAND as Brand,
@@ -528,10 +528,10 @@ public class SnowflakeApp : ViewBase
                 | BuildTabs(activeTab, isVerified.Value)).Height(Size.Fraction(0.1f))
             | (Layout.Vertical().Gap(2)
                 | (activeTab.Value == 0
-                    ? BuildSettingsTab(isDialogOpen, credentialsForm, verificationStatus, isVerifying, account, user, password, isVerified)
+                    ? BuildSettingsTab(isDialogOpen, credentialsForm, verificationStatus, isVerifying, account, user, password, isVerified, () => refreshToken.Refresh(), configuration)
                     : activeTab.Value == 1
-                    ? BuildDatabaseExplorerTab(account, user, password, isVerified, configuration, databases, selectedDatabase, schemas, selectedSchema, tables, selectedTable, tableInfo, tablePreview, dataTab, isLoadingStats, isLoadingSchemas, isLoadingTables, isLoadingTableData, errorMessage, totalDatabases, totalSchemas, totalTables, totalSchemasAll, totalTablesAll, totalTablesInSchema)
-                    : BuildBrandDashboardTab(account, user, password, isVerified, configuration, brandData, totalBrandsCount, totalItemsCount, totalAvgItemsPerBrand, totalAvgPrice, totalMinPrice, totalMaxPrice, totalInventoryValue, totalTotalSize, totalAvgSize, isLoadingBrands, errorMessageBrands, sortBy, sortOrder, limit))
+                    ? BuildDatabaseExplorerTab(account, user, password, isVerified, configuration, databases, selectedDatabase, schemas, selectedSchema, tables, selectedTable, tableInfo, tablePreview, dataTab, isLoadingStats, isLoadingSchemas, isLoadingTables, isLoadingTableData, errorMessage, totalDatabases, totalSchemas, totalTables, totalSchemasAll, totalTablesAll, totalTablesInSchema, () => refreshToken.Refresh())
+                    : BuildBrandDashboardTab(account, user, password, isVerified, configuration, brandData, totalBrandsCount, totalItemsCount, totalAvgItemsPerBrand, totalAvgPrice, totalMinPrice, totalMaxPrice, totalInventoryValue, totalTotalSize, totalAvgSize, isLoadingBrands, errorMessageBrands, sortBy, sortOrder, limit, () => refreshToken.Refresh()))
                 ).Height(Size.Fraction(0.9f))
             );
     }
@@ -575,12 +575,12 @@ public class SnowflakeApp : ViewBase
         IState<string> account,
         IState<string> user,
         IState<string> password,
-        IState<bool> isVerified)
+        IState<bool> isVerified,
+        Action refresh,
+        IConfiguration configuration)
     {
-        var refreshToken = this.UseRefreshToken();
-        var configuration = this.UseService<IConfiguration>();
         var showSuccessMessage = isVerified.Value && verificationStatus.Value == null;
-        
+
         return Layout.Center()
             | new Card(
                 Layout.Vertical().Gap(4).Padding(4)
@@ -603,7 +603,7 @@ public class SnowflakeApp : ViewBase
                             password.Value = "";
                             isVerified.Value = false;
                             verificationStatus.Value = null;
-                            refreshToken.Refresh();
+                            refresh();
                         })
                     : new Button("Enter Credentials")
                         .Icon(Icons.Key)
@@ -665,9 +665,9 @@ public class SnowflakeApp : ViewBase
         IState<int> totalTables,
         IState<int> totalSchemasAll,
         IState<int> totalTablesAll,
-        IState<int> totalTablesInSchema)
+        IState<int> totalTablesInSchema,
+        Action refresh)
     {
-        var refreshToken = this.UseRefreshToken();
         if (!isVerified.Value)
         {
             return Layout.Center()
@@ -680,25 +680,25 @@ public class SnowflakeApp : ViewBase
 
         var snowflakeService = CreateSnowflakeService(configuration, account, user, password);
         if (snowflakeService == null) return Text.Muted("Error creating service");
-        
 
-       
-        
+
+
+
         var hasDatabase = !string.IsNullOrEmpty(selectedDatabase.Value);
         var hasSchema = hasDatabase && !string.IsNullOrEmpty(selectedSchema.Value);
         var hasTable = hasSchema && !string.IsNullOrEmpty(selectedTable.Value);
         var isLoadingData = isLoadingStats.Value || databases.Value.Count == 0;
-        
+
         var currentSelectedDb = selectedDatabase.Value;
         var currentSelectedSchema = selectedSchema.Value;
         var currentHasDatabase = !string.IsNullOrEmpty(currentSelectedDb);
         var currentHasSchema = currentHasDatabase && !string.IsNullOrEmpty(currentSelectedSchema);
-        
+
         var databasesDisplayValue = currentHasDatabase ? 1 : totalDatabases.Value;
         var schemasDisplayValue = totalSchemas.Value;
         var tablesDisplayValue = totalTables.Value;
         var tablesInSchemaDisplayValue = totalTablesInSchema.Value;
-        
+
         var metricsList = new List<object>
         {
             new Card(
@@ -720,7 +720,7 @@ public class SnowflakeApp : ViewBase
             ).Title(currentHasDatabase ? $"Tables in {currentSelectedDb}" : "Tables").Icon(Icons.Table)
                 .Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}")
         };
-        
+
         if (currentHasSchema)
         {
             metricsList.Add(
@@ -732,7 +732,7 @@ public class SnowflakeApp : ViewBase
                     .Key($"tables-in-schema-{totalTablesInSchema.Value}-{currentSelectedSchema}")
             );
         }
-        
+
         var shouldShowSkeleton = isLoadingStats.Value || databases.Value.Count == 0;
         object statsCards;
         if (shouldShowSkeleton)
@@ -748,22 +748,22 @@ public class SnowflakeApp : ViewBase
             }
             statsCards = layout;
         }
-        
+
         var databaseOptions = databases.Value
             .Select(db => new Option<string>(db, db))
             .Prepend(new Option<string>("-- Select Database --", ""))
             .ToArray();
-        
+
         var schemaOptions = schemas.Value
             .Select(s => new Option<string>(s, s))
             .Prepend(new Option<string>("-- Select Schema --", ""))
             .ToArray();
-        
+
         var tableOptions = tables.Value
             .Select(t => new Option<string>(t, t))
             .Prepend(new Option<string>("-- Select Table --", ""))
             .ToArray();
-        
+
         // Simple SelectInput components that directly update states
         // When database changes -> schemas are loaded via existing UseEffect (line 191)
         // When schema changes -> tables are loaded via existing UseEffect (line 210)
@@ -782,7 +782,7 @@ public class SnowflakeApp : ViewBase
                 .Disabled(isLoadingTables.Value || !hasSchema)
                 .WithField()
                 .Label("Table");
-        
+
         var leftSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
             | Text.H2("Database Explorer")
@@ -790,12 +790,12 @@ public class SnowflakeApp : ViewBase
             | (isLoadingData
                 ? BuildSkeletons(3)
                 : formView)
-                    
+
         ).Width(Size.Fraction(0.3f));
-        
+
         // Show table data
         var hasLoadedTableData = tablePreview.Value != null || tableInfo.Value != null;
-        
+
         var rightSection = new Card(
             Layout.Vertical().Gap(4).Padding(3)
             | (hasTable
@@ -862,9 +862,9 @@ public class SnowflakeApp : ViewBase
         IState<string?> errorMessageBrands,
         IState<string> sortBy,
         IState<string> sortOrder,
-        IState<int> limit)
+        IState<int> limit,
+        Action refresh)
     {
-        var refreshToken = this.UseRefreshToken();
         if (!isVerified.Value)
         {
             return Layout.Center()
@@ -879,7 +879,7 @@ public class SnowflakeApp : ViewBase
         if (snowflakeService == null) return Text.Muted("Error creating service");
 
         var controlsHeader = Layout.Vertical().Align(Align.TopCenter)
-            |(Layout.Vertical().Gap(3).Padding(3).Width(Size.Fraction(0.8f))
+            | (Layout.Vertical().Gap(3).Padding(3).Width(Size.Fraction(0.8f))
                 | (Layout.Horizontal().Align(Align.TopCenter)
                         | sortBy.ToSelectInput(new[] { "ItemCount", "AvgPrice", "MinPrice", "MaxPrice", "TotalSize", "AvgSize", "Brand" }.ToOptions())
                             .WithField()
@@ -998,7 +998,7 @@ public class SnowflakeApp : ViewBase
                     fetcher: async (key, ct) => new MetricRecord(
                         avgPrice.ToString("C2"),
                         avgPriceTrend,
-                        totalAvgPrice.Value > 0 ? avgPrice / (totalAvgPrice.Value + totalAvgPrice.Value/2) : null,
+                        totalAvgPrice.Value > 0 ? avgPrice / (totalAvgPrice.Value + totalAvgPrice.Value / 2) : null,
                         $"{avgPrice:C2} loaded"
                     )))
             | new MetricView("Brands Analyzed", Icons.Tag,
@@ -1056,7 +1056,7 @@ public class SnowflakeApp : ViewBase
         var minPriceChart = minPriceChartData.ToBarChart()
             .Dimension("Brand", e => e.Brand)
             .Measure("Price", e => e.Sum(f => f.Price));
-        
+
         var minPriceChartCard = new Card(
             Layout.Vertical().Gap(3).Padding(3)
                 | minPriceChart
@@ -1065,7 +1065,7 @@ public class SnowflakeApp : ViewBase
         var maxPriceChartData = filteredBrands
             .Select(b => new { Brand = b.Brand, Price = b.MaxPrice })
             .ToList();
-            
+
         var maxPriceChart = maxPriceChartData.ToBarChart()
             .Dimension("Brand", e => e.Brand)
             .Measure("Price", e => e.Sum(f => f.Price));
@@ -1099,7 +1099,7 @@ public class SnowflakeApp : ViewBase
         }
         return layout;
     }
-    
+
     private object BuildStatsSkeletons()
     {
         var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
@@ -1109,25 +1109,25 @@ public class SnowflakeApp : ViewBase
         }
         return layout;
     }
-    
+
     private object BuildDataTabs(IState<int> activeTab, TableInfo? tableInfo)
     {
         var dataTab = new Button("Data")
             .Icon(Icons.Table)
             .Variant(activeTab.Value == 0 ? ButtonVariant.Primary : ButtonVariant.Outline)
             .OnClick(() => activeTab.Value = 0);
-        
+
         var structureTab = new Button("Structure")
             .Icon(Icons.Layers)
             .Variant(activeTab.Value == 1 ? ButtonVariant.Primary : ButtonVariant.Outline)
             .OnClick(() => activeTab.Value = 1)
             .Disabled(tableInfo == null);
-        
+
         return Layout.Horizontal().Gap(2)
             | dataTab
             | structureTab;
     }
-    
+
     private object BuildColumnsTable(List<ColumnInfo> columns)
     {
         var key = $"columns-{columns.Count}-{string.Join("-", columns.Select(c => c.Name))}";
@@ -1140,17 +1140,17 @@ public class SnowflakeApp : ViewBase
             .Height(Size.Units(100))
             .Key(key);
     }
-    
+
     private object ConvertDataTableToDataTable(System.Data.DataTable dataTable)
     {
         if (dataTable == null || dataTable.Rows.Count == 0)
         {
             return Text.Muted("No data available");
         }
-        
+
         var columns = dataTable.Columns.Cast<DataColumn>().ToList();
         var columnCount = Math.Min(columns.Count, 20);
-        
+
         var rows = dataTable.Rows.Cast<DataRow>().Select(row =>
         {
             var values = new string[20];
@@ -1166,19 +1166,19 @@ public class SnowflakeApp : ViewBase
                 values[15], values[16], values[17], values[18], values[19]
             );
         }).ToList();
-        
+
         var builder = rows.AsQueryable().ToDataTable();
-        
+
         for (int i = 0; i < columnCount; i++)
         {
             builder = builder.Header(CreatePropertyExpression<DynamicRow, object>($"C{i}"), columns[i].ColumnName);
         }
-        
+
         for (int i = columnCount; i < 20; i++)
         {
             builder = builder.Hidden(CreatePropertyExpression<DynamicRow, object>($"C{i}"));
         }
-        
+
         return builder
             .Config(c =>
             {
@@ -1189,7 +1189,7 @@ public class SnowflakeApp : ViewBase
             .Height(Size.Units(190))
             .Key($"datatable-{dataTable.TableName}-{columns.Count}-{dataTable.Rows.Count}");
     }
-    
+
     private static Expression<Func<T, TResult>> CreatePropertyExpression<T, TResult>(string propertyName)
     {
         var parameter = Expression.Parameter(typeof(T), "r");
@@ -1213,11 +1213,11 @@ public class SnowflakeApp : ViewBase
     }
 
 
-// Typed record for DataTable widget (supports up to 20 columns)
-public record DynamicRow(
-    string C0, string C1, string C2, string C3, string C4,
-    string C5, string C6, string C7, string C8, string C9,
-    string C10, string C11, string C12, string C13, string C14,
-    string C15, string C16, string C17, string C18, string C19
-);
+    // Typed record for DataTable widget (supports up to 20 columns)
+    public record DynamicRow(
+        string C0, string C1, string C2, string C3, string C4,
+        string C5, string C6, string C7, string C8, string C9,
+        string C10, string C11, string C12, string C13, string C14,
+        string C15, string C16, string C17, string C18, string C19
+    );
 }
