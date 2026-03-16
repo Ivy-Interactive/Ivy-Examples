@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -18,6 +18,10 @@
   
     <ItemGroup>
       <PackageReference Include="Ivy" Version="1.2.19" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
       <PackageReference Include="Snowflake.Data" Version="5.2.1" />
     </ItemGroup>
     
@@ -28,3 +32,4 @@
   </ItemGroup>
 
 </Project>
+
