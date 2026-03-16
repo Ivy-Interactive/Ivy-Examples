@@ -1,1 +1,0 @@
-dotnet run -- --data-provider Sqlite --connection-string "Data Source=C:\git\Ivy-Interactive\Ivy-Examples\project-demos\showcase-crm\db.sqlite" --seed-database --yes-to-all
