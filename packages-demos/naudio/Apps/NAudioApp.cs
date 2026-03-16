@@ -102,11 +102,11 @@ public class NAudioApp : ViewBase
                     | Text.Label("Wave Type")
                     | waveType.ToSelectInput(typeof(SignalGeneratorType).ToOptions())
                     | Text.Label("Frequency (Hz)")
-                    | new NumberInput<int>(freq).Min(50).Max(1000)
+                    | freq.ToNumberInput().Min(50).Max(1000)
                     | Text.Label("Duration (seconds)")
-                    | new NumberInput<double>(dur).Min(0.1).Max(600).Step(0.1)
+                    | dur.ToNumberInput().Min(0.1).Max(600).Step(0.1)
                     | Text.Label("Volume")
-                    | new NumberInput<float>(vol).Min(0).Max(1).Step(0.01)
+                    | vol.ToNumberInput().Min(0).Max(1).Step(0.01)
                     | (genError.Value != null ? new Callout(genError.Value, variant: CalloutVariant.Error) : null)
                     | new Button("Generate").Primary().Icon(Icons.Play).OnClick(_ =>
                     {
@@ -144,9 +144,9 @@ public class NAudioApp : ViewBase
                         ? new Callout("Upload a file first", variant: CalloutVariant.Warning)
                         : Text.Muted($"Uploaded file ready ({uploadBytes.Value.Length / 1024} KB)"))
                     | Text.Label("Generated Sound Volume")
-                    | new NumberInput<float>(mixGenVol).Min(0).Max(1).Step(0.01)
+                    | mixGenVol.ToNumberInput().Min(0).Max(1).Step(0.01)
                     | Text.Label("Uploaded File Volume")
-                    | new NumberInput<float>(mixUploadVol).Min(0).Max(1).Step(0.01)
+                    | mixUploadVol.ToNumberInput().Min(0).Max(1).Step(0.01)
                     | (mixError.Value != null ? new Callout(mixError.Value, variant: CalloutVariant.Error) : null)
                     | new Button("Mix").Primary().Icon(Icons.Layers).OnClick(_ =>
                     {
