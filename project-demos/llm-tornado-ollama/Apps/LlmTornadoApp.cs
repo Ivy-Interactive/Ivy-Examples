@@ -5,7 +5,8 @@ public class LlmTornadoApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new MainMenuBlade(), "Examples");
+        var blades = this.UseBlades(() => new MainMenuBlade(), "Examples");
+        return blades;
     }
 }
 

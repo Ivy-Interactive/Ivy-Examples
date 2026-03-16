@@ -11,10 +11,6 @@ public class AgentChatBlade : ViewBase
     private readonly string _ollamaUrl;
     private readonly string _modelName;
 
-    private IState<ImmutableArray<ChatMessage>> _messages;
-    private IState<string> _instructions;
-    private IState<InstructionsModel> _instructionsForm;
-    private IState<bool> _showSettings;
     private TornadoApi? _api;
 
     public AgentChatBlade(string ollamaUrl, string modelName)
@@ -117,22 +113,18 @@ public class AgentChatBlade : ViewBase
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
-
-        var welcomeMessage = "Hello! I'm an AI agent with access to tools. I can:\n\n" +
+        var messages = UseState(ImmutableArray.Create<ChatMessage>(
+            new ChatMessage(ChatSender.Assistant, Text.Markdown(
+                "Hello! I'm an AI agent with access to tools. I can:\n\n" +
                 "• **Get the current time**\n\n" +
                 "• **Calculate mathematical expressions**\n\n" +
                 "• **Get weather information**\n\n" +
-                "Try asking me: 'What time is it?' or 'Calculate 15 * 23'";
-
-        var messages = UseState(ImmutableArray.Create<ChatMessage>(
-            new ChatMessage(ChatSender.Assistant, Text.Markdown(welcomeMessage))
+                "Try asking me: 'What time is it?' or 'Calculate 15 * 23'"))
         ));
-
         var instructions = UseState("You are a helpful assistant with access to tools. You can get the current time, perform calculations, and get weather information. Use these tools when appropriate to answer user questions.");
         var instructionsForm = UseState(() => new InstructionsModel(instructions.Value));
         var showSettings = UseState(false);
 
-        // Initialize TornadoApi client
         UseEffect(async () =>
         {
             if (_api == null)
@@ -149,7 +141,6 @@ public class AgentChatBlade : ViewBase
             }
         }, EffectTrigger.OnMount());
 
-        // Update instructions when form is submitted (dialog closes)
         UseEffect(() =>
         {
             if (!showSettings.Value && instructionsForm.Value.Instructions != instructions.Value)
