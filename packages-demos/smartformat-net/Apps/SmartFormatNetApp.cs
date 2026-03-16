@@ -3,38 +3,36 @@ namespace SmartFormatNetExample;
 [App(icon: Icons.Type, title: "SmartFormat.NET")]
 public class SmartFormatNetApp : ViewBase
 {
+    private static readonly List<KeyValuePair<string, (string template, string data)>> ExampleEntries = new Dictionary<string, (string template, string data)>
+    {
+        ["Pluralization"] = ("You have {Count:plural:no items|one item|{} items}.", "{ \"Count\": 3 }"),
+        ["Choose"] = ("{Gender:choose(male|female):Mr.|Ms.|Mx.} {LastName}", "{ \"Gender\": \"male\", \"LastName\": \"Odiaka\" }"),
+        ["Conditional"] = ("{Age:cond:>=55?Senior Citizen|>=30?Adult|>=18?Young Adult|>12?Teenager|>2?Child|Baby}", "{ \"Age\": 32 }"),
+        ["List"] = ("Team: {Members:list:{}|, |, and }", "{ \"Members\": [\"Evans\", \"Sarah\", \"Mike\"] }"),
+        ["Numbers"] = ("Temperature: {Temp}°C = {TempF:0.0}°F", "{ \"Temp\": 25, \"TempF\": 77 }"),
+    }.ToList();
+
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
-        
         var templateInput = this.UseState("Hello {Name}! You have {MessageCount:plural:no messages|one message|{} messages}.");
         var jsonInput = this.UseState(FormatJson("{ \"Name\": \"John\", \"MessageCount\": 5 }"));
         var outputText = this.UseState("");
         var selectedExampleIndex = this.UseState(-1);
+        UseEffect(() => LoadExample(selectedExampleIndex.Value), selectedExampleIndex);
 
-        var examples = new Dictionary<string, (string template, string data)>
-        {
-            ["Pluralization"] = ("You have {Count:plural:no items|one item|{} items}.", "{ \"Count\": 3 }"),
-            ["Choose"] = ("{Gender:choose(male|female):Mr.|Ms.|Mx.} {LastName}", "{ \"Gender\": \"male\", \"LastName\": \"Odiaka\" }"),
-            ["Conditional"] = ("{Age:cond:>=55?Senior Citizen|>=30?Adult|>=18?Young Adult|>12?Teenager|>2?Child|Baby}", "{ \"Age\": 32 }"),
-            ["List"] = ("Team: {Members:list:{}|, |, and }", "{ \"Members\": [\"Evans\", \"Sarah\", \"Mike\"] }"),
-            ["Numbers"] = ("Temperature: {Temp}°C = {TempF:0.0}°F", "{ \"Temp\": 25, \"TempF\": 77 }"),
-        };
-        var exampleEntries = examples.ToList();
-        var exampleOptions = exampleEntries
+        var exampleOptions = ExampleEntries
             .Select((entry, index) => new Option<int>(entry.Key, index))
             .ToArray();
 
-        UseEffect(() => LoadExample(selectedExampleIndex.Value), selectedExampleIndex);
-
         void LoadExample(int exampleIndex)
         {
-            if (exampleIndex < 0 || exampleIndex >= exampleEntries.Count)
+            if (exampleIndex < 0 || exampleIndex >= ExampleEntries.Count)
             {
                 return;
             }
 
-            var example = exampleEntries[exampleIndex].Value;
+            var example = ExampleEntries[exampleIndex].Value;
             templateInput.Value = example.template;
             jsonInput.Value = FormatJson(example.data);
             outputText.Value = "";
