@@ -10,20 +10,19 @@ public class MimeMappingApp : ViewBase
         var inputMethod = this.UseState(InputMethod.UploadFile);
         var fileInput = this.UseState<string>();
         var uploadState = this.UseState<FileUpload<byte[]>?>();
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept("*/*")
-            .MaxFileSize(50 * 1024 * 1024);
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
+        
         var mimeTypeInput = this.UseState<string>();
         var searchQuery = this.UseState<string>();
         var currentPage = this.UseState(1);
-        const int itemsPerPage = 8;
-
+        
         // Reset to page 1 when search query changes
         UseEffect(() =>
         {
             currentPage.Set(1);
         }, [searchQuery]);
-
+        const int itemsPerPage = 8;
+        var uploadContext = uploadBase.Accept("*/*").MaxFileSize(50 * 1024 * 1024);
         var currentFileName = inputMethod.Value == InputMethod.UploadFile ? uploadState.Value?.FileName : fileInput.Value;
         var detectedMimeType = currentFileName != null
             ? MimeUtility.GetMimeMapping(currentFileName)
