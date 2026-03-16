@@ -58,7 +58,7 @@ public class XLParserApp : ViewBase
                             .Gap(1)
                         ),
                         Text.Label("Excel Formula: "),
-                        new TextInput(parserState.Formula),
+                        parserState.Formula.ToTextInput(),
                         new Button("Parse Formula", onClick: _ => HandleParse(parserState)),
                         parserState.Result.Value == FormulaParseResult.Parsed && parserState.Tokens.Value.Count > 0
                             ? new Expandable(
