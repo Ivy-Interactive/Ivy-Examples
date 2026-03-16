@@ -6,9 +6,6 @@ public class NAudioApp : ViewBase
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
-        try { MediaFoundationApi.Startup(); } catch { }
-
-        // States for generation
         var freq = UseState(440);
         var dur = UseState(4.0);
         var vol = UseState(0.8f);
@@ -17,28 +14,19 @@ public class NAudioApp : ViewBase
         var genDataUrl = UseState<string?>(() => null);
         var genError = UseState<string?>(() => null);
         var genVersion = UseState(() => 0);
-
-        // States for upload
         var uploadBytes = UseState<byte[]?>(() => null);
         var uploadName = UseState<string?>(() => null);
         var format = UseState<WaveFormat?>(() => null);
         var duration = UseState<TimeSpan?>(() => null);
-
-        // States for mixing
         var mixGenVol = UseState(0.5f);
         var mixUploadVol = UseState(0.5f);
         var mixBytes = UseState<byte[]?>(() => null);
         var mixDataUrl = UseState<string?>(() => null);
         var mixError = UseState<string?>(() => null);
         var mixVersion = UseState(() => 0);
-
-        // File upload handler
         var uploadedFile = UseState<FileUpload<byte[]>?>(() => null);
-        var uploadUrl = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile))
-            .Accept("audio/*")
-            .MaxFileSize(50 * 1024 * 1024);
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile));
 
-        // Process uploaded file when available
         UseEffect(() =>
         {
             if (uploadedFile.Value?.Content is byte[] bytes && bytes.Length > 0)
@@ -85,9 +73,11 @@ public class NAudioApp : ViewBase
             }
         }, [uploadedFile]);
 
-        // Download URLs
         var genUrl = this.UseDownload(() => genBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"generated_tone_{genVersion.Value}.wav");
         var mixUrl = this.UseDownload(() => mixBytes.Value ?? Array.Empty<byte>(), "audio/wav", $"mixed_audio_{mixVersion.Value}.wav");
+
+        var uploadUrl = uploadBase.Accept("audio/*").MaxFileSize(50 * 1024 * 1024);
+        try { MediaFoundationApi.Startup(); } catch { }
 
         return Layout.Vertical().Align(Align.TopCenter)
             | new Card(
