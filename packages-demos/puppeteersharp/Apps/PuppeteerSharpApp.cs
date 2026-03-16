@@ -3,8 +3,6 @@ namespace PuppeteerSharpExample
     [App(icon: Icons.Image, title: "PuppeteerSharp")]
     public class PuppeteerSharpApp : ViewBase
     {
-    public class PuppeteerSharpApp : ViewBase
-    {
         public override object? Build()
         {
             // initialize states
@@ -13,7 +11,7 @@ namespace PuppeteerSharpExample
             var screenshotDownloadPath = this.UseState<string?>();
             var pdfPath = this.UseState<string?>();
             var isLoading = this.UseState(false);
-            
+
             // Get client provider in Build method
             var client = this.UseService<IClientProvider>();
 
@@ -43,10 +41,10 @@ namespace PuppeteerSharpExample
             );
 
         private IWidget RenderCaptureButton(
-            IState<string> url, 
-            IState<string?> screenshotPath, 
-            IState<string?> screenshotDownloadPath, 
-            IState<string?> pdfPath, 
+            IState<string> url,
+            IState<string?> screenshotPath,
+            IState<string?> screenshotDownloadPath,
+            IState<string?> pdfPath,
             IState<bool> isLoading,
             IClientProvider client)
         {
@@ -118,10 +116,10 @@ namespace PuppeteerSharpExample
         // --- Action ---
 
         private async Task CaptureScreenshot(
-            IState<string> url, 
-            IState<string?> screenshotPath, 
-            IState<string?> screenshotDownloadPath, 
-            IState<string?> pdfPath, 
+            IState<string> url,
+            IState<string?> screenshotPath,
+            IState<string?> screenshotDownloadPath,
+            IState<string?> pdfPath,
             IState<bool> isLoading,
             IClientProvider client)
         {
@@ -133,7 +131,7 @@ namespace PuppeteerSharpExample
             }
 
             // Basic URL validation
-            if (!Uri.TryCreate(inputUrl, UriKind.Absolute, out var uri) || 
+            if (!Uri.TryCreate(inputUrl, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
                 client.Toast("Please enter a valid HTTP or HTTPS URL", "Invalid URL");
@@ -181,8 +179,8 @@ namespace PuppeteerSharpExample
             catch (PuppeteerException ex)
             {
                 Console.WriteLine("Puppeteer Error: " + ex.Message);
-                var errorMessage = ex.Message.Contains("net::ERR") 
-                    ? "Failed to load the website. Please check if the URL is correct and accessible." 
+                var errorMessage = ex.Message.Contains("net::ERR")
+                    ? "Failed to load the website. Please check if the URL is correct and accessible."
                     : $"Failed to render website: {ex.Message}";
                 client.Toast(errorMessage, "Error");
                 screenshotPath.Set((string?)null);
@@ -203,6 +201,6 @@ namespace PuppeteerSharpExample
             }
         }
     }
-    }
 }
+
 
