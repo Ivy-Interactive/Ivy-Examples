@@ -1,4 +1,4 @@
-﻿using BarcodeStandard;
+using BarcodeStandard;
 using SkiaSharp;
 using Type = BarcodeStandard.Type;
 
@@ -22,13 +22,7 @@ namespace BarcodeLibExample.Apps
             var text = UseState("123456789012");
             var typeIndex = UseState(0);
             var includeLabel = UseState(true);
-            // holds the generated preview data URI. null means no preview yet
             var previewUri = UseState("");
-
-            // fixed barcode size
-            const int width = 300;
-            const int height = 120;
-
             var downloadUrl = this.UseDownload(() =>
             {
                 if (string.IsNullOrWhiteSpace(text.Value))
@@ -36,7 +30,7 @@ namespace BarcodeLibExample.Apps
 
                 var (_, type) = Symbologies[typeIndex.Value];
                 var b = new Barcode { IncludeLabel = includeLabel.Value };
-                using var bitmap = b.Encode(type, text.Value, SKColors.Black, SKColors.White, width, height);
+                using var bitmap = b.Encode(type, text.Value, SKColors.Black, SKColors.White, 300, 120);
                 using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
                 return data.ToArray();
             }, "image/png", "barcode.png");
@@ -65,7 +59,7 @@ namespace BarcodeLibExample.Apps
                         }
                         var (_, type) = Symbologies[typeIndex.Value];
                         var b = new Barcode { IncludeLabel = includeLabel.Value };
-                        using var bitmap = b.Encode(type, text.Value, SKColors.Black, SKColors.White, width, height);
+                        using var bitmap = b.Encode(type, text.Value, SKColors.Black, SKColors.White, 300, 120);
                         using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
                         var base64 = Convert.ToBase64String(data.ToArray());
                         previewUri.Value = $"data:image/png;base64,{base64}";
