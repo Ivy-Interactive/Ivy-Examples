@@ -1,11 +1,14 @@
 namespace MiniExcelExample;
 
+using System.Reactive.Disposables;
+
 [App(icon: Icons.Sheet, title: "MiniExcel - Edit")]
 public class MiniExcelEditApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new StudentsListBlade(), "Students");
+        var blades = this.UseBlades(() => new StudentsListBlade(), "Students");
+        return blades;
     }
 }
 
@@ -152,19 +155,11 @@ public class MiniExcelViewApp : ViewBase
     public override object? Build()
     {
         var refreshToken = this.UseRefreshToken();
-
-        // Load students from shared service
         var students = this.UseState(() => StudentService.GetStudents());
-
-        // Helper hooks that were in BuildTableViewPage
         var client = UseService<IClientProvider>();
         var uploadState = this.UseState<FileUpload<byte[]>?>(null);
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept(".xlsx")
-            .MaxFileSize(50 * 1024 * 1024);
+        var uploadContextBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
         var actionMode = this.UseState("Export");
-
-        // Export download from MemoryStream
         var downloadUrl = this.UseDownload(
             async () =>
             {
@@ -175,14 +170,10 @@ public class MiniExcelViewApp : ViewBase
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"students-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.xlsx"
         );
-
-        // Load data on init AND when manually refreshed
         this.UseEffect(() =>
         {
             students.Set(StudentService.GetStudents());
         }, [refreshToken.ToTrigger()]);
-
-        // Listen to global data changes from StudentService (for cross-app sync)
         this.UseEffect(() =>
         {
             void OnDataChanged()
@@ -192,10 +183,8 @@ public class MiniExcelViewApp : ViewBase
             }
 
             StudentService.DataChanged += OnDataChanged;
-            return () => StudentService.DataChanged -= OnDataChanged;
+            return Disposable.Create(() => StudentService.DataChanged -= OnDataChanged);
         }, []);
-
-        // When a file is uploaded, import it
         this.UseEffect(() =>
         {
             if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
@@ -257,17 +246,18 @@ public class MiniExcelViewApp : ViewBase
                     uploadState.Reset();
                 }
             }
-        }, [uploadState.Value]);
+        }, [uploadState]);
 
+        var uploadContext = uploadContextBase.Accept(".xlsx").MaxFileSize(50 * 1024 * 1024);
         return BuildTableViewPage(students, uploadState, uploadContext, actionMode, downloadUrl);
     }
 
     private object BuildTableViewPage(
         IState<List<Student>> students,
-        IState<FileUpload<byte[]>> uploadState,
-        UploadContext uploadContext,
+        IState<FileUpload<byte[]>?> uploadState,
+        IState<UploadContext> uploadContext,
         IState<string> actionMode,
-        IState<string> downloadUrl)
+        IState<string?> downloadUrl)
     {
         object? actionWidget = actionMode.Value == "Export"
             ? (object)new Button("Download Excel File")
