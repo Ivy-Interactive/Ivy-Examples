@@ -12,9 +12,8 @@ public class WorkbooksViewerApp : ViewBase
     {
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
-        
-        var files = workbookRepository.GetFiles();
         var selectedFileIndex = this.UseState(0);
+        var files = workbookRepository.GetFiles();
         
         // Get selected file data
         DataTable? selectedTable = null;
