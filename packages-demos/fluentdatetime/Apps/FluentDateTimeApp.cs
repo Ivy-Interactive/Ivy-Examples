@@ -28,7 +28,7 @@ public class FluentDateTimeApp : ViewBase
                        | Text.Label("Time Unit")
                        | unit.ToSelectInput(TimeUnits).Variant(SelectInputVariant.Select)
                        | Text.Label("Amount")
-                       | new NumberInput<double>(amount)
+                       | amount.ToNumberInput()
                          .Min(1)
                          .Max(9999)
                        | (Layout.Horizontal().Gap(4)
