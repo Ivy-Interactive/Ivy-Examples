@@ -49,11 +49,11 @@ public class ServicesView : ViewBase
         var logsSelection = this.UseState<(string ProjectId, string ServiceName, string ServiceId)?>(() => null);
         var eventsSheetOpen = this.UseState(false);
         var eventsSelection = this.UseState<(string ServiceName, List<SliplaneServiceEvent> Events)?>(() => null);
+        var eventsStore = this.UseState<Dictionary<string, List<SliplaneServiceEvent>>>(() =>
+            new Dictionary<string, List<SliplaneServiceEvent>>());
 
-        // ── 1) data loading: UseQuery with polling ───────────────────────────────
-        var overviewKey = $"overview:{_apiToken}";
         var overviewQuery = this.UseQuery<SliplaneOverview?, string>(
-            key: overviewKey,
+            key: $"overview:{_apiToken}",
             fetcher: async ct =>
             {
                 var result = await client.GetOverviewAsync(_apiToken);
@@ -76,13 +76,29 @@ public class ServicesView : ViewBase
             overviewQuery.Mutator.Revalidate();
             return new Unit();
         }));
+        this.UseEffect(() =>
+        {
+            var ids = transitioningServiceIds.Value;
+            if (ids.Count == 0) return;
+            var evtsBySvc = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+            var toRemove = new List<string>();
+            foreach (var sid in ids)
+            {
+                if (!evtsBySvc.TryGetValue(sid, out var evts) || evts.Count == 0) continue;
+                var last = evts.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+                if (last?.Type is "service_suspend_success" or "service_resume_success")
+                    toRemove.Add(sid);
+            }
+            if (toRemove.Count > 0)
+            {
+                var next = new HashSet<string>(ids);
+                foreach (var id in toRemove) next.Remove(id);
+                transitioningServiceIds.Set(next);
+            }
+        }, EffectTrigger.OnBuild());
 
         // Current data for the table derived directly from overviewQuery
         var overview = overviewQuery.Value;
-        // Accumulate events per service across refreshes so logs don't "blink" or disappear
-        // when the API returns a shorter window of events.
-        var eventsStore = this.UseState<Dictionary<string, List<SliplaneServiceEvent>>>(() =>
-            new Dictionary<string, List<SliplaneServiceEvent>>());
         if (overview?.EventsByService is { Count: > 0 } latestEvents)
         {
             var current = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
@@ -123,27 +139,6 @@ public class ServicesView : ViewBase
                 .ToList();
         var currentServers = overview?.Servers ?? new List<SliplaneServer>();
         var eventsByService = eventsStore.Value ?? new Dictionary<string, List<SliplaneServiceEvent>>();
-
-        // Clear transitioning when we see success events for those services
-        this.UseEffect(() =>
-        {
-            var ids = transitioningServiceIds.Value;
-            if (ids.Count == 0) return;
-            var toRemove = new List<string>();
-            foreach (var sid in ids)
-            {
-                if (!eventsByService.TryGetValue(sid, out var evts) || evts.Count == 0) continue;
-                var last = evts.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
-                if (last?.Type is "service_suspend_success" or "service_resume_success")
-                    toRemove.Add(sid);
-            }
-            if (toRemove.Count > 0)
-            {
-                var next = new HashSet<string>(ids);
-                foreach (var id in toRemove) next.Remove(id);
-                transitioningServiceIds.Set(next);
-            }
-        }, EffectTrigger.OnBuild());
 
         // ── build rows (pure – no hooks) ──────────────────────────────────────
         var rows = BuildServiceRows(currentServices, currentServers, eventsByService, transitioningServiceIds.Value);
@@ -569,10 +564,7 @@ public class ServiceLogsSheet : ViewBase
 
     public override object? Build()
     {
-        if (!_isOpen.Value) return null;
-
         var client = this.UseService<SliplaneApiClient>();
-
         var logsQuery = this.UseQuery<List<SliplaneServiceLog>, string>(
             key: $"logs:{_serviceId}",
             fetcher: async ct =>
@@ -585,6 +577,8 @@ public class ServiceLogsSheet : ViewBase
                 RefreshInterval = TimeSpan.FromSeconds(5),
                 RevalidateOnMount = true
             });
+
+        if (!_isOpen.Value) return null;
 
         string logsText;
         if (logsQuery.Loading && logsQuery.Value == null)
@@ -729,13 +723,12 @@ public class EditServiceSheet : ViewBase
     {
         var client = this.UseService<SliplaneApiClient>();
         var refreshSender = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
-        var dep = _service.Deployment;
         var name = this.UseState(_service.Name ?? string.Empty);
-        var deployUrl = this.UseState(dep?.Url ?? string.Empty);
-        var branch = this.UseState(dep?.Branch ?? "main");
-        var dockerfilePath = this.UseState(dep?.DockerfilePath ?? "Dockerfile");
-        var dockerContext = this.UseState(dep?.DockerContext ?? ".");
-        var autoDeploy = this.UseState(dep?.AutoDeploy ?? true);
+        var deployUrl = this.UseState(_service.Deployment?.Url ?? string.Empty);
+        var branch = this.UseState(_service.Deployment?.Branch ?? "main");
+        var dockerfilePath = this.UseState(_service.Deployment?.DockerfilePath ?? "Dockerfile");
+        var dockerContext = this.UseState(_service.Deployment?.DockerContext ?? ".");
+        var autoDeploy = this.UseState(_service.Deployment?.AutoDeploy ?? true);
         var cmd = this.UseState(_service.Cmd ?? string.Empty);
         var healthcheck = this.UseState(_service.Healthcheck ?? string.Empty);
         var busy = this.UseState(false);
@@ -774,6 +767,9 @@ public class EditServiceSheet : ViewBase
             }
             catch { serverVolumes.Set(new List<SliplaneVolume>()); }
         });
+
+        if (!_isOpen.Value)
+            return null;
 
         async Task SaveAsync()
         {
@@ -1006,9 +1002,6 @@ public class EditServiceSheet : ViewBase
                 )).Width(Size.Units(220));
         }
 
-        if (!_isOpen.Value)
-            return null;
-
         var sheetBody = new FooterLayout(footer, content);
         var dialogs = new[] { addEnvDialog, editEnvDialog, addVolumeDialog }
             .Where(d => d != null).Cast<object>().ToArray();
@@ -1149,6 +1142,27 @@ public class CreateServiceSheet : ViewBase
         var addVolumeId = this.UseState(string.Empty);
         var addMountPath = this.UseState(string.Empty);
 
+        this.UseEffect(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(serverId.Value))
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+                return;
+            }
+            try
+            {
+                var vols = await client.GetServerVolumesAsync(_apiToken, serverId.Value);
+                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
+            }
+            catch
+            {
+                serverVolumes.Set(new List<SliplaneVolume>());
+            }
+        }, serverId);
+
+        if (!_isOpen.Value)
+            return null;
+
         QueryResult<Option<string>[]> QueryProjects(IViewContext ctx, string query)
         {
             return ctx.UseQuery<Option<string>[], (string, string, int)>(
@@ -1204,24 +1218,6 @@ public class CreateServiceSheet : ViewBase
                     return server != null ? new Option<string>(server.Name, server.Id) : null;
                 });
         }
-
-        this.UseEffect(async () =>
-        {
-            if (string.IsNullOrWhiteSpace(serverId.Value))
-            {
-                serverVolumes.Set(new List<SliplaneVolume>());
-                return;
-            }
-            try
-            {
-                var vols = await client.GetServerVolumesAsync(_apiToken, serverId.Value);
-                serverVolumes.Set(vols ?? new List<SliplaneVolume>());
-            }
-            catch
-            {
-                serverVolumes.Set(new List<SliplaneVolume>());
-            }
-        }, serverId);
 
         var volumeOptions = (serverVolumes.Value ?? new List<SliplaneVolume>()).Select(v => new Option<string>($"{v.Name} ({v.MountPath})", v.Id)).ToArray();
         var protocolOptions = new[] { new Option<string>("HTTP", "http"), new Option<string>("HTTPS", "https") };
@@ -1418,9 +1414,6 @@ public class CreateServiceSheet : ViewBase
                     new Button("Cancel").OnClick(_ => showAddVolumeDialog.Set(false))
                 )).Width(Size.Units(220));
         }
-
-        if (!_isOpen.Value)
-            return null;
 
         var sheetBody = new FooterLayout(footer, content);
         object sheetContent;

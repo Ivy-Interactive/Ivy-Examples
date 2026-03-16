@@ -29,7 +29,7 @@ public class ServersView : ViewBase
         var volumeCounts = this.UseState<Dictionary<string, int>>(() => new Dictionary<string, int>());
         var totalServices = this.UseState(0);
 
-        async Task LoadServersAsync()
+        this.UseEffect(async () =>
         {
             try
             {
@@ -44,11 +44,8 @@ public class ServersView : ViewBase
             {
                 loading.Set(false);
             }
-        }
+        }, EffectTrigger.OnMount(), reloadCounter);
 
-        this.UseEffect(async () => await LoadServersAsync(), EffectTrigger.OnMount(), reloadCounter);
-
-        // Preload volume counts so they are visible on server cards
         this.UseEffect(async () =>
         {
             var current = servers.Value;
@@ -72,7 +69,6 @@ public class ServersView : ViewBase
             volumeCounts.Set(map);
         }, [servers]);
 
-        // Total services count (across all projects; API has no per-server services)
         this.UseEffect(async () =>
         {
             try

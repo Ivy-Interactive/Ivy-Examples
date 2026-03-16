@@ -63,22 +63,18 @@ public class SliplaneServicesApp : ViewBase
         var auth = this.UseService<IAuthService>();
         var refreshReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
         var reloadCounter = this.UseState(0);
-
-        var session = auth.GetAuthSession();
-        var apiToken = config["Sliplane:ApiToken"]
-                       ?? session.AuthToken?.AccessToken
-                       ?? string.Empty;
-
         var projectsQuery = this.UseQuery(
-            key: ("services-projects", apiToken, reloadCounter.Value),
-            fetcher: async ct => await client.GetProjectsAsync(apiToken));
-
+            key: ("services-projects", config["Sliplane:ApiToken"] ?? auth.GetAuthSession().AuthToken?.AccessToken ?? string.Empty, reloadCounter.Value),
+            fetcher: async ct => await client.GetProjectsAsync(config["Sliplane:ApiToken"] ?? auth.GetAuthSession().AuthToken?.AccessToken ?? string.Empty));
         this.UseEffect(() => refreshReceiver.Receive(_ =>
         {
             reloadCounter.Set(reloadCounter.Value + 1);
             return new Unit();
         }));
 
+        var apiToken = config["Sliplane:ApiToken"]
+                       ?? auth.GetAuthSession().AuthToken?.AccessToken
+                       ?? string.Empty;
         if (string.IsNullOrWhiteSpace(apiToken))
             return Layout.Center() | Text.Muted("No API token. Sign in or configure Sliplane:ApiToken.");
 

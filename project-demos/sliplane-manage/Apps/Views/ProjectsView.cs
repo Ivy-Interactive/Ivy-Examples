@@ -190,33 +190,19 @@ public class ProjectDetailsBlade : ViewBase
         var refreshToken = this.UseRefreshToken();
 
         var overviewQuery = this.UseQuery<SliplaneOverview?, (string, string)>(
-    key: ("proj-detail-overview", _project.Id),
-    fetcher: async ct =>
-    {
-        var result = await client.GetOverviewAsync(_apiToken);
-        // Refresh DataTable rows
-        refreshToken.Refresh();
-        return result;
-    },
-    options: new QueryOptions
-    {
-        RefreshInterval = TimeSpan.FromSeconds(3),
-        RevalidateOnMount = true,
-        KeepPrevious = true
-    });
-
-        var overview = overviewQuery.Value;
-        List<SliplaneService>? rawServices = null;
-        overview?.ServicesByProject.TryGetValue(_project.Id, out rawServices);
-        var services = rawServices ?? new List<SliplaneService>();
-        var servers = overview?.Servers ?? new List<SliplaneServer>();
-        var eventsByService = overview?.EventsByService ?? new Dictionary<string, List<SliplaneServiceEvent>>();
-
-        void Reload()
-        {
-            overviewQuery.Mutator.Revalidate();
-            _parentRefreshToken.Refresh();
-        }
+            key: ("proj-detail-overview", _project.Id),
+            fetcher: async ct =>
+            {
+                var result = await client.GetOverviewAsync(_apiToken);
+                refreshToken.Refresh();
+                return result;
+            },
+            options: new QueryOptions
+            {
+                RefreshInterval = TimeSpan.FromSeconds(3),
+                RevalidateOnMount = true,
+                KeepPrevious = true
+            });
 
         var createSheetOpen = this.UseState(false);
         var editSheetOpen = this.UseState(false);
@@ -233,10 +219,6 @@ public class ProjectDetailsBlade : ViewBase
         var deleteProjectDialogOpen = this.UseState(false);
         var deleteProjectInput = this.UseState(string.Empty);
         var deleteProjectInputError = this.UseState<string?>(() => null);
-
-        object? createSheet = createSheetOpen.Value
-            ? new CreateServiceSheet(createSheetOpen, _apiToken, [], _project.Id)
-            : null;
 
         var selectionState = this.UseState<(string ProjectId, string ProjectName, SliplaneService Service)?>(() => null);
         this.UseEffect(() =>
@@ -258,9 +240,27 @@ public class ProjectDetailsBlade : ViewBase
         var signalReceiver = this.UseSignal<SliplaneRefreshSignal, string, Unit>();
         this.UseEffect(() => signalReceiver.Receive(_ =>
         {
-            Reload();
+            overviewQuery.Mutator.Revalidate();
+            _parentRefreshToken.Refresh();
             return new Unit();
         }));
+
+        var overview = overviewQuery.Value;
+        List<SliplaneService>? rawServices = null;
+        overview?.ServicesByProject.TryGetValue(_project.Id, out rawServices);
+        var services = rawServices ?? new List<SliplaneService>();
+        var servers = overview?.Servers ?? new List<SliplaneServer>();
+        var eventsByService = overview?.EventsByService ?? new Dictionary<string, List<SliplaneServiceEvent>>();
+
+        void Reload()
+        {
+            overviewQuery.Mutator.Revalidate();
+            _parentRefreshToken.Refresh();
+        }
+
+        object? createSheet = createSheetOpen.Value
+            ? new CreateServiceSheet(createSheetOpen, _apiToken, [], _project.Id)
+            : null;
 
         object? editSheet = editSheetOpen.Value && selectedForEdit.Value is { } svcEdit
             ? new EditServiceSheet(
