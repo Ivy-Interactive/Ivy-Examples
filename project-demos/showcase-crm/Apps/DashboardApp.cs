@@ -5,7 +5,7 @@ namespace ShowcaseCrm.Apps;
 [App(icon: Icons.ChartBar, path: ["Apps"])]
 public class DashboardApp : ViewBase
 {
-    private const int SkeletonDelayMs = 2000;
+    private const int SkeletonDelayMs = 50;
     private static bool _hasLoadedOnce;
 
     public override object? Build()
