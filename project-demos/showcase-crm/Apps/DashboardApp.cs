@@ -10,7 +10,9 @@ public class DashboardApp : ViewBase
 
     public override object? Build()
     {
-        var range = this.UseState(() => (fromDate: DateTime.UtcNow.Date.AddDays(-30), toDate: DateTime.UtcNow.Date));
+        var range = this.UseState(() => (
+            fromDate: new DateTime(DateTime.UtcNow.Year, 2, 1),
+            toDate: new DateTime(DateTime.UtcNow.Year, 2, 28)));
         var dataReady = this.UseState(() => _hasLoadedOnce);
 
         this.UseEffect(async () =>
