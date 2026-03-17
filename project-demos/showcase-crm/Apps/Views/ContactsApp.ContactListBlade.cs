@@ -51,12 +51,21 @@ public class ContactListBlade : ViewBase
             blades.Push(this, new ContactDetailsBlade(contact.Id), $"{contact.FirstName} {contact.LastName}");
         });
 
-        object CreateItem(ContactListRecord listRecord) => new ListItem(
-            title: $"{listRecord.FirstName} {listRecord.LastName}",
-            subtitle: listRecord.Email,
-            onClick: onItemClicked,
-            tag: listRecord
-        );
+        object CreateItem(ContactListRecord listRecord) => new FuncView(context =>
+        {
+            var itemQuery = UseContactListRecord(context, listRecord);
+            if (itemQuery.Loading || itemQuery.Value == null)
+            {
+                return new ListItem();
+            }
+            var record = itemQuery.Value;
+            return new ListItem(
+                title: $"{record.FirstName} {record.LastName}",
+                subtitle: record.Email,
+                onClick: onItemClicked,
+                tag: record
+            );
+        });
 
         var createBtn = Icons.Plus.ToButton(_ =>
         {
@@ -101,6 +110,25 @@ public class ContactListBlade : ViewBase
             {
                 KeepPrevious = true
             }
+        );
+    }
+
+    private static QueryResult<ContactListRecord?> UseContactListRecord(IViewContext context, ContactListRecord record)
+    {
+        var factory = context.UseService<ShowcaseCrmContextFactory>();
+        return context.UseQuery(
+            key: (nameof(UseContactListRecord), record.Id),
+            fetcher: async ct =>
+            {
+                await using var db = factory.CreateDbContext();
+                return await db.Contacts
+                    .Where(e => e.Id == record.Id)
+                    .Select(e => new ContactListRecord(e.Id, e.FirstName, e.LastName, e.Email))
+                    .FirstOrDefaultAsync(ct);
+            },
+            options: new QueryOptions { RevalidateOnMount = false },
+            initialValue: record,
+            tags: [(typeof(Contact), record.Id)]
         );
     }
 

@@ -38,10 +38,16 @@ public class LeadEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int l
         {
             if (request == null) return;
             await using var db = factory.CreateDbContext();
-            request.UpdatedAt = DateTime.UtcNow;
-            db.Leads.Update(request);
+            var lead = await db.Leads.FirstOrDefaultAsync(e => e.Id == leadId);
+            if (lead == null) return;
+            lead.CompanyId = request.CompanyId;
+            lead.ContactId = request.ContactId;
+            lead.StatusId = request.StatusId;
+            lead.Source = request.Source;
+            lead.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Lead), leadId));
+            queryService.RevalidateByTag(typeof(Lead[]));
         }
     }
 
