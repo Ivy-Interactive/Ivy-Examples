@@ -2,8 +2,6 @@ namespace ShowcaseCrm.Apps.Views;
 
 public class DealsKanbanBlade : ViewBase
 {
-    private record DealKanbanRecord(int Id, string CompanyName, string ContactName, decimal? Amount, string StageDescription, DateTime? CloseDate, string? LeadSource);
-
     private record DealTableRecord(int Id, string CompanyName, string ContactName, string Amount, string StageDescription, string CloseDate, string Lead);
 
     private static int StageOrder(string s) => s switch { "Prospecting" => 1, "Qualification" => 2, "Proposal" => 3, "Closed Won" => 4, "Closed Lost" => 5, _ => 0 };
@@ -51,6 +49,7 @@ public class DealsKanbanBlade : ViewBase
         var dataTableKey = $"deals-{data.Length}-{data.Aggregate(0, (h, d) => HashCode.Combine(h, d.Id, d.StageDescription, d.CloseDate, d.LeadSource))}";
         var dataTable = tableData.AsQueryable()
             .ToDataTable(idSelector: d => d.Id)
+            .RefreshToken(refreshToken)
             .Key(dataTableKey)
             .Header(d => d.Id, "Id")
             .Header(d => d.CompanyName, "Company")

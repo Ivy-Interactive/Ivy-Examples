@@ -1,5 +1,7 @@
 namespace ShowcaseCrm.Apps.Views;
 
+public record DealKanbanRecord(int Id, string CompanyName, string ContactName, decimal? Amount, string StageDescription, DateTime? CloseDate, string? LeadSource);
+
 public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int dealId) : ViewBase
 {
     public override object? Build()
