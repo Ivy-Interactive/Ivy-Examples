@@ -38,6 +38,8 @@ public class CompanyContactsEditSheet(IState<bool> isOpen, RefreshToken refreshT
             db.Contacts.Update(request);
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Contact), contactId));
+            queryService.RevalidateByTag(typeof(Contact[]));
+            refreshToken.Refresh(contactId);
         }
     }
 }

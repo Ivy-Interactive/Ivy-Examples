@@ -42,6 +42,7 @@ public class LeadDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToken, 
             queryService.RevalidateByTag((typeof(Deal), dealId));
             queryService.RevalidateByTag(typeof(Deal[]));
             if (request.LeadId != null) queryService.RevalidateByTag((typeof(Lead), request.LeadId));
+            refreshToken.Refresh(dealId);
         }
     }
 

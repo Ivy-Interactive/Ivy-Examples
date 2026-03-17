@@ -38,6 +38,8 @@ public class CompanyLeadsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
             db.Leads.Update(request);
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Lead), leadId));
+            queryService.RevalidateByTag(typeof(Lead[]));
+            refreshToken.Refresh(leadId);
         }
     }
 

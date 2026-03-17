@@ -58,6 +58,7 @@ public class CompanyDealsBlade(int companyId) : ViewBase
         var dataTableKey = $"deals-{companyId}-{tableData.Length}-{tableData.Aggregate(0, (h, d) => HashCode.Combine(h, d.Id))}";
         var dataTable = tableData.AsQueryable()
             .ToDataTable(idSelector: d => d.Id)
+            .RefreshToken(refreshToken)
             .Key(dataTableKey)
             .Header(d => d.Id, "Id")
             .Header(d => d.Contact, "Contact")
