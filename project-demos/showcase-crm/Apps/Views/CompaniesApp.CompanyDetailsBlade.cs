@@ -4,6 +4,7 @@ public class CompanyDetailsBlade(int companyId) : ViewBase
 {
     public override object? Build()
     {
+        var isDeleting = UseState(false);
         var factory = UseService<ShowcaseCrmContextFactory>();
         var blades = UseContext<IBladeService>();
         var queryService = UseService<IQueryService>();
@@ -65,12 +66,23 @@ public class CompanyDetailsBlade(int companyId) : ViewBase
 
         var deleteBtn = new Button("Delete", onClick: async _ =>
             {
-                blades.Pop(refresh: true);
-                await DeleteAsync(factory);
-                queryService.RevalidateByTag(typeof(Company[]));
+                isDeleting.Set(true);
+                await Task.Delay(50);
+                try
+                {
+                    await DeleteAsync(factory);
+                    queryService.RevalidateByTag(typeof(Company[]));
+                    blades.Pop(refresh: true);
+                }
+                finally
+                {
+                    isDeleting.Set(false);
+                }
             })
             .Variant(ButtonVariant.Destructive)
             .Icon(Icons.Trash)
+            .Loading(isDeleting.Value)
+            .Disabled(isDeleting.Value)
             .WithConfirm("Are you sure you want to delete this company?", "Delete Company");
 
         var editBtn = new Button("Edit")

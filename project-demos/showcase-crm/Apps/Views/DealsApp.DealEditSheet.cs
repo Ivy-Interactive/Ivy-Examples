@@ -6,6 +6,8 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
 {
     public override object? Build()
     {
+        var isDeleting = UseState(false);
+        var isSaving = UseState(false);
         var factory = UseService<ShowcaseCrmContextFactory>();
         var queryService = UseService<IQueryService>();
 
@@ -37,22 +39,42 @@ public class DealEditSheet(IState<bool> isOpen, RefreshToken refreshToken, int d
 
         var deleteBtn = new Button("Delete", onClick: async _ =>
             {
-                await DeleteDeal(dealId, factory, queryService);
-                queryService.RevalidateByTag((typeof(Deal), dealId));
-                queryService.RevalidateByTag(typeof(Deal[]));
-                refreshToken.Refresh(dealId);
-                isOpen.Set(false);
+                isDeleting.Set(true);
+                await Task.Delay(50);
+                try
+                {
+                    await DeleteDeal(dealId, factory, queryService);
+                    queryService.RevalidateByTag((typeof(Deal), dealId));
+                    queryService.RevalidateByTag(typeof(Deal[]));
+                    refreshToken.Refresh(dealId);
+                    isOpen.Set(false);
+                }
+                finally
+                {
+                    isDeleting.Set(false);
+                }
             })
             .Variant(ButtonVariant.Destructive)
             .Icon(Icons.Trash2)
+            .Loading(isDeleting.Value)
+            .Disabled(loading || isSaving.Value || isDeleting.Value)
             .WithConfirm("Are you sure you want to delete this deal?", "Delete Deal");
 
         var footer = Layout.Horizontal()
-                | new Button("Save").Variant(ButtonVariant.Primary).Loading(loading).Disabled(loading)
+                | new Button("Save").Variant(ButtonVariant.Primary).Loading(loading || isSaving.Value).Disabled(loading || isSaving.Value || isDeleting.Value)
                     .OnClick(async _ =>
                     {
-                        if (await onSubmit())
-                            isOpen.Set(false);
+                        isSaving.Set(true);
+                        await Task.Delay(50);
+                        try
+                        {
+                            if (await onSubmit())
+                                isOpen.Set(false);
+                        }
+                        finally
+                        {
+                            isSaving.Set(false);
+                        }
                     })
                 | deleteBtn
                 | new Button("Cancel").Variant(ButtonVariant.Outline).OnClick(_ => isOpen.Set(false))
