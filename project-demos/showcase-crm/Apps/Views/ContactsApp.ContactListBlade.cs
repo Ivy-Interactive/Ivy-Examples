@@ -10,8 +10,30 @@ public class ContactListBlade : ViewBase
         var refreshToken = UseRefreshToken();
 
         var filter = UseState("");
+        var searchFilter = UseState("");
 
-        var contactsQuery = UseContactListRecords(Context, filter.Value);
+        // Debounce search: update searchFilter 300ms after user stops typing (instant when clearing)
+        UseEffect(async () =>
+        {
+            var cts = new CancellationTokenSource();
+            if (string.IsNullOrWhiteSpace(filter.Value))
+            {
+                searchFilter.Value = filter.Value;
+                return (IDisposable?)new DebounceDisposable(cts);
+            }
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(300, cts.Token);
+                    searchFilter.Value = filter.Value;
+                }
+                catch (OperationCanceledException) { }
+            });
+            return new DebounceDisposable(cts);
+        }, [filter]);
+
+        var contactsQuery = UseContactListRecords(Context, searchFilter.Value);
 
         UseEffect(() =>
         {
@@ -29,21 +51,12 @@ public class ContactListBlade : ViewBase
             blades.Push(this, new ContactDetailsBlade(contact.Id), $"{contact.FirstName} {contact.LastName}");
         });
 
-        object CreateItem(ContactListRecord listRecord) => new FuncView(context =>
-        {
-            var itemQuery = UseContactListRecord(context, listRecord);
-            if (itemQuery.Loading || itemQuery.Value == null)
-            {
-                return new ListItem();
-            }
-            var record = itemQuery.Value;
-            return new ListItem(
-                title: $"{record.FirstName} {record.LastName}",
-                subtitle: record.Email,
-                onClick: onItemClicked,
-                tag: record
-            );
-        });
+        object CreateItem(ContactListRecord listRecord) => new ListItem(
+            title: $"{listRecord.FirstName} {listRecord.LastName}",
+            subtitle: listRecord.Email,
+            onClick: onItemClicked,
+            tag: listRecord
+        );
 
         var createBtn = Icons.Plus.ToButton(_ =>
         {
@@ -91,22 +104,8 @@ public class ContactListBlade : ViewBase
         );
     }
 
-    private static QueryResult<ContactListRecord?> UseContactListRecord(IViewContext context, ContactListRecord record)
+    private sealed class DebounceDisposable(CancellationTokenSource cts) : IDisposable
     {
-        var factory = context.UseService<ShowcaseCrmContextFactory>();
-        return context.UseQuery(
-            key: (nameof(UseContactListRecord), record.Id),
-            fetcher: async ct =>
-            {
-                await using var db = factory.CreateDbContext();
-                return await db.Contacts
-                    .Where(e => e.Id == record.Id)
-                    .Select(e => new ContactListRecord(e.Id, e.FirstName, e.LastName, e.Email))
-                    .FirstOrDefaultAsync(ct);
-            },
-            options: new QueryOptions { RevalidateOnMount = false },
-            initialValue: record,
-            tags: [(typeof(Contact), record.Id)]
-        );
+        public void Dispose() => cts.Cancel();
     }
 }

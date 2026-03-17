@@ -135,7 +135,9 @@ public class DealsKanbanBlade : ViewBase
                 updatedTasks.Insert(insertIndex, updated);
                 deals.Set(updatedTasks.ToArray());
 
-                _ = MoveDeal(id, moveData.ToColumn, factory, queryService, () => dealsQuery.Mutator.Revalidate());
+                // Persist to DB in background; no Revalidate here — avoids extra round-trip and keeps UI instant.
+                // RevalidateByTag invalidates cache so next visit fetches fresh data.
+                _ = MoveDeal(id, moveData.ToColumn, factory, queryService);
             })
             .Empty(
                 new Card()
@@ -176,7 +178,7 @@ public class DealsKanbanBlade : ViewBase
         }
     }
 
-    private static async Task MoveDeal(int id, string toColumn, ShowcaseCrmContextFactory factory, IQueryService queryService, Action revalidate)
+    private static async Task MoveDeal(int id, string toColumn, ShowcaseCrmContextFactory factory, IQueryService queryService)
     {
         await using var db = factory.CreateDbContext();
         var stage = await db.DealStages.FirstOrDefaultAsync(s => s.DescriptionText == toColumn);
@@ -187,7 +189,6 @@ public class DealsKanbanBlade : ViewBase
         deal.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         queryService.RevalidateByTag(typeof(Deal[]));
-        revalidate();
     }
 
     private static QueryResult<DealKanbanRecord[]> UseDealListRecords(IViewContext context)
