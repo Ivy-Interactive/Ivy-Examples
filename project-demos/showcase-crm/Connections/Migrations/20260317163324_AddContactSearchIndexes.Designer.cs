@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShowcaseCrm.Connections.ShowcaseCrm;
 
@@ -10,9 +11,11 @@ using ShowcaseCrm.Connections.ShowcaseCrm;
 namespace ShowcaseCrm.Connections.ShowcaseCrm.Migrations
 {
     [DbContext(typeof(ShowcaseCrmContext))]
-    partial class ShowcaseCrmContextModelSnapshot : ModelSnapshot
+    [Migration("20260317163324_AddContactSearchIndexes")]
+    partial class AddContactSearchIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -79,6 +82,12 @@ namespace ShowcaseCrm.Connections.ShowcaseCrm.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex(new[] { "CompanyId" }, "IX_contacts_CompanyId");
+
+                    b.HasIndex(new[] { "Email" }, "IX_contacts_Email");
+
+                    b.HasIndex(new[] { "FirstName" }, "IX_contacts_FirstName");
+
+                    b.HasIndex(new[] { "LastName" }, "IX_contacts_LastName");
 
                     b.ToTable("contacts");
                 });

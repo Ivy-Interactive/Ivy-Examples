@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -8,6 +8,9 @@ namespace ShowcaseCrm.Connections.ShowcaseCrm;
 
 [Table("contacts")]
 [Index("CompanyId", Name = "IX_contacts_CompanyId")]
+[Index(nameof(FirstName), Name = "IX_contacts_FirstName")]
+[Index(nameof(LastName), Name = "IX_contacts_LastName")]
+[Index(nameof(Email), Name = "IX_contacts_Email")]
 public partial class Contact
 {
     [Key]

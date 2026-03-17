@@ -37,6 +37,8 @@ public class ContactDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
             db.Deals.Update(request);
             await db.SaveChangesAsync();
             queryService.RevalidateByTag((typeof(Deal), dealId));
+            queryService.RevalidateByTag(typeof(Deal[]));
+            refreshToken.Refresh(dealId);
         }
     }
 

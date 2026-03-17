@@ -10,8 +10,30 @@ public class ContactListBlade : ViewBase
         var refreshToken = UseRefreshToken();
 
         var filter = UseState("");
+        var searchFilter = UseState("");
 
-        var contactsQuery = UseContactListRecords(Context, filter.Value);
+        // Debounce search: update searchFilter 300ms after user stops typing (instant when clearing)
+        UseEffect(async () =>
+        {
+            var cts = new CancellationTokenSource();
+            if (string.IsNullOrWhiteSpace(filter.Value))
+            {
+                searchFilter.Value = filter.Value;
+                return (IDisposable?)new DebounceDisposable(cts);
+            }
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(300, cts.Token);
+                    searchFilter.Value = filter.Value;
+                }
+                catch (OperationCanceledException) { }
+            });
+            return new DebounceDisposable(cts);
+        }, [filter]);
+
+        var contactsQuery = UseContactListRecords(Context, searchFilter.Value);
 
         UseEffect(() =>
         {
@@ -108,5 +130,10 @@ public class ContactListBlade : ViewBase
             initialValue: record,
             tags: [(typeof(Contact), record.Id)]
         );
+    }
+
+    private sealed class DebounceDisposable(CancellationTokenSource cts) : IDisposable
+    {
+        public void Dispose() => cts.Cancel();
     }
 }

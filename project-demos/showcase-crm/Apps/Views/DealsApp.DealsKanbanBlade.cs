@@ -2,8 +2,6 @@ namespace ShowcaseCrm.Apps.Views;
 
 public class DealsKanbanBlade : ViewBase
 {
-    private record DealKanbanRecord(int Id, string CompanyName, string ContactName, decimal? Amount, string StageDescription, DateTime? CloseDate, string? LeadSource);
-
     private record DealTableRecord(int Id, string CompanyName, string ContactName, string Amount, string StageDescription, string CloseDate, string Lead);
 
     private static int StageOrder(string s) => s switch { "Prospecting" => 1, "Qualification" => 2, "Proposal" => 3, "Closed Won" => 4, "Closed Lost" => 5, _ => 0 };
@@ -51,6 +49,7 @@ public class DealsKanbanBlade : ViewBase
         var dataTableKey = $"deals-{data.Length}-{data.Aggregate(0, (h, d) => HashCode.Combine(h, d.Id, d.StageDescription, d.CloseDate, d.LeadSource))}";
         var dataTable = tableData.AsQueryable()
             .ToDataTable(idSelector: d => d.Id)
+            .RefreshToken(refreshToken)
             .Key(dataTableKey)
             .Header(d => d.Id, "Id")
             .Header(d => d.CompanyName, "Company")
@@ -62,9 +61,10 @@ public class DealsKanbanBlade : ViewBase
             .Width(d => d.Id, Size.Px(40))
             .Width(d => d.CompanyName, Size.Px(250))
             .Width(d => d.Amount, Size.Px(100))
-            .LoadAllRows(true)
             .Config(config =>
             {
+                config.LoadAllRows = false;
+                config.BatchSize = 50;
                 config.AllowSorting = true;
                 config.AllowFiltering = true;
                 config.ShowSearch = true;
@@ -135,7 +135,9 @@ public class DealsKanbanBlade : ViewBase
                 updatedTasks.Insert(insertIndex, updated);
                 deals.Set(updatedTasks.ToArray());
 
-                _ = MoveDeal(id, moveData.ToColumn, factory, queryService, () => dealsQuery.Mutator.Revalidate());
+                // Persist to DB in background; no Revalidate here — avoids extra round-trip and keeps UI instant.
+                // RevalidateByTag invalidates cache so next visit fetches fresh data.
+                _ = MoveDeal(id, moveData.ToColumn, factory, queryService);
             })
             .Empty(
                 new Card()
@@ -176,7 +178,7 @@ public class DealsKanbanBlade : ViewBase
         }
     }
 
-    private static async Task MoveDeal(int id, string toColumn, ShowcaseCrmContextFactory factory, IQueryService queryService, Action revalidate)
+    private static async Task MoveDeal(int id, string toColumn, ShowcaseCrmContextFactory factory, IQueryService queryService)
     {
         await using var db = factory.CreateDbContext();
         var stage = await db.DealStages.FirstOrDefaultAsync(s => s.DescriptionText == toColumn);
@@ -187,7 +189,6 @@ public class DealsKanbanBlade : ViewBase
         deal.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         queryService.RevalidateByTag(typeof(Deal[]));
-        revalidate();
     }
 
     private static QueryResult<DealKanbanRecord[]> UseDealListRecords(IViewContext context)

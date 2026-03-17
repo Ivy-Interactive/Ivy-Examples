@@ -54,6 +54,7 @@ public class ContactLeadsBlade(int contactId) : ViewBase
         var dataTableKey = $"leads-{contactId}-{tableData.Length}-{tableData.Aggregate(0, (h, l) => HashCode.Combine(h, l.Id))}";
         var dataTable = tableData.AsQueryable()
             .ToDataTable(idSelector: l => l.Id)
+            .RefreshToken(refreshToken)
             .Key(dataTableKey)
             .Header(l => l.Id, "Id")
             .Header(l => l.Status, "Status")
@@ -61,9 +62,10 @@ public class ContactLeadsBlade(int contactId) : ViewBase
             .Header(l => l.CreatedAt, "Created")
             .Header(l => l.UpdatedAt, "Updated")
             .Width(l => l.Id, Size.Px(40))
-            .LoadAllRows(true)
             .Config(config =>
             {
+                config.LoadAllRows = false;
+                config.BatchSize = 50;
                 config.AllowSorting = true;
                 config.AllowFiltering = true;
                 config.ShowSearch = true;

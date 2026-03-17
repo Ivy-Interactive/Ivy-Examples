@@ -58,6 +58,7 @@ public class ContactDealsBlade(int contactId) : ViewBase
         var dataTableKey = $"deals-{contactId}-{tableData.Length}-{tableData.Aggregate(0, (h, d) => HashCode.Combine(h, d.Id))}";
         var dataTable = tableData.AsQueryable()
             .ToDataTable(idSelector: d => d.Id)
+            .RefreshToken(refreshToken)
             .Key(dataTableKey)
             .Header(d => d.Id, "Id")
             .Header(d => d.Company, "Company")
@@ -65,9 +66,10 @@ public class ContactDealsBlade(int contactId) : ViewBase
             .Header(d => d.Amount, "Amount")
             .Header(d => d.CloseDate, "Date")
             .Width(d => d.Id, Size.Px(40))
-            .LoadAllRows(true)
             .Config(config =>
             {
+                config.LoadAllRows = false;
+                config.BatchSize = 50;
                 config.AllowSorting = true;
                 config.AllowFiltering = true;
                 config.ShowSearch = true;
