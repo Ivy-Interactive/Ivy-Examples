@@ -239,6 +239,7 @@
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/sliplane-deploy",
       "deploymentLink": "ivy-projectdemos-sliplane-deploy.sliplane.app",
       "tags": [
+        "Ivy.Analyser",
         "Ivy.Auth.Sliplane",
         "demo"
       ]
