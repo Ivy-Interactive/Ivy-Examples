@@ -61,9 +61,10 @@ public class DealsKanbanBlade : ViewBase
             .Width(d => d.Id, Size.Px(40))
             .Width(d => d.CompanyName, Size.Px(250))
             .Width(d => d.Amount, Size.Px(100))
-            .LoadAllRows(true)
             .Config(config =>
             {
+                config.LoadAllRows = false;
+                config.BatchSize = 50;
                 config.AllowSorting = true;
                 config.AllowFiltering = true;
                 config.ShowSearch = true;
