@@ -205,6 +205,10 @@ userNameState.ToTextInput().Required().MaxLength(50).Placeholder("Enter your nam
 5. **Leverage Type Safety** - Use strongly-typed widgets and state
 6. **Component Composition** - Build complex UIs from simple, reusable views
 
+## CLI Commands
+
+When discovering available CLI commands, you should use `ivy-local cli explain` or `ivy cli explain` (which is powered by Spectre.Console.Cli). This method is preferred over using an MCP server for command discovery, as the CLI provides a reliable, built-in structural breakdown. In general, using the CLI is the preferred approach.
+
 ## Further Reading
 
 [Forms](https://docs.ivy.app/onboarding/concepts/forms.md)
