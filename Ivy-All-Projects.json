@@ -218,6 +218,23 @@
       ]
     },
     {
+      "name": "PR Staging Deploy",
+      "description": "PR Staging Deploy is a backend service for deploying docs and samples to Sliplane for each pull request. It provides a UI to manage PR deployments, listens to GitHub webhooks for automatic deploy/redeploy/delete, and runs a background job to remove deployments older than 7 days.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/pr-staging-deploy",
+      "deploymentLink": "ivy-projectdemos-pr-staging-deploy.sliplane.app",
+      "tags": [
+        "PR Staging",
+        "Sliplane",
+        "GitHub",
+        "Deploy",
+        "Docs",
+        "Samples",
+        "Ivy Framework",
+        "C#",
+        ".NET"
+      ]
+    },
+    {
       "name": "Showcase CRM",
       "description": "Showcase CRM is a full-featured Customer Relationship Management web application built with Ivy Framework. It demonstrates how to build a complete CRM with companies, contacts, leads, deals, and users management—featuring an interactive dashboard with metrics and charts, Kanban boards for deal pipeline, DataTables with row actions, and Entity Framework Core with SQLite.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/showcase-crm",
