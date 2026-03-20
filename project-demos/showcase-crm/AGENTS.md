@@ -207,7 +207,7 @@ userNameState.ToTextInput().Required().MaxLength(50).Placeholder("Enter your nam
 
 ## CLI Commands
 
-Prefer using `ivy-local cli explain` or `ivy cli explain` for command discovery over MCP server tools as it provides a reliable, built-in structural breakdown.
+Prefer using `ivy cli explain` for command discovery over MCP server tools as it provides a reliable, built-in structural breakdown.
 
 ## Further Reading
 
