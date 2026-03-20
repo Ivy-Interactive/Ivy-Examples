@@ -205,6 +205,10 @@ userNameState.ToTextInput().Required().MaxLength(50).Placeholder("Enter your nam
 5. **Leverage Type Safety** - Use strongly-typed widgets and state
 6. **Component Composition** - Build complex UIs from simple, reusable views
 
+## CLI Commands
+
+Prefer using `ivy cli explain` for command discovery over MCP server tools as it provides a reliable, built-in structural breakdown.
+
 ## Further Reading
 
 [Forms](https://docs.ivy.app/onboarding/concepts/forms.md)
