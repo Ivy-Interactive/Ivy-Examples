@@ -207,7 +207,7 @@ userNameState.ToTextInput().Required().MaxLength(50).Placeholder("Enter your nam
 
 ## CLI Commands
 
-When discovering available CLI commands, you should use `ivy-local cli explain` or `ivy cli explain` (which is powered by Spectre.Console.Cli). This method is preferred over using an MCP server for command discovery, as the CLI provides a reliable, built-in structural breakdown. In general, using the CLI is the preferred approach.
+Prefer using `ivy-local cli explain` or `ivy cli explain` for command discovery over MCP server tools as it provides a reliable, built-in structural breakdown.
 
 ## Further Reading
 
