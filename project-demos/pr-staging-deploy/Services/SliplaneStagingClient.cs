@@ -133,6 +133,63 @@ public class SliplaneStagingClient
         return list;
     }
 
+    /// <summary>All services in the project (no name filter).</summary>
+    public async Task<List<SliplaneServiceInfo>> ListAllServicesAsync(string apiToken, string projectId)
+    {
+        var client = CreateClient(apiToken);
+        var response = await client.GetAsync($"{BaseUrl}/projects/{projectId}/services");
+        if (!response.IsSuccessStatusCode)
+            return new List<SliplaneServiceInfo>();
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        JsonElement servicesEl = doc.RootElement.ValueKind == JsonValueKind.Array
+            ? doc.RootElement
+            : (doc.RootElement.TryGetProperty("services", out var s) ? s : doc.RootElement);
+        var list = new List<SliplaneServiceInfo>();
+        if (servicesEl.ValueKind != JsonValueKind.Array)
+            return list;
+
+        foreach (var el in servicesEl.EnumerateArray())
+        {
+            var name = el.GetProperty("name").GetString() ?? "";
+            var id = el.GetProperty("id").GetString() ?? "";
+            var managedDomain = el.TryGetProperty("network", out var net) && net.TryGetProperty("managedDomain", out var md)
+                ? md.GetString()
+                : null;
+            var createdAt = el.TryGetProperty("createdAt", out var ca)
+                ? DateTime.Parse(ca.GetString() ?? "1970-01-01")
+                : DateTime.MinValue;
+            var status = el.TryGetProperty("status", out var st) ? st.GetString() : null;
+            list.Add(new SliplaneServiceInfo(id, managedDomain ?? "", name, createdAt, status));
+        }
+
+        return list;
+    }
+
+    /// <summary>Deletes every service in the given Sliplane project.</summary>
+    public async Task<(int Deleted, int Failed)> DeleteAllServicesInProjectAsync(string apiToken, string projectId)
+    {
+        var services = await ListAllServicesAsync(apiToken, projectId);
+        var deleted = 0;
+        var failed = 0;
+        foreach (var svc in services)
+        {
+            if (string.IsNullOrEmpty(svc.Id))
+            {
+                failed++;
+                continue;
+            }
+
+            if (await DeleteServiceAsync(apiToken, projectId, svc.Id))
+                deleted++;
+            else
+                failed++;
+        }
+
+        return (deleted, failed);
+    }
+
     public async Task<List<SliplaneServiceEvent>> GetServiceEventsAsync(string apiToken, string projectId, string serviceId)
     {
         var client = CreateClient(apiToken);
