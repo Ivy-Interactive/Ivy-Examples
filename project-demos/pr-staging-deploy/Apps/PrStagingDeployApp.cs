@@ -33,6 +33,8 @@ public class PrStagingDeployApp : ViewBase
         var refreshToken = this.UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
         var message = this.UseState<(string Text, bool IsError)?>(() => null);
+        var pinnedTableRows = this.UseState<List<PrRow>?>(() => null);
+        var deleteAllWaitingForFreshNoStaging = this.UseState(false);
 
         var overviewQuery = this.UseQuery<List<PrRow>, string>(
             key: $"pr-overview:{config["Sliplane:ApiToken"] ?? ""}",
@@ -121,8 +123,27 @@ public class PrStagingDeployApp : ViewBase
                     {
                         var rowList = overviewQuery.Value ?? new List<PrRow>();
                         var branchesToDeploy = rowList.Where(r => r.Status != "deployed").Select(r => r.HeadRef).ToList();
+                        if (branchesToDeploy.Count > 0)
+                        {
+                            var branchSet = branchesToDeploy.ToHashSet();
+                            var updated = rowList.Select(r =>
+                                branchSet.Contains(r.HeadRef)
+                                    ? r with
+                                    {
+                                        Status = "pending",
+                                        StatusIcon = Icons.Clock,
+                                        DocsDisplay = "Deploying...",
+                                        SamplesDisplay = "Deploying...",
+                                        DocsUrl = null,
+                                        SamplesUrl = null
+                                    }
+                                    : r).ToList();
+                            overviewQuery.Mutator.Mutate(updated, revalidate: false);
+                            refreshToken.Refresh();
+                        }
+
                         ShowMessage($"Triggering deploy for {branchesToDeploy.Count} PRs...", false);
-                        foreach (var b in branchesToDeploy) _ = DeployBranchAsync(b);
+                        foreach (var b in branchesToDeploy) _ = DeployBranchAsync(b, clearMessageFirst: false);
                     }
                     await Task.CompletedTask;
                 }, "Deploy All", AlertButtonSet.OkCancel);
@@ -133,22 +154,73 @@ public class PrStagingDeployApp : ViewBase
                 {
                     if (result.IsOk())
                     {
-                        ShowMessage("Deleting all staging services...", false);
-                        _ = Task.Run(async () =>
+                        var rowList = overviewQuery.Value ?? new List<PrRow>();
+                        if (rowList.Count > 0)
                         {
-                            if (string.IsNullOrEmpty(token)) return;
-                            try
+                            var updated = rowList.Select(r => r with
                             {
-                                var projectId = config["Sliplane:ProjectId"] ?? "";
-                                var res = await sliplane.DeleteAllServicesInProjectAsync(token, projectId);
-                                ShowMessage($"Deleted {res.Deleted} services. Failed: {res.Failed}.", res.Failed > 0);
-                                overviewQuery.Mutator.Revalidate();
+                                Status = "pending",
+                                StatusIcon = Icons.Clock,
+                                DocsDisplay = DeletingStagingCellHint,
+                                SamplesDisplay = DeletingStagingCellHint,
+                                ExpiresAt = "—",
+                                DocsUrl = null,
+                                SamplesUrl = null
+                            }).ToList();
+                            pinnedTableRows.Set(updated);
+                            overviewQuery.Mutator.Mutate(updated, revalidate: false);
+                            refreshToken.Refresh();
+                            deleteAllWaitingForFreshNoStaging.Set(true);
+                        }
+
+                        ShowMessage("Deleting all staging services...", false);
+                        try
+                        {
+                            if (string.IsNullOrEmpty(token))
+                            {
+                                deleteAllWaitingForFreshNoStaging.Set(false);
+                                pinnedTableRows.Set(null);
+                                return;
                             }
-                            catch (Exception ex) { ShowMessage(ex.Message, true); }
-                        });
+
+                            var projectId = config["Sliplane:ProjectId"] ?? "";
+                            var res = await sliplane.DeleteAllServicesInProjectAsync(token, projectId);
+                            ShowMessage($"Deleted {res.Deleted} services. Failed: {res.Failed}.", res.Failed > 0);
+                            overviewQuery.Mutator.Revalidate();
+                            if (res.Failed > 0)
+                            {
+                                deleteAllWaitingForFreshNoStaging.Set(false);
+                                pinnedTableRows.Set(null);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ShowMessage(ex.Message, true);
+                            deleteAllWaitingForFreshNoStaging.Set(false);
+                            pinnedTableRows.Set(null);
+                        }
                     }
                     await Task.CompletedTask;
                 }, "Delete All", AlertButtonSet.OkCancel);
+            }
+        }, EffectTrigger.OnBuild());
+
+        this.UseEffect(() =>
+        {
+            if (!deleteAllWaitingForFreshNoStaging.Value) return;
+            if (overviewQuery.Loading) return;
+            var v = overviewQuery.Value;
+            if (v == null || v.Count == 0)
+            {
+                deleteAllWaitingForFreshNoStaging.Set(false);
+                pinnedTableRows.Set(null);
+                return;
+            }
+
+            if (v.All(RowLooksLikeNoStagingYet))
+            {
+                deleteAllWaitingForFreshNoStaging.Set(false);
+                pinnedTableRows.Set(null);
             }
         }, EffectTrigger.OnBuild());
 
@@ -156,11 +228,11 @@ public class PrStagingDeployApp : ViewBase
         void ClearMessage() => message.Set(null);
         void ShowMessage(string text, bool isError = false) => message.Set((text, isError));
 
-        async Task DeployBranchAsync(string branchName)
+        async Task DeployBranchAsync(string branchName, bool clearMessageFirst = true)
         {
             var t = config["Sliplane:ApiToken"] ?? "";
             if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
-            ClearMessage();
+            if (clearMessageFirst) ClearMessage();
             try
             {
                 var result = await deploySvc.DeployBranchAsync(t, branchName);
@@ -189,9 +261,9 @@ public class PrStagingDeployApp : ViewBase
                 | Text.H2("PR Staging Deploy")
                 | Text.Muted("Configure Sliplane:ApiToken in appsettings or environment variables.");
 
-        var rows = overviewQuery.Value ?? new List<PrRow>();
+        var rows = pinnedTableRows.Value ?? overviewQuery.Value ?? new List<PrRow>();
 
-        if (overviewQuery.Loading && overviewQuery.Value == null && rows.Count == 0)
+        if (overviewQuery.Loading && overviewQuery.Value == null && rows.Count == 0 && pinnedTableRows.Value == null)
             return Layout.Center() | Text.Muted("Loading...");
 
         if (overviewQuery.Error is { } errEx)
@@ -306,6 +378,14 @@ public class PrStagingDeployApp : ViewBase
     private const string NotDeployedDocsSamplesHint =
         "No staging service yet.\n\n"
         + "Use Deploy (rocket) in the row menu — after Sliplane creates the service, deploy/build events appear here.";
+
+    private const string DeletingStagingCellHint = "Deleting staging…";
+
+    /// <summary>Matches rows built in the query fetcher when there is no Sliplane deployment for the branch.</summary>
+    private static bool RowLooksLikeNoStagingYet(PrRow r) =>
+        r.Status == "not deployed"
+        && string.Equals(r.DocsDisplay, NotDeployedDocsSamplesHint, StringComparison.Ordinal)
+        && string.Equals(r.SamplesDisplay, NotDeployedDocsSamplesHint, StringComparison.Ordinal);
 
     private const string PreparingStagingLogMessage =
         "Preparing…\nBuild and deploy events will appear here shortly.";
