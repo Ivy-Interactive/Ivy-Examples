@@ -2,7 +2,7 @@ using ShowcaseCrm.Apps.Views;
 
 namespace ShowcaseCrm.Apps;
 
-[App(icon: Icons.ChartBar, path: ["Apps"])]
+[App(icon: Icons.ChartBar, group: ["Apps"])]
 public class DashboardApp : ViewBase
 {
     private const int SkeletonDelayMs = 50;
