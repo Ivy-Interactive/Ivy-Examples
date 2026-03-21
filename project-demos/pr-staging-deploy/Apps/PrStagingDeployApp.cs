@@ -7,7 +7,7 @@ using PrStagingDeploy.Services;
 /// <summary>
 /// PR Staging Deploy — one table: PRs with Sliplane deploy status. Data from GitHub + Sliplane API.
 /// </summary>
-[App(icon: Icons.GitBranch, title: "PR Staging Deploy", searchHints: ["pr", "staging", "deploy", "samples", "docs"])]
+[App(id: "pr-staging-deploy-app", icon: Icons.GitBranch, title: "PR Staging Deploy", searchHints: ["pr", "staging", "deploy", "samples", "docs"])]
 public class PrStagingDeployApp : ViewBase
 {
     private record PrRow(
@@ -102,17 +102,68 @@ public class PrStagingDeployApp : ViewBase
                 RevalidateOnMount = true
             });
 
+        this.UseEffect(() =>
+        {
+            var p = PrStagingFooterBridge.Consume();
+            if (p == null) return;
+            var token = config["Sliplane:ApiToken"] ?? "";
+            if (string.IsNullOrEmpty(token))
+            {
+                client.Toast("Configure Sliplane:ApiToken first.", "PR Staging Deploy");
+                return;
+            }
+
+            if (p == "deploy-all")
+            {
+                showAlert("Are you sure you want to trigger deploy for ALL open PRs?", async result =>
+                {
+                    if (result.IsOk())
+                    {
+                        var rowList = overviewQuery.Value ?? new List<PrRow>();
+                        var branchesToDeploy = rowList.Where(r => r.Status != "deployed").Select(r => r.HeadRef).ToList();
+                        ShowMessage($"Triggering deploy for {branchesToDeploy.Count} PRs...", false);
+                        foreach (var b in branchesToDeploy) _ = DeployBranchAsync(b);
+                    }
+                    await Task.CompletedTask;
+                }, "Deploy All", AlertButtonSet.OkCancel);
+            }
+            else if (p == "delete-all")
+            {
+                showAlert("Are you sure you want to delete ALL staging services in the project?", async result =>
+                {
+                    if (result.IsOk())
+                    {
+                        ShowMessage("Deleting all staging services...", false);
+                        _ = Task.Run(async () =>
+                        {
+                            if (string.IsNullOrEmpty(token)) return;
+                            try
+                            {
+                                var projectId = config["Sliplane:ProjectId"] ?? "";
+                                var res = await sliplane.DeleteAllServicesInProjectAsync(token, projectId);
+                                ShowMessage($"Deleted {res.Deleted} services. Failed: {res.Failed}.", res.Failed > 0);
+                                overviewQuery.Mutator.Revalidate();
+                            }
+                            catch (Exception ex) { ShowMessage(ex.Message, true); }
+                        });
+                    }
+                    await Task.CompletedTask;
+                }, "Delete All", AlertButtonSet.OkCancel);
+            }
+        }, EffectTrigger.OnBuild());
+
         var apiToken = config["Sliplane:ApiToken"] ?? "";
         void ClearMessage() => message.Set(null);
         void ShowMessage(string text, bool isError = false) => message.Set((text, isError));
 
         async Task DeployBranchAsync(string branchName)
         {
-            if (string.IsNullOrEmpty(apiToken)) { ShowMessage("Sliplane API token required.", true); return; }
+            var t = config["Sliplane:ApiToken"] ?? "";
+            if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             ClearMessage();
             try
             {
-                var result = await deploySvc.DeployBranchAsync(apiToken, branchName);
+                var result = await deploySvc.DeployBranchAsync(t, branchName);
                 ShowMessage(result.Message, !result.Success);
                 if (result.Success) overviewQuery.Mutator.Revalidate();
             }
@@ -121,11 +172,12 @@ public class PrStagingDeployApp : ViewBase
 
         async Task DeleteBranchAsync(string branchName)
         {
-            if (string.IsNullOrEmpty(apiToken)) { ShowMessage("Sliplane API token required.", true); return; }
+            var t = config["Sliplane:ApiToken"] ?? "";
+            if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             ClearMessage();
             try
             {
-                var result = await deploySvc.DeleteBranchAsync(apiToken, branchName);
+                var result = await deploySvc.DeleteBranchAsync(t, branchName);
                 ShowMessage(result.Message, !result.Success);
                 if (result.Success) overviewQuery.Mutator.Revalidate();
             }
@@ -145,7 +197,7 @@ public class PrStagingDeployApp : ViewBase
         if (overviewQuery.Error is { } errEx)
             return new Callout($"Error: {errEx.Message}", variant: CalloutVariant.Error);
 
-        var header = Layout.Vertical()
+        var header = Layout.Horizontal().Height(Size.Fit())
             | Text.H2("PR Staging Deploy");
 
         var table = rows
@@ -192,7 +244,7 @@ public class PrStagingDeployApp : ViewBase
                 var args = e.Value;
                 if (args is null) return ValueTask.CompletedTask;
                 var headRef = args.Id?.ToString();
-                var tag = args.GetType().GetProperty("Tag")?.GetValue(args)?.ToString();
+                var tag = args.Tag?.ToString();
                 if (string.IsNullOrEmpty(headRef)) return ValueTask.CompletedTask;
 
                 if (tag == "deploy")

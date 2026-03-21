@@ -1,6 +1,7 @@
 using System.Globalization;
 using PrStagingDeploy.Apps;
 using PrStagingDeploy.Services;
+using Ivy;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
@@ -32,9 +33,27 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = new ChromeSettings()
+var chromeSettings = ChromeSettings.Default()
     .DefaultApp<PrStagingDeployApp>()
-    .UseTabs(preventDuplicates: true);
+    .UseTabs(preventDuplicates: true)
+    .UseFooterMenuItemsTransformer((items, navigator) =>
+    {
+        // Convert to list for easier manipulation
+        var list = items.ToList();
+
+        list.Add(MenuItem.Default("Deploy All Open PRs").Icon(Icons.Rocket).OnSelect(() =>
+        {
+            PrStagingFooterBridge.Request("deploy-all");
+            navigator.Navigate(typeof(PrStagingDeployApp));
+        }));
+        list.Add(MenuItem.Default("Delete All Branches").Icon(Icons.Trash2).OnSelect(() =>
+        {
+            PrStagingFooterBridge.Request("delete-all");
+            navigator.Navigate(typeof(PrStagingDeployApp));
+        }));
+
+        return list;
+    });
 server.UseChrome(chromeSettings);
 
 await server.RunAsync();
