@@ -3,7 +3,7 @@ using System.IO;
 
 namespace AsposeOcrExample.Apps;
 
-[App(icon: Icons.FileImage, path: ["Apps"])]
+[App(icon: Icons.FileImage)]
 public class ImageToTextApp : ViewBase
 {
     public override object? Build()

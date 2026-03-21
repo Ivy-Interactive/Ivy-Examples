@@ -2,7 +2,7 @@ using Vc.Apps.Views;
 
 namespace Vc.Apps;
 
-[App(icon: Icons.ChartBar, path: ["Apps"])]
+[App(icon: Icons.ChartBar, group: ["Apps"])]
 public class DashboardApp : ViewBase
 {
     public override object? Build()

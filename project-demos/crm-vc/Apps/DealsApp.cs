@@ -2,7 +2,7 @@ using Vc.Apps.Views;
 
 namespace Vc.Apps;
 
-[App(icon: Icons.DollarSign, path: ["Apps"])]
+[App(icon: Icons.DollarSign, group: ["Apps"])]
 public class DealsApp : ViewBase
 {
     public override object? Build()

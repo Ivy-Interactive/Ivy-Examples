@@ -2,7 +2,7 @@ using ShowcaseCrm.Apps.Views;
 
 namespace ShowcaseCrm.Apps;
 
-[App(icon: Icons.Building, path: ["Apps"])]
+[App(icon: Icons.Building, group: ["Apps"])]
 public class CompaniesApp : ViewBase
 {
     public override object? Build()

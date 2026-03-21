@@ -4,7 +4,7 @@ using Type = BarcodeStandard.Type;
 
 namespace BarcodeLibExample.Apps
 {
-    [App(icon: Icons.Barcode, title: "BarcodeLib", path: ["Apps"])]
+    [App(icon: Icons.Barcode, title: "BarcodeLib")]
     public sealed class BarcodeLibApp : ViewBase
     {
         private static readonly (string Label, Type Type)[] Symbologies =

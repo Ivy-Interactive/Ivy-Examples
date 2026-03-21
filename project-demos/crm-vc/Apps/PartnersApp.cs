@@ -2,7 +2,7 @@ using Vc.Apps.Views;
 
 namespace Vc.Apps;
 
-[App(icon: Icons.Users, path: ["Apps"])]
+[App(icon: Icons.Users, group: ["Apps"])]
 public class PartnersApp : ViewBase
 {
     public override object? Build()

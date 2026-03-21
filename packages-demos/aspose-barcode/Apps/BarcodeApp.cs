@@ -1,6 +1,6 @@
 namespace AsposeBarCodeExample.Apps;
 
-[App(icon: Icons.QrCode, title: "Aspose BarCode", path: ["Apps"])]
+[App(icon: Icons.QrCode, title: "Aspose BarCode")]
 public class BarcodeApp : ViewBase
 {
   private enum DemoSize
