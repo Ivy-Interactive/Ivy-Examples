@@ -2,7 +2,7 @@ using AutodealerCrm.Apps.Views;
 
 namespace AutodealerCrm.Apps;
 
-[App(icon: Icons.Users, path: ["Apps"])]
+[App(icon: Icons.Users, group: ["Apps"])]
 public class CustomersApp : ViewBase
 {
     public override object? Build()

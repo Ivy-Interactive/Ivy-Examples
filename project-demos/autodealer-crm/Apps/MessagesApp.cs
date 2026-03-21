@@ -2,7 +2,7 @@ using AutodealerCrm.Apps.Views;
 
 namespace AutodealerCrm.Apps;
 
-[App(icon: Icons.MessageCircle, path: ["Apps"])]
+[App(icon: Icons.MessageCircle, group: ["Apps"])]
 public class MessagesApp : ViewBase
 {
     public override object? Build()
