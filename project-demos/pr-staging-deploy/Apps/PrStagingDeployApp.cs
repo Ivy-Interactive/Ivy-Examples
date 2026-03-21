@@ -1,5 +1,6 @@
 namespace PrStagingDeploy.Apps;
 
+using System.Text;
 using PrStagingDeploy.Models;
 using PrStagingDeploy.Services;
 
@@ -18,7 +19,9 @@ public class PrStagingDeployApp : ViewBase
         string ExpiresAt,
         string DocsDisplay,
         string SamplesDisplay,
-        string? HtmlUrl);
+        string? HtmlUrl,
+        string? DocsUrl,
+        string? SamplesUrl);
 
     public override object? Build()
     {
@@ -80,11 +83,14 @@ public class PrStagingDeployApp : ViewBase
                     {
                         status = "not deployed";
                         statusIcon = Icons.CircleX;
+                        docsDisplay = NotDeployedDocsSamplesHint;
+                        samplesDisplay = NotDeployedDocsSamplesHint;
                     }
 
                     rows.Add(new PrRow(
                         pr.HeadRef, pr.Number, pr.Title,
-                        status, statusIcon, expiresAt, docsDisplay, samplesDisplay, pr.HtmlUrl));
+                        status, statusIcon, expiresAt, docsDisplay, samplesDisplay, pr.HtmlUrl,
+                        dep?.DocsUrl, dep?.SamplesUrl));
                 }
 
                 return rows.OrderByDescending(r => r.Number).ToList();
@@ -163,6 +169,8 @@ public class PrStagingDeployApp : ViewBase
             .Width(r => r.SamplesDisplay, Size.Px(450))
             .Hidden(r => r.HeadRef)
             .Hidden(r => r.HtmlUrl)
+            .Hidden(r => r.DocsUrl)
+            .Hidden(r => r.SamplesUrl)
             .Config(c =>
             {
                 c.AllowSorting = true;
@@ -173,7 +181,12 @@ public class PrStagingDeployApp : ViewBase
             .RowActions(
                 MenuItem.Default(Icons.Rocket, "Deploy").Tag("deploy"),
                 MenuItem.Default(Icons.Trash2, "Delete").Tag("delete"),
-                MenuItem.Default(Icons.ExternalLink, "Open PR").Tag("pr"))
+                MenuItem.Default(Icons.ExternalLink, "open").Label("Open").Tag("open-dd")
+                    .Children([
+                        MenuItem.Default(Icons.GitBranch, "pr").Label("Open PR").Tag("pr"),
+                        MenuItem.Default(Icons.FileText, "docs").Label("Open Docs").Tag("docs"),
+                        MenuItem.Default(Icons.Box, "samples").Label("Open Samples").Tag("samples"),
+                    ]))
             .OnRowAction(e =>
             {
                 var args = e.Value;
@@ -190,7 +203,7 @@ public class PrStagingDeployApp : ViewBase
                         if (result.IsOk())
                         {
                             var updated = rows.Select(r => r.HeadRef == branch
-                                ? r with { Status = "pending", StatusIcon = Icons.Clock, DocsDisplay = "Deploying...", SamplesDisplay = "Deploying..." }
+                                ? r with { Status = "pending", StatusIcon = Icons.Clock, DocsDisplay = "Deploying...", SamplesDisplay = "Deploying...", DocsUrl = null, SamplesUrl = null }
                                 : r).ToList();
                             overviewQuery.Mutator.Mutate(updated, revalidate: false);
                             refreshToken.Refresh();
@@ -206,7 +219,7 @@ public class PrStagingDeployApp : ViewBase
                         if (result.IsOk())
                         {
                             var updated = rows.Select(r => r.HeadRef == branch
-                                ? r with { Status = "not deployed", StatusIcon = Icons.CircleX, DocsDisplay = "", SamplesDisplay = "", ExpiresAt = "—" }
+                                ? r with { Status = "not deployed", StatusIcon = Icons.CircleX, DocsDisplay = NotDeployedDocsSamplesHint, SamplesDisplay = NotDeployedDocsSamplesHint, ExpiresAt = "—", DocsUrl = null, SamplesUrl = null }
                                 : r).ToList();
                             overviewQuery.Mutator.Mutate(updated, revalidate: false);
                             refreshToken.Refresh();
@@ -219,10 +232,18 @@ public class PrStagingDeployApp : ViewBase
                     var pr = rows.FirstOrDefault(r => r.HeadRef == headRef);
                     if (pr?.HtmlUrl != null) client.OpenUrl(pr.HtmlUrl);
                 }
+                else if (tag == "docs")
+                {
+                    var pr = rows.FirstOrDefault(r => r.HeadRef == headRef);
+                    if (!string.IsNullOrEmpty(pr?.DocsUrl)) client.OpenUrl(pr.DocsUrl!);
+                }
+                else if (tag == "samples")
+                {
+                    var pr = rows.FirstOrDefault(r => r.HeadRef == headRef);
+                    if (!string.IsNullOrEmpty(pr?.SamplesUrl)) client.OpenUrl(pr.SamplesUrl!);
+                }
                 return ValueTask.CompletedTask;
-            })
-            .Renderer(e => e.DocsDisplay, new LinkDisplayRenderer { Type = LinkDisplayType.Url })
-            .Renderer(e => e.SamplesDisplay, new LinkDisplayRenderer { Type = LinkDisplayType.Url });
+            });
 
         return Layout.Vertical().Height(Size.Full())
             | header
@@ -230,10 +251,19 @@ public class PrStagingDeployApp : ViewBase
             | alertView;
     }
 
+    private const string NotDeployedDocsSamplesHint =
+        "No staging service yet.\n\n"
+        + "Use Deploy (rocket) in the row menu — after Sliplane creates the service, deploy/build events appear here.";
+
+    private const string PreparingStagingLogMessage =
+        "Preparing…\nBuild and deploy events will appear here shortly.";
+
     private static bool IsDeployEvent(SliplaneServiceEvent e)
     {
         var type = (e.Type ?? "").ToLowerInvariant();
         var msg = (e.Message ?? "").ToLowerInvariant();
+        if (type is "service_resume_success" or "service_suspend_success" or "service_suspend" or "service_resume")
+            return true;
         if (type.Contains("deploy") || type.Contains("build")) return true;
         if (msg.Contains("deploy") || msg.Contains("deployed") || msg.Contains("build failed")) return true;
         return false;
@@ -243,7 +273,8 @@ public class PrStagingDeployApp : ViewBase
     {
         var type = (e.Type ?? "").ToLowerInvariant();
         var msg = (e.Message ?? "").ToLowerInvariant();
-        return type == "service_deploy_success" || msg.Contains("deployed successfully");
+        return type is "service_deploy_success" or "service_resume_success"
+            || msg.Contains("deployed successfully");
     }
 
     private static bool IsFailEvent(SliplaneServiceEvent e)
@@ -263,8 +294,12 @@ public class PrStagingDeployApp : ViewBase
 
     private static (string Status, Icons Icon) GetStatusFromEvents(List<SliplaneServiceEvent> events)
     {
+        if (events.Count == 0)
+            return ("pending", Icons.Clock);
+
         var deployEvents = events.Where(IsDeployEvent).OrderByDescending(e => e.CreatedAt).ToList();
-        if (deployEvents.Count == 0) return ("deployed", Icons.Check);
+        if (deployEvents.Count == 0)
+            return ("pending", Icons.Clock);
 
         var lastEv = deployEvents.First();
         if (IsFailEvent(lastEv))
@@ -277,21 +312,36 @@ public class PrStagingDeployApp : ViewBase
         return ("deployed", Icons.Check);
     }
 
-    private static string FormatEventForLog(SliplaneServiceEvent e)
+    /// <summary>Multi-line block for one event (matches Sliplane UI timeline).</summary>
+    private static string FormatEventBlockForTable(SliplaneServiceEvent e)
     {
+        var sb = new StringBuilder();
+        sb.AppendLine(FormatEventType(e.Type));
+        sb.AppendLine(e.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy, HH:mm:ss"));
         if (!string.IsNullOrWhiteSpace(e.Message))
-            return e.Message.Trim();
-        var parts = new List<string> { FormatEventType(e.Type), e.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy, HH:mm:ss") };
-        if (!string.IsNullOrWhiteSpace(e.TriggeredBy))
-            parts.Add($"triggered by {e.TriggeredBy}");
+            sb.AppendLine(e.Message.Trim());
         if (!string.IsNullOrWhiteSpace(e.Reason))
-            parts.Add(e.Reason);
-        return string.Join("\n", parts);
+            sb.AppendLine(e.Reason.Trim());
+        if (!string.IsNullOrWhiteSpace(e.TriggeredBy))
+            sb.Append($"triggered by {e.TriggeredBy}");
+        return sb.ToString().TrimEnd();
+    }
+
+    private static string FormatEventLogColumn(List<SliplaneServiceEvent> events, int maxEvents)
+    {
+        var ordered = events
+            .OrderByDescending(e => e.CreatedAt)
+            .Take(maxEvents)
+            .Select(FormatEventBlockForTable);
+        return string.Join("\n\n", ordered);
     }
 
     private static string FormatEventType(string? type) => type switch
     {
         "service_deploy_success" => "Service deployed successfully",
+        "service_resume_success" => "Service resumed successfully",
+        "service_suspend_success" => "Service suspended successfully",
+        "service_build" => "Service build",
         "service_deploy" => "Deploy started",
         "service_deploy_failed" => "Service deploy failed",
         "service_build_failed" => "Build failed",
@@ -300,31 +350,17 @@ public class PrStagingDeployApp : ViewBase
 
     private static string GetServiceDisplay(string? url, string? svcStatus, List<SliplaneServiceEvent> events, string overallStatus)
     {
+        const int maxEventsInCell = 40;
         var rawStatus = (svcStatus ?? "").ToLowerInvariant();
-        var lastFail = events.Where(IsFailEvent).OrderByDescending(e => e.CreatedAt).FirstOrDefault();
-        if (lastFail != null)
-            return !string.IsNullOrWhiteSpace(lastFail.Message) ? lastFail.Message.Trim() : FormatEventType(lastFail.Type);
         if (rawStatus is "suspended" or "paused")
             return "suspended";
         if (rawStatus is "error" or "failed")
             return "error";
 
-        if (overallStatus == "deployed" && !string.IsNullOrEmpty(url))
-            return url;
+        if (events.Count > 0)
+            return FormatEventLogColumn(events, maxEventsInCell);
 
-        if (overallStatus == "pending" && events.Count > 0)
-        {
-            var logLines = events
-                .OrderByDescending(e => e.CreatedAt)
-                .Take(10)
-                .Select(FormatEventForLog);
-            return string.Join("\n\n", logLines);
-        }
-
-        if (overallStatus == "pending")
-            return "Deploying...";
-
-        return !string.IsNullOrEmpty(url) ? url : "";
+        return PreparingStagingLogMessage;
     }
 
 }

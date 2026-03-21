@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 /// <summary>
-/// Handles GitHub webhooks: pull_request (opened/synchronize/closed), issue_comment (/deploy).
+/// Handles GitHub webhooks: pull_request (opened/reopened/synchronize → deploy; closed → delete staging), issue_comment (/deploy).
 /// </summary>
 public class GitHubWebhookHandler
 {
@@ -98,7 +98,9 @@ public class GitHubWebhookHandler
                 break;
 
             case "closed":
-                _logger.LogInformation("PR #{Pr} closed: {Branch} — deployment kept until ExpiryDays + closed PR", prNumber, branch);
+                _logger.LogInformation("PR #{Pr} closed: {Branch} — removing Sliplane staging services", prNumber, branch);
+                var deleteResult = await _deployService.DeleteBranchAsync(apiToken, branch);
+                _logger.LogInformation("Delete result: {Success} - {Message}", deleteResult.Success, deleteResult.Message);
                 break;
 
             default:
