@@ -72,9 +72,9 @@ public class PrStagingDeployApp : ViewBase
                         var samplesEvents = !string.IsNullOrEmpty(projId) && !string.IsNullOrEmpty(dep.SamplesServiceId)
                             ? await sliplane.GetServiceEventsAsync(token, projId, dep.SamplesServiceId)
                             : new List<SliplaneServiceEvent>();
-                        var allEvents = docsEvents.Concat(samplesEvents).ToList();
 
-                        var (statusLabel, icon) = GetStatusFromEvents(allEvents);
+                        var (statusLabel, icon) = GetCombinedRowStatus(
+                            dep.DocsServiceId, docsEvents, dep.SamplesServiceId, samplesEvents);
                         status = statusLabel;
                         statusIcon = icon;
 
@@ -122,7 +122,7 @@ public class PrStagingDeployApp : ViewBase
                     if (result.IsOk())
                     {
                         var rowList = overviewQuery.Value ?? new List<PrRow>();
-                        var branchesToDeploy = rowList.Where(r => r.Status != "deployed").Select(r => r.HeadRef).ToList();
+                        var branchesToDeploy = rowList.Where(RowLooksLikeNoStagingYet).Select(r => r.HeadRef).ToList();
                         if (branchesToDeploy.Count > 0)
                         {
                             var branchSet = branchesToDeploy.ToHashSet();
@@ -157,20 +157,26 @@ public class PrStagingDeployApp : ViewBase
                         var rowList = overviewQuery.Value ?? new List<PrRow>();
                         if (rowList.Count > 0)
                         {
-                            var updated = rowList.Select(r => r with
-                            {
-                                Status = "pending",
-                                StatusIcon = Icons.Clock,
-                                DocsDisplay = DeletingStagingCellHint,
-                                SamplesDisplay = DeletingStagingCellHint,
-                                ExpiresAt = "—",
-                                DocsUrl = null,
-                                SamplesUrl = null
-                            }).ToList();
-                            pinnedTableRows.Set(updated);
+                            var updated = rowList.Select(r =>
+                                RowLooksLikeNoStagingYet(r)
+                                    ? r
+                                    : r with
+                                    {
+                                        Status = "pending",
+                                        StatusIcon = Icons.Clock,
+                                        DocsDisplay = DeletingStagingCellHint,
+                                        SamplesDisplay = DeletingStagingCellHint,
+                                        ExpiresAt = "—",
+                                        DocsUrl = null,
+                                        SamplesUrl = null
+                                    }).ToList();
                             overviewQuery.Mutator.Mutate(updated, revalidate: false);
                             refreshToken.Refresh();
-                            deleteAllWaitingForFreshNoStaging.Set(true);
+                            if (rowList.Any(r => !RowLooksLikeNoStagingYet(r)))
+                            {
+                                pinnedTableRows.Set(updated);
+                                deleteAllWaitingForFreshNoStaging.Set(true);
+                            }
                         }
 
                         ShowMessage("Deleting all staging services...", false);
@@ -424,6 +430,7 @@ public class PrStagingDeployApp : ViewBase
         return type == "service_deploy" || msg.Contains("deploy started");
     }
 
+    /// <summary>Status from one service's event timeline (docs or samples).</summary>
     private static (string Status, Icons Icon) GetStatusFromEvents(List<SliplaneServiceEvent> events)
     {
         if (events.Count == 0)
@@ -441,6 +448,32 @@ public class PrStagingDeployApp : ViewBase
         if (IsSuccessEvent(lastEv))
             return ("deployed", Icons.Check);
 
+        return ("deployed", Icons.Check);
+    }
+
+    /// <summary>
+    /// Row status only when every provisioned service (docs and/or samples) is <see cref="GetStatusFromEvents"/> deployed.
+    /// Merging all events into one list made the row show deployed as soon as the latest event was success on one service.
+    /// </summary>
+    private static (string Status, Icons Icon) GetCombinedRowStatus(
+        string? docsServiceId,
+        List<SliplaneServiceEvent> docsEvents,
+        string? samplesServiceId,
+        List<SliplaneServiceEvent> samplesEvents)
+    {
+        var parts = new List<(string Status, Icons Icon)>();
+        if (!string.IsNullOrEmpty(docsServiceId))
+            parts.Add(GetStatusFromEvents(docsEvents));
+        if (!string.IsNullOrEmpty(samplesServiceId))
+            parts.Add(GetStatusFromEvents(samplesEvents));
+
+        if (parts.Count == 0)
+            return ("pending", Icons.Clock);
+
+        if (parts.Exists(p => p.Status == "failed"))
+            return ("failed", Icons.CircleX);
+        if (parts.Exists(p => p.Status == "pending"))
+            return ("pending", Icons.Clock);
         return ("deployed", Icons.Check);
     }
 
