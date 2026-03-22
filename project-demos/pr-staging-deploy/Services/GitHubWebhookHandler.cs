@@ -72,6 +72,7 @@ public class GitHubWebhookHandler
         var branch = pr.GetProperty("head").GetProperty("ref").GetString() ?? "";
         var prNumber = pr.GetProperty("number").GetInt32();
         var title = pr.GetProperty("title").GetString() ?? "";
+        var prAuthorLogin = pr.GetProperty("user").GetProperty("login").GetString();
 
         var apiToken = GetApiToken();
         if (string.IsNullOrEmpty(apiToken))
@@ -86,12 +87,28 @@ public class GitHubWebhookHandler
         {
             case "opened":
             case "reopened":
+                if (!GitHubDeployPermissions.IsUserAllowed(_config, prAuthorLogin))
+                {
+                    _logger.LogInformation(
+                        "Skipping auto-deploy for PR #{Pr}: PR author {User} not in GitHub:DeployAllowedUsers",
+                        prNumber, prAuthorLogin ?? "(unknown)");
+                    break;
+                }
+
                 _logger.LogInformation("PR #{Pr} opened: {Title} branch={Branch}", prNumber, title, branch);
                 var deployResult = await _deployService.DeployBranchAsync(apiToken, branch);
                 _logger.LogInformation("Deploy result: {Success} - {Message}", deployResult.Success, deployResult.Message);
                 break;
 
             case "synchronize":
+                if (!GitHubDeployPermissions.IsUserAllowed(_config, prAuthorLogin))
+                {
+                    _logger.LogInformation(
+                        "Skipping auto-redeploy for PR #{Pr}: PR author {User} not in GitHub:DeployAllowedUsers",
+                        prNumber, prAuthorLogin ?? "(unknown)");
+                    break;
+                }
+
                 _logger.LogInformation("PR #{Pr} updated: {Branch}", prNumber, branch);
                 var redeployResult = await _deployService.RedeployBranchAsync(apiToken, branch);
                 _logger.LogInformation("Redeploy result: {Success} - {Message}", redeployResult.Success, redeployResult.Message);
@@ -139,6 +156,15 @@ public class GitHubWebhookHandler
         if (string.IsNullOrEmpty(apiToken))
         {
             _logger.LogWarning("Sliplane API token not configured");
+            return;
+        }
+
+        var commentAuthorLogin = root.GetProperty("comment").GetProperty("user").GetProperty("login").GetString();
+        if (!GitHubDeployPermissions.IsUserAllowed(_config, commentAuthorLogin))
+        {
+            _logger.LogInformation(
+                "Ignoring /deploy on PR #{Pr}: comment author {User} not in GitHub:DeployAllowedUsers",
+                prNumber, commentAuthorLogin ?? "(unknown)");
             return;
         }
 

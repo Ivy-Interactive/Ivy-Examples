@@ -52,7 +52,21 @@ dotnet user-secrets set "Staging:ExpiryDays" "7"
 
 # Webhook (optional – for auto-deploy on PR open/update/close)
 dotnet user-secrets set "GitHub:WebhookSecret" "your_webhook_secret"
+
+# Optional: comma-separated GitHub logins (case-insensitive). If empty, no user-based restriction.
+# Auto-deploy (PR open / push): only if the PR author is in this list.
+# /deploy comment: only if the comment author is in this list (PR author may be anyone).
+dotnet user-secrets set "GitHub:DeployAllowedUsers" "alice,bob"
 ```
+
+### Who can trigger deploy (webhooks)
+
+| Event | Who must be on the list (when `DeployAllowedUsers` is set) |
+|--------|-----------------------------------------------------------|
+| PR opened / reopened / synchronize | **PR author** (whose PR gets auto-deploy) |
+| Comment `/deploy` | **Comment author** (so a maintainer on the list can deploy someone else’s PR) |
+
+If `DeployAllowedUsers` is **empty**, GitHub user checks are skipped (same as before). Closing a PR is **not** gated by this list. The in-app **Deploy** buttons are not tied to GitHub identity — restrict the app URL separately if needed.
 
 ### Option 2: Environment Variables (for Sliplane Deployment)
 
@@ -72,6 +86,7 @@ Staging__DocsDockerContext=.
 Staging__SamplesDockerfile=.github/docker/Dockerfile.samples
 Staging__DocsDockerfile=.github/docker/Dockerfile.docs
 Staging__ExpiryDays=7
+GitHub__DeployAllowedUsers=alice,bob
 ```
 
 ### GitHub Webhook (Optional)
