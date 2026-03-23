@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 var server = new Server();
 server.SetMetaTitle("Excel Formula Explainer");
 server.SetMetaDescription("Paste any Excel formula and get a plain-English explanation with step-by-step breakdown of each function used.");
-server.SetMetaGitHubUrl("https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/agent-demos/excel-formula-explainer");
+// TODO: Uncomment when Ivy publishes SetMeta methods
+// server.SetMetaGitHubUrl("https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/agent-demos/excel-formula-explainer");
 server.UseCulture("en-US");
 #if DEBUG
 server.UseHotReload();
