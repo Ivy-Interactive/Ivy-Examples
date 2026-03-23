@@ -1,3 +1,5 @@
+using Ivy;
+
 namespace SnowflakeExample.Connections;
 
 /// <summary>
@@ -9,7 +11,7 @@ public class SnowflakeConnection : IConnection
     {
         // Parameterless constructor required by Ivy framework
     }
-    
+
     public string GetConnectionType()
     {
         return typeof(SnowflakeConnection).ToString();
@@ -29,14 +31,14 @@ public class SnowflakeConnection : IConnection
 
     public string GetNamespace() => typeof(SnowflakeConnection).Namespace ?? "";
 
-    public void RegisterServices(IServiceCollection services)
+    public void RegisterServices(Server server)
     {
         // Register this connection as singleton
-        services.AddSingleton<SnowflakeConnection>(this);
-        
+        server.Services.AddSingleton<SnowflakeConnection>(this);
+
         // SnowflakeService will be created in components with credentials from UseState
         // Register as scoped but with empty connection string - components will create their own instances
-        services.AddScoped<SnowflakeService>(sp => new SnowflakeService(""));
+        server.Services.AddScoped<SnowflakeService>(sp => new SnowflakeService(""));
     }
     
     public string GetConnectionString(IConfiguration configuration, string account, string user, string password)

@@ -24,8 +24,8 @@ public class DailyNewStartupsLineChartView(DateTime startDate, DateTime endDate)
                     .ToListAsync();
 
                 chart.Set(data.ToLineChart(
-                    e => e.Date, 
-                    [e => e.Sum(f => f.StartupCount)], 
+                    e => e.Date,
+                    [e => e.Sum(f => f.StartupCount)],
                     LineChartStyles.Dashboard));
             }
             catch (Exception ex)

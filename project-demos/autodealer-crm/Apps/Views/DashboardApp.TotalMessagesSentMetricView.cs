@@ -17,7 +17,7 @@ public class TotalMessagesSentMetricView(DateTime fromDate, DateTime toDate) : V
                 {
                     var (fd, td) = key;
                     await using var db = factory.CreateDbContext();
-                    
+
                     var outboundDirectionId = await db.MessageDirections
                         .Where(md => md.DescriptionText == "Outgoing")
                         .Select(md => md.Id)
@@ -25,7 +25,7 @@ public class TotalMessagesSentMetricView(DateTime fromDate, DateTime toDate) : V
 
                     // SentAt is now DateTime, so we can compare directly
                     var currentPeriodMessagesSent = await db.Messages
-                        .Where(m => m.MessageDirectionId == outboundDirectionId && 
+                        .Where(m => m.MessageDirectionId == outboundDirectionId &&
                                     m.SentAt >= fd && m.SentAt <= td)
                         .CountAsync(ct);
 
@@ -34,7 +34,7 @@ public class TotalMessagesSentMetricView(DateTime fromDate, DateTime toDate) : V
                     var previousToDate = fd.AddDays(-1);
 
                     var previousPeriodMessagesSent = await db.Messages
-                        .Where(m => m.MessageDirectionId == outboundDirectionId && 
+                        .Where(m => m.MessageDirectionId == outboundDirectionId &&
                                     m.SentAt >= previousFromDate && m.SentAt <= previousToDate)
                         .CountAsync(ct);
 
@@ -51,7 +51,7 @@ public class TotalMessagesSentMetricView(DateTime fromDate, DateTime toDate) : V
                     double? trend = ((double)currentPeriodMessagesSent - previousPeriodMessagesSent) / previousPeriodMessagesSent;
 
                     var goal = previousPeriodMessagesSent * 1.1;
-                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodMessagesSent / goal ): null;
+                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodMessagesSent / goal) : null;
 
                     return new MetricRecord(
                         MetricFormatted: currentPeriodMessagesSent.ToString("N0"),

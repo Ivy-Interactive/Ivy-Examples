@@ -17,15 +17,15 @@ public class NumberOfLeadsMetricView(DateTime fromDate, DateTime toDate) : ViewB
                 {
                     var (fd, td) = key;
                     await using var db = factory.CreateDbContext();
-                    
+
                     var currentPeriodLeads = await db.Leads
                         .Where(l => l.CreatedAt >= fd && l.CreatedAt <= td)
                         .CountAsync(ct);
-                        
+
                     var periodLength = td - fd;
                     var previousFromDate = fd.AddDays(-periodLength.TotalDays);
                     var previousToDate = fd.AddDays(-1);
-                    
+
                     var previousPeriodLeads = await db.Leads
                         .Where(l => l.CreatedAt >= previousFromDate && l.CreatedAt <= previousToDate)
                         .CountAsync(ct);
@@ -39,12 +39,12 @@ public class NumberOfLeadsMetricView(DateTime fromDate, DateTime toDate) : ViewB
                             GoalFormatted: null
                         );
                     }
-                    
+
                     double? trend = ((double)currentPeriodLeads - previousPeriodLeads) / previousPeriodLeads;
-                    
+
                     var goal = previousPeriodLeads * 1.1;
-                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodLeads / goal ): null;
-                    
+                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodLeads / goal) : null;
+
                     return new MetricRecord(
                         MetricFormatted: currentPeriodLeads.ToString("N0"),
                         TrendComparedToPreviousPeriod: trend,

@@ -11,7 +11,7 @@ public class MediumMessagesCreateDialog(IState<bool> isOpen, RefreshToken refres
         public int CustomerId { get; init; }
 
         public int? LeadId { get; init; }
-        
+
         public int MessageChannelId { get; init; }
 
         public int MessageDirectionId { get; init; }

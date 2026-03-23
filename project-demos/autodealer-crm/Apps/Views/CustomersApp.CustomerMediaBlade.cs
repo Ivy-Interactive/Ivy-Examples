@@ -13,7 +13,7 @@ public class CustomerMediaBlade(int? customerId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             media.Set(await db.Media.Where(m => m.CustomerId == customerId).ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -33,11 +33,11 @@ public class CustomerMediaBlade(int? customerId) : ViewBase
         if (media.Value == null) return null;
 
         var table = media.Value.Select(m => new
-            {
-                FilePath = m.FilePath,
-                FileType = m.FileType,
-                UploadedAt = m.UploadedAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            FilePath = m.FilePath,
+            FileType = m.FileType,
+            UploadedAt = m.UploadedAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -47,7 +47,7 @@ public class CustomerMediaBlade(int? customerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new CustomerMediaEditSheet(isOpen, refreshToken, m.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

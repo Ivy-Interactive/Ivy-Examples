@@ -20,8 +20,8 @@ public class AverageLeadResponseTimeMetricView(DateTime fromDate, DateTime toDat
 
                     // Filter messages where SentAt is after Lead creation (no negative response times)
                     var currentPeriodMessages = await db.Messages
-                        .Where(m => m.LeadId != null && 
-                                   m.Lead!.CreatedAt >= fd && 
+                        .Where(m => m.LeadId != null &&
+                                   m.Lead!.CreatedAt >= fd &&
                                    m.Lead.CreatedAt <= td &&
                                    m.SentAt >= m.Lead!.CreatedAt)
                         .Include(m => m.Lead)
@@ -37,8 +37,8 @@ public class AverageLeadResponseTimeMetricView(DateTime fromDate, DateTime toDat
                     var previousToDate = fd.AddDays(-1);
 
                     var previousPeriodMessages = await db.Messages
-                        .Where(m => m.LeadId != null && 
-                                   m.Lead!.CreatedAt >= previousFromDate && 
+                        .Where(m => m.LeadId != null &&
+                                   m.Lead!.CreatedAt >= previousFromDate &&
                                    m.Lead.CreatedAt <= previousToDate &&
                                    m.SentAt >= m.Lead!.CreatedAt)
                         .Include(m => m.Lead)
@@ -60,7 +60,7 @@ public class AverageLeadResponseTimeMetricView(DateTime fromDate, DateTime toDat
 
                     // For response time: lower is better, so trend is inverted
                     double? trend = (previousPeriodAverageResponseTime - currentPeriodAverageResponseTime) / previousPeriodAverageResponseTime;
-                    
+
                     // Goal is 10% improvement (10% less time = faster response)
                     var goal = previousPeriodAverageResponseTime * 0.9;
                     // GoalAchieved: if current is less than goal (better), achievement > 1

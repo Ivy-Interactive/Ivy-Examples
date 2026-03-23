@@ -17,7 +17,7 @@ public class DailyCallDurationsLineChartView(DateTime startDate, DateTime endDat
             try
             {
                 var db = factory.CreateDbContext();
-                
+
                 // StartTime is now DateTime, so we can compare directly and group in SQL
                 var data = await db.CallRecords
                     .Where(cr => cr.StartTime >= startDate && cr.StartTime <= endDate)

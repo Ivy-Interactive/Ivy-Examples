@@ -44,7 +44,8 @@ public class LeadDetailsBlade(int leadId) : ViewBase
                     blades.Pop(refresh: true);
                 }
             }, "Delete Lead", AlertButtonSet.OkCancel);
-        };
+        }
+        ;
 
         var dropDown = Icons.Ellipsis
             .ToButton()
@@ -60,16 +61,16 @@ public class LeadDetailsBlade(int leadId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    leadValue.Id,
-                    CustomerName = $"{leadValue.Customer.FirstName} {leadValue.Customer.LastName}",
-                    ManagerName = leadValue.Manager?.Name ?? "Unassigned",
-                    SourceChannel = leadValue.SourceChannel.DescriptionText,
-                    LeadIntent = leadValue.LeadIntent.DescriptionText,
-                    LeadStage = leadValue.LeadStage.DescriptionText,
-                    Priority = leadValue.Priority?.ToString() ?? "N/A",
-                    Notes = leadValue.Notes ?? "No notes"
-                }.ToDetails()
+            {
+                leadValue.Id,
+                CustomerName = $"{leadValue.Customer.FirstName} {leadValue.Customer.LastName}",
+                ManagerName = leadValue.Manager?.Name ?? "Unassigned",
+                SourceChannel = leadValue.SourceChannel.DescriptionText,
+                LeadIntent = leadValue.LeadIntent.DescriptionText,
+                LeadStage = leadValue.LeadStage.DescriptionText,
+                Priority = leadValue.Priority?.ToString() ?? "N/A",
+                Notes = leadValue.Notes ?? "No notes"
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

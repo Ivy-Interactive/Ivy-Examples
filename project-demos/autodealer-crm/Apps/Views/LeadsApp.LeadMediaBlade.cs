@@ -13,7 +13,7 @@ public class LeadMediaBlade(int? leadId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             media.Set(await db.Media.Include(e => e.Lead).Where(e => e.LeadId == leadId).ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -33,11 +33,11 @@ public class LeadMediaBlade(int? leadId) : ViewBase
         if (media.Value == null) return null;
 
         var table = media.Value.Select(e => new
-            {
-                FilePath = e.FilePath,
-                FileType = e.FileType,
-                UploadedAt = e.UploadedAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            FilePath = e.FilePath,
+            FileType = e.FileType,
+            UploadedAt = e.UploadedAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -47,7 +47,7 @@ public class LeadMediaBlade(int? leadId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new LeadMediaEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

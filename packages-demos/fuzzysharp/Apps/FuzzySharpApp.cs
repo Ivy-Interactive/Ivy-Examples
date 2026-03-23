@@ -5,7 +5,7 @@ using static FuzzySharp.Process;
 using FuzzySharp.Extractor;
 using Ivy.Core;
 
-[App(icon: Icons.Search, title: "FuzzySharp", path: ["Apps"])]
+[App(icon: Icons.Search, title: "FuzzySharp", group: ["Apps"])]
 public class FuzzySharpApp : ViewBase
 {
     public override object? Build()

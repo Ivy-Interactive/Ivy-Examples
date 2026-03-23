@@ -17,15 +17,15 @@ public class TotalSalesRevenueMetricView(DateTime fromDate, DateTime toDate) : V
                 {
                     var (fd, td) = key;
                     await using var db = factory.CreateDbContext();
-                    
+
                     var currentPeriodRevenue = await db.Vehicles
                         .Where(v => v.CreatedAt >= fd && v.CreatedAt <= td)
                         .SumAsync(v => (double)v.Price, ct);
-                        
+
                     var periodLength = td - fd;
                     var previousFromDate = fd.AddDays(-periodLength.TotalDays);
                     var previousToDate = fd.AddDays(-1);
-                    
+
                     var previousPeriodRevenue = await db.Vehicles
                         .Where(v => v.CreatedAt >= previousFromDate && v.CreatedAt <= previousToDate)
                         .SumAsync(v => (double)v.Price, ct);
@@ -39,11 +39,11 @@ public class TotalSalesRevenueMetricView(DateTime fromDate, DateTime toDate) : V
                             GoalFormatted: null
                         );
                     }
-                    
+
                     double? trend = (currentPeriodRevenue - previousPeriodRevenue) / previousPeriodRevenue;
                     var goal = previousPeriodRevenue * 1.1;
-                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodRevenue / goal ): null;
-                    
+                    double? goalAchievement = goal > 0 ? (double?)(currentPeriodRevenue / goal) : null;
+
                     return new MetricRecord(
                         MetricFormatted: currentPeriodRevenue.ToString("C0"),
                         TrendComparedToPreviousPeriod: trend,

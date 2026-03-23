@@ -13,7 +13,7 @@ public class StartupDealsBlade(int startupId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             deals.Set(await db.Deals.Include(e => e.Partners).Where(e => e.StartupId == startupId).ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -33,12 +33,12 @@ public class StartupDealsBlade(int startupId) : ViewBase
         if (deals.Value == null) return null;
 
         var table = deals.Value.Select(e => new
-            {
-                Round = e.Round,
-                Amount = e.Amount,
-                DealDate = e.DealDate,
-                Partners = string.Join(", ", e.Partners.Select(p => $"{p.FirstName} {p.LastName}")),
-                _ = Layout.Horizontal().Gap(1)
+        {
+            Round = e.Round,
+            Amount = e.Amount,
+            DealDate = e.DealDate,
+            Partners = string.Join(", ", e.Partners.Select(p => $"{p.FirstName} {p.LastName}")),
+            _ = Layout.Horizontal().Gap(1)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -48,7 +48,7 @@ public class StartupDealsBlade(int startupId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new StartupDealsEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

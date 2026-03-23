@@ -51,7 +51,7 @@ public class AverageVehiclePriceMetricView(DateTime fromDate, DateTime toDate) :
                     double? trend = (currentAveragePrice - previousAveragePrice) / previousAveragePrice;
 
                     var goal = previousAveragePrice * 1.1;
-                    double? goalAchievement = goal > 0 ? (double?)(currentAveragePrice / goal ): null;
+                    double? goalAchievement = goal > 0 ? (double?)(currentAveragePrice / goal) : null;
 
                     return new MetricRecord(
                         MetricFormatted: currentAveragePrice.ToString("C0"),

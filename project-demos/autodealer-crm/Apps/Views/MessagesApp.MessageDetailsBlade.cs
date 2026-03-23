@@ -55,18 +55,18 @@ public class MessageDetailsBlade(int messageId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    Id = messageValue.Id,
-                    Customer = $"{messageValue.Customer.FirstName} {messageValue.Customer.LastName}",
-                    Lead = messageValue.Lead?.Id,
-                    Manager = messageValue.Manager?.Name,
-                    Channel = messageValue.MessageChannel.DescriptionText,
-                    Direction = messageValue.MessageDirection.DescriptionText,
-                    Type = messageValue.MessageType.DescriptionText,
-                    Content = messageValue.Content,
-                    Media = messageValue.Media?.FilePath,
-                    SentAt = messageValue.SentAt
-                }
+            {
+                Id = messageValue.Id,
+                Customer = $"{messageValue.Customer.FirstName} {messageValue.Customer.LastName}",
+                Lead = messageValue.Lead?.Id,
+                Manager = messageValue.Manager?.Name,
+                Channel = messageValue.MessageChannel.DescriptionText,
+                Direction = messageValue.MessageDirection.DescriptionText,
+                Type = messageValue.MessageType.DescriptionText,
+                Content = messageValue.Content,
+                Media = messageValue.Media?.FilePath,
+                SentAt = messageValue.SentAt
+            }
                 .ToDetails()
                 .MultiLine(e => e.Content)
                 .RemoveEmpty()

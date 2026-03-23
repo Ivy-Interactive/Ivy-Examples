@@ -16,11 +16,11 @@ public class AverageDealSizeMetricView(DateTime fromDate, DateTime toDate) : Vie
                 fetcher: async (key, ct) =>
                 {
                     await using var db = factory.CreateDbContext();
-                    
+
                     var currentPeriodDeals = await db.Deals
                         .Where(d => d.DealDate >= fromDate && d.DealDate <= toDate)
                         .ToListAsync(ct);
-                        
+
                     var currentAverageDealSize = currentPeriodDeals.Any()
                         ? currentPeriodDeals.Average(d => (double)d.Amount.GetValueOrDefault())
                         : 0;
@@ -28,11 +28,11 @@ public class AverageDealSizeMetricView(DateTime fromDate, DateTime toDate) : Vie
                     var periodLength = toDate - fromDate;
                     var previousFromDate = fromDate.AddDays(-periodLength.TotalDays);
                     var previousToDate = fromDate.AddDays(-1);
-                    
+
                     var previousPeriodDeals = await db.Deals
                         .Where(d => d.DealDate >= previousFromDate && d.DealDate <= previousToDate)
                         .ToListAsync(ct);
-                        
+
                     var previousAverageDealSize = previousPeriodDeals.Any()
                         ? previousPeriodDeals.Average(d => (double)d.Amount.GetValueOrDefault())
                         : 0;
@@ -46,11 +46,11 @@ public class AverageDealSizeMetricView(DateTime fromDate, DateTime toDate) : Vie
                             GoalFormatted: null
                         );
                     }
-                    
+
                     double? trend = (currentAverageDealSize - previousAverageDealSize) / previousAverageDealSize;
                     var goal = previousAverageDealSize * 1.1;
                     double? goalAchievement = goal > 0 ? currentAverageDealSize / goal : null;
-                    
+
                     return new MetricRecord(
                         MetricFormatted: currentAverageDealSize.ToString("C0"),
                         TrendComparedToPreviousPeriod: trend,

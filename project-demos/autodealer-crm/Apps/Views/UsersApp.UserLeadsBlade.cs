@@ -19,7 +19,7 @@ public class UserLeadsBlade(int? managerId) : ViewBase
                 .Include(e => e.SourceChannel)
                 .Where(e => managerId == null || e.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -39,15 +39,15 @@ public class UserLeadsBlade(int? managerId) : ViewBase
         if (leads.Value == null) return null;
 
         var table = leads.Value.Select(e => new
-            {
-                Customer = $"{e.Customer.FirstName} {e.Customer.LastName}",
-                Intent = e.LeadIntent.DescriptionText,
-                Stage = e.LeadStage.DescriptionText,
-                Source = e.SourceChannel.DescriptionText,
-                Priority = e.Priority,
-                Notes = e.Notes,
-                CreatedAt = e.CreatedAt.ToString("yyyy-MM-dd"),
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Customer = $"{e.Customer.FirstName} {e.Customer.LastName}",
+            Intent = e.LeadIntent.DescriptionText,
+            Stage = e.LeadStage.DescriptionText,
+            Source = e.SourceChannel.DescriptionText,
+            Priority = e.Priority,
+            Notes = e.Notes,
+            CreatedAt = e.CreatedAt.ToString("yyyy-MM-dd"),
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -57,7 +57,7 @@ public class UserLeadsBlade(int? managerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new UserLeadsEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

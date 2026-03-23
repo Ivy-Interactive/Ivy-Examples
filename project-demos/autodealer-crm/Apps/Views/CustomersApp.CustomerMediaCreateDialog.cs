@@ -42,7 +42,7 @@ public class CustomerMediaCreateDialog(IState<bool> isOpen, RefreshToken refresh
             FileType = request.FileType,
             CreatedAt = DateTime.UtcNow.ToString("O"),
             UpdatedAt = DateTime.UtcNow.ToString("O"),
-            CustomerId = customerId 
+            CustomerId = customerId
         };
 
         db.Media.Add(media);

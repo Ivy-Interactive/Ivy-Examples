@@ -51,7 +51,8 @@ public class TaskDetailsBlade(int taskId) : ViewBase
             .ToTrigger(isOpen => new TaskEditSheet(isOpen, refreshToken, taskId));
 
         var detailsCard = new Card(
-            content: new {
+            content: new
+            {
                 Id = taskValue.Id,
                 Title = taskValue.Title,
                 Description = taskValue.Description,
@@ -68,7 +69,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
                 | editBtn
         ).Title("Task Details").Width(Size.Units(100));
 
-        return new Fragment() 
+        return new Fragment()
             | (Layout.Vertical() | detailsCard)
             | alertView;
     }

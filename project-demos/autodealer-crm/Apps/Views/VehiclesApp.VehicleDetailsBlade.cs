@@ -35,7 +35,8 @@ public class VehicleDetailsBlade(int vehicleId) : ViewBase
                     blades.Pop(refresh: true);
                 }
             }, "Delete Vehicle", AlertButtonSet.OkCancel);
-        };
+        }
+        ;
 
         var dropDown = Icons.Ellipsis
             .ToButton()
@@ -51,16 +52,16 @@ public class VehicleDetailsBlade(int vehicleId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    vehicleValue.Id,
-                    vehicleValue.Make,
-                    vehicleValue.Model,
-                    vehicleValue.Year,
-                    vehicleValue.Vin,
-                    vehicleValue.Price,
-                    Status = vehicleValue.VehicleStatus.DescriptionText,
-                    ManagerName = vehicleValue.Manager?.Name ?? "N/A"
-                }.ToDetails()
+            {
+                vehicleValue.Id,
+                vehicleValue.Make,
+                vehicleValue.Model,
+                vehicleValue.Year,
+                vehicleValue.Vin,
+                vehicleValue.Price,
+                Status = vehicleValue.VehicleStatus.DescriptionText,
+                ManagerName = vehicleValue.Manager?.Name ?? "N/A"
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

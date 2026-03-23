@@ -38,7 +38,8 @@ public class CustomerDetailsBlade(int customerId) : ViewBase
                     blades.Pop(refresh: true);
                 }
             }, "Delete Customer", AlertButtonSet.OkCancel);
-        };
+        }
+        ;
 
         var dropDown = Icons.Ellipsis
             .ToButton()
@@ -54,14 +55,14 @@ public class CustomerDetailsBlade(int customerId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    customerValue.Id,
-                    FullName = $"{customerValue.FirstName} {customerValue.LastName}",
-                    customerValue.Email,
-                    customerValue.ViberId,
-                    customerValue.WhatsappId,
-                    customerValue.TelegramId
-                }.ToDetails()
+            {
+                customerValue.Id,
+                FullName = $"{customerValue.FirstName} {customerValue.LastName}",
+                customerValue.Email,
+                customerValue.ViberId,
+                customerValue.WhatsappId,
+                customerValue.TelegramId
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

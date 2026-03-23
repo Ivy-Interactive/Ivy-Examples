@@ -28,8 +28,8 @@ public class DailyDealAmountsLineChartView(DateTime startDate, DateTime endDate)
                     .ToListAsync();
 
                 chart.Set(data.ToLineChart(
-                    e => e.Date, 
-                    [e => e.Sum(f => f.TotalAmount)], 
+                    e => e.Date,
+                    [e => e.Sum(f => f.TotalAmount)],
                     LineChartStyles.Dashboard));
             }
             catch (Exception ex)

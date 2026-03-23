@@ -1,3 +1,4 @@
+using Ivy;
 using Ivy.Connections;
 using Ivy.Services;
 
@@ -32,16 +33,16 @@ public class AutodealerCrmConnection : IConnection, IHaveSecrets
             .ToArray();
     }
 
-    public void RegisterServices(IServiceCollection services)
+    public void RegisterServices(Server server)
     {
-        services.AddSingleton<AutodealerCrmContextFactory>();
+        server.Services.AddSingleton<AutodealerCrmContextFactory>();
     }
 
-   public Ivy.Services.Secret[] GetSecrets()
-   {
-       return
-       [
-           
-       ];
-   }
+    public Ivy.Services.Secret[] GetSecrets()
+    {
+        return
+        [
+
+        ];
+    }
 }

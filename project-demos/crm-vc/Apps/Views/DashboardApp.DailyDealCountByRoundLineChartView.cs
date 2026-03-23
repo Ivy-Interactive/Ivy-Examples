@@ -29,8 +29,8 @@ public class DailyDealCountByRoundLineChartView(DateTime startDate, DateTime end
                     .ToListAsync();
 
                 chart.Set(data.ToLineChart(
-                    e => e.Date, 
-                    [e => e.Sum(f => f.DealCount)], 
+                    e => e.Date,
+                    [e => e.Sum(f => f.DealCount)],
                     LineChartStyles.Dashboard));
             }
             catch (Exception ex)

@@ -17,7 +17,7 @@ public class CustomerRetentionRateMetricView(DateTime fromDate, DateTime toDate)
                 {
                     var (fd, td) = key;
                     await using var db = factory.CreateDbContext();
-                    
+
                     var currentPeriodReturningCustomers = await db.Customers
                         .Where(c => c.Leads.Any(l => l.CreatedAt >= fd && l.CreatedAt <= td))
                         .Select(c => c.Id)
@@ -28,8 +28,8 @@ public class CustomerRetentionRateMetricView(DateTime fromDate, DateTime toDate)
                         .Where(c => c.CreatedAt < fd)
                         .CountAsync(ct);
 
-                    var currentRetentionRate = totalCustomersBeforePeriod > 0 
-                        ? (double)currentPeriodReturningCustomers / totalCustomersBeforePeriod * 100 
+                    var currentRetentionRate = totalCustomersBeforePeriod > 0
+                        ? (double)currentPeriodReturningCustomers / totalCustomersBeforePeriod * 100
                         : 0.0;
 
                     var periodLength = td - fd;
@@ -46,7 +46,7 @@ public class CustomerRetentionRateMetricView(DateTime fromDate, DateTime toDate)
                         .Where(c => c.CreatedAt < previousFromDate)
                         .CountAsync(ct);
 
-                    double? previousRetentionRate = totalCustomersBeforePreviousPeriod > 0 
+                    double? previousRetentionRate = totalCustomersBeforePreviousPeriod > 0
                         ? (double?)((double)previousPeriodReturningCustomers / totalCustomersBeforePreviousPeriod * 100)
                         : null;
 

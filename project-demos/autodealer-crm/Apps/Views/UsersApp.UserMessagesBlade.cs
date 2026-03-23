@@ -19,7 +19,7 @@ public class UserMessagesBlade(int? managerId) : ViewBase
                 .Include(m => m.MessageType)
                 .Where(m => managerId == null || m.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -39,14 +39,14 @@ public class UserMessagesBlade(int? managerId) : ViewBase
         if (messages.Value == null) return null;
 
         var table = messages.Value.Select(m => new
-            {
-                Customer = m.Customer.FirstName + " " + m.Customer.LastName,
-                Channel = m.MessageChannel.DescriptionText,
-                Direction = m.MessageDirection.DescriptionText,
-                Type = m.MessageType.DescriptionText,
-                Content = m.Content,
-                SentAt = m.SentAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Customer = m.Customer.FirstName + " " + m.Customer.LastName,
+            Channel = m.MessageChannel.DescriptionText,
+            Direction = m.MessageDirection.DescriptionText,
+            Type = m.MessageType.DescriptionText,
+            Content = m.Content,
+            SentAt = m.SentAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -56,7 +56,7 @@ public class UserMessagesBlade(int? managerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new UserMessagesEditSheet(isOpen, refreshToken, m.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

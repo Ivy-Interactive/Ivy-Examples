@@ -6,7 +6,7 @@ public class UserDetailsBlade(int userId) : ViewBase
     {
         var factory = this.UseService<AutodealerCrmContextFactory>();
         var blades = this.UseContext<IBladeService>();
-        var refreshToken = this.UseRefreshToken(); 
+        var refreshToken = this.UseRefreshToken();
         var user = this.UseState<User?>();
         var callRecordCount = this.UseState<int>();
         var leadCount = this.UseState<int>();
@@ -42,7 +42,8 @@ public class UserDetailsBlade(int userId) : ViewBase
                     blades.Pop(refresh: true);
                 }
             }, "Delete User", AlertButtonSet.OkCancel);
-        };
+        }
+        ;
 
         var dropDown = Icons.Ellipsis
             .ToButton()
@@ -50,7 +51,7 @@ public class UserDetailsBlade(int userId) : ViewBase
             .WithDropDown(
                 MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete)
             );
-        
+
         var editBtn = new Button("Edit")
             .Outline()
             .Icon(Icons.Pencil)
@@ -58,19 +59,19 @@ public class UserDetailsBlade(int userId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    userValue.Id,
-                    FullName = $"{userValue.Name}",
-                    userValue.Email,
-                    UserRole = userValue.UserRole.DescriptionText
-                }.ToDetails()
+            {
+                userValue.Id,
+                FullName = $"{userValue.Name}",
+                userValue.Email,
+                UserRole = userValue.UserRole.DescriptionText
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)
                     | dropDown
                     | editBtn
         ).Title("User Details").Width(Size.Units(100));
-        
+
         var relatedCard = new Card(
             new List(
                 new ListItem("Call Records", onClick: _ =>
@@ -95,7 +96,7 @@ public class UserDetailsBlade(int userId) : ViewBase
                 }, badge: vehicleCount.Value.ToString("N0"))
             ));
 
-        return new Fragment() 
+        return new Fragment()
                | (Layout.Vertical() | detailsCard | relatedCard)
                | alertView;
     }

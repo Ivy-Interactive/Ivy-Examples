@@ -1,3 +1,4 @@
+using Ivy;
 using Ivy.Connections;
 
 namespace Vc.Connections.Vc;
@@ -18,9 +19,9 @@ public class VcConnection : IConnection
     public string GetName() => nameof(Vc);
 
     public string GetNamespace() => typeof(VcConnection).Namespace;
-    
+
     public string GetConnectionType() => "EntityFramework.Sqlite";
-    
+
     public ConnectionEntity[] GetEntities()
     {
         return typeof(VcContext)
@@ -30,8 +31,8 @@ public class VcConnection : IConnection
             .ToArray();
     }
 
-    public void RegisterServices(IServiceCollection services)
+    public void RegisterServices(Server server)
     {
-        services.AddSingleton<VcContextFactory>();
+        server.Services.AddSingleton<VcContextFactory>();
     }
 }

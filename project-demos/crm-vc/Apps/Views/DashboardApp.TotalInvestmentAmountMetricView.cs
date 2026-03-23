@@ -16,22 +16,22 @@ public class TotalInvestmentAmountMetricView(DateTime fromDate, DateTime toDate)
                 fetcher: async (key, ct) =>
                 {
                     await using var db = factory.CreateDbContext();
-                    
+
                     var currentPeriodDeals = await db.Deals
                         .Where(d => d.DealDate >= fromDate && d.DealDate <= toDate)
                         .ToListAsync(ct);
-                        
+
                     var currentPeriodInvestmentAmount = currentPeriodDeals
                         .Sum(d => (double)(d.Amount ?? 0));
-                        
+
                     var periodLength = toDate - fromDate;
                     var previousFromDate = fromDate.AddDays(-periodLength.TotalDays);
                     var previousToDate = fromDate.AddDays(-1);
-                    
+
                     var previousPeriodDeals = await db.Deals
                         .Where(d => d.DealDate >= previousFromDate && d.DealDate <= previousToDate)
                         .ToListAsync(ct);
-                        
+
                     var previousPeriodInvestmentAmount = previousPeriodDeals
                         .Sum(d => (double)(d.Amount ?? 0));
 
@@ -44,12 +44,12 @@ public class TotalInvestmentAmountMetricView(DateTime fromDate, DateTime toDate)
                             GoalFormatted: null
                         );
                     }
-                    
+
                     double? trend = (currentPeriodInvestmentAmount - previousPeriodInvestmentAmount) / previousPeriodInvestmentAmount;
-                    
+
                     var goal = previousPeriodInvestmentAmount * 1.1;
                     double? goalAchievement = goal > 0 ? currentPeriodInvestmentAmount / goal : null;
-                    
+
                     return new MetricRecord(
                         MetricFormatted: currentPeriodInvestmentAmount.ToString("C0"),
                         TrendComparedToPreviousPeriod: trend,

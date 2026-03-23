@@ -18,7 +18,7 @@ public class MediumMessagesBlade(int? mediaId) : ViewBase
                 .Include(m => m.MessageType)
                 .Where(m => m.MediaId == mediaId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -38,13 +38,13 @@ public class MediumMessagesBlade(int? mediaId) : ViewBase
         if (messages.Value == null) return null;
 
         var table = messages.Value.Select(m => new
-            {
-                Channel = m.MessageChannel.DescriptionText,
-                Direction = m.MessageDirection.DescriptionText,
-                Type = m.MessageType.DescriptionText,
-                Content = m.Content,
-                SentAt = m.SentAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Channel = m.MessageChannel.DescriptionText,
+            Direction = m.MessageDirection.DescriptionText,
+            Type = m.MessageType.DescriptionText,
+            Content = m.Content,
+            SentAt = m.SentAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -54,7 +54,7 @@ public class MediumMessagesBlade(int? mediaId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new MediumMessagesEditSheet(isOpen, refreshToken, m.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

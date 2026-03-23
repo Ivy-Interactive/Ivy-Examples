@@ -14,7 +14,7 @@ public class VehicleMediaBlade(int? vehicleId) : ViewBase
             if (vehicleId == null) return;
             await using var db = factory.CreateDbContext();
             media.Set(await db.Media.Where(m => m.VehicleId == vehicleId).ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -34,11 +34,11 @@ public class VehicleMediaBlade(int? vehicleId) : ViewBase
         if (media.Value == null) return null;
 
         var table = media.Value.Select(m => new
-            {
-                FilePath = m.FilePath,
-                FileType = m.FileType,
-                UploadedAt = m.UploadedAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            FilePath = m.FilePath,
+            FileType = m.FileType,
+            UploadedAt = m.UploadedAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -48,7 +48,7 @@ public class VehicleMediaBlade(int? vehicleId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new VehicleMediaEditSheet(isOpen, refreshToken, m.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

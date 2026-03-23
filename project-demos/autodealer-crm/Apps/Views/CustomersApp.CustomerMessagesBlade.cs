@@ -13,9 +13,9 @@ public class CustomerMessagesBlade(int customerId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             messages.Set(await db.Messages.Include(e => e.Media).Where(e => e.CustomerId == customerId).ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
-        
-        Action OnDelete(int id)  
+        }, [EffectTrigger.OnMount(), refreshToken]);
+
+        Action OnDelete(int id)
         {
             return () =>
             {
@@ -28,16 +28,17 @@ public class CustomerMessagesBlade(int customerId) : ViewBase
                     }
                 }, "Delete Message", AlertButtonSet.OkCancel);
             };
-        };
-        
+        }
+        ;
+
         if (messages.Value == null) return null;
-        
+
         var table = messages.Value.Select(e => new
-            {
-                Content = e.Content,
-                SentAt = e.SentAt,
-                MediaFilePath = e.Media?.FilePath,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Content = e.Content,
+            SentAt = e.SentAt,
+            MediaFilePath = e.Media?.FilePath,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -47,7 +48,7 @@ public class CustomerMessagesBlade(int customerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new CustomerMessagesEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns()
         ;

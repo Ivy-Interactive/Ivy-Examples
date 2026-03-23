@@ -17,7 +17,7 @@ public class LeadCallRecordsBlade(int? leadId) : ViewBase
                 .Include(e => e.CallDirection)
                 .Where(e => e.LeadId == leadId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -37,15 +37,15 @@ public class LeadCallRecordsBlade(int? leadId) : ViewBase
         if (callRecords.Value == null) return null;
 
         var table = callRecords.Value.Select(e => new
-            {
-                Customer = $"{e.Customer.FirstName} {e.Customer.LastName}",
-                Direction = e.CallDirection.DescriptionText,
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-                Duration = e.Duration,
-                Recording = e.RecordingUrl,
-                Sentiment = e.Sentiment,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Customer = $"{e.Customer.FirstName} {e.Customer.LastName}",
+            Direction = e.CallDirection.DescriptionText,
+            StartTime = e.StartTime,
+            EndTime = e.EndTime,
+            Duration = e.Duration,
+            Recording = e.RecordingUrl,
+            Sentiment = e.Sentiment,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -55,7 +55,7 @@ public class LeadCallRecordsBlade(int? leadId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new LeadCallRecordsEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

@@ -19,7 +19,7 @@ public class LeadMessagesBlade(int? leadId) : ViewBase
                 .Include(m => m.Media)
                 .Where(m => m.LeadId == leadId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -39,14 +39,14 @@ public class LeadMessagesBlade(int? leadId) : ViewBase
         if (messages.Value == null) return null;
 
         var table = messages.Value.Select(m => new
-            {
-                Channel = m.MessageChannel.DescriptionText,
-                Direction = m.MessageDirection.DescriptionText,
-                Type = m.MessageType.DescriptionText,
-                Content = m.Content,
-                Media = m.Media?.FilePath ?? "No Media",
-                SentAt = m.SentAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Channel = m.MessageChannel.DescriptionText,
+            Direction = m.MessageDirection.DescriptionText,
+            Type = m.MessageType.DescriptionText,
+            Content = m.Content,
+            Media = m.Media?.FilePath ?? "No Media",
+            SentAt = m.SentAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -56,7 +56,7 @@ public class LeadMessagesBlade(int? leadId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new LeadMessagesEditSheet(isOpen, refreshToken, m.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

@@ -15,7 +15,7 @@ public class LeadTasksBlade(int leadId) : ViewBase
         {
             await using var db = factory.CreateDbContext();
             tasks.Set(await db.Tasks.Include(t => t.Manager).Where(t => t.LeadId == leadId).ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -35,13 +35,13 @@ public class LeadTasksBlade(int leadId) : ViewBase
         if (tasks.Value == null) return null;
 
         var table = tasks.Value.Select(t => new
-            {
-                Title = t.Title,
-                Description = t.Description,
-                DueDate = t.DueDate?.ToString("d") ?? "N/A",
-                Completed = t.Completed == true ? "Yes" : "No",
-                Manager = t.Manager.Name,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Title = t.Title,
+            Description = t.Description,
+            DueDate = t.DueDate?.ToString("d") ?? "N/A",
+            Completed = t.Completed == true ? "Yes" : "No",
+            Manager = t.Manager.Name,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -51,7 +51,7 @@ public class LeadTasksBlade(int leadId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new LeadTasksEditSheet(isOpen, refreshToken, t.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

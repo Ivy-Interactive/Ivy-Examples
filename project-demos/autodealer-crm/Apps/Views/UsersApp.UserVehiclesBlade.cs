@@ -16,7 +16,7 @@ public class UserVehiclesBlade(int? managerId) : ViewBase
                 .Include(v => v.VehicleStatus)
                 .Where(v => managerId == null || v.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -36,14 +36,14 @@ public class UserVehiclesBlade(int? managerId) : ViewBase
         if (vehicles.Value == null) return null;
 
         var table = vehicles.Value.Select(v => new
-            {
-                Make = v.Make,
-                Model = v.Model,
-                Year = v.Year,
-                VIN = v.Vin,
-                Price = v.Price,
-                Status = v.VehicleStatus.DescriptionText,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Make = v.Make,
+            Model = v.Model,
+            Year = v.Year,
+            VIN = v.Vin,
+            Price = v.Price,
+            Status = v.VehicleStatus.DescriptionText,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -53,7 +53,7 @@ public class UserVehiclesBlade(int? managerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new UserVehiclesEditSheet(isOpen, refreshToken, v.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

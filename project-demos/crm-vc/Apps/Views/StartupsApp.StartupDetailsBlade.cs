@@ -32,7 +32,8 @@ public class StartupDetailsBlade(int startupId) : ViewBase
                     blades.Pop(refresh: true);
                 }
             }, "Delete Startup", AlertButtonSet.OkCancel);
-        };
+        }
+        ;
 
         var dropDown = Icons.Ellipsis
             .ToButton()
@@ -48,12 +49,12 @@ public class StartupDetailsBlade(int startupId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    startupValue.Id,
-                    startupValue.Name,
-                    startupValue.Description,
-                    FoundedAt = startupValue.FoundedAt?.ToString("yyyy-MM-dd")
-                }.ToDetails()
+            {
+                startupValue.Id,
+                startupValue.Name,
+                startupValue.Description,
+                FoundedAt = startupValue.FoundedAt?.ToString("yyyy-MM-dd")
+            }.ToDetails()
                 .RemoveEmpty()
                 .MultiLine(e => e.Description)
                 .Builder(e => e.Id, e => e.CopyToClipboard()),

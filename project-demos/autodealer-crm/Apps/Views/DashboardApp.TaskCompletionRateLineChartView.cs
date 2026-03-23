@@ -17,7 +17,7 @@ public class TaskCompletionRateLineChartView(DateTime startDate, DateTime endDat
             try
             {
                 var db = factory.CreateDbContext();
-                
+
                 // Filter tasks with DueDate in range and group by date
                 var queryResult = await db.Tasks
                     .Where(t => t.DueDate.HasValue && t.DueDate.Value.Date >= startDate.Date && t.DueDate.Value.Date <= endDate.Date)
@@ -25,7 +25,7 @@ public class TaskCompletionRateLineChartView(DateTime startDate, DateTime endDat
                     .Select(g => new
                     {
                         DateKey = g.Key,
-                        CompletionRate = g.Count() > 0 
+                        CompletionRate = g.Count() > 0
                             ? (g.Count(t => t.Completed == true) * 100.0 / g.Count())
                             : 0.0
                     })

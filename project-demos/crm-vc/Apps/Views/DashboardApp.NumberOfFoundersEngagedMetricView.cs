@@ -16,44 +16,44 @@ public class NumberOfFoundersEngagedMetricView(DateTime fromDate, DateTime toDat
                 fetcher: async (key, ct) =>
                 {
                     await using var db = factory.CreateDbContext();
-                    
+
                     var currentPeriodDeals = await db.Deals
                         .Where(d => d.DealDate >= fromDate && d.DealDate <= toDate)
                         .Include(deal => deal.Startup)
                         .ToListAsync(ct);
-                    
+
                     var currentPeriodStartupIds = currentPeriodDeals
                         .Select(d => d.StartupId)
                         .Distinct()
                         .ToList();
-                    
+
                     var currentPeriodFounders = await db.Founders
                         .Where(f => f.Startups.Any(s => currentPeriodStartupIds.Contains(s.Id)))
                         .ToListAsync(ct);
-                    
+
                     var currentPeriodFounderCount = currentPeriodFounders
                         .Select(f => f.Id)
                         .Distinct()
                         .Count();
-                    
+
                     var periodLength = toDate - fromDate;
                     var previousFromDate = fromDate.AddDays(-periodLength.TotalDays);
                     var previousToDate = fromDate.AddDays(-1);
-                    
+
                     var previousPeriodDeals = await db.Deals
                         .Where(d => d.DealDate >= previousFromDate && d.DealDate <= previousToDate)
                         .Include(deal => deal.Startup)
                         .ToListAsync(ct);
-                    
+
                     var previousPeriodStartupIds = previousPeriodDeals
                         .Select(d => d.StartupId)
                         .Distinct()
                         .ToList();
-                    
+
                     var previousPeriodFounders = await db.Founders
                         .Where(f => f.Startups.Any(s => previousPeriodStartupIds.Contains(s.Id)))
                         .ToListAsync(ct);
-                    
+
                     var previousPeriodFounderCount = previousPeriodFounders
                         .Select(f => f.Id)
                         .Distinct()
@@ -68,12 +68,12 @@ public class NumberOfFoundersEngagedMetricView(DateTime fromDate, DateTime toDat
                             GoalFormatted: null
                         );
                     }
-                    
+
                     double? trend = ((double)currentPeriodFounderCount - previousPeriodFounderCount) / previousPeriodFounderCount;
-                    
+
                     var goal = previousPeriodFounderCount * 1.1;
                     double? goalAchievement = goal > 0 ? currentPeriodFounderCount / goal : null;
-                    
+
                     return new MetricRecord(
                         MetricFormatted: currentPeriodFounderCount.ToString("N0"),
                         TrendComparedToPreviousPeriod: trend,

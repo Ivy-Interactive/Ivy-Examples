@@ -17,7 +17,7 @@ public class CustomerLeadsBlade(int customerId) : ViewBase
                                     .Include(e => e.LeadStage)
                                     .Where(e => e.CustomerId == customerId)
                                     .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -37,15 +37,15 @@ public class CustomerLeadsBlade(int customerId) : ViewBase
         if (leads.Value == null) return null;
 
         var table = leads.Value.Select(e => new
-            {
-                SourceChannel = e.SourceChannel.DescriptionText,
-                Intent = e.LeadIntent.DescriptionText,
-                Stage = e.LeadStage.DescriptionText,
-                Priority = e.Priority,
-                Notes = e.Notes,
-                CreatedAt = e.CreatedAt,
-                UpdatedAt = e.UpdatedAt,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            SourceChannel = e.SourceChannel.DescriptionText,
+            Intent = e.LeadIntent.DescriptionText,
+            Stage = e.LeadStage.DescriptionText,
+            Priority = e.Priority,
+            Notes = e.Notes,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -55,7 +55,7 @@ public class CustomerLeadsBlade(int customerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new CustomerLeadsEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

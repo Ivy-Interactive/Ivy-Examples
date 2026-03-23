@@ -17,7 +17,7 @@ public class UserCallRecordsBlade(int? managerId) : ViewBase
                 .Include(e => e.CallDirection)
                 .Where(e => managerId == null || e.ManagerId == managerId)
                 .ToArrayAsync());
-        }, [ EffectTrigger.OnMount(), refreshToken ]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         Action OnDelete(int id)
         {
@@ -37,14 +37,14 @@ public class UserCallRecordsBlade(int? managerId) : ViewBase
         if (callRecords.Value == null) return null;
 
         var table = callRecords.Value.Select(e => new
-            {
-                Customer = $"{e.Customer.FirstName} {e.Customer.LastName}",
-                Direction = e.CallDirection.DescriptionText,
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-                Duration = e.Duration,
-                Sentiment = e.Sentiment,
-                _ = Layout.Horizontal().Gap(2)
+        {
+            Customer = $"{e.Customer.FirstName} {e.Customer.LastName}",
+            Direction = e.CallDirection.DescriptionText,
+            StartTime = e.StartTime,
+            EndTime = e.EndTime,
+            Duration = e.Duration,
+            Sentiment = e.Sentiment,
+            _ = Layout.Horizontal().Gap(2)
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
@@ -54,7 +54,7 @@ public class UserCallRecordsBlade(int? managerId) : ViewBase
                         .Outline()
                         .Tooltip("Edit")
                         .ToTrigger((isOpen) => new UserCallRecordsEditSheet(isOpen, refreshToken, e.Id))
-            })
+        })
             .ToTable()
             .RemoveEmptyColumns();
 

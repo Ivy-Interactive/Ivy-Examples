@@ -36,7 +36,8 @@ public class MediumDetailsBlade(int mediumId) : ViewBase
                     blades.Pop(refresh: true);
                 }
             }, "Delete Media", AlertButtonSet.OkCancel);
-        };
+        }
+        ;
 
         var dropDown = Icons.Ellipsis
             .ToButton()
@@ -52,14 +53,14 @@ public class MediumDetailsBlade(int mediumId) : ViewBase
 
         var detailsCard = new Card(
             content: new
-                {
-                    mediumValue.Id,
-                    FilePath = mediumValue.FilePath,
-                    FileType = mediumValue.FileType,
-                    CustomerName = mediumValue.Customer != null ? $"{mediumValue.Customer.FirstName} {mediumValue.Customer.LastName}" : null,
-                    LeadId = mediumValue.Lead?.Id,
-                    VehicleInfo = mediumValue.Vehicle != null ? $"{mediumValue.Vehicle.Make} {mediumValue.Vehicle.Model} ({mediumValue.Vehicle.Year})" : null
-                }.ToDetails()
+            {
+                mediumValue.Id,
+                FilePath = mediumValue.FilePath,
+                FileType = mediumValue.FileType,
+                CustomerName = mediumValue.Customer != null ? $"{mediumValue.Customer.FirstName} {mediumValue.Customer.LastName}" : null,
+                LeadId = mediumValue.Lead?.Id,
+                VehicleInfo = mediumValue.Vehicle != null ? $"{mediumValue.Vehicle.Make} {mediumValue.Vehicle.Model} ({mediumValue.Vehicle.Year})" : null
+            }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)
