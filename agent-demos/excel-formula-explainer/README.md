@@ -12,7 +12,7 @@ No secrets required for this project.
 
 ## Live Demo
 
-<https://ivy-agent-demos-excel-formula-explainer.sliplane.app>
+<https://ivy-agent-demos-formula-explainer.sliplane.app>
 
 ## Run
 
