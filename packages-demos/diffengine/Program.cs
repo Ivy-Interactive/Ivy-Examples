@@ -9,9 +9,9 @@ server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 var customHeader = Layout.Vertical().Gap(2)
     |new Embed(CodespacesUrl);
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<DiffEngineApp>()
     .UseTabs(preventDuplicates: true)
     .Header(customHeader);
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 await server.RunAsync();
