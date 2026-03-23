@@ -6,6 +6,6 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings().DefaultApp<DataTableApp>().UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
+var appShellSettings = new AppShellSettings().DefaultApp<DataTableApp>().UseTabs(preventDuplicates: true);
+server.UseAppShell(appShellSettings);
 await server.RunAsync();
