@@ -21,25 +21,18 @@ public class SliplaneDeployApp : ViewBase
         var auth = this.UseService<IAuthService>();
         var draftStore = this.UseService<DeploymentDraftStore>();
         var args = this.UseArgs<DeployArgs>();
+        var client = this.UseService<SliplaneApiClient>();
         var draftState = this.UseState<DeployDraft?>(() =>
             args is not null
                 ? DeploymentDraftStore.ParseGitHubUrl(args.Repo)
                 : draftStore.LastDraft);
 
-        var client = this.UseService<SliplaneApiClient>();
-        var session = auth.GetAuthSession();
-        var apiToken = config["Sliplane:ApiToken"]
-                       ?? session.AuthToken?.AccessToken
-                       ?? string.Empty;
-        var draft = draftState.Value;
-
         var firstServerQuery = this.UseQuery<SliplaneServer?, (string, string)>(
-            key: ("deploy-default-server", apiToken),
-            fetcher: async (_, ct) => (await client.GetServersAsync(apiToken)).FirstOrDefault());
+            key: ("deploy-default-server", config["Sliplane:ApiToken"] ?? auth.GetAuthSession().AuthToken?.AccessToken ?? string.Empty),
+            fetcher: async (key, ct) => (await client.GetServersAsync(key.Item2)).FirstOrDefault());
 
-        var needIvyProject = draft is not null;
         var ivyProjectQuery = this.UseQuery<SliplaneProject?, (string, bool)>(
-            key: (apiToken, needIvyProject),
+            key: (config["Sliplane:ApiToken"] ?? auth.GetAuthSession().AuthToken?.AccessToken ?? string.Empty, draftState.Value is not null),
             fetcher: async (key, ct) =>
             {
                 var (token, needIvy) = key;
@@ -50,24 +43,39 @@ public class SliplaneDeployApp : ViewBase
             });
 
         var firstProjectQuery = this.UseQuery<SliplaneProject?, (string, string)>(
-            key: ("deploy-default-project", apiToken),
-            fetcher: async (_, ct) => (await client.GetProjectsAsync(apiToken)).FirstOrDefault());
+            key: ("deploy-default-project", config["Sliplane:ApiToken"] ?? auth.GetAuthSession().AuthToken?.AccessToken ?? string.Empty),
+            fetcher: async (key, ct) => (await client.GetProjectsAsync(key.Item2)).FirstOrDefault());
 
+        var serverLookupPreload = this.UseQuery<Option<string>?, (string, string?, int)>(
+            key: ("deploy-server-lookup", string.IsNullOrEmpty(firstServerQuery.Value?.Id ?? "") ? null : firstServerQuery.Value!.Id, 0),
+            fetcher: async _ =>
+            {
+                var currentServerId = firstServerQuery.Value?.Id ?? "";
+                return string.IsNullOrEmpty(currentServerId)
+                ? null
+                : new Option<string>(firstServerQuery.Value!.Name, currentServerId);
+            });
+
+        var projectLookupPreload = this.UseQuery<Option<string>?, (string, string?, int)>(
+            key: ("deploy-project-lookup", string.IsNullOrEmpty((draftState.Value is not null ? ivyProjectQuery.Value?.Id : firstProjectQuery.Value?.Id) ?? "") ? null : (draftState.Value is not null ? ivyProjectQuery.Value?.Id : firstProjectQuery.Value?.Id), 0),
+            fetcher: async _ =>
+            {
+                var currentNeedIvyProject = draftState.Value is not null;
+                var currentProjectId = (currentNeedIvyProject ? ivyProjectQuery.Value?.Id : firstProjectQuery.Value?.Id) ?? "";
+                return string.IsNullOrEmpty(currentProjectId)
+                ? null
+                : new Option<string>((currentNeedIvyProject ? ivyProjectQuery.Value?.Name : firstProjectQuery.Value?.Name) ?? "Ivy", currentProjectId);
+            });
+
+        var session = auth.GetAuthSession();
+        var apiToken = config["Sliplane:ApiToken"]
+                       ?? session.AuthToken?.AccessToken
+                       ?? string.Empty;
+        var draft = draftState.Value;
+        var needIvyProject = draft is not null;
         var ivyProject = needIvyProject ? ivyProjectQuery.Value : null;
         var preServerId = firstServerQuery.Value?.Id ?? "";
         var preProjectId = (needIvyProject ? ivyProject?.Id : firstProjectQuery.Value?.Id) ?? "";
-
-        var serverLookupPreload = this.UseQuery<Option<string>?, (string, string?, int)>(
-            key: ("deploy-server-lookup", string.IsNullOrEmpty(preServerId) ? null : preServerId, 0),
-            fetcher: async _ => string.IsNullOrEmpty(preServerId)
-                ? null
-                : new Option<string>(firstServerQuery.Value!.Name, preServerId));
-
-        var projectLookupPreload = this.UseQuery<Option<string>?, (string, string?, int)>(
-            key: ("deploy-project-lookup", string.IsNullOrEmpty(preProjectId) ? null : preProjectId, 0),
-            fetcher: async _ => string.IsNullOrEmpty(preProjectId)
-                ? null
-                : new Option<string>((needIvyProject ? ivyProject?.Name : firstProjectQuery.Value?.Name) ?? "Ivy", preProjectId));
 
         if (string.IsNullOrWhiteSpace(apiToken))
         {
