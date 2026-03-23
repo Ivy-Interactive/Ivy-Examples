@@ -34,6 +34,7 @@ public class PrStagingDeployCommentService
         string? samplesUrl,
         string? status = null,
         IReadOnlyList<string>? logLines = null,
+        bool forceNewComment = false,
         CancellationToken cancellationToken = default)
     {
         var pat = _config["GitHub:PrCommentToken"] ?? "";
@@ -42,13 +43,23 @@ public class PrStagingDeployCommentService
 
         var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines);
         var comments = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
-        var existingId = FindCommentIdByMarker(comments, Marker);
+        var existingIds = FindCommentIdsByMarker(comments, Marker);
 
-        if (existingId.HasValue)
+        if (forceNewComment && existingIds.Any())
         {
-            var ok = await _github.UpdateIssueCommentAsync(owner, repo, existingId.Value, pat, body, cancellationToken);
+            foreach (var oldId in existingIds)
+            {
+                await _github.DeleteIssueCommentAsync(owner, repo, oldId, pat, cancellationToken);
+            }
+            existingIds.Clear();
+        }
+
+        if (existingIds.Any())
+        {
+            var existingId = existingIds.Last();
+            var ok = await _github.UpdateIssueCommentAsync(owner, repo, existingId, pat, body, cancellationToken);
             if (!ok)
-                _logger.LogWarning("Failed to update staging comment {CommentId} on PR #{Pr}", existingId.Value, prNumber);
+                _logger.LogWarning("Failed to update staging comment {CommentId} on PR #{Pr}", existingId, prNumber);
             else
                 _logger.LogInformation("Updated staging links comment on PR #{Pr}", prNumber);
         }
@@ -158,16 +169,16 @@ public class PrStagingDeployCommentService
         return docsUrl.TrimEnd('/');
     }
 
-    private static long? FindCommentIdByMarker(
+    private static List<long> FindCommentIdsByMarker(
         IReadOnlyList<GitHubIssueComment> comments,
         string marker)
     {
+        var list = new List<long>();
         foreach (var c in comments)
         {
             if (c.Body.Contains(marker, StringComparison.Ordinal))
-                return c.Id;
+                list.Add(c.Id);
         }
-
-        return null;
+        return list;
     }
 }

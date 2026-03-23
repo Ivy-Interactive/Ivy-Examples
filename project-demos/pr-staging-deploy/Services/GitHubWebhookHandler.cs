@@ -122,7 +122,8 @@ public class GitHubWebhookHandler
                         prNumber,
                         docsUrl: existingDepOnOpen.DocsUrl,
                         samplesUrl: existingDepOnOpen.SamplesUrl,
-                        status: "Already deployed");
+                        status: "Already deployed",
+                        forceNewComment: true);
                     break;
                 }
 
@@ -133,7 +134,8 @@ public class GitHubWebhookHandler
                     docsUrl: null,
                     samplesUrl: null,
                     status: "Deploying...",
-                    logLines: null);
+                    logLines: null,
+                    forceNewComment: true);
 
                 _logger.LogInformation("PR #{Pr} opened: {Title} branch={Branch}", prNumber, title, branch);
                 var deployResult = await _deployService.DeployBranchAsync(apiToken, branch);
@@ -191,7 +193,8 @@ public class GitHubWebhookHandler
                     docsUrl: null,
                     samplesUrl: null,
                     status: "Redeploying...",
-                    logLines: null);
+                    logLines: null,
+                    forceNewComment: true);
 
                 _logger.LogInformation("PR #{Pr} updated: {Branch}", prNumber, branch);
                 var redeployResult = await _deployService.RedeployBranchAsync(apiToken, branch);
@@ -247,7 +250,8 @@ public class GitHubWebhookHandler
                         docsUrl: null,
                         samplesUrl: null,
                         status: "Deleted",
-                        logLines: new[] { TruncLine(deleteResult.Message, 240) });
+                        logLines: new[] { TruncLine(deleteResult.Message, 240) },
+                        forceNewComment: true);
                 break;
 
             default:
@@ -317,7 +321,8 @@ public class GitHubWebhookHandler
                 prNumber,
                 docsUrl: existingDep.DocsUrl,
                 samplesUrl: existingDep.SamplesUrl,
-                status: "Already deployed");
+                status: "Already deployed",
+                forceNewComment: true);
             return;
         }
 
@@ -329,7 +334,8 @@ public class GitHubWebhookHandler
             docsUrl: null,
             samplesUrl: null,
             status: "Deploying...",
-            logLines: null);
+            logLines: null,
+            forceNewComment: true);
 
         _logger.LogInformation("PR #{Pr} /deploy comment: {Branch}", prNumber, branch);
         var result = await _deployService.DeployBranchAsync(apiToken, branch);
