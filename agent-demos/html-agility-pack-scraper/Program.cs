@@ -12,5 +12,5 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-server.UseChrome(new ChromeSettings().UseTabs(preventDuplicates: true));
+server.UseAppShell(new AppShellSettings().UseTabs(preventDuplicates: true));
 await server.RunAsync();
