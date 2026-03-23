@@ -16,6 +16,6 @@ server.Services.AddHttpClient<CountriesService>();
 
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-server.UseChrome(new ChromeSettings().UseTabs(preventDuplicates: true));
+server.UseAppShell(new AppShellSettings().UseTabs(preventDuplicates: true));
 server.UseDefaultApp(typeof(TravelPlannerApp));
 await server.RunAsync();
