@@ -32,13 +32,15 @@ public class PrStagingDeployCommentService
         int prNumber,
         string? docsUrl,
         string? samplesUrl,
+        string? status = null,
+        IReadOnlyList<string>? logLines = null,
         CancellationToken cancellationToken = default)
     {
         var pat = _config["GitHub:PrCommentToken"] ?? "";
         if (string.IsNullOrWhiteSpace(pat))
             return;
 
-        var body = BuildCommentBody(docsUrl, samplesUrl);
+        var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines);
         var comments = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
         var existingId = FindCommentIdByMarker(comments, Marker);
 
@@ -74,23 +76,82 @@ public class PrStagingDeployCommentService
         await _github.AddReactionToIssueCommentAsync(owner, repo, issueCommentId, RocketReaction, pat, cancellationToken);
     }
 
-    private static string BuildCommentBody(string? docsUrl, string? samplesUrl)
+    private static string BuildCommentBody(
+        string? docsUrl,
+        string? samplesUrl,
+        string? status,
+        IReadOnlyList<string>? logLines)
     {
+        var statusText = string.IsNullOrWhiteSpace(status)
+            ? "Staging preview"
+            : status.Trim();
+
+        // Hide links until everything is fully deployed.
+        // We treat any status that contains "deployed" but not "failed" as "ready".
+        var showLinks = statusText.Contains("deployed", StringComparison.OrdinalIgnoreCase)
+                        && !statusText.Contains("failed", StringComparison.OrdinalIgnoreCase);
+
         var sb = new StringBuilder();
         sb.AppendLine(Marker);
         sb.AppendLine();
-        sb.AppendLine("### Staging preview");
+        sb.AppendLine("### " + statusText);
         sb.AppendLine();
-        sb.AppendLine(FormatLinkLine("Docs", docsUrl));
-        sb.AppendLine(FormatLinkLine("Samples", samplesUrl));
+
+        if (showLinks)
+        {
+            var docsPageUrl = BuildDocsIntroPageUrl(docsUrl);
+            sb.AppendLine(FormatLinkLine("Docs", docsPageUrl, showLinks));
+            sb.AppendLine(FormatLinkLine("Samples", samplesUrl, showLinks));
+        }
+        else
+        {
+            var isFailed = statusText.Contains("failed", StringComparison.OrdinalIgnoreCase);
+            if (isFailed)
+            {
+                sb.AppendLine("Deployment stopped due to an error. I’m attaching the latest Sliplane events below.");
+            }
+            else if (statusText.Contains("redeploy", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.AppendLine("Updating this PR deployment — I’ll keep the comment updated until Sliplane finishes.");
+            }
+            else
+            {
+                sb.AppendLine("I’m preparing your docs & samples for this PR. I’ll update the comment as Sliplane reports progress.");
+            }
+        }
+
+        if (logLines is { Count: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Logs");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var line in logLines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                sb.AppendLine(line);
+            }
+            sb.AppendLine("```");
+        }
         return sb.ToString();
     }
 
-    private static string FormatLinkLine(string label, string? url)
+    private static string FormatLinkLine(string label, string? url, bool showLinks)
     {
-        if (!string.IsNullOrWhiteSpace(url))
-            return $"- **{label}:** [{label}]({url})";
-        return $"- **{label}:** _pending_";
+        if (showLinks && !string.IsNullOrWhiteSpace(url))
+            return $"**{label}:** [{url}]({url})";
+
+        return $"**{label}:** _pending_";
+    }
+
+    private static string? BuildDocsIntroPageUrl(string? docsUrl)
+    {
+        if (string.IsNullOrWhiteSpace(docsUrl))
+            return null;
+
+        // Sliplane docs service usually returns the managed domain for the UI.
+        // We want to show a fully clickable URL, without forcing any extra path.
+        return docsUrl.TrimEnd('/');
     }
 
     private static long? FindCommentIdByMarker(

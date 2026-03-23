@@ -24,6 +24,8 @@ server.Services.AddScoped<GitHubApiClient>();
 server.Services.AddScoped<SliplaneStagingClient>();
 server.Services.AddScoped<StagingDeployService>();
 server.Services.AddScoped<PrStagingDeployCommentService>();
+server.Services.AddSingleton<PrStagingDeployCommentUpdateQueue>();
+server.Services.AddHostedService<PrStagingDeployCommentUpdateBackgroundService>();
 server.Services.AddScoped<GitHubWebhookHandler>();
 server.Services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, WebhookEndpointFilter>();
 server.Services.AddHostedService<ExpiryCleanupBackgroundService>();
@@ -34,7 +36,7 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = ChromeSettings.Default()
+var appShellSettings = AppShellSettings.Default()
     .DefaultApp<PrStagingDeployApp>()
     .UseTabs(preventDuplicates: true)
     .UseFooterMenuItemsTransformer((items, navigator) =>
@@ -55,6 +57,6 @@ var chromeSettings = ChromeSettings.Default()
 
         return list;
     });
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 
 await server.RunAsync();

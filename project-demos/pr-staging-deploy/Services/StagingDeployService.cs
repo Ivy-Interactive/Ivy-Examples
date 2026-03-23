@@ -104,6 +104,33 @@ public class StagingDeployService
         return (dep.DocsUrl, dep.SamplesUrl);
     }
 
+    public async Task<(List<SliplaneServiceEvent> DocsEvents, List<SliplaneServiceEvent> SamplesEvents)> GetDeploymentEventsForServicesAsync(
+        string apiToken,
+        string? docsServiceId,
+        string? samplesServiceId)
+    {
+        var projectId = _config["Sliplane:ProjectId"] ?? "";
+        if (string.IsNullOrEmpty(projectId))
+            return (new List<SliplaneServiceEvent>(), new List<SliplaneServiceEvent>());
+
+        var docsEvents = !string.IsNullOrEmpty(docsServiceId)
+            ? await _sliplane.GetServiceEventsAsync(apiToken, projectId, docsServiceId)
+            : new List<SliplaneServiceEvent>();
+
+        var samplesEvents = !string.IsNullOrEmpty(samplesServiceId)
+            ? await _sliplane.GetServiceEventsAsync(apiToken, projectId, samplesServiceId)
+            : new List<SliplaneServiceEvent>();
+
+        return (docsEvents, samplesEvents);
+    }
+
+    public async Task<StagingDeployment?> GetDeploymentByBranchAsync(string apiToken, string branchName)
+    {
+        var list = await ListDeploymentsAsync(apiToken);
+        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
+        return list.FirstOrDefault(d => string.Equals(d.BranchSafe, safe, StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task<StagingDeleteResult> DeleteBranchAsync(string apiToken, string branchName)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
