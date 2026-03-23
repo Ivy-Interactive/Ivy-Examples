@@ -12,7 +12,7 @@ No secrets required for this project.
 
 ## Live Demo
 
-<https://ivy-agent-demos-trevor-blades-countries.sliplane.app>
+<https://ivy-agent-demos-travel-planner.sliplane.app>
 
 ## Run
 
