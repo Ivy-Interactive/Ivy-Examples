@@ -14,5 +14,5 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 server.Services.AddHttpClient<SwapiService>(c => c.BaseAddress = new Uri("https://swapi.dev/api/"));
-server.UseChrome(new ChromeSettings().UseTabs(preventDuplicates: true));
+server.UseAppShell(new AppShellSettings().UseTabs(preventDuplicates: true));
 await server.RunAsync();
