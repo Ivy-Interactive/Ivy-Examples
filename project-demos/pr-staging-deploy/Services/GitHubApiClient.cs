@@ -175,6 +175,28 @@ public class GitHubApiClient
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> AddReactionToIssueCommentAsync(
+        string owner,
+        string repo,
+        long commentId,
+        string reactionContent,
+        string? token,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
+        var client = CreateClient(token);
+        var payload = JsonSerializer.Serialize(new { content = reactionContent });
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync(
+            $"https://api.github.com/repos/{owner}/{repo}/issues/comments/{commentId}/reactions",
+            content,
+            cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
     private HttpClient CreateClient(string? token)
     {
         var client = _httpClientFactory.CreateClient("GitHub");

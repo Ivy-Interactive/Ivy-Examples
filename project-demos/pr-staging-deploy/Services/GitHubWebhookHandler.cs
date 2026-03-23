@@ -150,8 +150,10 @@ public class GitHubWebhookHandler
         if (action != "created")
             return;
 
-        var comment = root.GetProperty("comment").GetProperty("body").GetString() ?? "";
-        if (!comment.Trim().Equals("/deploy", StringComparison.OrdinalIgnoreCase))
+        var commentEl = root.GetProperty("comment");
+        var commentId = commentEl.GetProperty("id").GetInt64();
+        var commentBody = commentEl.GetProperty("body").GetString() ?? "";
+        if (!commentBody.Trim().Equals("/deploy", StringComparison.OrdinalIgnoreCase))
             return;
 
         var issue = root.GetProperty("issue");
@@ -177,7 +179,7 @@ public class GitHubWebhookHandler
             return;
         }
 
-        var commentAuthorLogin = root.GetProperty("comment").GetProperty("user").GetProperty("login").GetString();
+        var commentAuthorLogin = commentEl.GetProperty("user").GetProperty("login").GetString();
         if (!GitHubDeployPermissions.IsUserAllowed(_config, commentAuthorLogin))
         {
             _logger.LogInformation(
@@ -185,6 +187,9 @@ public class GitHubWebhookHandler
                 prNumber, commentAuthorLogin ?? "(unknown)");
             return;
         }
+
+        // Let users know the bot read the `/deploy` command.
+        await _prComments.TryAddRocketReactionAsync(owner, repo, commentId);
 
         _logger.LogInformation("PR #{Pr} /deploy comment: {Branch}", prNumber, branch);
         var result = await _deployService.DeployBranchAsync(apiToken, branch);

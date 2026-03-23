@@ -24,6 +24,7 @@ This application is powered by [Ivy Framework](https://github.com/Ivy-Interactiv
   - `issue_comment` with `/deploy` → deploy on command
 - **Auto-cleanup** — background job runs hourly; removes deployments only when **both** ExpiryDays passed (since deploy start) **and** PR is closed
 - **PR comments (optional)** — after a successful deploy (webhook auto-deploy, `/deploy`, or Deploy in the UI), posts or updates **one** comment on the PR with Docs and Samples links. Uses a dedicated PAT; the comment appears as that GitHub user (bot or service account).
+- **PR comment reactions (optional)** — when someone posts `/deploy` and is allowed, the bot reacts to that comment with the GitHub `rocket` reaction (so people see it was read).
 
 ## Configuration
 
@@ -59,7 +60,7 @@ dotnet user-secrets set "GitHub:WebhookSecret" "your_webhook_secret"
 # /deploy comment: only if the comment author is in this list (PR author may be anyone).
 dotnet user-secrets set "GitHub:DeployAllowedUsers" "alice,bob"
 
-# Optional: PAT used only to create/update the staging-links comment (Issues API). Comment author = owner of this token.
+# Optional: PAT used for PR comment and comment reactions (Issues API). Reaction/comment appear as the PAT owner.
 # Fine-grained: Issues read/write on the repo. Classic: repo scope.
 dotnet user-secrets set "GitHub:PrCommentToken" "ghp_xxx"
 ```

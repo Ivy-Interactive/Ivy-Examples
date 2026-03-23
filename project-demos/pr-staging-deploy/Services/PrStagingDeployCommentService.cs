@@ -10,6 +10,7 @@ using PrStagingDeploy.Models;
 public class PrStagingDeployCommentService
 {
     public const string Marker = "<!-- ivy-staging-deploy -->";
+    private const string RocketReaction = "rocket";
 
     private readonly GitHubApiClient _github;
     private readonly IConfiguration _config;
@@ -57,6 +58,20 @@ public class PrStagingDeployCommentService
             else
                 _logger.LogInformation("Posted staging links comment on PR #{Pr}", prNumber);
         }
+    }
+
+    public async Task TryAddRocketReactionAsync(
+        string owner,
+        string repo,
+        long issueCommentId,
+        CancellationToken cancellationToken = default)
+    {
+        var pat = _config["GitHub:PrCommentToken"] ?? "";
+        if (string.IsNullOrWhiteSpace(pat))
+            return;
+
+        // Creates GitHub reaction (rocket icon) on the `/deploy` comment.
+        await _github.AddReactionToIssueCommentAsync(owner, repo, issueCommentId, RocketReaction, pat, cancellationToken);
     }
 
     private static string BuildCommentBody(string? docsUrl, string? samplesUrl)
