@@ -10,13 +10,20 @@ public class GitHubWebhookHandler
 {
     private readonly StagingDeployService _deployService;
     private readonly GitHubApiClient _github;
+    private readonly PrStagingDeployCommentService _prComments;
     private readonly IConfiguration _config;
     private readonly ILogger<GitHubWebhookHandler> _logger;
 
-    public GitHubWebhookHandler(StagingDeployService deployService, GitHubApiClient github, IConfiguration config, ILogger<GitHubWebhookHandler> logger)
+    public GitHubWebhookHandler(
+        StagingDeployService deployService,
+        GitHubApiClient github,
+        PrStagingDeployCommentService prComments,
+        IConfiguration config,
+        ILogger<GitHubWebhookHandler> logger)
     {
         _deployService = deployService;
         _github = github;
+        _prComments = prComments;
         _config = config;
         _logger = logger;
     }
@@ -73,6 +80,9 @@ public class GitHubWebhookHandler
         var prNumber = pr.GetProperty("number").GetInt32();
         var title = pr.GetProperty("title").GetString() ?? "";
         var prAuthorLogin = pr.GetProperty("user").GetProperty("login").GetString();
+        var repoEl = root.GetProperty("repository");
+        var owner = repoEl.GetProperty("owner").GetProperty("login").GetString() ?? "";
+        var repoName = repoEl.GetProperty("name").GetString() ?? "";
 
         var apiToken = GetApiToken();
         if (string.IsNullOrEmpty(apiToken))
@@ -98,6 +108,8 @@ public class GitHubWebhookHandler
                 _logger.LogInformation("PR #{Pr} opened: {Title} branch={Branch}", prNumber, title, branch);
                 var deployResult = await _deployService.DeployBranchAsync(apiToken, branch);
                 _logger.LogInformation("Deploy result: {Success} - {Message}", deployResult.Success, deployResult.Message);
+                if (deployResult.Success)
+                    await _prComments.TryPostOrUpdateStagingCommentAsync(owner, repoName, prNumber, deployResult.DocsUrl, deployResult.SamplesUrl);
                 break;
 
             case "synchronize":
@@ -112,6 +124,12 @@ public class GitHubWebhookHandler
                 _logger.LogInformation("PR #{Pr} updated: {Branch}", prNumber, branch);
                 var redeployResult = await _deployService.RedeployBranchAsync(apiToken, branch);
                 _logger.LogInformation("Redeploy result: {Success} - {Message}", redeployResult.Success, redeployResult.Message);
+                if (redeployResult.Success)
+                {
+                    var urls = await _deployService.GetDeploymentUrlsForBranchAsync(apiToken, branch);
+                    await _prComments.TryPostOrUpdateStagingCommentAsync(owner, repoName, prNumber, urls.DocsUrl, urls.SamplesUrl);
+                }
+
                 break;
 
             case "closed":
@@ -171,6 +189,8 @@ public class GitHubWebhookHandler
         _logger.LogInformation("PR #{Pr} /deploy comment: {Branch}", prNumber, branch);
         var result = await _deployService.DeployBranchAsync(apiToken, branch);
         _logger.LogInformation("Deploy result: {Success} - {Message}", result.Success, result.Message);
+        if (result.Success)
+            await _prComments.TryPostOrUpdateStagingCommentAsync(owner, repo, prNumber, result.DocsUrl, result.SamplesUrl);
     }
 
     private string GetApiToken()

@@ -28,6 +28,7 @@ public class PrStagingDeployApp : ViewBase
         var config = this.UseService<IConfiguration>();
         var github = this.UseService<GitHubApiClient>();
         var deploySvc = this.UseService<StagingDeployService>();
+        var prComments = this.UseService<PrStagingDeployCommentService>();
         var sliplane = this.UseService<SliplaneStagingClient>();
         var client = this.UseService<IClientProvider>();
         var refreshToken = this.UseRefreshToken();
@@ -243,7 +244,16 @@ public class PrStagingDeployApp : ViewBase
             {
                 var result = await deploySvc.DeployBranchAsync(t, branchName);
                 ShowMessage(result.Message, !result.Success);
-                if (result.Success) overviewQuery.Mutator.Revalidate();
+                if (result.Success)
+                {
+                    overviewQuery.Mutator.Revalidate();
+                    var owner = config["GitHub:Owner"] ?? "";
+                    var repo = config["GitHub:Repo"] ?? "";
+                    var ghToken = config["GitHub:Token"] ?? "";
+                    var prNum = await github.FindOpenPullRequestNumberByHeadBranchAsync(owner, repo, ghToken, branchName);
+                    if (prNum.HasValue)
+                        await prComments.TryPostOrUpdateStagingCommentAsync(owner, repo, prNum.Value, result.DocsUrl, result.SamplesUrl);
+                }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }
         }

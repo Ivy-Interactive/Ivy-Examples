@@ -23,6 +23,7 @@ This application is powered by [Ivy Framework](https://github.com/Ivy-Interactiv
   - `pull_request` closed → deployment kept (no immediate delete)
   - `issue_comment` with `/deploy` → deploy on command
 - **Auto-cleanup** — background job runs hourly; removes deployments only when **both** ExpiryDays passed (since deploy start) **and** PR is closed
+- **PR comments (optional)** — after a successful deploy (webhook auto-deploy, `/deploy`, or Deploy in the UI), posts or updates **one** comment on the PR with Docs and Samples links. Uses a dedicated PAT; the comment appears as that GitHub user (bot or service account).
 
 ## Configuration
 
@@ -57,6 +58,10 @@ dotnet user-secrets set "GitHub:WebhookSecret" "your_webhook_secret"
 # Auto-deploy (PR open / push): only if the PR author is in this list.
 # /deploy comment: only if the comment author is in this list (PR author may be anyone).
 dotnet user-secrets set "GitHub:DeployAllowedUsers" "alice,bob"
+
+# Optional: PAT used only to create/update the staging-links comment (Issues API). Comment author = owner of this token.
+# Fine-grained: Issues read/write on the repo. Classic: repo scope.
+dotnet user-secrets set "GitHub:PrCommentToken" "ghp_xxx"
 ```
 
 ### Who can trigger deploy (webhooks)
@@ -87,6 +92,7 @@ Staging__SamplesDockerfile=.github/docker/Dockerfile.samples
 Staging__DocsDockerfile=.github/docker/Dockerfile.docs
 Staging__ExpiryDays=7
 GitHub__DeployAllowedUsers=alice,bob
+GitHub__PrCommentToken=ghp_xxx
 ```
 
 ### GitHub Webhook (Optional)
