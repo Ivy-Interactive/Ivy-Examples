@@ -1,4 +1,4 @@
-﻿using Jwt.Apps;
+using Jwt.Apps;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 var server = new Server();
@@ -7,6 +7,6 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings().DefaultApp<JwtDemoApp>().UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
+var appShellSettings = new AppShellSettings().DefaultApp<JwtDemoApp>().UseTabs(preventDuplicates: true);
+server.UseAppShell(appShellSettings);
 await server.RunAsync();
