@@ -12,7 +12,7 @@ public static class TemplateServer
         var version = typeof(Server).Assembly.GetName().Version!.ToString().EatRight(".0");
         server.SetMetaTitle($"Ivy Course Template {version}");
 
-        var chromeSettings = new ChromeSettings()
+        var appShellSettings = new AppShellSettings()
             .Header(
                 Layout.Vertical().Padding(2)
                 | new IvyLogo()
@@ -20,7 +20,7 @@ public static class TemplateServer
             )
             .DefaultApp<Apps.Module1.Theme1.Section1.Paragraph1App>()
             .UsePages();
-        server.UseChrome(() => new DefaultSidebarChrome(chromeSettings));
+        server.UseAppShell(() => new DefaultSidebarAppShell(appShellSettings));
 
         await server.RunAsync();
     }
