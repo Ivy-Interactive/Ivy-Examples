@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["Readability.Score.Calculator.csproj", "./"]
-RUN dotnet restore "Readability.Score.Calculator.csproj"
+COPY ["Todo.csproj", "./"]
+RUN dotnet restore "Todo.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "Readability.Score.Calculator.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "Todo.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Readability.Score.Calculator.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "Todo.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./Readability.Score.Calculator.dll"]
+ENTRYPOINT ["dotnet","./Todo.dll"]
