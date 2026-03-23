@@ -23,7 +23,11 @@ public class TestAuthApp : ViewBase
         var userInfo = this.UseState<UserInfo?>();
         var repositories = this.UseState<List<GitHubRepo>?>();
         var loading = this.UseState<bool>(true);
-
+        
+        var client = this.UseService<IClientProvider>();
+        var isSheetOpen = this.UseState<bool>(false);
+        var searchText = this.UseState<string>("");
+        
         this.UseEffect(async () =>
         {
             try
@@ -64,16 +68,12 @@ public class TestAuthApp : ViewBase
                      .Width(Size.Fraction(0.4f));
         }
 
-        var client = this.UseService<IClientProvider>();
-        var isSheetOpen = this.UseState<bool>(false);
-        var searchText = this.UseState<string>("");
-
         return new Fragment()
                | (Layout.Center()
                    | new Card(Layout.Vertical().Gap(4)
                        | (Layout.Vertical().Gap(2).Align(Align.Center)
                           | new Avatar(userInfo.Value.FullName ?? userInfo.Value.Id, userInfo.Value.AvatarUrl)
-                              .Height(60).Width(60)
+                              .Height(Size.Units(60)).Width(Size.Units(60))
                           | Text.H3($"Welcome, {userInfo.Value.FullName ?? userInfo.Value.Id}!"))
                        | (new
                        {
@@ -94,7 +94,7 @@ public class TestAuthApp : ViewBase
             : $"Repositories ({count})";
 
         return new Button(buttonText, variant: ButtonVariant.Outline)
-            .HandleClick(_ => isSheetOpen.Set(true))
+            .OnClick(_ => isSheetOpen.Set(true))
             .Disabled(count == 0)
             .Width(Size.Full());
     }
@@ -121,11 +121,11 @@ public class TestAuthApp : ViewBase
                 .RemoveEmpty();
             
             var content = Layout.Vertical().Align(Align.Center)
-                | Text.Literal(repo.Name).Italic().Bold()
+                | Text.Block(repo.Name).Italic().Bold()
                 | details;
             
             return new Card(content)
-                .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
+                .OnClick(_ => client.OpenUrl(repo.HtmlUrl));
         });
 
         var content = Layout.Vertical().Gap(3)

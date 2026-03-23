@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 
 public class PullRequestsSlide : ViewBase
 {
@@ -15,7 +14,7 @@ public class PullRequestsSlide : ViewBase
         _stats = stats;
         _targetCreated = stats.PullRequestsCreated;
         _targetMerged = stats.PullRequestsMerged;
-        _targetMergeRate = _targetCreated > 0 
+        _targetMergeRate = _targetCreated > 0
             ? (int)Math.Round(_targetMerged * 100.0 / _targetCreated)
             : 0;
     }
@@ -102,7 +101,7 @@ public class PullRequestsSlide : ViewBase
         return Layout.Vertical().Gap(4).Align(Align.Center)
                | Text.H2($"{animatedCreated.Value} Pull Requests").Bold().Italic()
                | Text.Block("ideas turned into pull requests").Muted()
-               | new Spacer().Height(10)
+               | Layout.Vertical().Height(Size.Units(10))
                | (Layout.Grid().Gap(3).Columns(2).Width(Size.Fraction(0.8f))
                    | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
                        | Text.H2(animatedMerged.Value.ToString()).Bold().Italic()
@@ -112,7 +111,7 @@ public class PullRequestsSlide : ViewBase
                        | Text.H2($"{animatedRate.Value}%").Bold().Italic()
                        | Text.Block("Merge success rate").Muted())
                        .Title("Success Rate").Icon(Icons.TrendingUp))
-               | new Spacer().Height(10)
+               | Layout.Vertical().Height(Size.Units(10))
                | insight;
     }
 

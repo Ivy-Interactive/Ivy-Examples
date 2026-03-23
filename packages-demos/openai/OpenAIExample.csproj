@@ -14,8 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.13" />
-    <PackageReference Include="OpenAI" Version="2.8.0" />
+    <PackageReference Include="Ivy" Version="1.2.25" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="OpenAI" Version="2.9.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,3 +27,4 @@
   </ItemGroup>
 
 </Project>
+

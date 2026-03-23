@@ -41,7 +41,7 @@ public class LeadMediaBlade(int? leadId) : ViewBase
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
-                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete(e.Id)))
+                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(OnDelete(e.Id)))
                     | Icons.ChevronRight
                         .ToButton()
                         .Outline()

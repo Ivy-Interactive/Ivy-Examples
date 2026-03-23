@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 
 public class RepositoriesSlide : ViewBase
 {
@@ -18,21 +17,16 @@ public class RepositoriesSlide : ViewBase
 
     public override object? Build()
     {
-        var topRepo = _stats.TopRepos.FirstOrDefault();
-        var client = this.UseService<IClientProvider>();
-        var maxCommits = _stats.TopRepos.DefaultIfEmpty().Max(r => r?.CommitCount ?? 0);
-
-        // Animated values
         var animatedRepoCount = this.UseState(0);
         var animatedTopRepoCommits = this.UseState(0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
 
-        // Animate numbers on first render
         this.UseEffect(() =>
         {
             if (hasAnimated.Value) return;
 
+            var topRepo = _stats.TopRepos.FirstOrDefault();
             var scheduler = new JobScheduler(maxParallelJobs: 2);
             var steps = 50;
             var delayMs = 30;
@@ -85,6 +79,9 @@ public class RepositoriesSlide : ViewBase
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
 
+        var topRepo = _stats.TopRepos.FirstOrDefault();
+        var maxCommits = _stats.TopRepos.DefaultIfEmpty().Max(r => r?.CommitCount ?? 0);
+
         // Generate dynamic headline
         var repoName = topRepo?.Name ?? "N/A";
         var headline = _targetTotalRepos >= 10
@@ -105,14 +102,14 @@ public class RepositoriesSlide : ViewBase
                   | Text.Block(subheadline).Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer().Height(5)
-                   | BuildRepoList(client, maxCommits)
-                   | new Spacer().Height(5)
+                   | Layout.Vertical().Height(Size.Units(5))
+                   | BuildRepoList(maxCommits)
+                   | Layout.Vertical().Height(Size.Units(5))
                    | BuildInsights(topRepo, _targetTotalRepos, _targetTopRepoCommits))
                  .Width(Size.Fraction(0.8f));
     }
 
-    private object BuildRepoList(IClientProvider client, int maxCommits)
+    private object BuildRepoList(int maxCommits)
     {
         if (_stats.TopRepos.Count == 0)
         {
@@ -126,47 +123,13 @@ public class RepositoriesSlide : ViewBase
         var repoCards = _stats.TopRepos.Select((repo, index) =>
         {
             var percentage = totalCommits > 0 ? Math.Round((repo.CommitCount / (double)totalCommits) * 100, 1) : 0.0;
-            var animatedPercentage = this.UseState(0.0);
-            var refresh = this.UseRefreshToken();
-
-            // Animate percentage
-            this.UseEffect(() =>
-            {
-                if (repo.CommitCount == 0) return;
-
-                var finalValue = percentage;
-                var steps = 30;
-                var delay = index * 50; // Stagger by index
-
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(delay);
-
-                    for (int i = 0; i <= steps; i++)
-                    {
-                        var currentValue = Math.Round((i / (double)steps) * finalValue, 1);
-                        animatedPercentage.Set(currentValue);
-                        refresh.Refresh();
-                        await Task.Delay(30);
-                    }
-
-                    animatedPercentage.Set(finalValue);
-                    refresh.Refresh();
-                });
-            });
-
-            return new Card(Layout.Vertical().Align(Align.Center)
-                    | Text.H2($"{animatedPercentage.Value}%").Bold().Italic()
-                    | Text.Block($"{repo.CommitCount} commits").Muted())
-                .Title($"{repo.Name}")
-                .Icon(Icons.Folder)
-                .HandleClick(_ => client.OpenUrl(repo.HtmlUrl));
+            return new RepoCardView(repo, index, percentage);
         });
 
         // Arrange cards: first row with 2 cards, second row with 3 cards
         var cardsList = repoCards.ToList();
         var rows = new List<object>();
-        
+
         // First row: 2 cards
         if (cardsList.Count > 0)
         {
@@ -176,7 +139,7 @@ public class RepositoriesSlide : ViewBase
                 rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | firstRow);
             }
         }
-        
+
         // Second row: 3 cards
         if (cardsList.Count > 2)
         {
@@ -186,7 +149,7 @@ public class RepositoriesSlide : ViewBase
                 rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | secondRow);
             }
         }
-        
+
         // Remaining cards (if more than 5)
         if (cardsList.Count > 5)
         {

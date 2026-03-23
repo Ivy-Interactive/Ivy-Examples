@@ -44,7 +44,7 @@ public class MessageDetailsBlade(int messageId) : ViewBase
             .ToButton()
             .Ghost()
             .WithDropDown(
-                MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(onDelete)
+                MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(onDelete)
             );
 
         var editBtn = new Button("Edit")
@@ -68,7 +68,7 @@ public class MessageDetailsBlade(int messageId) : ViewBase
                 SentAt = messageValue.SentAt
             }
                 .ToDetails()
-                .MultiLine(e => e.Content)
+                .Multiline(e => e.Content)
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)

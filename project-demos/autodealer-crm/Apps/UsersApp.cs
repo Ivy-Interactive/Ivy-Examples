@@ -7,6 +7,7 @@ public class UsersApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new UserListBlade(), "Search");
+        var blades = this.UseBlades(() => new UserListBlade(), "Search");
+        return blades;
     }
 }

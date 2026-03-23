@@ -11,81 +11,73 @@ public class CreateNewDocumentApp : ViewBase
 
     public override object? Build()
     {
+        var generatedDocuments = UseState<Dictionary<string, Document>>(new Dictionary<string, Document>());
+        var isGenerating = UseState<string?>(null);
+        var errorMessages = UseState<Dictionary<string, string>>(new Dictionary<string, string>());
+
+        var simpleLetterDownload = this.UseDownload(
+            () => GetDocumentBytes("Simple Letter", GenerateSimpleLetter, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"simple-letter-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+        var tableReportDownload = this.UseDownload(
+            () => GetDocumentBytes("Table Report", GenerateTableReport, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"table-report-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+        var invoiceDownload = this.UseDownload(
+            () => GetDocumentBytes("Invoice", GenerateInvoice, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"invoice-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+        var formLetterDownload = this.UseDownload(
+            () => GetDocumentBytes("Form Letter", GenerateFormLetter, generatedDocuments.Value),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"form-letter-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
+        );
+
+        var downloads = new Dictionary<string, IState<string?>>
+        {
+            ["Simple Letter"] = simpleLetterDownload,
+            ["Table Report"] = tableReportDownload,
+            ["Invoice"] = invoiceDownload,
+            ["Form Letter"] = formLetterDownload
+        };
+
         var templates = new[]
         {
             new DocumentTemplate(
                 "Simple Letter",
                 "A basic business letter template",
-                () => GenerateSimpleLetter()
+                GenerateSimpleLetter
             ),
             new DocumentTemplate(
                 "Table Report",
                 "Document with formatted tables and data",
-                () => GenerateTableReport()
+                GenerateTableReport
             ),
             new DocumentTemplate(
                 "Invoice",
                 "Professional invoice template",
-                () => GenerateInvoice()
+                GenerateInvoice
             ),
             new DocumentTemplate(
                 "Form Letter",
                 "Mail merge style form letter",
-                () => GenerateFormLetter()
+                GenerateFormLetter
             )
         };
-
-        // State for each template
-        var generatedDocuments = UseState<Dictionary<string, Document>>(new Dictionary<string, Document>());
-        var isGenerating = UseState<string?>("");
-        var errorMessages = UseState<Dictionary<string, string>>(new Dictionary<string, string>());
 
         return new StackLayout([
             Text.H2("Aspose.Words for .NET Demo"),
             Text.Block("Generate and download Word documents using Aspose.Words."),
-        
+
             Layout.Grid().Columns(2).Gap(3)
             | templates.Select(template =>
             {
                 var isTemplateGenerated = generatedDocuments.Value.ContainsKey(template.Name);
                 var isCurrentlyGenerating = isGenerating.Value == template.Name;
-                
-                // Create download functionality for each template
-                var downloadUrl = this.UseDownload(
-                    () =>
-                    {
-                        try
-                        {
-                            Document doc;
-                            if (isTemplateGenerated)
-                            {
-                                // Use the stored document
-                                doc = generatedDocuments.Value[template.Name];
-                            }
-                            else
-                            {
-                                doc = template.Generator();
-                            }
-                            
-                            using var stream = new MemoryStream();
-                            doc.Save(stream, SaveFormat.Docx);
-                            return stream.ToArray();
-                        }
-                        catch (Exception ex)
-                        {
-                            var errorDoc = new Document();
-                            var errorBuilder = new DocumentBuilder(errorDoc);
-                            errorBuilder.Writeln($"Error generating {template.Name}:");
-                            errorBuilder.Writeln(ex.Message);
-                            
-                            using var errorStream = new MemoryStream();
-                            errorDoc.Save(errorStream, SaveFormat.Docx);
-                            return errorStream.ToArray();
-                        }
-                    },
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    $"{template.Name.Replace(" ", "-").ToLower()}-{DateTime.Now:yyyy-MM-dd-HHmmss}.docx"
-                );
+                var downloadUrl = downloads[template.Name];
 
                 // Build card content dynamically
                 var cardContent = new List<object>
@@ -104,7 +96,7 @@ public class CreateNewDocumentApp : ViewBase
                         var clearedErrors = new Dictionary<string, string>(errorMessages.Value);
                         clearedErrors.Remove(template.Name);
                         errorMessages.Set(clearedErrors);
-                        
+
                         try
                         {
                             var doc = template.Generator();
@@ -136,7 +128,7 @@ public class CreateNewDocumentApp : ViewBase
                 {
                     cardContent.Add(new StackLayout([
                         Text.Muted("Generating...")
-                    ], Ivy.Shared.Orientation.Horizontal, align: Align.Center, gap: 2));
+                    ], Ivy.Orientation.Horizontal, align: Align.Center, gap: 2));
                 }
                 
                 // Error message
@@ -160,6 +152,37 @@ public class CreateNewDocumentApp : ViewBase
             Text.Block("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents."),
             Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)")
         ], gap: 4);
+    }
+
+    private static byte[] GetDocumentBytes(string name, Func<Document> generator, Dictionary<string, Document> generatedDocuments)
+    {
+        try
+        {
+            Document doc;
+            if (generatedDocuments.TryGetValue(name, out var storedDoc))
+            {
+                doc = storedDoc;
+            }
+            else
+            {
+                doc = generator();
+            }
+
+            using var stream = new MemoryStream();
+            doc.Save(stream, SaveFormat.Docx);
+            return stream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            var errorDoc = new Document();
+            var errorBuilder = new DocumentBuilder(errorDoc);
+            errorBuilder.Writeln($"Error generating {name}:");
+            errorBuilder.Writeln(ex.Message);
+
+            using var errorStream = new MemoryStream();
+            errorDoc.Save(errorStream, SaveFormat.Docx);
+            return errorStream.ToArray();
+        }
     }
 
     private static Document GenerateSimpleLetter()

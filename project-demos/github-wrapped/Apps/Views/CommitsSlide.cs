@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 
 public class CommitsSlide : ViewBase
 {
@@ -16,34 +15,18 @@ public class CommitsSlide : ViewBase
 
     public override object? Build()
     {
-        var maxCommits = _stats.CommitsByMonth.Values.DefaultIfEmpty(0).Max();
-        var peakMonth = _stats.CommitsByMonth
-            .OrderByDescending(kvp => kvp.Value)
-            .FirstOrDefault();
-        var targetCommitsPerWeek = _stats.TotalContributionDays > 0 
-            ? Math.Round(_targetCommits / (double)(_stats.TotalContributionDays / 7.0), 1)
-            : 0;
-        var activeMonths = _stats.CommitsByMonth.Values.Count(v => v > 0);
-        var totalMonths = 12;
-        var activeMonthsPercentage = Math.Round((activeMonths / (double)totalMonths) * 100);
-        
-        // Calculate months after peak month with activity
-        var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-        var peakMonthIndex = peakMonth.Value > 0 ? Array.IndexOf(months, peakMonth.Key) : -1;
-        var monthsAfterPeak = peakMonthIndex >= 0 
-            ? months.Skip(peakMonthIndex + 1).Count(m => _stats.CommitsByMonth.GetValueOrDefault(m, 0) > 0)
-            : 0;
-
-        // Animated values
         var animatedCommits = this.UseState(0);
         var animatedCommitsPerWeek = this.UseState(0.0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
 
-        // Animate numbers on first render
         this.UseEffect(() =>
         {
             if (hasAnimated.Value) return;
+
+            var targetCommitsPerWeek = _stats.TotalContributionDays > 0
+                ? Math.Round(_targetCommits / (double)(_stats.TotalContributionDays / 7.0), 1)
+                : 0.0;
 
             var scheduler = new JobScheduler(maxParallelJobs: 2);
             var steps = 50;
@@ -90,6 +73,19 @@ public class CommitsSlide : ViewBase
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
 
+        var maxCommits = _stats.CommitsByMonth.Values.DefaultIfEmpty(0).Max();
+        var peakMonth = _stats.CommitsByMonth
+            .OrderByDescending(kvp => kvp.Value)
+            .FirstOrDefault();
+        var activeMonths = _stats.CommitsByMonth.Values.Count(v => v > 0);
+        var totalMonths = 12;
+        var activeMonthsPercentage = Math.Round((activeMonths / (double)totalMonths) * 100);
+        var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        var peakMonthIndex = peakMonth.Value > 0 ? Array.IndexOf(months, peakMonth.Key) : -1;
+        var monthsAfterPeak = peakMonthIndex >= 0
+            ? months.Skip(peakMonthIndex + 1).Count(m => _stats.CommitsByMonth.GetValueOrDefault(m, 0) > 0)
+            : 0;
+
         return Layout.Vertical().Gap(6).Align(Align.Center)
                | (Layout.Vertical().Gap(4).Align(Align.Center)
                   | Text.H2($"{animatedCommits.Value} Commits").Bold().Italic()
@@ -97,9 +93,9 @@ public class CommitsSlide : ViewBase
                   | Text.Block($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildMonthlyChart(maxCommits)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildInsights(activeMonths, activeMonthsPercentage, peakMonth.Key, peakMonth.Value, monthsAfterPeak))
                  .Width(Size.Fraction(0.8f));
     }
@@ -110,54 +106,13 @@ public class CommitsSlide : ViewBase
         var peakMonth = _stats.CommitsByMonth
             .OrderByDescending(kvp => kvp.Value)
             .FirstOrDefault();
-        
+
         // Filter to show only months with activity, or show all but make empty ones more compact
         var rows = months.Select((month, index) =>
         {
             var count = _stats.CommitsByMonth.GetValueOrDefault(month, 0);
             var isPeak = month == peakMonth.Key && peakMonth.Value > 0;
-            var progressValue = maxCommits > 0 ? (int)Math.Round((count / (double)maxCommits) * 100) : 0;
-            
-            var progressState = this.UseState(0);
-            
-            // Animate progress bar
-            this.UseEffect(() =>
-            {
-                if (count == 0) return;
-                
-                var finalValue = progressValue;
-                var steps = 30;
-                var delay = index * 30; // Stagger by month index
-                
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(delay);
-                    
-                    for (int i = 0; i <= steps; i++)
-                    {
-                        var currentValue = (int)Math.Round((i / (double)steps) * finalValue);
-                        progressState.Set(currentValue);
-                        await Task.Delay(30);
-                    }
-                    
-                    progressState.Set(finalValue);
-                });
-            });
-            
-            if (count == 0)
-            {
-                return Layout.Horizontal().Gap(2).Align(Align.Center)
-                       | Text.Block(month).Width(10).Muted()
-                       | new Progress(progressState)
-                           .Height(Size.Units(4))
-                       | Text.Block("0").Width(10).Muted();
-            }
-            
-            return Layout.Horizontal().Gap(2).Align(Align.Center)
-                   | Text.Block(month).Width(10).Bold(isPeak)
-                   | new Progress(progressState)
-                       .Goal(count > 0 ? count.ToString() : null)
-                   | Text.Block(count.ToString()).Width(10).Bold(isPeak);
+            return new MonthlyChartRowView(month, count, maxCommits, isPeak, index);
         });
 
         return Layout.Vertical().Gap(2) | rows;
@@ -167,7 +122,7 @@ public class CommitsSlide : ViewBase
     {
         var mainInsight = "";
         var subInsight = "";
-        
+
         if (activeMonths == 0)
         {
             mainInsight = "Your coding journey in 2025.";
@@ -216,7 +171,7 @@ public class CommitsSlide : ViewBase
                 | Text.Block(mainInsight).Bold())
             | Text.Block(subInsight).Muted();
     }
-    
+
     private string GetFullMonthName(string monthAbbr)
     {
         return monthAbbr switch

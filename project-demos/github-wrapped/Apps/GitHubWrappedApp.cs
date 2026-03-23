@@ -3,7 +3,6 @@ namespace GitHubWrapped.Apps;
 using GitHubWrapped.Models;
 using GitHubWrapped.Services;
 using GitHubWrapped.Apps.Views;
-using Ivy.Helpers;
 
 [App(icon: Icons.Github, title: "GitHub Wrapped 2025")]
 public class GitHubWrappedApp : ViewBase
@@ -12,23 +11,30 @@ public class GitHubWrappedApp : ViewBase
     {
         var auth = this.UseService<IAuthService>();
         var apiClient = this.UseService<GitHubApiClient>();
-        
+
         var stats = this.UseState<GitHubStats?>();
         var selectedIndex = this.UseState(0);
         var refresh = this.UseRefreshToken();
+
+        // 1. Hooks MUST be at the top
+        var downloadUrl = this.UseDownload(
+            () => stats.Value != null ? SummarySlide.GenerateSummaryImage(stats.Value) : Array.Empty<byte>(),
+            "image/png",
+            "github-wrapped-2025.png"
+        );
 
         var scheduler = this.UseMemo(() => BuildScheduler(auth, apiClient, stats));
 
         this.UseEffect(() =>
         {
             var sub = scheduler.Subscribe(_ => refresh.Refresh());
-            
+
             // Auto-start if not already finished or running
             if (stats.Value == null)
             {
                 _ = scheduler.RunAsync();
             }
-            
+
             return sub;
         });
 
@@ -69,16 +75,16 @@ public class GitHubWrappedApp : ViewBase
                                     .Icon(Icons.ChevronLeft)
                                     .Variant(ButtonVariant.Outline)
                                     .Disabled(selectedIndex.Value == 0)
-                                    .HandleClick(() =>
+                                    .OnClick(() =>
                                     {
                                         selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
                                     }))
                             | (Layout.Vertical().Align(Align.Right)
-                                | (selectedIndex.Value == stepperItems.Length - 1 
-                                    ? BuildShareButton(stats.Value)
+                                | (selectedIndex.Value == stepperItems.Length - 1
+                                    ? BuildShareButton(downloadUrl)
                                     : new Button(selectedIndex.Value == 0 ? "Start the recap" : "Show me more")
                                         .Icon(Icons.ChevronRight, Align.Right)
-                                        .HandleClick(() =>
+                                        .OnClick(() =>
                                         {
                                             selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
                                         })))),
@@ -92,10 +98,8 @@ public class GitHubWrappedApp : ViewBase
         }
     }
 
-    private object BuildShareButton(GitHubStats stats)
+    private object BuildShareButton(IState<string?> downloadUrl)
     {
-        var downloadUrl = this.UseDownload(() => SummarySlide.GenerateSummaryImage(stats), "image/png", "github-wrapped-2025.png");
-        
         var shareButton = new Button("Share").Icon(Icons.Share2);
         if (!string.IsNullOrEmpty(downloadUrl.Value))
         {
@@ -103,7 +107,7 @@ public class GitHubWrappedApp : ViewBase
         }
         return shareButton;
     }
-    
+
     private object BuildCurrentSlide(int index, GitHubStats stats)
     {
         return index switch
@@ -124,7 +128,7 @@ public class GitHubWrappedApp : ViewBase
         IState<GitHubStats?> statsState)
     {
         var scheduler = new JobScheduler(maxParallelJobs: 3);
-        
+
         // Shared state for the jobs
         var context = new ExtractionContext();
         var options = new GitHubStatsOptions();
@@ -135,7 +139,7 @@ public class GitHubWrappedApp : ViewBase
                 progress.Report(0.2);
                 context.User = await auth.GetUserInfoAsync();
                 if (context.User == null) throw new Exception("Not authenticated");
-                
+
                 var authToken = auth.GetAuthSession().AuthToken?.AccessToken;
                 if (string.IsNullOrWhiteSpace(authToken)) throw new Exception("No access token");
                 context.Token = authToken;
@@ -143,7 +147,7 @@ public class GitHubWrappedApp : ViewBase
                 progress.Report(0.6);
                 context.Username = await apiClient.GetUsernameAsync(context.Token);
                 if (string.IsNullOrWhiteSpace(context.Username)) throw new Exception("Could not find username");
-                
+
                 progress.Report(1.0);
             })
             .Build();
@@ -177,7 +181,7 @@ public class GitHubWrappedApp : ViewBase
                 progress.Report(1.0);
             })
             .Build();
-            
+
         var streakJob = scheduler.CreateJob("Calculating Streak")
              .DependsOn(authJob)
              .WithAction(async (_, _, progress, token) =>
@@ -197,7 +201,7 @@ public class GitHubWrappedApp : ViewBase
             {
                 progress.Report(0.1);
                 var calculator = new GitHubStatsCalculator(options);
-                
+
                 var commitsByMonth = calculator.CalculateCommitsByMonth(context.Commits!);
                 var languageBreakdown = calculator.CalculateLanguageBreakdown(context.Repositories!);
                 var topRepos = calculator.CalculateTopRepos(context.Repositories!, context.Commits!);
@@ -224,7 +228,7 @@ public class GitHubWrappedApp : ViewBase
                 progress.Report(1.0);
             })
             .Build();
-            
+
         return scheduler;
     }
 

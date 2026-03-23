@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -18,7 +18,11 @@
   
   <ItemGroup>
     <PackageReference Include="IbanNet" Version="6.0.0" />
-    <PackageReference Include="Ivy" Version="1.2.13" />
+    <PackageReference Include="Ivy" Version="1.2.25" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   
   
@@ -29,4 +33,5 @@
   </ItemGroup>
 
 </Project>
+
 

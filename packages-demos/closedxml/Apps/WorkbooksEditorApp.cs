@@ -10,7 +10,8 @@ public class ExcelEditorApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new WorkbooksListBlade(), "Workbooks Editor", Size.Units(75));
+        var blades = this.UseBlades(() => new WorkbooksListBlade(), "Workbooks Editor", Size.Units(75));
+        return blades;
     }
 }
 
@@ -114,10 +115,10 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeService bla
         var client = this.UseService<IClientProvider>();
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
-
+        var selectedType = this.UseState("string");
         var columnName = this.UseState<string?>(() => null);
         var columnTypes = new string[] { "int", "double", "decimal", "long", "string" };
-        var selectedType = this.UseState("string");
+        
 
         var addColumnButton = new Button("Add Column", _ =>
         {
@@ -151,7 +152,7 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeService bla
             Layout.Vertical().Gap(2)
             | Layout.Horizontal().Gap(2)
                 | columnName.ToTextInput(placeholder: "Column name")
-                | selectedType.ToSelectInput(columnTypes.ToOptions()).Variant(SelectInputs.Select)
+                | selectedType.ToSelectInput(columnTypes.ToOptions()).Variant(SelectInputVariant.Select)
                 | addColumnButton
         ).Title($"Add New Column");
 
@@ -207,7 +208,7 @@ public class RowEditor(DataTable table, RefreshToken refreshToken, WorkbookRepos
     public override object? Build()
     {
         var client = this.UseService<IClientProvider>();
-        var inputsForRowData = new List<IState<string?>>();
+        var inputsRef = this.UseRef(new List<IState<string?>>());
         var dataColumns = table.Columns.Cast<DataColumn>().ToList();
 
         if (dataColumns.Count == 0)
@@ -215,30 +216,23 @@ public class RowEditor(DataTable table, RefreshToken refreshToken, WorkbookRepos
             return Text.Block("Add columns first to start adding rows");
         }
 
-        var inputFields = new List<object>();
-        foreach (var col in dataColumns)
-        {
-            var inputState = this.UseState<string?>(() => null);
-            inputsForRowData.Add(inputState);
-            inputFields.Add(inputState.ToTextInput(placeholder: col.ColumnName));
-        }
+        inputsRef.Value.Clear();
+        var inputFields = dataColumns.Select(col => new RowEditorColumnInputView(col, inputsRef)).Cast<object>().ToList();
 
         var addRowButton = new Button("Add Row", _ =>
         {
             try
             {
-                var newRow = inputsForRowData.Select(input => input.Value ?? "").ToArray();
+                var newRow = inputsRef.Value.Select(input => input.Value ?? "").ToArray();
                 table.Rows.Add(newRow);
-                
-                // Auto-save changes - passing fileName directly to avoid shared state issues
+
                 workbookRepository.Save(fileName, table);
-                
-                // Clear inputs
-                foreach (var input in inputsForRowData)
+
+                foreach (var input in inputsRef.Value)
                 {
-                    input.Set(String.Empty);
+                    input.Set(string.Empty);
                 }
-                
+
                 refreshToken.Refresh();
                 client.Toast("Row added and saved!");
             }
@@ -253,6 +247,19 @@ public class RowEditor(DataTable table, RefreshToken refreshToken, WorkbookRepos
         return Layout.Vertical().Gap(2)
             | Layout.Horizontal().Gap(2) | inputFields.ToArray()
             | addRowButton;
+    }
+}
+
+/// <summary>
+/// Single column input for Row Editor - has its own UseState at top level (no hooks in loop)
+/// </summary>
+public class RowEditorColumnInputView(DataColumn column, IRef<List<IState<string?>>> inputsRef) : ViewBase
+{
+    public override object? Build()
+    {
+        var inputState = this.UseState<string?>(() => null);
+        inputsRef.Value.Add(inputState);
+        return inputState.ToTextInput(placeholder: column.ColumnName);
     }
 }
 

@@ -42,7 +42,7 @@ public class StartupDealsBlade(int startupId) : ViewBase
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
-                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete(e.Id)))
+                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(OnDelete(e.Id)))
                     | Icons.Pencil
                         .ToButton()
                         .Outline()

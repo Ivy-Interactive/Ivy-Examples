@@ -27,7 +27,7 @@ public class StartupDealsEditSheet(IState<bool> isOpen, RefreshToken refreshToke
         return deal
             .ToForm()
             .Builder(e => e.Amount, e => e.ToMoneyInput().Currency("USD"))
-            .Builder(e => e.Round, e => e.ToTextAreaInput())
+            .Builder(e => e.Round, e => e.ToTextareaInput())
             .Builder(e => e.DealDate, e => e.ToDateInput())
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt, e => e.StartupId)
             .ToSheet(isOpen, "Edit Deal");

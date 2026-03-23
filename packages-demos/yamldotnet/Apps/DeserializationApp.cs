@@ -47,7 +47,7 @@ addresses:
 
                 // Convert Button
                 | new Button("Deserialize to Person")
-                    .HandleClick(() => DeserializeToPerson(yamlInput.Value, personOutput, errorMessage, resultOutput))
+                    .OnClick(() => DeserializeToPerson(yamlInput.Value, personOutput, errorMessage, resultOutput))
                 )
 
             | Text.Block("This demo uses YamlDotNet library to deserialize YAML into Person objects.")

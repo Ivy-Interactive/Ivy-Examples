@@ -2,11 +2,12 @@ using Vc.Apps.Views;
 
 namespace Vc.Apps;
 
-[App(icon: Icons.User)]
+[App(icon: Icons.User, group: ["Apps"])]
 public class FoundersApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new FounderListBlade(), "Search");
+        var blades = this.UseBlades(() => new FounderListBlade(), "Search");
+        return blades;
     }
 }

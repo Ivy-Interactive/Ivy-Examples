@@ -5,7 +5,8 @@ public class LlmTornadoApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new MainMenuBlade(), "Examples");
+        var blades = this.UseBlades(() => new MainMenuBlade(), "Examples");
+        return blades;
     }
 }
 
@@ -13,82 +14,16 @@ public class MainMenuBlade : ViewBase
 {
     public override object? Build()
     {
+        // 1. Hooks MUST be at the top
         var blades = UseContext<IBladeService>();
         var client = UseService<IClientProvider>();
         var ollamaUrl = UseState("http://localhost:11434");
         var selectedModel = UseState<string?>(() => null);
         var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
         var isLoadingModels = UseState(false);
-        
-        // Load models from Ollama API
-        async Task LoadModels()
-        {
-            if (string.IsNullOrWhiteSpace(ollamaUrl.Value)) return;
-            
-            isLoadingModels.Set(true);
-            try
-            {
-                var url = $"{ollamaUrl.Value.TrimEnd('/')}/api/tags";
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                var response = await httpClient.GetAsync(url);
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    using var doc = System.Text.Json.JsonDocument.Parse(json);
-                    
-                    if (doc.RootElement.TryGetProperty("models", out var modelsElement) && modelsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
-                    {
-                        var modelNames = modelsElement.EnumerateArray()
-                            .Select(m => m.TryGetProperty("name", out var name) ? name.GetString() : null)
-                            .Where(name => !string.IsNullOrEmpty(name))
-                            .Cast<string>()
-                            .ToImmutableArray();
-                        
-                        availableModels.Set(modelNames);
-                        
-                        // Auto-select first model if no model is selected
-                        if (modelNames.Length > 0 && (selectedModel.Value == null || !modelNames.Contains(selectedModel.Value)))
-                        {
-                            selectedModel.Set(modelNames[0]);
-                        }
-                    }
-                    else
-                    {
-                        // If JSON structure is not as expected
-                        availableModels.Set(ImmutableArray<string>.Empty);
-                    }
-                }
-                else
-                {
-                    availableModels.Set(ImmutableArray<string>.Empty);
-                    var errorText = await response.Content.ReadAsStringAsync();
-                    client.Toast($"Failed to load models: {response.StatusCode}", "Error");
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                availableModels.Set(ImmutableArray<string>.Empty);
-                client.Toast("Connection timeout to Ollama. Please check if Ollama is running.", "Error");
-            }
-            catch (HttpRequestException ex)
-            {
-                availableModels.Set(ImmutableArray<string>.Empty);
-                client.Toast($"Connection error to Ollama: {ex.Message}", "Error");
-            }
-            catch (Exception ex)
-            {
-                availableModels.Set(ImmutableArray<string>.Empty);
-                client.Toast($"Error loading models: {ex.Message}", "Error");
-            }
-            finally
-            {
-                isLoadingModels.Set(false);
-            }
-        }
-        
+
         // Load models on initialization and when URL changes
-        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
+        UseEffect(async () => await LoadModels(), []);
         UseEffect(async () => await LoadModels(), [ollamaUrl]);
 
         var content = Layout.Vertical()
@@ -98,7 +33,7 @@ public class MainMenuBlade : ViewBase
                     | Text.Muted("Follow these steps to get started:")
                     | Text.Markdown("**1. Download Ollama** from [https://ollama.com/download](https://ollama.com/download)")
                     | Text.Markdown("**2. Download Models** for example:")
-                    | new Code("ollama pull llama2")
+                    | new CodeBlock("ollama pull llama2")
                         .ShowCopyButton()
                    | Text.Markdown("**3. Configuration:**")
                    | Layout.Horizontal()
@@ -119,31 +54,86 @@ public class MainMenuBlade : ViewBase
                      | new Card(
                          Layout.Horizontal().Gap(3)
                          | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
-                            | new Icon(Icons.MessageSquare).Size(16))
+                            | new Icon(Icons.MessageSquare).Size(Size.Units(16)))
                          | (Layout.Vertical().Gap(2)
                              | Text.H3("Simple Chat").Bold()
                              | Text.Block("Basic conversation with streaming responses").Muted()
                              | new Button("Try It")
                                  .Variant(ButtonVariant.Primary)
                                  .Disabled(selectedModel.Value == null)
-                                 .HandleClick(_ => blades.Push(this, new SimpleChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Simple Chat")))
+                                 .OnClick(_ => blades.Push(this, new SimpleChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Simple Chat")))
                      )
                     | new Card(
                         Layout.Horizontal().Gap(3)
                         | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
-                            | new Icon(Icons.Bot).Size(16))
+                            | new Icon(Icons.Bot).Size(Size.Units(16)))
                         | (Layout.Vertical().Gap(2)
                             | Text.H3("Agent with Tools").Bold()
                             | Text.Block("Agent with function calling capabilities").Muted()
                             | new Button("Try It")
                                 .Variant(ButtonVariant.Primary)
                                 .Disabled(selectedModel.Value == null)
-                                .HandleClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
+                                .OnClick(_ => blades.Push(this, new AgentChatBlade(ollamaUrl.Value, selectedModel.Value ?? "llama3.2:1b"), "Agent Chat")))
                     );
 
         return new Fragment()
                | new BladeHeader(Text.H4("LlmTornado Examples"))
                | content;
+
+        // --- Helper / Logic at bottom ---
+        async Task LoadModels()
+        {
+            if (string.IsNullOrWhiteSpace(ollamaUrl.Value)) return;
+
+            isLoadingModels.Set(true);
+            try
+            {
+                var url = $"{ollamaUrl.Value.TrimEnd('/')}/api/tags";
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var response = await httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+                    if (doc.RootElement.TryGetProperty("models", out var modelsElement) && modelsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        var modelNames = modelsElement.EnumerateArray()
+                            .Select(m => m.TryGetProperty("name", out var name) ? name.GetString() : null)
+                            .Where(name => !string.IsNullOrEmpty(name))
+                            .Cast<string>()
+                            .ToImmutableArray();
+
+                        availableModels.Set(modelNames);
+
+                        // Auto-select first model if no model is selected
+                        if (modelNames.Length > 0 && (selectedModel.Value == null || !modelNames.Contains(selectedModel.Value)))
+                        {
+                            selectedModel.Set(modelNames[0]);
+                        }
+                    }
+                    else
+                    {
+                        availableModels.Set(ImmutableArray<string>.Empty);
+                    }
+                }
+                else
+                {
+                    availableModels.Set(ImmutableArray<string>.Empty);
+                    client.Toast($"Failed to load models: {response.StatusCode}", "Error");
+                }
+            }
+            catch (Exception ex)
+            {
+                availableModels.Set(ImmutableArray<string>.Empty);
+                client.Toast($"Error loading models: {ex.Message}", "Error");
+            }
+            finally
+            {
+                isLoadingModels.Set(false);
+            }
+        }
     }
 }
 

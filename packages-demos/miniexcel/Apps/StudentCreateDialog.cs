@@ -49,9 +49,9 @@ public class StudentCreateDialog(IState<bool> isOpen, RefreshToken refreshToken,
                     StudentService.AddStudent(newStudent);
                     students.Set(StudentService.GetStudents()); // Trigger update
                     refreshToken.Refresh(); // Sync with other pages
-                    
+
                     client.Toast($"Student '{newStudent.Name}' added");
-                    
+
                     // Reset form - ToDialog will auto-close
                     student.Set(new StudentCreateRequest());
                 }

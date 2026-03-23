@@ -2,11 +2,12 @@ using AutodealerCrm.Apps.Views;
 
 namespace AutodealerCrm.Apps;
 
-[App(icon: Icons.MessageCircle)]
+[App(icon: Icons.MessageCircle, group: ["Apps"])]
 public class MessagesApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new MessageListBlade(), "Search");
+        var blades = this.UseBlades(() => new MessageListBlade(), "Search");
+        return blades;
     }
 }

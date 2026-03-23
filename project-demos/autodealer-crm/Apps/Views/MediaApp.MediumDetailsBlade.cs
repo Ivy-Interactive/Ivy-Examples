@@ -43,7 +43,7 @@ public class MediumDetailsBlade(int mediumId) : ViewBase
             .ToButton()
             .Ghost()
             .WithDropDown(
-                MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete)
+                MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(OnDelete)
             );
 
         var editBtn = new Button("Edit")

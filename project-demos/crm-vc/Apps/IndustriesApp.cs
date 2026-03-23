@@ -7,6 +7,7 @@ public class IndustriesApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new IndustryListBlade(), "Search");
+        var blades = this.UseBlades(() => new IndustryListBlade(), "Search");
+        return blades;
     }
 }

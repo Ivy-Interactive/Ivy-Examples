@@ -3,11 +3,7 @@ namespace ZStringExample;
 [App(icon: Icons.Code, title: "ZString")]
 public class ZStringApp : ViewBase
 {
-    public override object Build()
-    {
-        var selectedOperation = this.UseState<string?>(() => null);
-        var resultState = this.UseState<string?>(() => null);
-        var operations = new Dictionary<string, (string code, Func<string> execute)>
+    private static readonly Dictionary<string, (string code, Func<string> execute)> Operations = new()
         {
             ["Concat"] = (
                 "var output = ZString.Concat(\"Hello\", \" \", \"Ivy\", \" \", 2025);",
@@ -123,9 +119,16 @@ public class ZStringApp : ViewBase
                     return "Failed to copy";
                 }
             )
-        };
-        UseEffect(() => {
-            if (selectedOperation.Value != null && operations.TryGetValue(selectedOperation.Value, out var op))
+    };
+
+    public override object Build()
+    {
+        var selectedOperation = this.UseState<string?>(() => null);
+        var resultState = this.UseState<string?>(() => null);
+
+        UseEffect(() =>
+        {
+            if (selectedOperation.Value != null && Operations.TryGetValue(selectedOperation.Value, out var op))
             {
                 try
                 {
@@ -142,19 +145,19 @@ public class ZStringApp : ViewBase
             }
         }, selectedOperation);
 
-        var operationOptions = operations.Keys
+        var operationOptions = Operations.Keys
             .Select(key => new Option<string>(key, key))
             .ToArray();
 
         object? codeBlocks = null;
-        if (selectedOperation.Value != null && operations.TryGetValue(selectedOperation.Value, out var selectedOp))
+        if (selectedOperation.Value != null && Operations.TryGetValue(selectedOperation.Value, out var selectedOp))
         {
             codeBlocks = Layout.Vertical()
                 | Text.Label("Function Code")
-                | new Code(selectedOp.code, Languages.Csharp)
+                | new CodeBlock(selectedOp.code, Languages.Csharp)
                     .ShowCopyButton()
                 | Text.Label("Result")
-                | new Code(resultState.Value ?? "Computing...", Languages.Text)
+                | new CodeBlock(resultState.Value ?? "Computing...", Languages.Text)
                     .ShowCopyButton();
         }
 

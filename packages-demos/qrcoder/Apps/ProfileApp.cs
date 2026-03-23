@@ -18,10 +18,10 @@ public class ProfileApp : ViewBase
     public override object? Build()
     {
         var profile = UseState(() => new ProfileModel("", "", "", null, null, null));
-        var qrCodeService = new QrCodeService();
         var qrCodeBase64 = UseState<string>("");
         var profileSubmitted = UseState<bool>(false);
-
+        
+        var qrCodeService = new QrCodeService();
         var formBuilder = profile.ToForm()
             .Required(m => m.FirstName, m => m.LastName, m => m.Email)
             .Place(m => m.FirstName)
@@ -70,7 +70,7 @@ public class ProfileApp : ViewBase
             | Text.Block("Fill in your information to create a shareable profile")
             | formView
             | Layout.Horizontal()
-                 | new Button("Create Profile").HandleClick(new Action(HandleSubmit))
+                 | new Button("Create Profile").OnClick(new Action(HandleSubmit))
                     .Loading(loading).Disabled(loading)
                 | validationView
             | Text.Block("This demo uses QRCoder library to generate vCard QR codes for contact sharing.")

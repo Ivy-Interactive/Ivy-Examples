@@ -18,6 +18,9 @@ namespace EnumsNetApp.Apps
     [App(title: "Enums.NET", icon: Icons.Tag)]
     public class EnumsNetDemoApp : ViewBase
     {
+        private static readonly DaysOfWeek FlagA = DaysOfWeek.Monday | DaysOfWeek.Wednesday | DaysOfWeek.Friday;
+        private static readonly DaysOfWeek FlagB = DaysOfWeek.Monday | DaysOfWeek.Wednesday;
+
         // for falg enums related operations
         enum flagOperations { HasAllFlags, HasAnyFlags, CombineFlags, CommonFlags, RemoveFlags, GetFlags }
 
@@ -67,52 +70,14 @@ namespace EnumsNetApp.Apps
         public override object? Build()
         {
             var client = UseService<IClientProvider>();
-
-            // enum flag states 
             var selectedFlagView = UseState<string>(() => "HasAllFlags");
-            
-            var flagA = DaysOfWeek.Monday | DaysOfWeek.Wednesday | DaysOfWeek.Friday;
-            var flagB = DaysOfWeek.Monday | DaysOfWeek.Wednesday;
-            // state for DaysOfWeek flags
-            var daysFlags = UseState(flagB);
+            var daysFlags = UseState(FlagB);
             var flagResult = UseState<object>(() => CreateHasAllFlagsMarkdown());
-            // Validation result state
             var validationResult = UseState<object>(() => Text.P("Select a validation option to see results"));
-
-
-            // Simple enum viewer state
             var selectedEnumType = UseState<string>(() => "DaysOfWeek");
             var simpleEnumList = UseState<List<EnumMemberInfo>>(() => GetEnumMembers("DaysOfWeek"));
-
-            // Demo selection state
             var selectedDemo = UseState<string>(() => "");
 
-            // Helper function to get enum members
-            List<EnumMemberInfo> GetEnumMembers(string enumTypeName)
-            {
-                var enumType = enumTypeName switch
-                {
-                    "NumericOperator" => typeof(NumericOperator),
-                    "DaysOfWeek" => typeof(DaysOfWeek),
-                    "DayType" => typeof(DayType),
-                    "PriorityLevel" => typeof(PriorityLevel),
-                    _ => throw new ArgumentException($"Invalid enum type name: '{enumTypeName}'", nameof(enumTypeName))
-                };
-
-                return Enums.GetMembers(enumType)
-                           .Select(m => new EnumMemberInfo(
-                               (int)m.Value,
-                               m.Name,
-                               m.Attributes.Get<DescriptionAttribute>()?.Description,
-                               m.Attributes.Get<SymbolAttribute>()?.Symbol,
-                               m.Attributes.Get<DisplayAttribute>()?.Name,
-                               m.Attributes.Get<DisplayAttribute>()?.Order
-                           ))
-                           .OrderBy(x => x.Value)
-                           .ToList();
-            }
-
-            // Initialize and update enum list when selectedEnumType changes
             UseEffect(() =>
             {
                 try
@@ -126,7 +91,6 @@ namespace EnumsNetApp.Apps
                 }
             }, selectedEnumType);
 
-            // Update flag operation when selectedFlagView changes
             UseEffect(() =>
             {
                 try
@@ -138,8 +102,7 @@ namespace EnumsNetApp.Apps
                     client.Error(ex);
                 }
             }, selectedFlagView);
-            
-            // Update demo when selectedDemo changes
+
             UseEffect(() =>
             {
                 try
@@ -171,13 +134,37 @@ namespace EnumsNetApp.Apps
                 }
             }, selectedDemo);
 
+            List<EnumMemberInfo> GetEnumMembers(string enumTypeName)
+            {
+                var enumType = enumTypeName switch
+                {
+                    "NumericOperator" => typeof(NumericOperator),
+                    "DaysOfWeek" => typeof(DaysOfWeek),
+                    "DayType" => typeof(DayType),
+                    "PriorityLevel" => typeof(PriorityLevel),
+                    _ => throw new ArgumentException($"Invalid enum type name: '{enumTypeName}'", nameof(enumTypeName))
+                };
+
+                return Enums.GetMembers(enumType)
+                           .Select(m => new EnumMemberInfo(
+                               (int)m.Value,
+                               m.Name,
+                               m.Attributes.Get<DescriptionAttribute>()?.Description,
+                               m.Attributes.Get<SymbolAttribute>()?.Symbol,
+                               m.Attributes.Get<DisplayAttribute>()?.Name,
+                               m.Attributes.Get<DisplayAttribute>()?.Order
+                           ))
+                           .OrderBy(x => x.Value)
+                           .ToList();
+            }
+
             // Helper functions for creating Markdown results
             object CreateHasAllFlagsMarkdown()
             {
-                var result = flagA.HasAllFlags(flagB);
+                var result = FlagA.HasAllFlags(FlagB);
                 var markdown = $"### HasAllFlags Operation\n\n" +
-                             $"**FlagA:** `{flagA}` (Value: {(int)flagA})\n\n" +
-                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**FlagA:** `{FlagA}` (Value: {(int)FlagA})\n\n" +
+                             $"**FlagB:** `{FlagB}` (Value: {(int)FlagB})\n\n" +
                              $"**Operation:** `flagA.HasAllFlags(flagB)`\n\n" +
                              $"**Result:** `{result}`\n\n" +
                              $"**Explanation:** {(result ? "FlagA contains ALL flags from FlagB" : "FlagA does NOT contain all flags from FlagB")}";
@@ -186,10 +173,10 @@ namespace EnumsNetApp.Apps
 
             object CreateHasAnyFlagsMarkdown()
             {
-                var result = DaysOfWeek.Monday.HasAnyFlags(flagB);
+                var result = DaysOfWeek.Monday.HasAnyFlags(FlagB);
                 var markdown = $"### HasAnyFlags Operation\n\n" +
                              $"**Monday:** `{DaysOfWeek.Monday}` (Value: {(int)DaysOfWeek.Monday})\n\n" +
-                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**FlagB:** `{FlagB}` (Value: {(int)FlagB})\n\n" +
                              $"**Operation:** `Monday.HasAnyFlags(flagB)`\n\n" +
                              $"**Result:** `{result}`\n\n" +
                              $"**Explanation:** {(result ? "Monday shares at least one flag with FlagB" : "Monday shares NO flags with FlagB")}";
@@ -198,10 +185,10 @@ namespace EnumsNetApp.Apps
 
             object CreateCombineFlagsMarkdown()
             {
-                var result = flagA.CombineFlags(flagB);
+                var result = FlagA.CombineFlags(FlagB);
                 var markdown = $"### CombineFlags Operation\n\n" +
-                             $"**FlagA:** `{flagA}` (Value: {(int)flagA})\n\n" +
-                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**FlagA:** `{FlagA}` (Value: {(int)FlagA})\n\n" +
+                             $"**FlagB:** `{FlagB}` (Value: {(int)FlagB})\n\n" +
                              $"**Operation:** `flagA.CombineFlags(flagB)`\n\n" +
                              $"**Result:** `{result}` (Value: {(int)result})\n\n" +
                              $"**Explanation:** Combines all flags from both FlagA and FlagB";
@@ -210,10 +197,10 @@ namespace EnumsNetApp.Apps
 
             object CreateCommonFlagsMarkdown()
             {
-                var result = flagA.CommonFlags(flagB);
+                var result = FlagA.CommonFlags(FlagB);
                 var markdown = $"### CommonFlags Operation\n\n" +
-                             $"**FlagA:** `{flagA}` (Value: {(int)flagA})\n\n" +
-                             $"**FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**FlagA:** `{FlagA}` (Value: {(int)FlagA})\n\n" +
+                             $"**FlagB:** `{FlagB}` (Value: {(int)FlagB})\n\n" +
                              $"**Operation:** `flagA.CommonFlags(flagB)`\n\n" +
                              $"**Result:** `{result}` (Value: {(int)result})\n\n" +
                              $"**Explanation:** Shows only flags that exist in BOTH FlagA and FlagB";
@@ -222,9 +209,9 @@ namespace EnumsNetApp.Apps
 
             object CreateRemoveFlagsMarkdown()
             {
-                var result = flagB.RemoveFlags(DaysOfWeek.Wednesday);
+                var result = FlagB.RemoveFlags(DaysOfWeek.Wednesday);
                 var markdown = $"### RemoveFlags Operation\n\n" +
-                             $"**Original FlagB:** `{flagB}` (Value: {(int)flagB})\n\n" +
+                             $"**Original FlagB:** `{FlagB}` (Value: {(int)FlagB})\n\n" +
                              $"**Flag to Remove:** `{DaysOfWeek.Wednesday}` (Value: {(int)DaysOfWeek.Wednesday})\n\n" +
                              $"**Operation:** `flagB.RemoveFlags(DaysOfWeek.Wednesday)`\n\n" +
                              $"**Result:** `{result}` (Value: {(int)result})\n\n" +
@@ -406,7 +393,7 @@ namespace EnumsNetApp.Apps
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                 | selectedDemo.ToSelectInput(new[] { "Enumeration", "StringFormatting", "FlagOperations", "Parsing" }.ToOptions())
-                                    .Variant(SelectInputs.Toggle)
+                                    .Variant(SelectInputVariant.Toggle)
                                 | validationResult.Value)
                     );
 
@@ -422,13 +409,13 @@ namespace EnumsNetApp.Apps
                                     | Text.Muted("Interactive demonstrations of flag operations on DaysOfWeek enum")
                                     | flagOperationsAndManipulation
                                     | validationAndErrorHandling
-                            ).Width("50%")
+                            ).Width(Size.Fraction(0.5f))
                             | new Card(
                                 Layout.Vertical().Gap(2)
                                     | Text.H4("Enum Viewer")
                                     | Text.Muted("Select an enum type to view its members with descriptions and symbols")
                                     | simpleEnumViewer
-                            ).Width("50%"))
+                            ).Width(Size.Fraction(0.5f)))
                         | new Spacer().Height(Size.Units(10))
                         | Text.Block("This demo uses the Enums.NET library to work with enums and flags.")
                         | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Enums.NET](https://github.com/TylerBrinkley/Enums.NET)")

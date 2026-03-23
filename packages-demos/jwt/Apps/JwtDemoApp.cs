@@ -9,13 +9,12 @@ public class JwtDemoApp : ViewBase
 {
     public override object? Build()
     {
-        var jwtService = new JwtService();
-        
         // State for managing the demo
         var tokenInput = this.UseState<string>();
         var generatedToken = this.UseState<string>();
         var validationResult = this.UseState<string>();
-
+        
+        var jwtService = new JwtService();
         // Generate a sample token
         var generateToken = new Action(() =>
         {

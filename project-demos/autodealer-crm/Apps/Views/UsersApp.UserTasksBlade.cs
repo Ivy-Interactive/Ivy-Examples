@@ -45,7 +45,7 @@ public class UserTasksBlade(int managerId) : ViewBase
                     | Icons.Ellipsis
                         .ToButton()
                         .Ghost()
-                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(OnDelete(t.Id)))
+                        .WithDropDown(MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(OnDelete(t.Id)))
                     | Icons.ChevronRight
                         .ToButton()
                         .Outline()

@@ -19,33 +19,12 @@ public class CronosApp : ViewBase
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
-
-        // Basic cron expression
         var inputCronExpression = UseState((string?)null);
-
-        // Time zones
-        var timeZones = TimeZoneInfo.GetSystemTimeZones()
-            .Select(tz => new { Id = tz.Id, Name = tz.DisplayName })
-            .ToList();
-        var inputTimeZone = UseState(timeZones[0].Id);
-        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(inputTimeZone.Value);
-
-        // Results
+        var inputTimeZone = UseState(TimeZoneInfo.GetSystemTimeZones().First().Id);
         var nextOccurrence = UseState<DateTime?>();
-
-        // Options for Cron format
         var includeSeconds = UseState(false);
-        var cronFormat = includeSeconds.Value ? CronFormat.IncludeSeconds : CronFormat.Standard;
-
-        // Selected schedule type
         var selectedSchedule = UseState<CronScheduleType?>(default(CronScheduleType?));
 
-        // Formatting
-        var dateFormat = includeSeconds.Value ? "dd.MM.yyyy HH:mm:ss zzz" : "dd.MM.yyyy HH:mm zzz";
-        var dateString = nextOccurrence.Value?.ToString(dateFormat) ?? "—";
-        var scheduleOptions = typeof(CronScheduleType).ToOptions();
-
-        // Automatically apply selected schedule
         UseEffect(() =>
         {
             if (selectedSchedule.Value.HasValue)
@@ -55,7 +34,15 @@ public class CronosApp : ViewBase
             }
         }, selectedSchedule);
 
-        // Try parse cron
+        var timeZones = TimeZoneInfo.GetSystemTimeZones()
+            .Select(tz => new { Id = tz.Id, Name = tz.DisplayName })
+            .ToList();
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(inputTimeZone.Value);
+        var cronFormat = includeSeconds.Value ? CronFormat.IncludeSeconds : CronFormat.Standard;
+        var dateFormat = includeSeconds.Value ? "dd.MM.yyyy HH:mm:ss zzz" : "dd.MM.yyyy HH:mm zzz";
+        var dateString = nextOccurrence.Value?.ToString(dateFormat) ?? "—";
+        var scheduleOptions = typeof(CronScheduleType).ToOptions();
+
         void TryParseCron()
         {
             if (!string.IsNullOrWhiteSpace(inputCronExpression.Value))
@@ -123,7 +110,7 @@ public class CronosApp : ViewBase
                     .WithLabel("Predefined Examples"),
 
                 includeSeconds
-                    .ToBoolInput(variant: BoolInputs.Checkbox)
+                    .ToBoolInput(variant: BoolInputVariant.Checkbox)
                     .Label("Include seconds"),
 
                 new Button("Try parse", onClick: TryParseCron)

@@ -41,7 +41,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
             .ToButton()
             .Ghost()
             .WithDropDown(
-                MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(onDelete)
+                MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(onDelete)
             );
 
         var editBtn = new Button("Edit")
@@ -62,7 +62,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
                 Completed = taskValue.Completed == true ? "Yes" : "No"
             }
             .ToDetails()
-            .MultiLine(e => e.Description)
+            .Multiline(e => e.Description)
             .RemoveEmpty(),
             footer: Layout.Horizontal().Gap(2).Align(Align.Right)
                 | dropDown

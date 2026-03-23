@@ -1,7 +1,3 @@
-﻿using Ivy.Client;
-using Ivy.Core.Hooks;
-using Ivy.Views.Forms;
-
 namespace EPPlusExample.Apps;
 
 [App(icon: Icons.Box, title: "EPPlus")]
@@ -21,28 +17,24 @@ public class EPPlusApp : ViewBase
     }
     public override object? Build()
     {
-        var filePath = GetExcelFilePath();
         var client = UseService<IClientProvider>();
-
-        // Ensure file exists
-        EnsureExcelFileExists(filePath);
-
-        var booksState = UseState<List<Book>>(() => ExcelManipulation.ReadExcel());
-
-
-        var downloadUrl = this.UseDownload(
-        async () =>
+        var booksState = UseState<List<Book>>(() =>
         {
-            // Read the file into memory
-            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+            var path = GetExcelFilePath();
+            EnsureExcelFileExists(path);
+            return ExcelManipulation.ReadExcel();
+        });
+        var book = UseState(() => new Book());
+        var downloadUrl = this.UseDownload(
+            async () =>
+            {
+                var filePath = GetExcelFilePath();
+                return await File.ReadAllBytesAsync(filePath);
+            },
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"books-{DateTime.UtcNow:yyyy-MM-dd}.xlsx");
 
-            // Return as bytes
-            return fileBytes;
-        },
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    $"books-{DateTime.UtcNow:yyyy-MM-dd}.xlsx"
-       );
-
+        var filePath = GetExcelFilePath();
         var hasBooks = (booksState.Value?.Count ?? 0) > 0;
 
         var downloadBtn = hasBooks
@@ -59,25 +51,25 @@ public class EPPlusApp : ViewBase
             ? new Button("Delete All Records")
                 .Destructive()
                 .Icon(Icons.Trash)
-                .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+                .OnClick(_ => HandleDeleteAsync(booksState, filePath, client))
             : new Button("Delete All Records")
                 .Secondary()
                 .Icon(Icons.Trash)
-                .HandleClick(_ => HandleDeleteAsync(booksState, filePath, client))
+                .OnClick(_ => HandleDeleteAsync(booksState, filePath, client))
                 .Disabled();
 
         var generateBtn = hasBooks
             ? new Button("Generate Excel")
                 .Secondary()
                 .Icon(Icons.FileText)
-                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState))
+                .OnClick(_ => ExcelManipulation.WriteExcel(booksState))
                 .Disabled()
             : new Button("Generate Excel")
                 .Primary()
                 .Icon(Icons.FileText)
-                .HandleClick(_ => ExcelManipulation.WriteExcel(booksState));
+                .OnClick(_ => ExcelManipulation.WriteExcel(booksState));
 
-        var book = UseState(() => new Book());
+        
         var formBuilder = book.ToForm().Remove(x => x.ID)
             .Label(m => m.Title, "Title")
             .Builder(m => m.Title, s => s.ToTextInput().Placeholder("Insert title..."))
@@ -112,7 +104,7 @@ public class EPPlusApp : ViewBase
                 | new Button("Add Book")
                     .Primary()
                     .Icon(Icons.Plus)
-                    .HandleClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
+                    .OnClick(async _ => await HandleSubmitAsync(booksState, client, book, onSubmit))
                     .Loading(loading)
                     .Disabled(loading)
             | validationView

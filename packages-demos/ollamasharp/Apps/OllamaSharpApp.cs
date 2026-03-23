@@ -5,7 +5,8 @@ public class OllamaSharpChatApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new ModelListBlade(), "Models");
+        var blades =this.UseBlades(() => new ModelListBlade(), "Models");
+        return blades;
     }
 }
 
@@ -21,7 +22,7 @@ public class OllamaSharpIntroductionApp : ViewBase
                    | Text.Muted("Follow these steps to get started:")
                    | Text.Markdown("**1. Download Ollama** from [https://ollama.com/download](https://ollama.com/download)")
                    | Text.Markdown("**2. Download Models** for example:")
-                   | new Code("ollama pull llama2")
+                   | new CodeBlock("ollama pull llama2")
                        .ShowCopyButton()
                    | Text.Markdown("**3. Default Configuration** Ollama runs on `http://localhost:11434` by default"))
                    | new Separator()

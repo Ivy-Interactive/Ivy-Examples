@@ -1,4 +1,4 @@
-﻿namespace XLParserExample;
+namespace XLParserExample;
 
 [App(title: "XLParser", icon: Icons.Sheet)]
 public class XLParserApp : ViewBase
@@ -30,12 +30,11 @@ public class XLParserApp : ViewBase
 
     public override object? Build()
     {
-        var parserState = new ParserState(
-            Formula: UseState("SUM(A1:A10) + IF(B1>10, MAX(B1:B10), MIN(B1:B10))"),
-            Result: UseState(FormulaParseResult.Unknown),
-            Tokens: UseState(new List<ParseTreeNodeInfo>()),
-            SelectedToken: UseState<ParseTreeNodeInfo?>()
-        );
+        var formula = UseState("SUM(A1:A10) + IF(B1>10, MAX(B1:B10), MIN(B1:B10))");
+        var result = UseState(FormulaParseResult.Unknown);
+        var tokens = UseState(new List<ParseTreeNodeInfo>());
+        var selectedToken = UseState<ParseTreeNodeInfo?>();
+        var parserState = new ParserState(Formula: formula, Result: result, Tokens: tokens, SelectedToken: selectedToken);
 
         return Layout.Vertical()
         | new Card(
@@ -52,14 +51,14 @@ public class XLParserApp : ViewBase
                             "Example Formulas",
                             Layout.Vertical(
                                 ExampleFormulas.Select(example =>
-                                    new Code(example)
+                                    new CodeBlock(example)
                                         .ShowCopyButton()
                                 )
                             )
                             .Gap(1)
                         ),
                         Text.Label("Excel Formula: "),
-                        new TextInput(parserState.Formula),
+                        parserState.Formula.ToTextInput(),
                         new Button("Parse Formula", onClick: _ => HandleParse(parserState)),
                         parserState.Result.Value == FormulaParseResult.Parsed && parserState.Tokens.Value.Count > 0
                             ? new Expandable(

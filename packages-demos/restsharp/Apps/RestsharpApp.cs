@@ -126,23 +126,24 @@ public class RestSharpApp : ViewBase
                 .Outline()
                 .WithDropDown(
                     Methods
-                        .Select(o => MenuItem.Default(o.Label).HandleSelect(() =>
+                        .Select(o => MenuItem.Default(o.Label).OnSelect(() =>
                         {
                             method.Set(o.Label);
                             updateUrlForMethod(o.Label);
                         }))
                         .ToArray()
                 ),
-            new TextInput(url, placeholder: "URL")
-                .Variant(TextInputs.Url)
+            url.ToTextInput()
+                .Variant(TextInputVariant.Url)
+                .Placeholder("URL")
         };
 
         if (RequiresResourceId(method.Value))
         {
-            requestControls.Add(new TextInput(resourceId, placeholder: "ID"));
+            requestControls.Add(resourceId.ToTextInput().Placeholder("ID"));
         }
 
-        requestControls.Add(new Button("Send", onClick: onSend).Width(50));
+        requestControls.Add(new Button("Send", _ => onSend()).Width(Size.Units(50)));
 
         var statusCallout = string.IsNullOrWhiteSpace(statusCode.Value)
             ? null
@@ -177,11 +178,11 @@ public class RestSharpApp : ViewBase
                 | Text.Muted("This is the response from the API. It is displayed in JSON format.")
                 | (hasResponse
                     ? Layout.Vertical()
-                        | new Code(formatJson.Value ? FormatStringToJson(response.Value) : response.Value, Languages.Json)
+                        | new CodeBlock(formatJson.Value ? FormatStringToJson(response.Value) : response.Value, Languages.Json)
                             .Height(Size.Fit().Max(70))
                         | formatJson.ToInput("Format JSON")
                     : Layout.Vertical()
-                        | new Code("Please execute a request to see the response here", Languages.Json)
+                        | new CodeBlock("Please execute a request to see the response here", Languages.Json)
                             .Height(Size.Fit().Max(70)))
                 | statusCallout
                 )

@@ -1,6 +1,3 @@
-using Ivy;
-using Ivy.Connections;
-
 namespace Vc.Connections.Vc;
 
 public class VcConnection : IConnection
@@ -19,9 +16,9 @@ public class VcConnection : IConnection
     public string GetName() => nameof(Vc);
 
     public string GetNamespace() => typeof(VcConnection).Namespace;
-
+    
     public string GetConnectionType() => "EntityFramework.Sqlite";
-
+    
     public ConnectionEntity[] GetEntities()
     {
         return typeof(VcContext)
@@ -29,6 +26,20 @@ public class VcConnection : IConnection
             .Where(e => e.PropertyType.IsGenericType && e.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
             .Select(e => new ConnectionEntity(e.PropertyType.GenericTypeArguments[0].Name, e.Name))
             .ToArray();
+    }
+
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
+    {
+        try
+        {
+            var factory = new VcContextFactory(new ServerArgs());
+            using var ctx = factory.CreateDbContext();
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>(ctx.Database.CanConnect() ? (true, null) : (false, "Cannot connect to database"));
+        }
+        catch (Exception ex)
+        {
+            return System.Threading.Tasks.Task.FromResult<(bool, string?)>((false, ex.Message));
+        }
     }
 
     public void RegisterServices(Server server)

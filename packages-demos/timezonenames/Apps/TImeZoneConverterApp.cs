@@ -20,6 +20,20 @@ public class TimeZoneConverterApp : ViewBase
         var windowsSearchTerm = UseState<string>("");
         var railsSearchTerm = UseState<string>("");
 
+        UseEffect(() =>
+        {
+            try
+            {
+                var timeZoneInfo = TZConvert.GetTimeZoneInfo(ianaZoneState.Value);
+                currentTimeState.Set(TimeZoneInfo.ConvertTime(DateTime.Now, timeZoneInfo)
+                    .ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+            catch
+            {
+                currentTimeState.Set("Invalid time zone");
+            }
+        }, [ianaZoneState]);
+
         // Initialize time zone lists
         var allIanaZones = TZConvert.KnownIanaTimeZoneNames.OrderBy(x => x).ToArray();
         var allWindowsZones = TZConvert.KnownWindowsTimeZoneIds.OrderBy(x => x).ToArray();
@@ -43,21 +57,6 @@ public class TimeZoneConverterApp : ViewBase
             : allRailsZones
                 .Where(z => z.Contains(railsSearchTerm.Value, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-
-        // Update time on mount and when IANA zone changes
-        UseEffect(() =>
-        {
-            try
-            {
-                var timeZoneInfo = TZConvert.GetTimeZoneInfo(ianaZoneState.Value);
-                currentTimeState.Set(TimeZoneInfo.ConvertTime(DateTime.Now, timeZoneInfo)
-                    .ToString("yyyy-MM-dd HH:mm:ss"));
-            }
-            catch
-            {
-                currentTimeState.Set("Invalid time zone");
-            }
-        }, [ianaZoneState]);
 
         // Update time function
         var updateTime = () =>
@@ -139,21 +138,21 @@ public class TimeZoneConverterApp : ViewBase
             {
                 "IANA" => Layout.Vertical().Gap(4)
                     | ianaSearchTerm.ToTextInput(ianaZoneState.Value)
-                        .Variant(TextInputs.Search)
+                        .Variant(TextInputVariant.Search)
                         .WithField()
                         .Label("Search IANA Time Zones")
                     | Layout.Vertical(new List(ianaListItems.ToArray())).Height(Size.Units(70)),
                 
                 "Windows" => Layout.Vertical().Gap(4)
                     | windowsSearchTerm.ToTextInput(windowsZoneState.Value)
-                        .Variant(TextInputs.Search)
+                        .Variant(TextInputVariant.Search)
                         .WithField()
                         .Label("Search Windows Time Zones")
                     | Layout.Vertical(new List(windowsListItems.ToArray())).Height(Size.Units(70)),
                 
                 "Rails" => Layout.Vertical().Gap(4)
                     | railsSearchTerm.ToTextInput(railsZoneState.Value)
-                        .Variant(TextInputs.Search)
+                        .Variant(TextInputVariant.Search)
                         .WithField()
                         .Label("Search Rails Time Zones")
                     | Layout.Vertical(new List(railsListItems.ToArray())).Height(Size.Units(70)),

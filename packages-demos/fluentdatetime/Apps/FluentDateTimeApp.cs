@@ -22,21 +22,21 @@ public class FluentDateTimeApp : ViewBase
                    | Layout.Vertical()
                        | Text.Label("Base Date & Time")
                        | baseDateTime.ToDateTimeInput()
-                           .Variant(DateTimeInputs.DateTime)
+                           .Variant(DateTimeInputVariant.DateTime)
                        | Text.Label("Operation")
-                       | operation.ToSelectInput(Operations).Variant(SelectInputs.Select)
+                       | operation.ToSelectInput(Operations).Variant(SelectInputVariant.Select)
                        | Text.Label("Time Unit")
-                       | unit.ToSelectInput(TimeUnits).Variant(SelectInputs.Select)
+                       | unit.ToSelectInput(TimeUnits).Variant(SelectInputVariant.Select)
                        | Text.Label("Amount")
-                       | new NumberInput<double>(amount)
+                       | amount.ToNumberInput()
                          .Min(1)
                          .Max(9999)
                        | (Layout.Horizontal().Gap(4)
                          | new Button("Calculate")
-                             .HandleClick(() => showResult.Set(true))
+                             .OnClick(() => showResult.Set(true))
                          | new Button("Clear")
                              .Secondary()
-                             .HandleClick(() => {
+                             .OnClick(() => {
                                  showResult.Set(false);
                                  operation.Set("Add");
                                  unit.Set("Days");

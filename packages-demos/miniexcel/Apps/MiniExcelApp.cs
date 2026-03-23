@@ -1,11 +1,14 @@
 namespace MiniExcelExample;
 
+using System.Reactive.Disposables;
+
 [App(icon: Icons.Sheet, title: "MiniExcel - Edit")]
 public class MiniExcelEditApp : ViewBase
 {
     public override object? Build()
     {
-        return this.UseBlades(() => new StudentsListBlade(), "Students");
+        var blades = this.UseBlades(() => new StudentsListBlade(), "Students");
+        return blades;
     }
 }
 
@@ -75,46 +78,37 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
 {
     public override object? Build()
     {
+        // 1. Hooks first
         var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
+        var student = this.UseState(() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId)!);
 
-        var initialStudent = StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
-        
-        if (initialStudent == null)
+        // Update local data when refresh token changes (for external updates)
+        this.UseEffect(() =>
         {
-            return null; // Blade will be closed automatically
-        }
-
-        var student = this.UseState(initialStudent);
-        
-        // Helper function to get current student from service
-        Student? GetCurrentStudent() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
-        
-        // Targeted refresh function - only called when needed
-        void RefreshStudentData()
-        {
-            var updatedStudent = GetCurrentStudent();
+            var updatedStudent = StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
             if (updatedStudent != null)
             {
                 student.Set(updatedStudent);
             }
-        }
-        
-        // Update local data when refresh token changes (for external updates)
-        this.UseEffect(() =>
-        {
-            RefreshStudentData();
         }, [refreshToken.ToTrigger()]);
+
+        if (student.Value == null)
+        {
+            return null; // Blade will be closed automatically
+        }
 
         var studentValue = student.Value;
 
         var editButton = new Button("Edit")
             .Icon(Icons.Pencil)
             .Secondary()
-            .ToTrigger((isOpen) => new StudentEditSheet(isOpen, studentId, refreshToken, () => 
+            .ToTrigger((isOpen) => new StudentEditSheet(isOpen, studentId, refreshToken, () =>
             {
-                RefreshStudentData();
+                // Refresh local state after edit
+                var updated = StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId);
+                if (updated != null) student.Set(updated);
                 onRefresh?.Invoke();
             }));
 
@@ -137,7 +131,8 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
             | Layout.Vertical().Gap(4)
                 | new Card(
                     Layout.Vertical().Gap(3)
-                    | new {
+                    | new
+                    {
                         Email = studentValue.Email,
                         Age = studentValue.Age,
                         Course = studentValue.Course,
@@ -148,7 +143,7 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
                     | new Button("Delete")
                         .Icon(Icons.Trash)
                         .Destructive()
-                        .HandleClick(onDelete)
+                        .OnClick(onDelete)
                 )
             | alertView;
     }
@@ -160,42 +155,11 @@ public class MiniExcelViewApp : ViewBase
     public override object? Build()
     {
         var refreshToken = this.UseRefreshToken();
-        
-        // Load students from shared service
         var students = this.UseState(() => StudentService.GetStudents());
-
-        // Load data on init AND when manually refreshed (Best Practice from docs)
-        this.UseEffect(() =>
-        {
-            students.Set(StudentService.GetStudents());
-        }, [refreshToken.ToTrigger()]);
-
-        // Listen to global data changes from StudentService (for cross-app sync)
-        // Subscribe to event and refresh both state and token
-        this.UseEffect(() =>
-        {
-            void OnDataChanged()
-            {
-                students.Set(StudentService.GetStudents());
-                refreshToken.Refresh(); // Also trigger refresh for other effects
-            }
-            
-            StudentService.DataChanged += OnDataChanged;
-        }, []);
-
-        return BuildTableViewPage(students, refreshToken);
-    }
-
-    private object BuildTableViewPage(IState<List<Student>> students, RefreshToken refreshToken)
-    {
         var client = UseService<IClientProvider>();
-        var uploadState = this.UseState<FileUpload<byte[]>?>();
-        var uploadContext = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState))
-            .Accept(".xlsx")
-            .MaxFileSize(50 * 1024 * 1024);
+        var uploadState = this.UseState<FileUpload<byte[]>?>(null);
+        var uploadContextBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
         var actionMode = this.UseState("Export");
-
-        // Export download from MemoryStream
         var downloadUrl = this.UseDownload(
             async () =>
             {
@@ -206,8 +170,21 @@ public class MiniExcelViewApp : ViewBase
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"students-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.xlsx"
         );
+        this.UseEffect(() =>
+        {
+            students.Set(StudentService.GetStudents());
+        }, [refreshToken.ToTrigger()]);
+        this.UseEffect(() =>
+        {
+            void OnDataChanged()
+            {
+                students.Set(StudentService.GetStudents());
+                refreshToken.Refresh();
+            }
 
-        // When a file is uploaded, import it
+            StudentService.DataChanged += OnDataChanged;
+            return Disposable.Create(() => StudentService.DataChanged -= OnDataChanged);
+        }, []);
         this.UseEffect(() =>
         {
             if (uploadState.Value?.Content is byte[] bytes && bytes.Length > 0)
@@ -216,7 +193,7 @@ public class MiniExcelViewApp : ViewBase
                 {
                     using var ms = new MemoryStream(bytes);
                     var imported = MiniExcel.Query<Student>(ms).ToList();
-                    
+
                     // Merge imported students with existing ones (by ID)
                     var currentStudents = StudentService.GetStudents();
                     var studentsById = currentStudents.ToDictionary(s => s.ID);
@@ -242,7 +219,7 @@ public class MiniExcelViewApp : ViewBase
                             studentsById[importedStudent.ID] = importedStudent;
                         }
                     }
-                    
+
                     StudentService.UpdateStudents(currentStudents);
                     students.Set(StudentService.GetStudents()); // Trigger update
                     refreshToken.Refresh(); // Sync with other pages
@@ -271,8 +248,19 @@ public class MiniExcelViewApp : ViewBase
             }
         }, [uploadState]);
 
+        var uploadContext = uploadContextBase.Accept(".xlsx").MaxFileSize(50 * 1024 * 1024);
+        return BuildTableViewPage(students, uploadState, uploadContext, actionMode, downloadUrl);
+    }
+
+    private object BuildTableViewPage(
+        IState<List<Student>> students,
+        IState<FileUpload<byte[]>?> uploadState,
+        IState<UploadContext> uploadContext,
+        IState<string> actionMode,
+        IState<string?> downloadUrl)
+    {
         object? actionWidget = actionMode.Value == "Export"
-            ? new Button("Download Excel File")
+            ? (object)new Button("Download Excel File")
                 .Icon(Icons.Download)
                 .Primary()
                 .Url(downloadUrl.Value)
@@ -303,8 +291,7 @@ public class MiniExcelViewApp : ViewBase
                         .Key($"students-{students.Value.Count}-{students.Value.Sum(s => s.GetHashCode())}") // Force re-render when data changes
                     : Layout.Center()
                         | Text.Muted("No data to display")
-                     
+
             )).Height(Size.Fit().Min(Size.Full()));
     }
 }
-

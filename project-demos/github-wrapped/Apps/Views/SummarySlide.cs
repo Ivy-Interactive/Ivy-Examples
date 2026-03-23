@@ -1,7 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Helpers;
 using SkiaSharp;
 
 public class SummarySlide : ViewBase
@@ -15,25 +14,18 @@ public class SummarySlide : ViewBase
 
     public override object? Build()
     {
-        var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
-        var userStatus = DetermineUserStatus(_stats);
-        var topLanguage = _stats.LanguageBreakdown
-            .OrderByDescending(kvp => kvp.Value)
-            .FirstOrDefault();
-        
-        // Animated values
         var animatedCommits = this.UseState(0);
         var animatedPRs = this.UseState(0);
         var animatedStreak = this.UseState(0);
         var animatedDays = this.UseState(0);
         var refresh = this.UseRefreshToken();
-        
+
         this.UseEffect(() =>
         {
             var scheduler = new JobScheduler(maxParallelJobs: 2);
             var steps = 50;
             var delayMs = 20;
-            
+
             scheduler.CreateJob("Animate Stats")
                 .WithAction(async (_, _, progress, token) =>
                 {
@@ -56,10 +48,16 @@ public class SummarySlide : ViewBase
                     refresh.Refresh();
                 })
                 .Build();
-            
+
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
-        
+
+        var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
+        var userStatus = DetermineUserStatus(_stats);
+        var topLanguage = _stats.LanguageBreakdown
+            .OrderByDescending(kvp => kvp.Value)
+            .FirstOrDefault();
+
         return Layout.Vertical().Gap(4).Align(Align.Center)
                 | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
                 | (Layout.Horizontal().Gap(4).Align(Align.Stretch).Width(Size.Fraction(0.8f)).Height(Size.Full())
@@ -68,7 +66,7 @@ public class SummarySlide : ViewBase
                         | BuildStatusCard(userStatus)
                         | BuildTopLanguageCard(topLanguage)));
     }
-    
+
     public static byte[] GenerateSummaryImage(GitHubStats stats)
     {
         var userStatus = DetermineUserStatus(stats);
@@ -77,7 +75,7 @@ public class SummarySlide : ViewBase
             .FirstOrDefault();
         return GenerateSummaryImageInternal(userStatus, topLanguage, stats);
     }
-    
+
     private static byte[] GenerateSummaryImageInternal(
         (string Title, string MainText, string SubText, string Narrative) userStatus,
         KeyValuePair<string, long> topLanguage,
@@ -86,17 +84,17 @@ public class SummarySlide : ViewBase
         const int width = 1200;
         const int height = 800;
         const int padding = 60;
-        
+
         using var surface = SKSurface.Create(new SKImageInfo(width, height));
         var canvas = surface.Canvas;
         canvas.Clear(SKColors.White);
-        
+
         var paint = new SKPaint
         {
             IsAntialias = true,
             TextAlign = SKTextAlign.Center
         };
-        
+
         var titlePaint = new SKPaint
         {
             IsAntialias = true,
@@ -105,7 +103,7 @@ public class SummarySlide : ViewBase
             TextSize = 48,
             Color = SKColors.Black
         };
-        
+
         var headingPaint = new SKPaint
         {
             IsAntialias = true,
@@ -114,7 +112,7 @@ public class SummarySlide : ViewBase
             TextSize = 36,
             Color = SKColors.Black
         };
-        
+
         var subHeadingPaint = new SKPaint
         {
             IsAntialias = true,
@@ -123,7 +121,7 @@ public class SummarySlide : ViewBase
             TextSize = 32,
             Color = SKColors.Black
         };
-        
+
         var bodyPaint = new SKPaint
         {
             IsAntialias = true,
@@ -132,24 +130,24 @@ public class SummarySlide : ViewBase
             TextSize = 20,
             Color = new SKColor(0x66, 0x66, 0x66)
         };
-        
+
         var yPos = padding;
-        
+
         // Title
         canvas.DrawText("My2025", width / 2f, yPos + 50, titlePaint);
         yPos += 80;
-        
+
         // Main content area
         var contentWidth = width - (padding * 2);
         var leftCardWidth = contentWidth * 0.35f;
         var rightCardWidth = contentWidth * 0.65f;
         var cardSpacing = contentWidth * 0.015f;
         var cardHeight = height - yPos - padding - 40;
-        
+
         var leftCardX = padding;
         var rightCardX = padding + leftCardWidth + cardSpacing;
         var cardY = yPos;
-        
+
         // Draw cards background
         var cardPaint = new SKPaint
         {
@@ -157,7 +155,7 @@ public class SummarySlide : ViewBase
             Style = SKPaintStyle.Fill,
             IsAntialias = true
         };
-        
+
         var strokePaint = new SKPaint
         {
             Color = new SKColor(0xE0, 0xE0, 0xE0),
@@ -165,34 +163,34 @@ public class SummarySlide : ViewBase
             StrokeWidth = 2,
             IsAntialias = true
         };
-        
+
         // Left card - Stats (full height)
         var leftCardRect = new SKRect(leftCardX, cardY, leftCardX + leftCardWidth, cardY + cardHeight);
         canvas.DrawRoundRect(leftCardRect, 12, 12, cardPaint);
         canvas.DrawRoundRect(leftCardRect, 12, 12, strokePaint);
-        
+
         // Right side - two separate cards
         var statusCardHeight = cardHeight * 0.49f;
         var languageCardHeight = cardHeight * 0.49f;
-        var cardGap = cardHeight * 0.02f;;
-        
+        var cardGap = cardHeight * 0.02f; ;
+
         // Status card (top right)
         var statusCardRect = new SKRect(rightCardX, cardY, rightCardX + rightCardWidth, cardY + statusCardHeight);
         canvas.DrawRoundRect(statusCardRect, 12, 12, cardPaint);
         canvas.DrawRoundRect(statusCardRect, 12, 12, strokePaint);
-        
+
         // Language card (bottom right)
         var languageCardY = cardY + statusCardHeight + cardGap;
         var languageCardRect = new SKRect(rightCardX, languageCardY, rightCardX + rightCardWidth, languageCardY + languageCardHeight);
         canvas.DrawRoundRect(languageCardRect, 12, 12, cardPaint);
         canvas.DrawRoundRect(languageCardRect, 12, 12, strokePaint);
-        
+
         // Left card - Stats (evenly distributed with padding)
         var leftCardTextX = leftCardX + leftCardWidth / 2f;
         var cardPadding = 40f; // Padding from top and bottom
         var usableHeight = cardHeight - (cardPadding * 2f);
         var sectionHeight = usableHeight / 3f; // Divide usable area into 3 equal sections
-        
+
         // Smaller heading for better spacing
         var statsHeadingPaint = new SKPaint
         {
@@ -202,7 +200,7 @@ public class SummarySlide : ViewBase
             TextSize = 32,
             Color = SKColors.Black
         };
-        
+
         var statsBodyPaint = new SKPaint
         {
             IsAntialias = true,
@@ -211,26 +209,26 @@ public class SummarySlide : ViewBase
             TextSize = 20,
             Color = new SKColor(0x66, 0x66, 0x66)
         };
-        
+
         // Section 1: Active Days
         var section1Y = cardY + cardPadding + sectionHeight / 2f - 10;
         canvas.DrawText($"{stats.TotalContributionDays} days", leftCardTextX, section1Y, statsHeadingPaint);
         canvas.DrawText("You showed up again and again", leftCardTextX, section1Y + 35, statsBodyPaint);
-        
+
         // Section 2: Commits
         var section2Y = cardY + cardPadding + sectionHeight + sectionHeight / 2f - 10;
         canvas.DrawText($"{stats.TotalCommits} commits", leftCardTextX, section2Y, statsHeadingPaint);
         canvas.DrawText("Progress in small steps", leftCardTextX, section2Y + 35, statsBodyPaint);
-        
+
         // Section 3: PRs
         var section3Y = cardY + cardPadding + sectionHeight * 2f + sectionHeight / 2f - 10;
         canvas.DrawText($"{stats.PullRequestsCreated} PRs", leftCardTextX, section3Y, statsHeadingPaint);
         canvas.DrawText("You didn't just code — you shipped", leftCardTextX, section3Y + 35, statsBodyPaint);
-        
+
         // Status card content
         var rightCardTextX = rightCardX + rightCardWidth / 2f;
         var statusTextY = cardY + 60;
-        
+
         var smallLabelPaint = new SKPaint
         {
             IsAntialias = true,
@@ -239,7 +237,7 @@ public class SummarySlide : ViewBase
             TextSize = 16,
             Color = new SKColor(0x99, 0x99, 0x99)
         };
-        
+
         var mainTextPaint = new SKPaint
         {
             IsAntialias = true,
@@ -248,7 +246,7 @@ public class SummarySlide : ViewBase
             TextSize = 20,
             Color = SKColors.Black
         };
-        
+
         var subTextPaint = new SKPaint
         {
             IsAntialias = true,
@@ -257,24 +255,24 @@ public class SummarySlide : ViewBase
             TextSize = 20,
             Color = new SKColor(0x99, 0x99, 0x99)
         };
-        
+
         // Draw trophy icon (full height of status card)
         var iconSize = statusCardHeight - 120f; // Full height minus padding
         var iconX = rightCardX + 40f;
         var iconY = cardY + (statusCardHeight - iconSize) / 2f; // Center vertically
         DrawTrophyIconStatic(canvas, iconX, iconY, iconSize);
-        
+
         // Calculate text area (to the right of icon)
         var iconRight = iconX + iconSize;
         var textAreaLeft = iconRight + 50f; // Gap after icon (increased)
         var textAreaWidth = rightCardX + rightCardWidth - textAreaLeft - 40f; // Width minus right padding
         var textCenterX = textAreaLeft + textAreaWidth / 2f; // Center of text area
-        
+
         canvas.DrawText("Your Developer Status — 2025", textCenterX, statusTextY, smallLabelPaint);
         statusTextY += 45;
         canvas.DrawText(userStatus.Title.ToUpper(), textCenterX, statusTextY, headingPaint);
         statusTextY += 70;
-        
+
         // Draw main text with wrapping
         var mainTextLines = WrapTextStatic(userStatus.MainText, textAreaWidth, mainTextPaint);
         foreach (var line in mainTextLines)
@@ -282,9 +280,9 @@ public class SummarySlide : ViewBase
             canvas.DrawText(line, textCenterX, statusTextY, mainTextPaint);
             statusTextY += 30;
         }
-        
+
         statusTextY += 20;
-        
+
         // Draw sub text with wrapping
         var subTextLines = WrapTextStatic(userStatus.SubText, textAreaWidth, subTextPaint);
         foreach (var line in subTextLines)
@@ -292,21 +290,21 @@ public class SummarySlide : ViewBase
             canvas.DrawText(line, textCenterX, statusTextY, subTextPaint);
             statusTextY += 30;
         }
-        
+
         // Language card content
         var totalBytes = stats.LanguageBreakdown.Values.Sum();
         var languagePercentage = totalBytes > 0
-            ? Math.Round((topLanguage.Value / (double)totalBytes) * 100, 0) 
+            ? Math.Round((topLanguage.Value / (double)totalBytes) * 100, 0)
             : 0;
         var languageName = topLanguage.Key ?? "N/A";
-        
+
         // Calculate motivational text (same logic as BuildTopLanguageCard)
         var motivationalText = languagePercentage >= 70
             ? "This is your superpower! You created most of your code with it."
             : languagePercentage >= 50
                 ? "More than half of your code was written in this language. You know what you're doing!"
                 : "This language helped you realize most of your ideas this year. Keep it up!";
-        
+
         var langPadding = 100f; // Padding from top
         var langTextY = languageCardY + langPadding;
         var languageTitleText = $"{languageName.ToUpper()} - THIS WAS YOUR LANGUAGE";
@@ -315,7 +313,7 @@ public class SummarySlide : ViewBase
         canvas.DrawText($"{languagePercentage}% of your code was written in {languageName}", rightCardTextX, langTextY, bodyPaint);
         langTextY += 45;
         canvas.DrawText(motivationalText, rightCardTextX, langTextY, bodyPaint);
-        
+
         // Add Ivy Framework link at the bottom
         var linkPaint = new SKPaint
         {
@@ -325,28 +323,28 @@ public class SummarySlide : ViewBase
             TextSize = 20,
             Color = new SKColor(0x01, 0xD1, 0x8E) // #01D18E
         };
-        
+
         var linkY = height - padding + 30f; // Position at bottom with padding
         var linkText = "Built with Ivy Framework - github.com/Ivy-Interactive/Ivy-Framework";
         canvas.DrawText(linkText, rightCardTextX + 30f, linkY - 30f, linkPaint);
-        
+
         // Encode to PNG
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         return data.ToArray();
     }
-    
+
     private static List<string> WrapTextStatic(string text, float maxWidth, SKPaint paint)
     {
         var words = text.Split(' ');
         var lines = new List<string>();
         var currentLine = "";
-        
+
         foreach (var word in words)
         {
             var testLine = string.IsNullOrEmpty(currentLine) ? word : currentLine + " " + word;
             var width = paint.MeasureText(testLine);
-            
+
             if (width <= maxWidth)
             {
                 currentLine = testLine;
@@ -360,15 +358,15 @@ public class SummarySlide : ViewBase
                 currentLine = word;
             }
         }
-        
+
         if (!string.IsNullOrEmpty(currentLine))
         {
             lines.Add(currentLine);
         }
-        
+
         return lines.Count > 0 ? lines : new List<string> { text };
     }
-    
+
     private static void DrawTrophyIconStatic(SKCanvas canvas, float x, float y, float size)
     {
         try
@@ -380,7 +378,7 @@ public class SummarySlide : ViewBase
                 Path.Combine(Directory.GetCurrentDirectory(), "svg", "trophy.svg"),
                 Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "", "svg", "trophy.svg")
             };
-            
+
             string? svgPath = null;
             foreach (var path in possiblePaths)
             {
@@ -390,18 +388,18 @@ public class SummarySlide : ViewBase
                     break;
                 }
             }
-            
+
             if (svgPath != null)
             {
                 var svg = new SkiaSharp.Extended.Svg.SKSvg();
                 using var stream = File.OpenRead(svgPath);
                 var picture = svg.Load(stream);
-                
+
                 if (picture != null)
                 {
                     var bounds = picture.CullRect;
                     var scale = size / Math.Max(bounds.Width, bounds.Height);
-                    
+
                     canvas.Save();
                     canvas.Translate(x, y);
                     canvas.Scale(scale, scale);
@@ -425,11 +423,11 @@ public class SummarySlide : ViewBase
         var streak = stats.LongestStreak;
         var activeDays = stats.TotalContributionDays;
         var languages = stats.LanguageBreakdown.Count;
-        
+
         // Code Master
         if (commits >= 300 && activeDays >= 100 && prs >= 50)
         {
-            return ("Code Master", 
+            return ("Code Master",
                 "You showed up, you shipped, you collaborated.",
                 "Master-level developer with exceptional dedication",
                 "In 2025 you balanced high activity with consistency, building mastery through daily practice.");
@@ -509,7 +507,7 @@ public class SummarySlide : ViewBase
     {
         return new Card(Layout.Horizontal().Gap(3).Height(Size.Full())
             | (Layout.Vertical().Gap(3).Align(Align.Center).Width(Size.Fit()).Padding(3)
-                | Icons.Trophy.ToIcon().Height(40).Width(40))
+                | (Layout.Vertical().Height(Size.Units(40)).Width(Size.Units(40)) | Icons.Trophy.ToIcon()))
             | (Layout.Vertical().Gap(3).Align(Align.Center)
                 | Text.Block("Your Developer Status — 2025").Muted()
                 | Text.H1(userStatus.Title.ToUpper()).Bold()
@@ -538,7 +536,7 @@ public class SummarySlide : ViewBase
         var languagePercentage = totalBytes > 0
             ? Math.Round((topLanguage.Value / (double)totalBytes) * 100, 0)
             : 0;
-        
+
         var languageName = topLanguage.Key ?? "N/A";
         var mainText = languagePercentage > 0
             ? "THIS WAS YOUR LANGUAGE"

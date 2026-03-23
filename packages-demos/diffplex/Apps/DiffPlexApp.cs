@@ -17,6 +17,8 @@ public class DiffPlexApp : ViewBase
         var diffResult = this.UseState<SideBySideDiffModel?>(() => null);
         var ignoreWhitespace = this.UseState(() => false);
         var ignoreCase = this.UseState(() => false);
+        // State for diff results display
+        var diffDisplayText = UseState("");
 
         // Handler
         void compareDiff()
@@ -45,14 +47,11 @@ public class DiffPlexApp : ViewBase
         // Comparison controls
         var controls =
             Layout.Horizontal().Gap(3)
-            | ignoreWhitespace.ToBoolInput(variant: BoolInputs.Checkbox).Label("Ignore Whitespace")
-            | ignoreCase.ToBoolInput(variant: BoolInputs.Checkbox).Label("Ignore Case")
+            | ignoreWhitespace.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Ignore Whitespace")
+            | ignoreCase.ToBoolInput(variant: BoolInputVariant.Checkbox).Label("Ignore Case")
             | new Button("Compare Texts", onClick: compareDiff).Primary().Icon(Icons.GitCompare)
             | new Button("Clear", onClick: () => diffResult.Value = null).Variant(ButtonVariant.Secondary).Icon(Icons.X);
 
-        // State for diff results display
-        var diffDisplayText = UseState("");
-        
         // Update diff display when result changes
         if (diffResult.Value != null)
         {

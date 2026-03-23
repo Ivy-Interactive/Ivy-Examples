@@ -1,7 +1,4 @@
-using Ivy.Chrome;
-using Ivy.Core;
-using Ivy.Core.Hooks;
-using Ivy.Views;
+using Ivy;
 
 namespace CourseTemplate.Helpers;
 

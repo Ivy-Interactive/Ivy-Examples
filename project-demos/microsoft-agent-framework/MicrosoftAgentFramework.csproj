@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -15,7 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.13" />
+    <PackageReference Include="Ivy" Version="1.2.25" />
+    <PackageReference Include="Ivy.Analyser" Version="1.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-preview.251204.1" />
     <PackageReference Include="OllamaSharp" Version="5.4.12" />
   </ItemGroup>
@@ -29,4 +33,5 @@
   </ItemGroup>
 
 </Project>
+
 

@@ -1,41 +1,40 @@
-﻿namespace NewtonsoftJsonExample
+namespace NewtonsoftJsonExample
 {
 
     [App(title: "Newtonsoft.Json", icon: Icons.File)]
     public class NewtonsoftJsonApp : ViewBase
     {
+        private static readonly UserData DefaultUser = new()
+        {
+            FullName = "John Doe",
+            Email = "johndoe@example.com",
+            DateCreated = DateTime.Parse("2013-01-20T00:00:00Z", null, System.Globalization.DateTimeStyles.AdjustToUniversal),
+            Roles = new List<string> { "User", "Admin" }
+        };
+
         public override object? Build()
         {
             var client = UseService<IClientProvider>();
-            var defaultUser = new UserData
-            {
-                FullName = "John Doe",
-                Email = "johndoe@example.com",
-                DateCreated = DateTime.Parse("2013-01-20T00:00:00Z", null, System.Globalization.DateTimeStyles.AdjustToUniversal),
-                Roles = new List<string> { "User", "Admin" }
-            };
-
             var user = UseState<UserData>(() => new UserData());
+            var fullName = UseState("");
             var date = UseState<DateTime>(DateTime.UtcNow);
-            var roles = UseState<List<string>>(() => new List<string>(defaultUser.Roles));
-            var availableRoles = UseState<List<string>>(() => new List<string>(defaultUser.Roles));
+            var roles = UseState<List<string>>(() => new List<string>(DefaultUser.Roles));
+            var availableRoles = UseState<List<string>>(() => new List<string>(DefaultUser.Roles));
             var email = UseState("");
             var emailInvalid = UseState("");
             var isSerialized = UseState<bool>(true);
-
-            var json = JsonConvert.SerializeObject(defaultUser, Formatting.Indented);
-            var rawData = UseState<string>(json);
+            var rawData = UseState<string>(() => JsonConvert.SerializeObject(DefaultUser, Formatting.Indented));
 
             UseEffect(() =>
             {
                 user.Set(u => new UserData
                 {
-                    FullName = u.FullName,
+                    FullName = fullName.Value,
                     Email = email.Value,
                     DateCreated = u.DateCreated,
                     Roles = new List<string>(u.Roles)
                 });
-            }, [email.ToTrigger()]);
+            }, [fullName.ToTrigger(), email.ToTrigger()]);
 
             // Simple email validation (Ivy-style via Invalid)
             UseEffect(() =>
@@ -69,7 +68,7 @@
                 {
                     var toSerialize = new UserData
                     {
-                        FullName = user.Value.FullName,
+                        FullName = fullName.Value,
                         Email = user.Value.Email,
                         DateCreated = date.Value,
                         Roles = new List<string>(roles.Value)
@@ -90,6 +89,7 @@
                 {
                     var userData = JsonConvert.DeserializeObject<UserData>(rawData.Value);
                     user.Set(userData!);
+                    fullName.Set(userData!.FullName ?? "");
                     date.Set(userData!.DateCreated);
                     email.Set(userData!.Email ?? "");
                     roles.Set(userData!.Roles ?? new List<string>());
@@ -115,7 +115,7 @@
                         Layout.Vertical()
 						| Text.H4("Source JSON")
 						| Text.Muted("Edit sample JSON (add roles, tweak fields) then click Deserialize to load it here.")
-                        | rawData.ToCodeInput(variant: CodeInputs.Default, language: Languages.Json).Height(Size.Fit())
+                        | rawData.ToCodeInput(variant: CodeInputVariant.Default, language: Languages.Json).Height(Size.Fit())
                             .Disabled(!isSerialized.Value)
                         | new Button("Deserialize", _ => HandleButtonClick())
                             .Disabled(!isSerialized.Value)
@@ -132,17 +132,7 @@
 						| Text.Muted("Modify user fields, pick date and roles, then click Serialize to push changes back to JSON.")
 
                         | Text.Label("Full name")
-                        | new TextInput(user.Value?.FullName ?? string.Empty, e =>
-                            {
-                                user.Set(userData => new UserData
-                                {
-                                    FullName = e.Value,
-                                    Email = userData.Email,
-                                    DateCreated = userData.DateCreated,
-                                    Roles = new List<string>(userData.Roles)
-                                });
-                            })
-                            .Placeholder("Full name")
+                        | fullName.ToTextInput(placeholder: "Full name")
                             .Disabled(isSerialized.Value)
 
                         | Text.Label("Email")
@@ -154,7 +144,7 @@
                         | Text.Label("Date created")
                         | date.ToDateInput().Disabled(isSerialized.Value)
                         | Text.Label("Roles")
-                        | roles.ToSelectInput(availableRoles.Value.ToOptions()).Variant(SelectInputs.Toggle).Disabled(isSerialized.Value)
+                        | roles.ToSelectInput(availableRoles.Value.ToOptions()).Variant(SelectInputVariant.Toggle).Disabled(isSerialized.Value)
                         | new Button("Serialize", _ => HandleButtonClick())
                             .Disabled(isSerialized.Value)
                             .Icon(Icons.ArrowLeft, Align.Left)

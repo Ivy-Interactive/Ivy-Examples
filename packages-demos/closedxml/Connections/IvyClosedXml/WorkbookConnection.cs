@@ -1,5 +1,4 @@
 using Ivy;
-using Ivy.Connections;
 using System.Data;
 
 /// <summary>
@@ -100,6 +99,12 @@ public class WorkbookConnection : IConnection
     public string GetName() => nameof(WorkbookConnection);
 
     public string GetNamespace() => typeof(WorkbookConnection).Namespace;
+
+    public Task<(bool ok, string? message)> TestConnection(IConfiguration configuration)
+    {
+        // In-memory workbook repository - no external connection to test
+        return Task.FromResult<(bool, string?)>((true, null));
+    }
 
     public void RegisterServices(Server server)
     {

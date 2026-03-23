@@ -26,7 +26,7 @@ public class StartupEditSheet(IState<bool> isOpen, RefreshToken refreshToken, in
 
         return startup
             .ToForm()
-            .Builder(e => e.Description, e => e.ToTextAreaInput())
+            .Builder(e => e.Description, e => e.ToTextareaInput())
             .Builder(e => e.FoundedAt, e => e.ToDateInput())
             .Remove(e => e.Id, e => e.CreatedAt, e => e.UpdatedAt)
             .ToSheet(isOpen, "Edit Startup");

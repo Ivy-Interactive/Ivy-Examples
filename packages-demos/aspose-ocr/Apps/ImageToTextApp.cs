@@ -1,4 +1,4 @@
-﻿using Aspose.OCR;
+using Aspose.OCR;
 using System.IO;
 
 namespace AsposeOcrExample.Apps;
@@ -12,9 +12,8 @@ public class ImageToTextApp : ViewBase
 
         var error = UseState<string?>(() => null);
         var uploadedFile = UseState<FileUpload<byte[]>?>();
-        var upload = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile))
-            .Accept("image/*")
-            .MaxFileSize(1 * 1024 * 1024);
+        var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadedFile));
+        var upload = uploadBase.Accept("image/*").MaxFileSize(1 * 1024 * 1024);
 
         var leftCard = new Card(
             Layout.Vertical().Gap(6).Padding(3)
@@ -23,7 +22,7 @@ public class ImageToTextApp : ViewBase
             | (error.Value != null ? new Callout(error.Value, variant: CalloutVariant.Error) : null)
             | uploadedFile.ToFileInput(upload).Placeholder("Upload Image")
             | new Button("Recognize").Primary().Icon(Icons.Eye)
-                .HandleClick(() =>
+                .OnClick(() =>
                 {
                     if (error.Value == null && uploadedFile.Value != null)
                     {
@@ -39,7 +38,7 @@ public class ImageToTextApp : ViewBase
                 })
             | Text.Block("This demo uses Aspose.OCR for .NET to recognize text.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.OCR for .NET](https://products.aspose.com/ocr/net/)")
-        ).Width(Size.Fraction(0.45f)).Height(130);
+        ).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
         var rightCardBody = Layout.Vertical().Gap(4)
             | Text.H2("Recognized Text")
@@ -49,7 +48,7 @@ public class ImageToTextApp : ViewBase
                 .Height(Size.Units(70))
                 .Language(Languages.Text);
 
-        var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(130);
+        var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
         return Layout.Horizontal().Gap(6).Align(Align.Center)
             | leftCard

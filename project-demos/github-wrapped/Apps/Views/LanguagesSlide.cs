@@ -1,8 +1,6 @@
 namespace GitHubWrapped.Apps.Views;
 
 using GitHubWrapped.Models;
-using Ivy.Charts;
-using Ivy.Helpers;
 
 public class LanguagesSlide : ViewBase
 {
@@ -18,23 +16,18 @@ public class LanguagesSlide : ViewBase
         var totalBytes = _stats.LanguageBreakdown.Values.Sum();
         _targetTotalCommits = (int)totalBytes; // Use total bytes for percentage calculation (cast to int for compatibility)
         _topLanguage = _stats.LanguageBreakdown.OrderByDescending(kvp => kvp.Value).FirstOrDefault();
-        _targetTopLanguagePercentage = _targetTotalCommits > 0 
+        _targetTopLanguagePercentage = _targetTotalCommits > 0
             ? Math.Round((_topLanguage.Value / (double)totalBytes) * 100, 1)
             : 0;
     }
 
     public override object? Build()
     {
-        var maxBytes = _stats.LanguageBreakdown.Values.DefaultIfEmpty(0L).Max();
-        var languagesCount = _stats.LanguageBreakdown.Count;
-
-        // Animated values
         var animatedTotalCommits = this.UseState(0);
         var animatedTopLanguagePercentage = this.UseState(0.0);
         var refresh = this.UseRefreshToken();
         var hasAnimated = this.UseState(false);
 
-        // Animate numbers on first render
         this.UseEffect(() =>
         {
             if (hasAnimated.Value) return;
@@ -84,6 +77,9 @@ public class LanguagesSlide : ViewBase
             _ = Task.Run(async () => await scheduler.RunAsync());
         });
 
+        var maxBytes = _stats.LanguageBreakdown.Values.DefaultIfEmpty(0L).Max();
+        var languagesCount = _stats.LanguageBreakdown.Count;
+
         // Generate dynamic headline based on percentage (avoid repeating language name)
         var languageName = _topLanguage.Key ?? "N/A";
         var headline = _targetTopLanguagePercentage >= 80
@@ -91,7 +87,7 @@ public class LanguagesSlide : ViewBase
             : _targetTopLanguagePercentage >= 50
                 ? "was at the heart of your projects"
                 : "powered most of your work this year";
-        
+
         // Generate dynamic subheadline (avoid repeating language name)
         var subheadline = _targetTopLanguagePercentage >= 66.7
             ? $"Over two thirds of your code came from one language"
@@ -104,9 +100,9 @@ public class LanguagesSlide : ViewBase
                   | Text.Block(subheadline).Muted())
                  .Width(Size.Fraction(0.6f))
                | (Layout.Vertical().Gap(4)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildLanguageChart(maxBytes)
-                   | new Spacer().Height(10)
+                   | Layout.Vertical().Height(Size.Units(10))
                    | BuildInsights(_topLanguage, languagesCount, _targetTotalCommits))
                  .Width(Size.Fraction(0.8f));
     }
@@ -130,16 +126,16 @@ public class LanguagesSlide : ViewBase
 
         // Prepare data for bar chart with percentages - each language as separate column
         var chartData = sortedLanguages
-            .Select(kvp => new 
-            { 
-                Language = kvp.Key, 
+            .Select(kvp => new
+            {
+                Language = kvp.Key,
                 Percentage = totalBytes > 0 ? Math.Round((kvp.Value / (double)totalBytes) * 100, 1) : 0.0
             })
             .ToArray();
 
 
         // Create bar chart with vertical layout and different color for each language
-        var barChart = new BarChart(chartData, 
+        var barChart = new BarChart(chartData,
                 new Bar("Percentage")
                     .LegendType(LegendTypes.Square))
             .Layout(Layouts.Horizontal) // Vertical bars (standing)

@@ -1,22 +1,8 @@
-#:package Ivy@1.2.6
+#:package Ivy@1.2.25
+#:package Ivy.Analyser@1.2.25
 #:package Microsoft.Data.Sqlite@8.0.0
 
 global using Ivy;
-global using Ivy.Apps;
-global using Ivy.Chrome;
-global using Ivy.Client;
-global using Ivy.Core;
-global using Ivy.Core.Hooks;
-global using Ivy.Hooks;
-global using Ivy.Services;
-global using Ivy.Shared;
-global using Ivy.Views;
-global using Ivy.Views.Alerts;
-global using Ivy.Views.Blades;
-global using Ivy.Views.Builders;
-global using Ivy.Views.Forms;
-global using Ivy.Views.Charts;
-global using Ivy.Widgets.Inputs;
 global using System.Globalization;
 global using System.ComponentModel.DataAnnotations;
 global using Microsoft.Data.Sqlite;
@@ -33,12 +19,12 @@ server.AddConnectionsFromAssembly();
 
 var customHeader = Layout.Vertical().Gap(2)
     |new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fcrm-filebased%2Fdevcontainer.json&location=EuropeWest");
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<DashboardApp>()
     .UseTabs(preventDuplicates: true)
     .Header(customHeader);
-server.UseChrome(chromeSettings);
-server.UseVolume(new FolderVolume(Ivy.Utils.IsProduction() ? "/app/data" : null));
+server.UseAppShell(appShellSettings);
+server.UseVolume(new FolderVolume(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production" ? "/app/data" : null));
 await server.RunAsync();
 
 // Models
@@ -62,7 +48,7 @@ static class Database
         // Copy seed database from project folder if it doesn't exist
         if (!File.Exists(absolutePath))
         {
-            var seedPath = Path.Combine(AppContext.BaseDirectory, relativePath);
+            var seedPath = Path.Combine(System.AppContext.BaseDirectory, relativePath);
             if (File.Exists(seedPath))
             {
                 var dir = Path.GetDirectoryName(absolutePath);
@@ -173,14 +159,14 @@ public class DashboardApp : ViewBase
                 notes.Value = await Database.GetNotesAsync(volume);
                 contacts.Value = await Database.GetContactsAsync(volume);
             }
-        }, [EffectTrigger.AfterInit(), refreshToken]);
+        }, [EffectTrigger.OnMount(), refreshToken]);
 
         // Subscribe to global data changes from Database (for cross-app sync)
         UseEffect(() =>
         {
             void OnDataChanged() => refreshToken.Refresh();
             Database.DataChanged += OnDataChanged;
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         var completedTasks = tasks.Value.Count(t => t.IsCompleted);
         var totalTasks = tasks.Value.Count;
@@ -303,7 +289,7 @@ public class TaskListBlade : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = this.UseContext<IBladeController>();
+        var blades = this.UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var refreshKey = UseState(() => 0);
 
@@ -357,7 +343,8 @@ public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
+        var client = UseService<IClientProvider>();
         var task = UseState<TaskItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -365,7 +352,7 @@ public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
         {
             var tasks = await Database.GetTasksAsync(volume);
             task.Value = tasks.FirstOrDefault(t => t.Id == taskId);
-        }, [EffectTrigger.AfterInit(), token]);
+        }, [EffectTrigger.OnMount(), token]);
 
         if (task.Value == null) return null;
 
@@ -391,7 +378,7 @@ public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
                 await Database.SaveTaskAsync(volume, taskValue with { IsCompleted = !taskValue.IsCompleted });
                 token.Refresh();
             }
-            catch (Exception ex) { UseService<IClientProvider>().Toast(ex.Message, "Error"); }
+            catch (Exception ex) { client.Toast(ex.Message, "Error"); }
         };
 
         var dropDown = Icons.Ellipsis
@@ -400,8 +387,8 @@ public class TaskDetailsBlade(Guid taskId, RefreshToken token) : ViewBase
             .WithDropDown(
                 MenuItem.Default(taskValue.IsCompleted ? "Mark as Pending" : "Mark as Completed")
                     .Icon(taskValue.IsCompleted ? Icons.Square : Icons.Check)
-                    .HandleSelect(async _ => await onToggle()),
-                MenuItem.Default("Delete").Icon(Icons.Trash).HandleSelect(onDelete)
+                    .OnSelect(async _ => await onToggle()),
+                MenuItem.Default("Delete").Icon(Icons.Trash).OnSelect(onDelete)
             );
 
         var editBtn = new Button("Edit")
@@ -452,7 +439,7 @@ public class TaskEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken ref
             var tasks = await Database.GetTasksAsync(volume);
             task.Value = tasks.FirstOrDefault(t => t.Id == taskId);
             skipSave.Value = false;
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         UseEffect(async () =>
         {
@@ -523,7 +510,7 @@ public class NoteListBlade : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var refreshKey = UseState(() => 0);
 
@@ -579,7 +566,7 @@ public class NoteDetailsBlade(Guid noteId, RefreshToken token) : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var note = UseState<NoteItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -587,7 +574,7 @@ public class NoteDetailsBlade(Guid noteId, RefreshToken token) : ViewBase
         {
             var notes = await Database.GetNotesAsync(volume);
             note.Value = notes.FirstOrDefault(n => n.Id == noteId);
-        }, [EffectTrigger.AfterInit(), token]);
+        }, [EffectTrigger.OnMount(), token]);
 
         if (note.Value == null) return null;
 
@@ -616,7 +603,7 @@ public class NoteDetailsBlade(Guid noteId, RefreshToken token) : ViewBase
             .Variant(ButtonVariant.Outline)
             .Icon(Icons.Trash)
             .Width(Size.Grow())
-            .HandleClick(onDelete);
+            .OnClick(onDelete);
 
         var detailsCard = new Card(
             content: Layout.Vertical()
@@ -631,7 +618,7 @@ public class NoteDetailsBlade(Guid noteId, RefreshToken token) : ViewBase
                 .ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard())
-                .MultiLine(e => e.Content),
+                .Multiline(e => e.Content),
             footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
                 | editBtn
                 | deleteBtn
@@ -680,7 +667,7 @@ public class NoteCreateDialog(IState<bool> isOpen, IVolume volume, RefreshToken 
         return note
             .ToForm()
             .Required(n => n.Title)
-            .Builder(n => n.Content, e => e.ToTextAreaInput().Height(Size.Units(8)))
+            .Builder(n => n.Content, e => e.ToTextareaInput().Height(Size.Units(8)))
             .ToDialog(isOpen, title: "New Note", submitTitle: "Create");
     }
 }
@@ -698,7 +685,7 @@ public class NoteEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken ref
             var notes = await Database.GetNotesAsync(volume);
             note.Value = notes.FirstOrDefault(n => n.Id == noteId);
             skipSave.Value = false;
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         UseEffect(async () =>
         {
@@ -716,7 +703,7 @@ public class NoteEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken ref
         return note
             .ToForm()
             .Builder(n => n!.Title, e => e.ToTextInput())
-            .Builder(n => n!.Content, e => e.ToTextAreaInput().Height(Size.Units(8)))
+            .Builder(n => n!.Content, e => e.ToTextareaInput().Height(Size.Units(8)))
             .Remove(n => n!.Id, n => n!.CreatedAt)
             .ToSheet(isOpen, "Edit Note");
     }
@@ -734,7 +721,7 @@ public class ContactListBlade : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = this.UseRefreshToken();
         var refreshKey = UseState(() => 0);
 
@@ -791,7 +778,7 @@ public class ContactDetailsBlade(Guid contactId, RefreshToken token) : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeController>();
+        var blades = UseContext<IBladeService>();
         var contact = UseState<ContactItem?>(() => null);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -799,7 +786,7 @@ public class ContactDetailsBlade(Guid contactId, RefreshToken token) : ViewBase
         {
             var contacts = await Database.GetContactsAsync(volume);
             contact.Value = contacts.FirstOrDefault(c => c.Id == contactId);
-        }, [EffectTrigger.AfterInit(), token]);
+        }, [EffectTrigger.OnMount(), token]);
 
         if (contact.Value == null) return null;
 
@@ -828,7 +815,7 @@ public class ContactDetailsBlade(Guid contactId, RefreshToken token) : ViewBase
             .Variant(ButtonVariant.Outline)
             .Icon(Icons.Trash)
             .Width(Size.Grow())
-            .HandleClick(onDelete);
+            .OnClick(onDelete);
 
         var detailsCard = new Card(
             content: Layout.Vertical()
@@ -913,7 +900,7 @@ public class ContactEditSheet(IState<bool> isOpen, IVolume volume, RefreshToken 
             var contacts = await Database.GetContactsAsync(volume);
             contact.Value = contacts.FirstOrDefault(c => c.Id == contactId);
             skipSave.Value = false;
-        }, [EffectTrigger.AfterInit()]);
+        }, [EffectTrigger.OnMount()]);
 
         UseEffect(async () =>
         {

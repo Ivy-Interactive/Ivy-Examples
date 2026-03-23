@@ -57,11 +57,11 @@
                 | Text.Label("Date/time input:")
                 | dateTextState.ToTextInput()
                     .Placeholder("Enter date and time")
-                    .Width("100%")
+                    .Width(Size.Full())
                 | new Button("Parse Date", eventHandler)
                     .Loading(parsingState.Value)
                     .Variant(ButtonVariant.Primary)
-                    .Width("100%")
+                    .Width(Size.Full())
                 | Text.Block("This demo uses Superpower library to parse the date/time.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Superpower](https://github.com/datalust/superpower)")
             );

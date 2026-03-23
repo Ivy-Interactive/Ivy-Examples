@@ -1,13 +1,7 @@
-#:package Ivy@1.2.6
+#:package Ivy@1.2.25
+#:package Ivy.Analyser@1.2.25
 
 global using Ivy;
-global using Ivy.Apps;
-global using Ivy.Chrome;
-global using Ivy.Core;
-global using Ivy.Hooks;
-global using Ivy.Shared;
-global using Ivy.Views;
-global using Ivy.Widgets.Inputs;
 global using System.Globalization;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
@@ -20,11 +14,11 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<HelloApp>()
     .UseTabs(preventDuplicates: true);
 
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 await server.RunAsync();
 
 

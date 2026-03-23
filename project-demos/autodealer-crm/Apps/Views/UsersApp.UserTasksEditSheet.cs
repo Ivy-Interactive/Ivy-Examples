@@ -19,7 +19,7 @@ public class UserTasksEditSheet(IState<bool> isOpen, RefreshToken refreshToken, 
         return task
             .ToForm()
             .Builder(e => e.Title, e => e.ToTextInput())
-            .Builder(e => e.Description, e => e.ToTextAreaInput())
+            .Builder(e => e.Description, e => e.ToTextareaInput())
             .Builder(e => e.DueDate, e => e.ToDateInput())
             .Builder(e => e.Completed, e => e.ToNumberInput())
             .Builder(e => e.LeadId, e => e.ToAsyncSelectInput<int?>(QueryLeads, LookupLead, placeholder: "Select Lead"))

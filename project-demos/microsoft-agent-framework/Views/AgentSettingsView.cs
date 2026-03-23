@@ -35,27 +35,33 @@ public class AgentSettingsView : ViewBase
         var instState = UseState(form.Value.Instructions);
         var modelState = UseState(form.Value.OllamaModel);
 
-        // Available Ollama models - loaded dynamically
         var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
-        
-        // Load models from Ollama API
-        async Task LoadModels()
+
+        UseEffect(async () =>
         {
             if (string.IsNullOrWhiteSpace(_ollamaUrl)) return;
             try
             {
-                using var client = new OllamaApiClient(new Uri(_ollamaUrl));
-                availableModels.Set((await client.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
+                using var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl));
+                availableModels.Set((await ollamaClient.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
             }
-            catch 
-            { 
-                availableModels.Set(ImmutableArray<string>.Empty); 
+            catch
+            {
+                availableModels.Set(ImmutableArray<string>.Empty);
             }
-        }
-        
-        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
-        
-        // Query function for AsyncSelectInput
+        }, EffectTrigger.OnMount());
+
+        UseEffect(() =>
+        {
+            form.Set(form.Value with
+            {
+                Name = nameState.Value,
+                Description = descState.Value,
+                Instructions = instState.Value,
+                OllamaModel = modelState.Value
+            });
+        }, [nameState, descState, instState, modelState]);
+
         QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
         {
             return context.UseQuery<Option<string>[], (string, string)>(
@@ -81,17 +87,6 @@ public class AgentSettingsView : ViewBase
                 fetcher: ct => Task.FromResult<Option<string>?>(
                     string.IsNullOrEmpty(model) ? null : new Option<string>(model)));
         }
-
-        UseEffect(() =>
-        {
-            form.Set(form.Value with
-            {
-                Name = nameState.Value,
-                Description = descState.Value,
-                Instructions = instState.Value,
-                OllamaModel = modelState.Value
-            });
-        }, [nameState, descState, instState, modelState]);
 
         void SaveAgent()
         {
@@ -153,7 +148,7 @@ public class AgentSettingsView : ViewBase
                 | modelInput)
             | (Layout.Vertical().Gap(1)
                 | Text.Block("Instructions (System Prompt)").Bold()
-                | instState.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
+                | instState.ToTextareaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50))
                     .Disabled(isReadOnly))
             | (Layout.Vertical().Gap(1)

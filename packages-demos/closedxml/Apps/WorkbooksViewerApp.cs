@@ -12,9 +12,8 @@ public class WorkbooksViewerApp : ViewBase
     {
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
-        
-        var files = workbookRepository.GetFiles();
         var selectedFileIndex = this.UseState(0);
+        var files = workbookRepository.GetFiles();
         
         // Get selected file data
         DataTable? selectedTable = null;
@@ -35,7 +34,7 @@ public class WorkbooksViewerApp : ViewBase
         
         // Dropdown menu items for file selection
         var fileMenuItems = files
-            .Select((file, idx) => MenuItem.Default(file.FileName).HandleSelect(() => selectedFileIndex.Value = idx))
+            .Select((file, idx) => MenuItem.Default(file.FileName).OnSelect(() => selectedFileIndex.Value = idx))
             .ToArray();
         
         var fileDropDown = new Button(selectedFile?.FileName ?? "Select File")
@@ -61,7 +60,7 @@ public class WorkbooksViewerApp : ViewBase
             | new Spacer()
             | Text.Block("This demo uses the ClosedXML NuGet package to work with Excel files.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ClosedXML](https://github.com/ClosedXML/ClosedXML)")
-        ).Width(Size.Fraction(0.45f)).Height(110);
+        ).Width(Size.Fraction(0.45f)).Height(Size.Units(110));
         
         // Right Card - Data Table
         var tableContent = selectedTable != null && selectedTable.Columns.Count > 0

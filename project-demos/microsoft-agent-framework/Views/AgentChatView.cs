@@ -30,26 +30,20 @@ public class AgentChatView : ViewBase
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
-
-        // Dialog state for editing agent
         var isEditDialogOpen = UseState(false);
         var editForm = UseState(AgentFormModel.FromConfiguration(_agent));
-
-        // Create agent manager
         var agentManager = UseState<AgentManager?>(default(AgentManager?));
-        
-        // Initialize welcome message
-        var welcomeMessage = $"Hello! I'm **{_agent.Name}**. {_agent.Description}\n\n" +
-            "How can I help you today?";
-        
         var messages = UseState(ImmutableArray.Create<Ivy.ChatMessage>(
-            new Ivy.ChatMessage(ChatSender.Assistant, Text.Markdown(welcomeMessage))
+            new Ivy.ChatMessage(ChatSender.Assistant, Text.Markdown(
+                $"Hello! I'm **{_agent.Name}**. {_agent.Description}\n\nHow can I help you today?"))
         ));
-
-        // Track agent changes to update manager when agent is edited
         var agentId = UseState(_agent.Id);
-        
-        // Initialize agent manager
+        var nameState = UseState(editForm.Value.Name);
+        var descState = UseState(editForm.Value.Description);
+        var instState = UseState(editForm.Value.Instructions);
+        var modelState = UseState(editForm.Value.OllamaModel);
+        var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
+
         UseEffect(() =>
         {
             var manager = new AgentManager(_ollamaUrl, _ollamaModel, _bingApiKey);
@@ -57,21 +51,13 @@ public class AgentChatView : ViewBase
             agentManager.Set(manager);
         }, []);
 
-        // Update agent manager when agent is edited
         UseEffect(() =>
         {
-            // Find updated agent from the list
             var updatedAgent = _agents.Value?.FirstOrDefault(a => a.Id == _agent.Id);
             if (updatedAgent != null && updatedAgent.Id == agentId.Value)
             {
-                // Agent was updated, reconfigure manager
                 agentManager.Value?.ConfigureAgent(updatedAgent);
-                
-                // Update welcome message if name or description changed
-                var newWelcomeMessage = $"Hello! I'm **{updatedAgent.Name}**. {updatedAgent.Description}\n\n" +
-                    "How can I help you today?";
-                
-                // Only update if messages still contain the original welcome message (only one message = welcome message)
+                var newWelcomeMessage = $"Hello! I'm **{updatedAgent.Name}**. {updatedAgent.Description}\n\nHow can I help you today?";
                 if (messages.Value.Length == 1)
                 {
                     messages.Set(ImmutableArray.Create<Ivy.ChatMessage>(
@@ -80,6 +66,57 @@ public class AgentChatView : ViewBase
                 }
             }
         }, [_agents]);
+
+        UseEffect(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(_ollamaUrl)) return;
+            try
+            {
+                using var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl));
+                availableModels.Set((await ollamaClient.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
+            }
+            catch
+            {
+                availableModels.Set(ImmutableArray<string>.Empty);
+            }
+        }, EffectTrigger.OnMount());
+
+        UseEffect(() =>
+        {
+            editForm.Set(editForm.Value with
+            {
+                Name = nameState.Value,
+                Description = descState.Value,
+                Instructions = instState.Value,
+                OllamaModel = modelState.Value
+            });
+        }, [nameState, descState, instState, modelState]);
+
+        UseEffect(() =>
+        {
+            if (!isEditDialogOpen.Value && (editForm.Value.Name != _agent.Name || editForm.Value.OllamaModel != _agent.OllamaModel))
+            {
+                var oldModel = _agent.OllamaModel;
+                editForm.Value.ApplyTo(_agent);
+                _agents.Set(_agents.Value.ToList());
+                client.Toast($"Agent '{_agent.Name}' updated", "Success");
+                if (editForm.Value.OllamaModel != oldModel)
+                {
+                    var manager = new AgentManager(_ollamaUrl, editForm.Value.OllamaModel, _bingApiKey);
+                    manager.ConfigureAgent(_agent);
+                    agentManager.Set(manager);
+                }
+                else
+                {
+                    agentManager.Value?.ConfigureAgent(_agent);
+                }
+                editForm.Set(AgentFormModel.FromConfiguration(_agent));
+                nameState.Set(_agent.Name);
+                descState.Set(_agent.Description);
+                instState.Set(_agent.Instructions);
+                modelState.Set(_agent.OllamaModel);
+            }
+        }, [isEditDialogOpen]);
 
         async void HandleMessageAsync(Event<Ivy.Chat, string> @event)
         {
@@ -136,33 +173,6 @@ public class AgentChatView : ViewBase
             }
         }
 
-        // Handle form state updates
-        var nameState = UseState(editForm.Value.Name);
-        var descState = UseState(editForm.Value.Description);
-        var instState = UseState(editForm.Value.Instructions);
-        var modelState = UseState(editForm.Value.OllamaModel);
-
-        // Available Ollama models - loaded dynamically
-        var availableModels = UseState<ImmutableArray<string>>(ImmutableArray<string>.Empty);
-        
-        // Load models from Ollama API
-        async Task LoadModels()
-        {
-            if (string.IsNullOrWhiteSpace(_ollamaUrl)) return;
-            try
-            {
-                using var client = new OllamaApiClient(new Uri(_ollamaUrl));
-                availableModels.Set((await client.ListLocalModelsAsync()).Select(m => m.Name).ToImmutableArray());
-            }
-            catch 
-            { 
-                availableModels.Set(ImmutableArray<string>.Empty); 
-            }
-        }
-        
-        UseEffect(async () => await LoadModels(), EffectTrigger.OnMount());
-        
-        // Query function for AsyncSelectInput
         QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
         {
             return context.UseQuery<Option<string>[], (string, string)>(
@@ -189,52 +199,6 @@ public class AgentChatView : ViewBase
                     string.IsNullOrEmpty(model) ? null : new Option<string>(model)));
         }
 
-        UseEffect(() =>
-        {
-            editForm.Set(editForm.Value with
-            {
-                Name = nameState.Value,
-                Description = descState.Value,
-                Instructions = instState.Value,
-                OllamaModel = modelState.Value
-            });
-        }, [nameState, descState, instState, modelState]);
-
-        // Handle save in dialog
-        UseEffect(() =>
-        {
-            if (!isEditDialogOpen.Value && (editForm.Value.Name != _agent.Name || editForm.Value.OllamaModel != _agent.OllamaModel))
-            {
-                // Store old model before updating
-                var oldModel = _agent.OllamaModel;
-                
-                // Form was saved, update agent
-                editForm.Value.ApplyTo(_agent);
-                _agents.Set(_agents.Value.ToList());
-                client.Toast($"Agent '{_agent.Name}' updated", "Success");
-                
-                // If model changed, recreate agent manager with new model
-                if (editForm.Value.OllamaModel != oldModel)
-                {
-                    var manager = new AgentManager(_ollamaUrl, editForm.Value.OllamaModel, _bingApiKey);
-                    manager.ConfigureAgent(_agent);
-                    agentManager.Set(manager);
-                }
-                else
-                {
-                    // Just reconfigure with updated agent
-                    agentManager.Value?.ConfigureAgent(_agent);
-                }
-                
-                // Reset form to current agent values
-                editForm.Set(AgentFormModel.FromConfiguration(_agent));
-                nameState.Set(_agent.Name);
-                descState.Set(_agent.Description);
-                instState.Set(_agent.Instructions);
-                modelState.Set(_agent.OllamaModel);
-            }
-        }, [isEditDialogOpen]);
-
         // Edit button for header
         var editButton = Layout.Horizontal().Gap(2).Align(Align.Center)
             | Text.Label(_agent.Name).Bold()
@@ -259,7 +223,7 @@ public class AgentChatView : ViewBase
                 .Label(e => e.Description, "Description")
                 .Builder(e => e.OllamaModel,e => modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models..."))
                 .Label(e => e.OllamaModel, "Ollama Model")
-                .Builder(e => e.Instructions, e => e.ToTextAreaInput(placeholder: "Instructions for the AI agent...")
+                .Builder(e => e.Instructions, e => e.ToTextareaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50)))
                 .Label(e => e.Instructions, "Instructions (System Prompt)")
                 .ToDialog(isEditDialogOpen,

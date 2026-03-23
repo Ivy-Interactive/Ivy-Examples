@@ -5,7 +5,7 @@ using static FuzzySharp.Process;
 using FuzzySharp.Extractor;
 using Ivy.Core;
 
-[App(icon: Icons.Search, title: "FuzzySharp", group: ["Apps"])]
+[App(icon: Icons.Search, title: "FuzzySharp")]
 public class FuzzySharpApp : ViewBase
 {
     public override object? Build()
@@ -59,13 +59,12 @@ public class FuzzySharpApp : ViewBase
             Layout.Vertical().Gap(4).Padding(2)
             | Text.H2("Fuzzy Search")
             | Text.Muted("Intelligent search with typo tolerance")
-            | new TextInput(searchTerm)
-                .Placeholder("Try: 'aple', 'bana', 'berry'...")
-                .Variant(TextInputs.Search)
+            | searchTerm.ToTextInput(placeholder: "Try: 'aple', 'bana', 'berry'...")
+                .Variant(TextInputVariant.Search)
             | new Spacer()
             | Text.Block("This demo uses the FuzzySharp NuGet package for intelligent text matching.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [FuzzySharp](https://github.com/JakeBayer/FuzzySharp)")
-        ).Width(Size.Fraction(0.45f)).Height(110);
+        ).Width(Size.Fraction(0.45f)).Height(Size.Units(110));
 
         var rightCard = new Card(
             Layout.Vertical().Gap(4).Padding(2)
@@ -85,7 +84,7 @@ public class FuzzySharpApp : ViewBase
                     | Text.Muted("• 'bana' → finds 'Banana'")
                     | Text.Muted("• 'berry' → finds all berry fruits")
                     | Text.Muted("• 'smoothie' → finds 'Tropical Pineapple Smoothie'"))
-        ).Width(Size.Fraction(0.45f)).Height(110);
+        ).Width(Size.Fraction(0.45f)).Height(Size.Units(110));
 
         return Layout.Horizontal().Gap(6).Align(Align.Center)
             | leftCard

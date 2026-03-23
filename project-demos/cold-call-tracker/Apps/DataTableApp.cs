@@ -143,80 +143,16 @@ public class DataTableApp : ViewBase
         var showExampleData = this.UseState(() => false);
         var apiResponseData = this.UseState<string?>(() => null);
 
-        // Handler for listing available websets
-        var listWebsets = new Func<ValueTask>(async () =>
+        UseEffect(async () =>
         {
-            var listId = Guid.NewGuid();
-            Console.WriteLine($"[{listId}] ===== LISTING WEBSETS =====");
-
-            loadingWebsets.Set(_ => true);
-
-            try
+            var id = selectedWebsetId.Value;
+            if (!string.IsNullOrEmpty(id))
             {
-                using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromMinutes(2);
-                httpClient.DefaultRequestHeaders.Add("accept", "application/json");
-                httpClient.DefaultRequestHeaders.Add("x-api-key", ExaApiKey);
-
-                Console.WriteLine($"[{listId}] Fetching websets list...");
-                var response = await httpClient.GetAsync(ExaApiUrl);
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine($"[{listId}] ERROR: {response.StatusCode}");
-                    Console.WriteLine($"[{listId}] Response: {responseContent}");
-                    loadingWebsets.Set(_ => false);
-                    return;
-                }
-
-                Console.WriteLine($"[{listId}] Parsing websets...");
-                var jsonDoc = JsonDocument.Parse(responseContent);
-                var websets = new List<(string, string, DateTime)>();
-
-                if (jsonDoc.RootElement.TryGetProperty("data", out var data))
-                {
-                    foreach (var webset in data.EnumerateArray())
-                    {
-                        var id = webset.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-                        var title = webset.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : null;
-                        var createdAt = webset.TryGetProperty("createdAt", out var createdProp) ?
-                            DateTime.Parse(createdProp.GetString()!) : DateTime.MinValue;
-
-                        if (!string.IsNullOrEmpty(id))
-                        {
-                            // Use first part of search query as title if no title set
-                            if (string.IsNullOrEmpty(title))
-                            {
-                                if (webset.TryGetProperty("searches", out var searches) && searches.GetArrayLength() > 0)
-                                {
-                                    var firstSearch = searches[0];
-                                    if (firstSearch.TryGetProperty("query", out var query))
-                                    {
-                                        var queryText = query.GetString();
-                                        title = queryText?.Length > 50 ? queryText.Substring(0, 47) + "..." : queryText;
-                                    }
-                                }
-                            }
-
-                            websets.Add((id!, title ?? "Untitled", createdAt));
-                        }
-                    }
-                }
-
-                Console.WriteLine($"[{listId}] Found {websets.Count} websets");
-                websetsState.Set(websets.OrderByDescending(w => w.Item3).ToList());
-                loadingWebsets.Set(_ => false);
+                await LoadWebset(id);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[{listId}] ERROR: {ex.Message}");
-                loadingWebsets.Set(_ => false);
-            }
-        });
+        }, [selectedWebsetId.ToTrigger()]);
 
-        // Handler for loading a specific webset
-        var loadWebset = new Func<string, ValueTask>(async (websetId) =>
+        async ValueTask LoadWebset(string websetId)
         {
             var loadId = Guid.NewGuid();
             Console.WriteLine($"[{loadId}] ===== LOADING WEBSET {websetId} =====");
@@ -231,7 +167,6 @@ public class DataTableApp : ViewBase
                 httpClient.DefaultRequestHeaders.Add("accept", "application/json");
                 httpClient.DefaultRequestHeaders.Add("x-api-key", ExaApiKey);
 
-                // Fetch items from the webset
                 var listUrl = $"{ExaApiUrl}/{websetId}/items";
                 Console.WriteLine($"[{loadId}] Fetching from: {listUrl}");
 
@@ -251,7 +186,6 @@ public class DataTableApp : ViewBase
                 Console.WriteLine(listContent);
                 Console.WriteLine($"[{loadId}] ================================");
 
-                // Store the raw API response for viewing
                 apiResponseData.Set(_ => listContent);
 
                 var listDoc = JsonDocument.Parse(listContent);
@@ -339,9 +273,79 @@ public class DataTableApp : ViewBase
                 errorState.Set(_ => $"Error: {ex.Message}");
                 loadingState.Set(_ => false);
             }
-        });
+        }
 
-        // Don't auto-load websets - only load when user clicks the button
+        // Handler for listing available websets
+        var listWebsets = new Func<ValueTask>(async () =>
+        {
+            var listId = Guid.NewGuid();
+            Console.WriteLine($"[{listId}] ===== LISTING WEBSETS =====");
+
+            loadingWebsets.Set(_ => true);
+
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromMinutes(2);
+                httpClient.DefaultRequestHeaders.Add("accept", "application/json");
+                httpClient.DefaultRequestHeaders.Add("x-api-key", ExaApiKey);
+
+                Console.WriteLine($"[{listId}] Fetching websets list...");
+                var response = await httpClient.GetAsync(ExaApiUrl);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[{listId}] ERROR: {response.StatusCode}");
+                    Console.WriteLine($"[{listId}] Response: {responseContent}");
+                    loadingWebsets.Set(_ => false);
+                    return;
+                }
+
+                Console.WriteLine($"[{listId}] Parsing websets...");
+                var jsonDoc = JsonDocument.Parse(responseContent);
+                var websets = new List<(string, string, DateTime)>();
+
+                if (jsonDoc.RootElement.TryGetProperty("data", out var data))
+                {
+                    foreach (var webset in data.EnumerateArray())
+                    {
+                        var id = webset.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                        var title = webset.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : null;
+                        var createdAt = webset.TryGetProperty("createdAt", out var createdProp) ?
+                            DateTime.Parse(createdProp.GetString()!) : DateTime.MinValue;
+
+                        if (!string.IsNullOrEmpty(id))
+                        {
+                            // Use first part of search query as title if no title set
+                            if (string.IsNullOrEmpty(title))
+                            {
+                                if (webset.TryGetProperty("searches", out var searches) && searches.GetArrayLength() > 0)
+                                {
+                                    var firstSearch = searches[0];
+                                    if (firstSearch.TryGetProperty("query", out var query))
+                                    {
+                                        var queryText = query.GetString();
+                                        title = queryText?.Length > 50 ? queryText.Substring(0, 47) + "..." : queryText;
+                                    }
+                                }
+                            }
+
+                            websets.Add((id!, title ?? "Untitled", createdAt));
+                        }
+                    }
+                }
+
+                Console.WriteLine($"[{listId}] Found {websets.Count} websets");
+                websetsState.Set(websets.OrderByDescending(w => w.Item3).ToList());
+                loadingWebsets.Set(_ => false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[{listId}] ERROR: {ex.Message}");
+                loadingWebsets.Set(_ => false);
+            }
+        });
 
         // Handler for fetching leads (creates new webset)
         var fetchLeads = new Func<ValueTask>(async () =>
@@ -669,18 +673,7 @@ public class DataTableApp : ViewBase
 
             object websetSelector = websetOptions.Count > 0
                 ? new StackLayout([
-                    new SelectInput<string>(
-                        value: selectedWebsetId.Value,
-                        options: websetOptions,
-                        onChange: async (e) =>
-                        {
-                            selectedWebsetId.Set(_ => e.Value);
-                            if (!string.IsNullOrEmpty(e.Value))
-                            {
-                                await loadWebset(e.Value);
-                            }
-                        }
-                    ).Placeholder("Select a webset..."),
+                    selectedWebsetId.ToSelectInput(websetOptions, placeholder: "Select a webset..."),
                     Text.Muted($"{websetOptions.Count} saved webset(s) available")
                 ], gap: 8)
                 : new Button("Load Websets List", _ => listWebsets());
@@ -700,7 +693,7 @@ public class DataTableApp : ViewBase
                                 .Variant(ButtonVariant.Outline)
                         ], gap: 8)
                     ),
-                    new Code(responseToShow, Languages.Json)
+                    new CodeBlock(responseToShow, Languages.Json)
                 ], gap: 12);
             }
 
@@ -731,14 +724,13 @@ public class DataTableApp : ViewBase
                     new StackLayout([
                         Text.H2(responseTitle),
                         Text.Block("GET /websets/v0/websets/{id}/items"),
-                        new WrapLayout([
-                            new Button("Back to Data", _ => showExampleData.Set(_ => false))
-                                .Variant(ButtonVariant.Outline),
-                            Text.Muted($"{leadsState.Value.Count} leads loaded")
-                        ], gap: 12)
+                        Layout.Horizontal().Gap(12)
+                            | new Button("Back to Data", _ => showExampleData.Set(_ => false))
+                                .Variant(ButtonVariant.Outline)
+                            | Text.Muted($"{leadsState.Value.Count} leads loaded")
                     ], gap: 8)
                 ),
-                new Code(responseToShow, Languages.Json)
+                new CodeBlock(responseToShow, Languages.Json)
             ], gap: 12);
         }
 
