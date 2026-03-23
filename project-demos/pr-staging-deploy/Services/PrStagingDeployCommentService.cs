@@ -114,6 +114,10 @@ public class PrStagingDeployCommentService
             {
                 sb.AppendLine("Updating this PR deployment — I’ll keep the comment updated until Sliplane finishes.");
             }
+            else if (statusText.Contains("Deleted", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.AppendLine("Staging services have been deleted.");
+            }
             else
             {
                 sb.AppendLine("I’m preparing your docs & samples for this PR. I’ll update the comment as Sliplane reports progress.");

@@ -197,6 +197,20 @@ public class PrStagingDeployApp : ViewBase
                             var projectId = config["Sliplane:ProjectId"] ?? "";
                             var res = await sliplane.DeleteAllServicesInProjectAsync(token, projectId);
                             ShowMessage($"Deleted {res.Deleted} services. Failed: {res.Failed}.", res.Failed > 0);
+
+                            // Now update PR comments to "Deleted" for any PRs that had staging services
+                            var owner = config["GitHub:Owner"] ?? "";
+                            var repo = config["GitHub:Repo"] ?? "";
+                            if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                            {
+                                var prsThatHadServices = rowList.Where(r => !RowLooksLikeNoStagingYet(r)).ToList();
+                                foreach (var pr in prsThatHadServices)
+                                {
+                                    _ = prComments.TryPostOrUpdateStagingCommentAsync(
+                                        owner, repo, pr.Number, null, null, "Deleted", null);
+                                }
+                            }
+
                             overviewQuery.Mutator.Revalidate();
                             if (res.Failed > 0)
                             {

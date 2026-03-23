@@ -265,7 +265,8 @@ public class GitHubWebhookHandler
         var commentEl = root.GetProperty("comment");
         var commentId = commentEl.GetProperty("id").GetInt64();
         var commentBody = commentEl.GetProperty("body").GetString() ?? "";
-        if (!commentBody.Trim().Equals("/deploy", StringComparison.OrdinalIgnoreCase))
+        var trimmedComment = commentBody.Trim();
+        if (!IsDeployCommand(trimmedComment))
             return;
 
         var issue = root.GetProperty("issue");
@@ -374,6 +375,19 @@ public class GitHubWebhookHandler
     private string GetApiToken()
     {
         return _config["Sliplane:ApiToken"] ?? "";
+    }
+
+    /// <summary>Matches /deploy or /publish, optionally followed by extra text (e.g. "/deploy this app").</summary>
+    private static bool IsDeployCommand(string trimmed)
+    {
+        foreach (var cmd in new[] { "/deploy", "/publish" })
+        {
+            if (trimmed.Equals(cmd, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (trimmed.StartsWith(cmd + " ", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     private static string TruncLine(string? s, int maxLen)
