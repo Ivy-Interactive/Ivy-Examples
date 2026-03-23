@@ -93,6 +93,17 @@ public class StagingDeployService
         return new StagingDeployResult(triggered > 0, $"Redeploy triggered for {triggered} service(s).");
     }
 
+    /// <summary>Resolves docs/samples URLs from existing Sliplane services for a branch (e.g. after redeploy).</summary>
+    public async Task<(string? DocsUrl, string? SamplesUrl)> GetDeploymentUrlsForBranchAsync(string apiToken, string branchName)
+    {
+        var list = await ListDeploymentsAsync(apiToken);
+        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
+        var dep = list.FirstOrDefault(d => string.Equals(d.BranchSafe, safe, StringComparison.OrdinalIgnoreCase));
+        if (dep == null)
+            return (null, null);
+        return (dep.DocsUrl, dep.SamplesUrl);
+    }
+
     public async Task<StagingDeleteResult> DeleteBranchAsync(string apiToken, string branchName)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";

@@ -10,13 +10,20 @@ public class GitHubWebhookHandler
 {
     private readonly StagingDeployService _deployService;
     private readonly GitHubApiClient _github;
+    private readonly PrStagingDeployCommentService _prComments;
     private readonly IConfiguration _config;
     private readonly ILogger<GitHubWebhookHandler> _logger;
 
-    public GitHubWebhookHandler(StagingDeployService deployService, GitHubApiClient github, IConfiguration config, ILogger<GitHubWebhookHandler> logger)
+    public GitHubWebhookHandler(
+        StagingDeployService deployService,
+        GitHubApiClient github,
+        PrStagingDeployCommentService prComments,
+        IConfiguration config,
+        ILogger<GitHubWebhookHandler> logger)
     {
         _deployService = deployService;
         _github = github;
+        _prComments = prComments;
         _config = config;
         _logger = logger;
     }
@@ -72,6 +79,10 @@ public class GitHubWebhookHandler
         var branch = pr.GetProperty("head").GetProperty("ref").GetString() ?? "";
         var prNumber = pr.GetProperty("number").GetInt32();
         var title = pr.GetProperty("title").GetString() ?? "";
+        var prAuthorLogin = pr.GetProperty("user").GetProperty("login").GetString();
+        var repoEl = root.GetProperty("repository");
+        var owner = repoEl.GetProperty("owner").GetProperty("login").GetString() ?? "";
+        var repoName = repoEl.GetProperty("name").GetString() ?? "";
 
         var apiToken = GetApiToken();
         if (string.IsNullOrEmpty(apiToken))
@@ -86,15 +97,39 @@ public class GitHubWebhookHandler
         {
             case "opened":
             case "reopened":
+                if (!GitHubDeployPermissions.IsUserAllowed(_config, prAuthorLogin))
+                {
+                    _logger.LogInformation(
+                        "Skipping auto-deploy for PR #{Pr}: PR author {User} not in GitHub:DeployAllowedUsers",
+                        prNumber, prAuthorLogin ?? "(unknown)");
+                    break;
+                }
+
                 _logger.LogInformation("PR #{Pr} opened: {Title} branch={Branch}", prNumber, title, branch);
                 var deployResult = await _deployService.DeployBranchAsync(apiToken, branch);
                 _logger.LogInformation("Deploy result: {Success} - {Message}", deployResult.Success, deployResult.Message);
+                if (deployResult.Success)
+                    await _prComments.TryPostOrUpdateStagingCommentAsync(owner, repoName, prNumber, deployResult.DocsUrl, deployResult.SamplesUrl);
                 break;
 
             case "synchronize":
+                if (!GitHubDeployPermissions.IsUserAllowed(_config, prAuthorLogin))
+                {
+                    _logger.LogInformation(
+                        "Skipping auto-redeploy for PR #{Pr}: PR author {User} not in GitHub:DeployAllowedUsers",
+                        prNumber, prAuthorLogin ?? "(unknown)");
+                    break;
+                }
+
                 _logger.LogInformation("PR #{Pr} updated: {Branch}", prNumber, branch);
                 var redeployResult = await _deployService.RedeployBranchAsync(apiToken, branch);
                 _logger.LogInformation("Redeploy result: {Success} - {Message}", redeployResult.Success, redeployResult.Message);
+                if (redeployResult.Success)
+                {
+                    var urls = await _deployService.GetDeploymentUrlsForBranchAsync(apiToken, branch);
+                    await _prComments.TryPostOrUpdateStagingCommentAsync(owner, repoName, prNumber, urls.DocsUrl, urls.SamplesUrl);
+                }
+
                 break;
 
             case "closed":
@@ -115,8 +150,10 @@ public class GitHubWebhookHandler
         if (action != "created")
             return;
 
-        var comment = root.GetProperty("comment").GetProperty("body").GetString() ?? "";
-        if (!comment.Trim().Equals("/deploy", StringComparison.OrdinalIgnoreCase))
+        var commentEl = root.GetProperty("comment");
+        var commentId = commentEl.GetProperty("id").GetInt64();
+        var commentBody = commentEl.GetProperty("body").GetString() ?? "";
+        if (!commentBody.Trim().Equals("/deploy", StringComparison.OrdinalIgnoreCase))
             return;
 
         var issue = root.GetProperty("issue");
@@ -142,9 +179,23 @@ public class GitHubWebhookHandler
             return;
         }
 
+        var commentAuthorLogin = commentEl.GetProperty("user").GetProperty("login").GetString();
+        if (!GitHubDeployPermissions.IsUserAllowed(_config, commentAuthorLogin))
+        {
+            _logger.LogInformation(
+                "Ignoring /deploy on PR #{Pr}: comment author {User} not in GitHub:DeployAllowedUsers",
+                prNumber, commentAuthorLogin ?? "(unknown)");
+            return;
+        }
+
+        // Let users know the bot read the `/deploy` command.
+        await _prComments.TryAddRocketReactionAsync(owner, repo, commentId);
+
         _logger.LogInformation("PR #{Pr} /deploy comment: {Branch}", prNumber, branch);
         var result = await _deployService.DeployBranchAsync(apiToken, branch);
         _logger.LogInformation("Deploy result: {Success} - {Message}", result.Success, result.Message);
+        if (result.Success)
+            await _prComments.TryPostOrUpdateStagingCommentAsync(owner, repo, prNumber, result.DocsUrl, result.SamplesUrl);
     }
 
     private string GetApiToken()

@@ -23,6 +23,8 @@ This application is powered by [Ivy Framework](https://github.com/Ivy-Interactiv
   - `pull_request` closed → deployment kept (no immediate delete)
   - `issue_comment` with `/deploy` → deploy on command
 - **Auto-cleanup** — background job runs hourly; removes deployments only when **both** ExpiryDays passed (since deploy start) **and** PR is closed
+- **PR comments (optional)** — after a successful deploy (webhook auto-deploy, `/deploy`, or Deploy in the UI), posts or updates **one** comment on the PR with Docs and Samples links. Uses a dedicated PAT; the comment appears as that GitHub user (bot or service account).
+- **PR comment reactions (optional)** — when someone posts `/deploy` and is allowed, the bot reacts to that comment with the GitHub `rocket` reaction (so people see it was read).
 
 ## Configuration
 
@@ -52,7 +54,25 @@ dotnet user-secrets set "Staging:ExpiryDays" "7"
 
 # Webhook (optional – for auto-deploy on PR open/update/close)
 dotnet user-secrets set "GitHub:WebhookSecret" "your_webhook_secret"
+
+# Optional: comma-separated GitHub logins (case-insensitive). If empty, no user-based restriction.
+# Auto-deploy (PR open / push): only if the PR author is in this list.
+# /deploy comment: only if the comment author is in this list (PR author may be anyone).
+dotnet user-secrets set "GitHub:DeployAllowedUsers" "alice,bob"
+
+# Optional: PAT used for PR comment and comment reactions (Issues API). Reaction/comment appear as the PAT owner.
+# Fine-grained: Issues read/write on the repo. Classic: repo scope.
+dotnet user-secrets set "GitHub:PrCommentToken" "ghp_xxx"
 ```
+
+### Who can trigger deploy (webhooks)
+
+| Event | Who must be on the list (when `DeployAllowedUsers` is set) |
+|--------|-----------------------------------------------------------|
+| PR opened / reopened / synchronize | **PR author** (whose PR gets auto-deploy) |
+| Comment `/deploy` | **Comment author** (so a maintainer on the list can deploy someone else’s PR) |
+
+If `DeployAllowedUsers` is **empty**, GitHub user checks are skipped (same as before). Closing a PR is **not** gated by this list. The in-app **Deploy** buttons are not tied to GitHub identity — restrict the app URL separately if needed.
 
 ### Option 2: Environment Variables (for Sliplane Deployment)
 
@@ -72,6 +92,8 @@ Staging__DocsDockerContext=.
 Staging__SamplesDockerfile=.github/docker/Dockerfile.samples
 Staging__DocsDockerfile=.github/docker/Dockerfile.docs
 Staging__ExpiryDays=7
+GitHub__DeployAllowedUsers=alice,bob
+GitHub__PrCommentToken=ghp_xxx
 ```
 
 ### GitHub Webhook (Optional)

@@ -3,6 +3,9 @@ namespace PrStagingDeploy.Models;
 /// <summary>Sliplane service event (deploy status, etc.).</summary>
 public record SliplaneServiceEvent(string Type, string? Message, DateTime CreatedAt, string? TriggeredBy = null, string? Reason = null);
 
+/// <summary>Issue/PR comment (REST).</summary>
+public record GitHubIssueComment(long Id, long UserId, string Body);
+
 /// <summary>GitHub pull request info.</summary>
 public record GitHubPullRequest(
     int Number,
