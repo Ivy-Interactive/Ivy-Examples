@@ -33,9 +33,9 @@ server.AddConnectionsFromAssembly();
 // Sliplane OAuth auth provider
 server.UseAuth<SliplaneAuthProvider>();
 
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<SliplaneServicesApp>()        // show Servers app as wallpaper when no tabs are open
     .UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 
 await server.RunAsync();
