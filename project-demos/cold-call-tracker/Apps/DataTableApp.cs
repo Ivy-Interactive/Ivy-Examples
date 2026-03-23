@@ -143,8 +143,16 @@ public class DataTableApp : ViewBase
         var showExampleData = this.UseState(() => false);
         var apiResponseData = this.UseState<string?>(() => null);
 
-        // Handler for loading a specific webset (defined before UseEffect)
-        var loadWebset = new Func<string, ValueTask>(async (websetId) =>
+        UseEffect(async () =>
+        {
+            var id = selectedWebsetId.Value;
+            if (!string.IsNullOrEmpty(id))
+            {
+                await LoadWebset(id);
+            }
+        }, [selectedWebsetId.ToTrigger()]);
+
+        async ValueTask LoadWebset(string websetId)
         {
             var loadId = Guid.NewGuid();
             Console.WriteLine($"[{loadId}] ===== LOADING WEBSET {websetId} =====");
@@ -265,16 +273,7 @@ public class DataTableApp : ViewBase
                 errorState.Set(_ => $"Error: {ex.Message}");
                 loadingState.Set(_ => false);
             }
-        });
-
-        UseEffect(async () =>
-        {
-            var id = selectedWebsetId.Value;
-            if (!string.IsNullOrEmpty(id))
-            {
-                await loadWebset(id);
-            }
-        }, [selectedWebsetId.ToTrigger()]);
+        }
 
         // Handler for listing available websets
         var listWebsets = new Func<ValueTask>(async () =>

@@ -199,17 +199,6 @@ public class AgentChatView : ViewBase
                     string.IsNullOrEmpty(model) ? null : new Option<string>(model)));
         }
 
-        UseEffect(() =>
-        {
-            editForm.Set(editForm.Value with
-            {
-                Name = nameState.Value,
-                Description = descState.Value,
-                Instructions = instState.Value,
-                OllamaModel = modelState.Value
-            });
-        }, [nameState, descState, instState, modelState]);
-
         // Edit button for header
         var editButton = Layout.Horizontal().Gap(2).Align(Align.Center)
             | Text.Label(_agent.Name).Bold()

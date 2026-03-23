@@ -20,10 +20,10 @@ server.UseHotReload();
 #endif
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<TestAuthApp>()
     .UseTabs(preventDuplicates: true);
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 
 // Configure GitHub Auth Provider - UseAuth will create the provider via DI
 server.UseAuth<GitHubAuthProvider>();

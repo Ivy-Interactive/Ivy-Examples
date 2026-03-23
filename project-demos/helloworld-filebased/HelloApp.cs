@@ -1,5 +1,5 @@
-#:package Ivy@1.2.21
-#:package Ivy.Analyser@1.2.21
+#:package Ivy@1.2.25
+#:package Ivy.Analyser@1.2.25
 
 global using Ivy;
 global using System.Globalization;
@@ -14,11 +14,11 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<HelloApp>()
     .UseTabs(preventDuplicates: true);
 
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 await server.RunAsync();
 
 

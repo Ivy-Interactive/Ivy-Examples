@@ -50,7 +50,18 @@ public class AgentSettingsView : ViewBase
                 availableModels.Set(ImmutableArray<string>.Empty);
             }
         }, EffectTrigger.OnMount());
-        
+
+        UseEffect(() =>
+        {
+            form.Set(form.Value with
+            {
+                Name = nameState.Value,
+                Description = descState.Value,
+                Instructions = instState.Value,
+                OllamaModel = modelState.Value
+            });
+        }, [nameState, descState, instState, modelState]);
+
         QueryResult<Option<string>[]> QueryModels(IViewContext context, string query)
         {
             return context.UseQuery<Option<string>[], (string, string)>(
@@ -76,17 +87,6 @@ public class AgentSettingsView : ViewBase
                 fetcher: ct => Task.FromResult<Option<string>?>(
                     string.IsNullOrEmpty(model) ? null : new Option<string>(model)));
         }
-
-        UseEffect(() =>
-        {
-            form.Set(form.Value with
-            {
-                Name = nameState.Value,
-                Description = descState.Value,
-                Instructions = instState.Value,
-                OllamaModel = modelState.Value
-            });
-        }, [nameState, descState, instState, modelState]);
 
         void SaveAgent()
         {
