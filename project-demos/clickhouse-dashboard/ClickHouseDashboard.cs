@@ -1,5 +1,5 @@
-#:package Ivy@1.2.21
-#:package Ivy.Analyser@1.2.21
+#:package Ivy@1.2.25
+#:package Ivy.Analyser@1.2.25
 #:package ClickHouse.Driver@0.9.0
 
 global using Ivy;
@@ -28,11 +28,11 @@ server.AddConnectionsFromAssembly();
 
 var customHeader = Layout.Vertical().Gap(2)
     |new Embed("https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=Ivy-Interactive%2FIvy-Examples&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fclickhouse-dashboard%2Fdevcontainer.json&location=EuropeWest");
-var chromeSettings = new ChromeSettings()
+var appShellSettings = new AppShellSettings()
     .DefaultApp<DashboardApp>()
     .UseTabs(preventDuplicates: true)
     .Header(customHeader);
-server.UseChrome(chromeSettings);
+server.UseAppShell(appShellSettings);
 await server.RunAsync();
 
 static async Task EnsureClickHouseRunning()
