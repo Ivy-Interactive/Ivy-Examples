@@ -12,7 +12,7 @@ No secrets required for this project.
 
 ## Live Demo
 
-<https://ivy-agent-demos-html-agility-pack-scraper.sliplane.app>
+<https://ivy-agent-demos-data-anonymizer.sliplane.app>
 
 ## Run
 
