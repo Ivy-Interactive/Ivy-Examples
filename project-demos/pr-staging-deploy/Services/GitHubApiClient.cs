@@ -175,6 +175,22 @@ public class GitHubApiClient
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> DeleteIssueCommentAsync(
+        string owner,
+        string repo,
+        long commentId,
+        string? token,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+        var client = CreateClient(token);
+        var response = await client.DeleteAsync(
+            $"https://api.github.com/repos/{owner}/{repo}/issues/comments/{commentId}",
+            cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> AddReactionToIssueCommentAsync(
         string owner,
         string repo,

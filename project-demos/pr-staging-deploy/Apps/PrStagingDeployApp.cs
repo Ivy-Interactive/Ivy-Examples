@@ -29,6 +29,7 @@ public class PrStagingDeployApp : ViewBase
         var github = this.UseService<GitHubApiClient>();
         var deploySvc = this.UseService<StagingDeployService>();
         var prComments = this.UseService<PrStagingDeployCommentService>();
+        var commentUpdateQueue = this.UseService<PrStagingDeployCommentUpdateQueue>();
         var sliplane = this.UseService<SliplaneStagingClient>();
         var client = this.UseService<IClientProvider>();
         var refreshToken = this.UseRefreshToken();
@@ -123,10 +124,12 @@ public class PrStagingDeployApp : ViewBase
                     if (result.IsOk())
                     {
                         var rowList = overviewQuery.Value ?? new List<PrRow>();
-                        var branchesToDeploy = rowList.Where(RowLooksLikeNoStagingYet).Select(r => r.HeadRef).ToList();
-                        if (branchesToDeploy.Count > 0)
+                        var prsToDeploy = rowList.Where(RowLooksLikeNoStagingYet)
+                            .Select(r => (r.HeadRef, r.Number))
+                            .ToList();
+                        if (prsToDeploy.Count > 0)
                         {
-                            var branchSet = branchesToDeploy.ToHashSet();
+                            var branchSet = prsToDeploy.Select(x => x.HeadRef).ToHashSet();
                             var updated = rowList.Select(r =>
                                 branchSet.Contains(r.HeadRef)
                                     ? r with
@@ -143,8 +146,9 @@ public class PrStagingDeployApp : ViewBase
                             refreshToken.Refresh();
                         }
 
-                        ShowMessage($"Triggering deploy for {branchesToDeploy.Count} PRs...", false);
-                        foreach (var b in branchesToDeploy) _ = DeployBranchAsync(b, clearMessageFirst: false);
+                        ShowMessage($"Triggering deploy for {prsToDeploy.Count} PRs...", false);
+                        foreach (var item in prsToDeploy)
+                            _ = DeployBranchAsync(item.HeadRef, item.Number, clearMessageFirst: false);
                     }
                     await Task.CompletedTask;
                 }, "Deploy All", AlertButtonSet.OkCancel);
@@ -193,6 +197,20 @@ public class PrStagingDeployApp : ViewBase
                             var projectId = config["Sliplane:ProjectId"] ?? "";
                             var res = await sliplane.DeleteAllServicesInProjectAsync(token, projectId);
                             ShowMessage($"Deleted {res.Deleted} services. Failed: {res.Failed}.", res.Failed > 0);
+
+                            // Now update PR comments to "Deleted" for any PRs that had staging services
+                            var owner = config["GitHub:Owner"] ?? "";
+                            var repo = config["GitHub:Repo"] ?? "";
+                            if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                            {
+                                var prsThatHadServices = rowList.Where(r => !RowLooksLikeNoStagingYet(r)).ToList();
+                                foreach (var pr in prsThatHadServices)
+                                {
+                                    _ = prComments.TryPostOrUpdateStagingCommentAsync(
+                                        owner, repo, pr.Number, null, null, "Deleted", null, forceNewComment: true);
+                                }
+                            }
+
                             overviewQuery.Mutator.Revalidate();
                             if (res.Failed > 0)
                             {
@@ -235,39 +253,131 @@ public class PrStagingDeployApp : ViewBase
         void ClearMessage() => message.Set(null);
         void ShowMessage(string text, bool isError = false) => message.Set((text, isError));
 
-        async Task DeployBranchAsync(string branchName, bool clearMessageFirst = true)
+        static string TruncLine(string? s, int maxLen)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return "";
+            var line = s.Trim().Replace("\r", "").Replace("\n", " ");
+            return line.Length <= maxLen ? line : line[..maxLen] + "...";
+        }
+
+        async Task DeployBranchAsync(string branchName, int prNumber, bool clearMessageFirst = true)
         {
             var t = config["Sliplane:ApiToken"] ?? "";
             if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             if (clearMessageFirst) ClearMessage();
             try
             {
+                var owner = config["GitHub:Owner"] ?? "";
+                var repo = config["GitHub:Repo"] ?? "";
+
+                if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                {
+                    await prComments.TryPostOrUpdateStagingCommentAsync(
+                        owner, repo, prNumber,
+                        docsUrl: null, samplesUrl: null,
+                        status: "Deploying...",
+                        logLines: null,
+                        forceNewComment: true);
+                }
+
                 var result = await deploySvc.DeployBranchAsync(t, branchName);
                 ShowMessage(result.Message, !result.Success);
                 if (result.Success)
                 {
                     overviewQuery.Mutator.Revalidate();
-                    var owner = config["GitHub:Owner"] ?? "";
-                    var repo = config["GitHub:Repo"] ?? "";
-                    var ghToken = config["GitHub:Token"] ?? "";
-                    var prNum = await github.FindOpenPullRequestNumberByHeadBranchAsync(owner, repo, ghToken, branchName);
-                    if (prNum.HasValue)
-                        await prComments.TryPostOrUpdateStagingCommentAsync(owner, repo, prNum.Value, result.DocsUrl, result.SamplesUrl);
+
+                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                    {
+                        if (string.IsNullOrEmpty(result.DocsServiceId) || string.IsNullOrEmpty(result.SamplesServiceId))
+                        {
+                            await prComments.TryPostOrUpdateStagingCommentAsync(
+                                owner, repo, prNumber,
+                                docsUrl: null, samplesUrl: null,
+                                status: "Deploy failed",
+                                logLines: new[] { TruncLine(result.Message, 240) });
+                            return;
+                        }
+
+                        await commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
+                            Owner: owner,
+                            Repo: repo,
+                            PrNumber: prNumber,
+                            BranchName: branchName,
+                            DocsServiceId: result.DocsServiceId,
+                            SamplesServiceId: result.SamplesServiceId));
+
+                        // Final state + links will be updated by background worker.
+                        return;
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                    {
+                        await prComments.TryPostOrUpdateStagingCommentAsync(
+                            owner,
+                            repo,
+                            prNumber,
+                            docsUrl: null,
+                            samplesUrl: null,
+                            status: "Deploy failed",
+                            logLines: new[] { TruncLine(result.Message, 240) });
+                    }
                 }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }
         }
 
-        async Task DeleteBranchAsync(string branchName)
+        async Task DeleteBranchAsync(string branchName, int prNumber)
         {
             var t = config["Sliplane:ApiToken"] ?? "";
             if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             ClearMessage();
             try
             {
+                var owner = config["GitHub:Owner"] ?? "";
+                var repo = config["GitHub:Repo"] ?? "";
+                if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                {
+                    await prComments.TryPostOrUpdateStagingCommentAsync(
+                        owner, repo, prNumber,
+                        docsUrl: null, samplesUrl: null,
+                        status: "Deleting...",
+                        logLines: null,
+                        forceNewComment: true);
+                }
+
                 var result = await deploySvc.DeleteBranchAsync(t, branchName);
                 ShowMessage(result.Message, !result.Success);
-                if (result.Success) overviewQuery.Mutator.Revalidate();
+                if (result.Success)
+                {
+                    overviewQuery.Mutator.Revalidate();
+                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                    {
+                        await prComments.TryPostOrUpdateStagingCommentAsync(
+                            owner,
+                            repo,
+                            prNumber,
+                            docsUrl: null,
+                            samplesUrl: null,
+                            status: "Deleted",
+                            logLines: null);
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                    {
+                        await prComments.TryPostOrUpdateStagingCommentAsync(
+                            owner,
+                            repo,
+                            prNumber,
+                            docsUrl: null,
+                            samplesUrl: null,
+                            status: "Delete failed",
+                            logLines: new[] { TruncLine(result.Message, 240) });
+                    }
+                }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }
         }
@@ -338,18 +448,31 @@ public class PrStagingDeployApp : ViewBase
                 if (tag == "deploy")
                 {
                     var branch = headRef;
-                    showAlert($"Deploy docs and samples for branch \"{branch}\"?", result =>
+                    var prRow = rows.FirstOrDefault(r => r.HeadRef == branch);
+                    if (prRow != null && !RowLooksLikeNoStagingYet(prRow))
                     {
-                        if (result.IsOk())
+                        // Services already exist — just inform the user, no action taken.
+                        showAlert(
+                            $"Staging services for branch \"{branch}\" already exist.",
+                            _ => { }, "Services already deployed", AlertButtonSet.Ok);
+                    }
+                    else
+                    {
+                        showAlert($"Deploy docs and samples for branch \"{branch}\"?", result =>
                         {
-                            var updated = rows.Select(r => r.HeadRef == branch
-                                ? r with { Status = "pending", StatusIcon = Icons.Clock, DocsDisplay = "Deploying...", SamplesDisplay = "Deploying...", DocsUrl = null, SamplesUrl = null }
-                                : r).ToList();
-                            overviewQuery.Mutator.Mutate(updated, revalidate: false);
-                            refreshToken.Refresh();
-                            _ = DeployBranchAsync(branch);
-                        }
-                    }, "Deploy", AlertButtonSet.OkCancel);
+                            if (result.IsOk())
+                            {
+                                var updated = rows.Select(r => r.HeadRef == branch
+                                    ? r with { Status = "pending", StatusIcon = Icons.Clock, DocsDisplay = "Deploying...", SamplesDisplay = "Deploying...", DocsUrl = null, SamplesUrl = null }
+                                    : r).ToList();
+                                overviewQuery.Mutator.Mutate(updated, revalidate: false);
+                                refreshToken.Refresh();
+                                var newPrRow = rows.FirstOrDefault(r => r.HeadRef == branch);
+                                if (newPrRow != null)
+                                    _ = DeployBranchAsync(branch, newPrRow.Number);
+                            }
+                        }, "Deploy", AlertButtonSet.OkCancel);
+                    }
                 }
                 else if (tag == "delete")
                 {
@@ -363,7 +486,9 @@ public class PrStagingDeployApp : ViewBase
                                 : r).ToList();
                             overviewQuery.Mutator.Mutate(updated, revalidate: false);
                             refreshToken.Refresh();
-                            _ = DeleteBranchAsync(branch);
+                            var prRow = rows.FirstOrDefault(r => r.HeadRef == branch);
+                            if (prRow != null)
+                                _ = DeleteBranchAsync(branch, prRow.Number);
                         }
                     }, "Delete", AlertButtonSet.OkCancel);
                 }

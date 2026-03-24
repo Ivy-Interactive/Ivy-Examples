@@ -32,21 +32,34 @@ public class PrStagingDeployCommentService
         int prNumber,
         string? docsUrl,
         string? samplesUrl,
+        string? status = null,
+        IReadOnlyList<string>? logLines = null,
+        bool forceNewComment = false,
         CancellationToken cancellationToken = default)
     {
         var pat = _config["GitHub:PrCommentToken"] ?? "";
         if (string.IsNullOrWhiteSpace(pat))
             return;
 
-        var body = BuildCommentBody(docsUrl, samplesUrl);
+        var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines);
         var comments = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
-        var existingId = FindCommentIdByMarker(comments, Marker);
+        var existingIds = FindCommentIdsByMarker(comments, Marker);
 
-        if (existingId.HasValue)
+        if (forceNewComment && existingIds.Any())
         {
-            var ok = await _github.UpdateIssueCommentAsync(owner, repo, existingId.Value, pat, body, cancellationToken);
+            foreach (var oldId in existingIds)
+            {
+                await _github.DeleteIssueCommentAsync(owner, repo, oldId, pat, cancellationToken);
+            }
+            existingIds.Clear();
+        }
+
+        if (existingIds.Any())
+        {
+            var existingId = existingIds.Last();
+            var ok = await _github.UpdateIssueCommentAsync(owner, repo, existingId, pat, body, cancellationToken);
             if (!ok)
-                _logger.LogWarning("Failed to update staging comment {CommentId} on PR #{Pr}", existingId.Value, prNumber);
+                _logger.LogWarning("Failed to update staging comment {CommentId} on PR #{Pr}", existingId, prNumber);
             else
                 _logger.LogInformation("Updated staging links comment on PR #{Pr}", prNumber);
         }
@@ -74,35 +87,98 @@ public class PrStagingDeployCommentService
         await _github.AddReactionToIssueCommentAsync(owner, repo, issueCommentId, RocketReaction, pat, cancellationToken);
     }
 
-    private static string BuildCommentBody(string? docsUrl, string? samplesUrl)
+    private static string BuildCommentBody(
+        string? docsUrl,
+        string? samplesUrl,
+        string? status,
+        IReadOnlyList<string>? logLines)
     {
+        var statusText = string.IsNullOrWhiteSpace(status)
+            ? "Staging preview"
+            : status.Trim();
+
+        // Hide links until everything is fully deployed.
+        // We treat any status that contains "deployed" but not "failed" as "ready".
+        var showLinks = statusText.Contains("deployed", StringComparison.OrdinalIgnoreCase)
+                        && !statusText.Contains("failed", StringComparison.OrdinalIgnoreCase);
+
         var sb = new StringBuilder();
         sb.AppendLine(Marker);
         sb.AppendLine();
-        sb.AppendLine("### Staging preview");
+        sb.AppendLine("### " + statusText);
         sb.AppendLine();
-        sb.AppendLine(FormatLinkLine("Docs", docsUrl));
-        sb.AppendLine(FormatLinkLine("Samples", samplesUrl));
+
+        if (showLinks)
+        {
+            var docsPageUrl = BuildDocsIntroPageUrl(docsUrl);
+            sb.AppendLine(FormatLinkLine("Docs", docsPageUrl, showLinks));
+            sb.AppendLine(FormatLinkLine("Samples", samplesUrl, showLinks));
+        }
+        else
+        {
+            var isFailed = statusText.Contains("failed", StringComparison.OrdinalIgnoreCase);
+            if (isFailed)
+            {
+                sb.AppendLine("Deployment stopped due to an error. I’m attaching the latest Sliplane events below.");
+            }
+            else if (statusText.Contains("redeploy", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.AppendLine("Updating this PR deployment — I’ll keep the comment updated until Sliplane finishes.");
+            }
+            else if (statusText.Contains("Deleted", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.AppendLine("Staging services have been deleted.");
+            }
+            else
+            {
+                sb.AppendLine("I’m preparing your docs & samples for this PR. I’ll update the comment as Sliplane reports progress.");
+            }
+        }
+
+        if (logLines is { Count: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Logs");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var line in logLines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                sb.AppendLine(line);
+            }
+            sb.AppendLine("```");
+        }
         return sb.ToString();
     }
 
-    private static string FormatLinkLine(string label, string? url)
+    private static string FormatLinkLine(string label, string? url, bool showLinks)
     {
-        if (!string.IsNullOrWhiteSpace(url))
-            return $"- **{label}:** [{label}]({url})";
-        return $"- **{label}:** _pending_";
+        if (showLinks && !string.IsNullOrWhiteSpace(url))
+            return $"**{label}:** [{url}]({url})";
+
+        return $"**{label}:** _pending_";
     }
 
-    private static long? FindCommentIdByMarker(
+    private static string? BuildDocsIntroPageUrl(string? docsUrl)
+    {
+        if (string.IsNullOrWhiteSpace(docsUrl))
+            return null;
+
+        // Sliplane docs service usually returns the managed domain for the UI.
+        // We want to show a fully clickable URL, without forcing any extra path.
+        return docsUrl.TrimEnd('/');
+    }
+
+    private static List<long> FindCommentIdsByMarker(
         IReadOnlyList<GitHubIssueComment> comments,
         string marker)
     {
+        var list = new List<long>();
         foreach (var c in comments)
         {
             if (c.Body.Contains(marker, StringComparison.Ordinal))
-                return c.Id;
+                list.Add(c.Id);
         }
-
-        return null;
+        return list;
     }
 }

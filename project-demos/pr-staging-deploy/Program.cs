@@ -24,6 +24,8 @@ server.Services.AddScoped<GitHubApiClient>();
 server.Services.AddScoped<SliplaneStagingClient>();
 server.Services.AddScoped<StagingDeployService>();
 server.Services.AddScoped<PrStagingDeployCommentService>();
+server.Services.AddSingleton<PrStagingDeployCommentUpdateQueue>();
+server.Services.AddHostedService<PrStagingDeployCommentUpdateBackgroundService>();
 server.Services.AddScoped<GitHubWebhookHandler>();
 server.Services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, WebhookEndpointFilter>();
 server.Services.AddHostedService<ExpiryCleanupBackgroundService>();
