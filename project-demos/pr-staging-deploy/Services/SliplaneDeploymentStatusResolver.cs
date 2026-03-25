@@ -23,11 +23,13 @@ public static class SliplaneDeploymentStatusResolver
         if (parts.Count == 0)
             return "pending";
 
-        if (parts.Exists(p => p == "failed"))
-            return "failed";
-
+        // If anything is still pending — keep waiting. Don't stop just because one failed.
         if (parts.Exists(p => p == "pending"))
             return "pending";
+
+        // All services resolved: report failed if any failed, otherwise deployed.
+        if (parts.Exists(p => p == "failed"))
+            return "failed";
 
         return "deployed";
     }
@@ -52,7 +54,7 @@ public static class SliplaneDeploymentStatusResolver
         return "deployed";
     }
 
-    private static bool IsDeployEvent(SliplaneServiceEvent e)
+    public static bool IsDeployEvent(SliplaneServiceEvent e)
     {
         var type = (e.Type ?? "").ToLowerInvariant();
         var msg = (e.Message ?? "").ToLowerInvariant();
@@ -63,7 +65,7 @@ public static class SliplaneDeploymentStatusResolver
         return false;
     }
 
-    private static bool IsSuccessEvent(SliplaneServiceEvent e)
+    public static bool IsSuccessEvent(SliplaneServiceEvent e)
     {
         var type = (e.Type ?? "").ToLowerInvariant();
         var msg = (e.Message ?? "").ToLowerInvariant();
@@ -71,7 +73,7 @@ public static class SliplaneDeploymentStatusResolver
             || msg.Contains("deployed successfully");
     }
 
-    private static bool IsFailEvent(SliplaneServiceEvent e)
+    public static bool IsFailEvent(SliplaneServiceEvent e)
     {
         var type = (e.Type ?? "").ToLowerInvariant();
         var msg = (e.Message ?? "").ToLowerInvariant();
@@ -79,7 +81,7 @@ public static class SliplaneDeploymentStatusResolver
             || msg.Contains("deploy failed") || msg.Contains("deployment failed") || msg.Contains("build failed");
     }
 
-    private static bool IsPendingEvent(SliplaneServiceEvent e)
+    public static bool IsPendingEvent(SliplaneServiceEvent e)
     {
         var type = (e.Type ?? "").ToLowerInvariant();
         var msg = (e.Message ?? "").ToLowerInvariant();

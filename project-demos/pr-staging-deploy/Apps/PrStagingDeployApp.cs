@@ -37,6 +37,9 @@ public class PrStagingDeployApp : ViewBase
         var message = this.UseState<(string Text, bool IsError)?>(() => null);
         var pinnedTableRows = this.UseState<List<PrRow>?>(() => null);
         var deleteAllWaitingForFreshNoStaging = this.UseState(false);
+        // Tracks branches for which a deploy was triggered but Sliplane hasn't created the service yet.
+        // Prevents the row from flickering back to "not deployed" during the query refresh window.
+        var deployingBranches = this.UseState(() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
         var overviewQuery = this.UseQuery<List<PrRow>, string>(
             key: $"pr-overview:{config["Sliplane:ApiToken"] ?? ""}",
@@ -85,10 +88,22 @@ public class PrStagingDeployApp : ViewBase
                     }
                     else
                     {
-                        status = "not deployed";
-                        statusIcon = Icons.CircleX;
-                        docsDisplay = NotDeployedDocsSamplesHint;
-                        samplesDisplay = NotDeployedDocsSamplesHint;
+                        // Sliplane doesn't know about this branch yet.
+                        // If we triggered a deploy and are waiting for the service to appear, keep "Deploying...".
+                        if (deployingBranches.Value.Contains(pr.HeadRef))
+                        {
+                            status = "pending";
+                            statusIcon = Icons.Clock;
+                            docsDisplay = "Deploying...";
+                            samplesDisplay = "Deploying...";
+                        }
+                        else
+                        {
+                            status = "not deployed";
+                            statusIcon = Icons.CircleX;
+                            docsDisplay = NotDeployedDocsSamplesHint;
+                            samplesDisplay = NotDeployedDocsSamplesHint;
+                        }
                     }
 
                     rows.Add(new PrRow(
@@ -207,7 +222,7 @@ public class PrStagingDeployApp : ViewBase
                                 foreach (var pr in prsThatHadServices)
                                 {
                                     _ = prComments.TryPostOrUpdateStagingCommentAsync(
-                                        owner, repo, pr.Number, null, null, "Deleted", null, forceNewComment: true);
+                                        owner, repo, pr.Number, null, null, "Deleted", null);
                                 }
                             }
 
@@ -265,6 +280,15 @@ public class PrStagingDeployApp : ViewBase
             var t = config["Sliplane:ApiToken"] ?? "";
             if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             if (clearMessageFirst) ClearMessage();
+
+            // Mark this branch as "deploying" so the query fetcher keeps the row in Deploying... state
+            // even before Sliplane registers the new service.
+            deployingBranches.Set(prev =>
+            {
+                var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase) { branchName };
+                return next;
+            });
+
             try
             {
                 var owner = config["GitHub:Owner"] ?? "";
@@ -282,19 +306,29 @@ public class PrStagingDeployApp : ViewBase
 
                 var result = await deploySvc.DeployBranchAsync(t, branchName);
                 ShowMessage(result.Message, !result.Success);
+
+                // Once Sliplane has registered the service (or failed), remove from deployingBranches.
+                deployingBranches.Set(prev =>
+                {
+                    var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase);
+                    next.Remove(branchName);
+                    return next;
+                });
+
                 if (result.Success)
                 {
                     overviewQuery.Mutator.Revalidate();
 
                     if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
                     {
-                        if (string.IsNullOrEmpty(result.DocsServiceId) || string.IsNullOrEmpty(result.SamplesServiceId))
+                        // We need at least one service correctly created to start tracking progress.
+                        if (string.IsNullOrEmpty(result.DocsServiceId) && string.IsNullOrEmpty(result.SamplesServiceId))
                         {
                             await prComments.TryPostOrUpdateStagingCommentAsync(
                                 owner, repo, prNumber,
                                 docsUrl: null, samplesUrl: null,
                                 status: "Deploy failed",
-                                logLines: new[] { TruncLine(result.Message, 240) });
+                                logLines: new[] { "No Sliplane services were created: " + TruncLine(result.Message, 200) });
                             return;
                         }
 
@@ -306,7 +340,6 @@ public class PrStagingDeployApp : ViewBase
                             DocsServiceId: result.DocsServiceId,
                             SamplesServiceId: result.SamplesServiceId));
 
-                        // Final state + links will be updated by background worker.
                         return;
                     }
                 }
@@ -325,7 +358,17 @@ public class PrStagingDeployApp : ViewBase
                     }
                 }
             }
-            catch (Exception ex) { ShowMessage(ex.Message, true); }
+            catch (Exception ex)
+            {
+                // On unexpected error, also remove from deployingBranches.
+                deployingBranches.Set(prev =>
+                {
+                    var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase);
+                    next.Remove(branchName);
+                    return next;
+                });
+                ShowMessage(ex.Message, true);
+            }
         }
 
         async Task DeleteBranchAsync(string branchName, int prNumber)
@@ -343,8 +386,7 @@ public class PrStagingDeployApp : ViewBase
                         owner, repo, prNumber,
                         docsUrl: null, samplesUrl: null,
                         status: "Deleting...",
-                        logLines: null,
-                        forceNewComment: true);
+                        logLines: null);
                 }
 
                 var result = await deploySvc.DeleteBranchAsync(t, branchName);

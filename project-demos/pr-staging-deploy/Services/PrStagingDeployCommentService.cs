@@ -97,10 +97,13 @@ public class PrStagingDeployCommentService
             ? "Staging preview"
             : status.Trim();
 
-        // Hide links until everything is fully deployed.
-        // We treat any status that contains "deployed" but not "failed" as "ready".
-        var showLinks = statusText.Contains("deployed", StringComparison.OrdinalIgnoreCase)
-                        && !statusText.Contains("failed", StringComparison.OrdinalIgnoreCase);
+        var isFailed   = statusText.Contains("failed",   StringComparison.OrdinalIgnoreCase);
+        var isDeployed = statusText.Contains("deployed", StringComparison.OrdinalIgnoreCase)
+                         && !isFailed;
+        var isDeleted  = statusText.Contains("deleted",  StringComparison.OrdinalIgnoreCase);
+
+        // Show links only once everything is fully deployed, not during intermediate states.
+        var showLinks = isDeployed && !isDeleted;
 
         var sb = new StringBuilder();
         sb.AppendLine(Marker);
@@ -111,27 +114,29 @@ public class PrStagingDeployCommentService
         if (showLinks)
         {
             var docsPageUrl = BuildDocsIntroPageUrl(docsUrl);
-            sb.AppendLine(FormatLinkLine("Docs", docsPageUrl, showLinks));
-            sb.AppendLine(FormatLinkLine("Samples", samplesUrl, showLinks));
+            sb.AppendLine(FormatLinkLine("Docs", docsPageUrl));
+            sb.AppendLine(FormatLinkLine("Samples", samplesUrl));
+            sb.AppendLine();
         }
-        else
+
+        // Show a descriptive prose line for non-final states.
+        if (!isDeployed)
         {
-            var isFailed = statusText.Contains("failed", StringComparison.OrdinalIgnoreCase);
             if (isFailed)
             {
-                sb.AppendLine("Deployment stopped due to an error. I’m attaching the latest Sliplane events below.");
+                sb.AppendLine("Deployment stopped due to an error. I'm attaching the latest Sliplane events below.");
             }
             else if (statusText.Contains("redeploy", StringComparison.OrdinalIgnoreCase))
             {
-                sb.AppendLine("Updating this PR deployment — I’ll keep the comment updated until Sliplane finishes.");
+                sb.AppendLine("Updating this PR deployment — I'll keep the comment updated until Sliplane finishes.");
             }
-            else if (statusText.Contains("Deleted", StringComparison.OrdinalIgnoreCase))
+            else if (isDeleted)
             {
                 sb.AppendLine("Staging services have been deleted.");
             }
             else
             {
-                sb.AppendLine("I’m preparing your docs & samples for this PR. I’ll update the comment as Sliplane reports progress.");
+                sb.AppendLine("I'm preparing your docs & samples for this PR. I'll update the comment as Sliplane reports progress.");
             }
         }
 
@@ -151,9 +156,9 @@ public class PrStagingDeployCommentService
         return sb.ToString();
     }
 
-    private static string FormatLinkLine(string label, string? url, bool showLinks)
+    private static string FormatLinkLine(string label, string? url)
     {
-        if (showLinks && !string.IsNullOrWhiteSpace(url))
+        if (!string.IsNullOrWhiteSpace(url))
             return $"**{label}:** [{url}]({url})";
 
         return $"**{label}:** _pending_";
@@ -182,3 +187,4 @@ public class PrStagingDeployCommentService
         return list;
     }
 }
+

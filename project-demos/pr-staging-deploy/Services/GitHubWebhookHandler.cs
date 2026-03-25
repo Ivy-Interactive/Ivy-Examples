@@ -116,14 +116,45 @@ public class GitHubWebhookHandler
                     _logger.LogInformation(
                         "Staging services already exist for PR #{Pr} branch={Branch}, skipping deploy",
                         prNumber, branch);
-                    await _prComments.TryPostOrUpdateStagingCommentAsync(
-                        owner,
-                        repoName,
-                        prNumber,
-                        docsUrl: existingDepOnOpen.DocsUrl,
-                        samplesUrl: existingDepOnOpen.SamplesUrl,
-                        status: "Already deployed",
-                        forceNewComment: true);
+
+                    // Verify the actual deployment status — services can exist but still be deploying.
+                    var (docsEvOnOpen, samplesEvOnOpen) = await _deployService.GetDeploymentEventsForServicesAsync(
+                        apiToken, existingDepOnOpen.DocsServiceId, existingDepOnOpen.SamplesServiceId);
+                    var statusOnOpen = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
+                        existingDepOnOpen.DocsServiceId, docsEvOnOpen,
+                        existingDepOnOpen.SamplesServiceId, samplesEvOnOpen);
+
+                    if (statusOnOpen == "deployed")
+                    {
+                        await _prComments.TryPostOrUpdateStagingCommentAsync(
+                            owner, repoName, prNumber,
+                            docsUrl: existingDepOnOpen.DocsUrl,
+                            samplesUrl: existingDepOnOpen.SamplesUrl,
+                            status: "Already deployed",
+                            forceNewComment: true);
+                    }
+                    else
+                    {
+                        // Still in progress — just update the comment and let the existing
+                        // background worker (if already enqueued) continue monitoring.
+                        await _prComments.TryPostOrUpdateStagingCommentAsync(
+                            owner, repoName, prNumber,
+                            docsUrl: null, samplesUrl: null,
+                            status: "Deploying...",
+                            logLines: null,
+                            forceNewComment: true);
+
+                        if (!string.IsNullOrEmpty(existingDepOnOpen.DocsServiceId) || !string.IsNullOrEmpty(existingDepOnOpen.SamplesServiceId))
+                        {
+                            await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
+                                Owner: owner,
+                                Repo: repoName,
+                                PrNumber: prNumber,
+                                BranchName: branch,
+                                DocsServiceId: existingDepOnOpen.DocsServiceId,
+                                SamplesServiceId: existingDepOnOpen.SamplesServiceId));
+                        }
+                    }
                     break;
                 }
 
@@ -250,8 +281,7 @@ public class GitHubWebhookHandler
                         docsUrl: null,
                         samplesUrl: null,
                         status: "Deleted",
-                        logLines: new[] { TruncLine(deleteResult.Message, 240) },
-                        forceNewComment: true);
+                        logLines: null);
                 break;
 
             default:
@@ -313,16 +343,48 @@ public class GitHubWebhookHandler
         if (existingDep != null)
         {
             _logger.LogInformation(
-                "Staging services already exist for PR #{Pr} branch={Branch}, skipping /deploy",
+                "Staging services already exist for PR #{Pr} branch={Branch}",
                 prNumber, branch);
-            await _prComments.TryPostOrUpdateStagingCommentAsync(
-                owner,
-                repo,
-                prNumber,
-                docsUrl: existingDep.DocsUrl,
-                samplesUrl: existingDep.SamplesUrl,
-                status: "Already deployed",
-                forceNewComment: true);
+
+            // Verify the actual deployment status — services can exist but still be deploying.
+            var (docsEvents, samplesEvents) = await _deployService.GetDeploymentEventsForServicesAsync(
+                apiToken, existingDep.DocsServiceId, existingDep.SamplesServiceId);
+            var currentStatus = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
+                existingDep.DocsServiceId, docsEvents,
+                existingDep.SamplesServiceId, samplesEvents);
+
+            if (currentStatus == "deployed")
+            {
+                // Truly deployed — show links.
+                await _prComments.TryPostOrUpdateStagingCommentAsync(
+                    owner, repo, prNumber,
+                    docsUrl: existingDep.DocsUrl,
+                    samplesUrl: existingDep.SamplesUrl,
+                    status: "Already deployed",
+                    forceNewComment: true);
+            }
+            else
+            {
+                // Deploy is still in progress (or failed) — replace old comment and keep monitoring.
+                await _prComments.TryPostOrUpdateStagingCommentAsync(
+                    owner, repo, prNumber,
+                    docsUrl: null, samplesUrl: null,
+                    status: "Deploying...",
+                    logLines: null,
+                    forceNewComment: true);
+
+                // Re-enqueue to keep updating the comment as Sliplane progresses.
+                if (!string.IsNullOrEmpty(existingDep.DocsServiceId) || !string.IsNullOrEmpty(existingDep.SamplesServiceId))
+                {
+                    await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
+                        Owner: owner,
+                        Repo: repo,
+                        PrNumber: prNumber,
+                        BranchName: branch,
+                        DocsServiceId: existingDep.DocsServiceId,
+                        SamplesServiceId: existingDep.SamplesServiceId));
+                }
+            }
             return;
         }
 
