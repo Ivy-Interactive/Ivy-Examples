@@ -79,9 +79,6 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
         // Safety: bounded by cancellation token only (worker stop) + bounded channel size upstream.
         var delayMs = 2500;
         const int maxDelayMs = 20000;
-
-        List<SliplaneServiceEvent> lastDocsEvents = new();
-        List<SliplaneServiceEvent> lastSamplesEvents = new();
         var iteration = 0;
 
         while (!ct.IsCancellationRequested)
@@ -92,22 +89,30 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                 docsServiceId,
                 samplesServiceId);
 
-            lastDocsEvents = docsEvents;
-            lastSamplesEvents = samplesEvents;
-
             var combined = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
                 docsServiceId, docsEvents,
                 samplesServiceId, samplesEvents);
 
+            // Fetch URLs on each iteration so we can show partial links as they appear.
+            var urls = await _deployService.GetDeploymentUrlsForBranchAsync(apiToken, req.BranchName);
+            var hasAnyUrl = !string.IsNullOrWhiteSpace(urls.DocsUrl) || !string.IsNullOrWhiteSpace(urls.SamplesUrl);
+
+            // Check if any individual service already has an error event
+            // (so we can show error details even while other service is still pending).
+            var hasAnyFailureEvent = docsEvents.Any(SliplaneDeploymentStatusResolver.IsFailEvent)
+                                    || samplesEvents.Any(SliplaneDeploymentStatusResolver.IsFailEvent);
+
             if (combined == "failed")
             {
+                // All services are resolved and at least one failed.
+                // Show error logs (as requested), plus any partial links that did succeed.
                 var logLines = BuildRecentLogLines(docsEvents, samplesEvents, maxLines: 10);
                 await _commentService.TryPostOrUpdateStagingCommentAsync(
                     req.Owner,
                     req.Repo,
                     req.PrNumber,
-                    docsUrl: null,
-                    samplesUrl: null,
+                    docsUrl: urls.DocsUrl,
+                    samplesUrl: urls.SamplesUrl,
                     status: "Deploy failed",
                     logLines: logLines,
                     cancellationToken: ct);
@@ -116,8 +121,10 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
 
             if (combined == "deployed")
             {
-                var urls = await _deployService.GetDeploymentUrlsForBranchAsync(apiToken, req.BranchName);
-                if (!string.IsNullOrWhiteSpace(urls.DocsUrl) && !string.IsNullOrWhiteSpace(urls.SamplesUrl))
+                // All services deployed successfully.
+                // Wait for BOTH managed domains before finalizing — give up only after 25 iterations.
+                var bothUrlsReady = !string.IsNullOrWhiteSpace(urls.DocsUrl) && !string.IsNullOrWhiteSpace(urls.SamplesUrl);
+                if (bothUrlsReady || iteration > 25)
                 {
                     await _commentService.TryPostOrUpdateStagingCommentAsync(
                         req.Owner,
@@ -131,24 +138,19 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                     return;
                 }
 
-                // Deployed events came, but managed domains are not attached yet.
-                // Keep waiting and re-check.
-                await _commentService.TryPostOrUpdateStagingCommentAsync(
-                    req.Owner,
-                    req.Repo,
-                    req.PrNumber,
-                    docsUrl: null,
-                    samplesUrl: null,
-                    status: "Deploying...",
-                    logLines: null,
-                    cancellationToken: ct);
+                // Deployed events came but managed domains not attached yet — keep polling silently.
             }
             else
             {
-                // Still deploying: periodically update comment with a few latest lines.
-                // Throttle to avoid spamming GitHub API.
-                if (iteration == 1 || iteration % 2 == 0)
+                // combined == "pending": some services still in progress.
+                // Update the comment periodically (no logs during normal deploy).
+                // If there is already a partial failure event, show error details as context.
+                if (iteration == 1 || iteration % 2 == 0 || hasAnyFailureEvent)
                 {
+                    IReadOnlyList<string>? logLines = hasAnyFailureEvent
+                        ? BuildRecentLogLines(docsEvents, samplesEvents, maxLines: 10)
+                        : null;
+
                     await _commentService.TryPostOrUpdateStagingCommentAsync(
                         req.Owner,
                         req.Repo,
@@ -156,7 +158,7 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                         docsUrl: null,
                         samplesUrl: null,
                         status: "Deploying...",
-                        logLines: null,
+                        logLines: logLines,
                         cancellationToken: ct);
                 }
             }
@@ -203,10 +205,10 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
             var friendly = type switch
             {
                 "service_deploy_success" => "Service deployed successfully",
-                "service_deploy_failed" => "Service deploy failed",
-                "service_build_failed" => "Build failed",
-                "service_build" => "Service build",
-                "service_deploy" => "Deploy started",
+                "service_deploy_failed"  => "Service deploy failed",
+                "service_build_failed"   => "Build failed",
+                "service_build"          => "Service build",
+                "service_deploy"         => "Deploy started",
                 _ => type
             };
             var text = string.IsNullOrWhiteSpace(msg) ? friendly : $"{friendly}: {TruncLine(msg, 180)}";
