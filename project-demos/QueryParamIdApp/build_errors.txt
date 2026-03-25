@@ -1,0 +1,21 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(23,94): error CS0103: The name 'TextWeight' does not exist in the current context [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(23,87): error CS1061: 'TextBuilder' does not contain a definition for 'Weight' and no accessible extension method 'Weight' accepting a first argument of type 'TextBuilder' could be found (are you missing a using directive or an assembly reference?) [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(24,77): error CS0103: The name 'TextWeight' does not exist in the current context [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(24,70): error CS1061: 'TextBuilder' does not contain a definition for 'Weight' and no accessible extension method 'Weight' accepting a first argument of type 'TextBuilder' could be found (are you missing a using directive or an assembly reference?) [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(29,90): error CS0103: The name 'TextWeight' does not exist in the current context [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(29,83): error CS1061: 'TextBuilder' does not contain a definition for 'Weight' and no accessible extension method 'Weight' accepting a first argument of type 'TextBuilder' could be found (are you missing a using directive or an assembly reference?) [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+
+Build FAILED.
+
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(23,94): error CS0103: The name 'TextWeight' does not exist in the current context [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(23,87): error CS1061: 'TextBuilder' does not contain a definition for 'Weight' and no accessible extension method 'Weight' accepting a first argument of type 'TextBuilder' could be found (are you missing a using directive or an assembly reference?) [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(24,77): error CS0103: The name 'TextWeight' does not exist in the current context [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(24,70): error CS1061: 'TextBuilder' does not contain a definition for 'Weight' and no accessible extension method 'Weight' accepting a first argument of type 'TextBuilder' could be found (are you missing a using directive or an assembly reference?) [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(29,90): error CS0103: The name 'TextWeight' does not exist in the current context [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\Apps\IdExampleApp.cs(29,83): error CS1061: 'TextBuilder' does not contain a definition for 'Weight' and no accessible extension method 'Weight' accepting a first argument of type 'TextBuilder' could be found (are you missing a using directive or an assembly reference?) [D:\git\ivy-human\Ivy-Examples\project-demos\QueryParamIdApp\QueryParamIdApp.csproj]
+    0 Warning(s)
+    6 Error(s)
+
+Time Elapsed 00:00:00.60
