@@ -24,7 +24,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Ivy.Auth.GitHub" Version="1.2.19" />
+    <PackageReference Include="Ivy.Auth.GitHub" Version="1.2.25" />
   </ItemGroup>
 
 </Project>
