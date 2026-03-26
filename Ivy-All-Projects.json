@@ -1,6 +1,16 @@
 {
   "project-demos": [
     {
+      "name": "QueryParamIdApp",
+      "description": "",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/QueryParamIdApp",
+      "deploymentLink": "ivy-projectdemos-QueryParamIdApp.sliplane.app",
+      "tags": [
+        "Ivy.Analyser",
+        "demo"
+      ]
+    },
+    {
       "name": "GitHub Authentication Test",
       "description": "",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/auth-github-test",
