@@ -16,7 +16,7 @@
   
   <ItemGroup>
     <PackageReference Include="FastMember" Version="1.5.0" />
-    <PackageReference Include="Ivy" Version="1.2.25" />
+    <PackageReference Include="Ivy" Version="1.2.27" />
     <PackageReference Include="Ivy.Analyser" Version="1.*">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
