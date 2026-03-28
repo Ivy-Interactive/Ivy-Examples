@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="Ivy" Version="1.2.27" />
-    <PackageReference Include="Ivy.Analyser" Version="1.*">
+    <PackageReference Include="Ivy.Analyser" Version="1.2.27">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference> 

@@ -1,5 +1,5 @@
-#:package Ivy@1.2.25
-#:package Ivy.Analyser@1.2.25
+#:package Ivy@1.2.27
+#:package Ivy.Analyser@1.2.27
 
 global using Ivy;
 global using System.Globalization;
