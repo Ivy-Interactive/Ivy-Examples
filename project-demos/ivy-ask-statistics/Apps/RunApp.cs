@@ -4,7 +4,7 @@ namespace IvyAskStatistics.Apps;
 public class RunApp : ViewBase
 {
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
-    private static readonly string[] EnvOptions = ["production", "staging"];
+    private const string BaseUrl = "https://mcp.ivy.app";
 
     // Implements IBuilder<T> so TableBuilder can render custom cells
     private class CellBuilder(Func<QuestionRow, object?, object?> build) : IBuilder<QuestionRow>
@@ -17,7 +17,6 @@ public class RunApp : ViewBase
         var client = UseService<IClientProvider>();
 
         // ── State ─────────────────────────────────────────────────────────────
-        var env = UseState("production");
         var difficultyFilter = UseState("all");
 
         // runningIndex drives the step-by-step runner:
@@ -28,12 +27,12 @@ public class RunApp : ViewBase
         var completed = UseState<List<QuestionRun>>([]);
 
         // ── Hooks (must be at top, before derived values) ─────────────────────
-        // Reset when filters change
+        // Reset when difficulty filter changes
         UseEffect(() =>
         {
             completed.Set([]);
             runningIndex.Set(-1);
-        }, [env.ToTrigger(), difficultyFilter.ToTrigger()]);
+        }, [difficultyFilter.ToTrigger()]);
 
         // Step runner: each index change processes one question then increments
         UseEffect(async () =>
@@ -51,11 +50,7 @@ public class RunApp : ViewBase
                 return;
             }
 
-            var baseUrl = env.Value == "staging"
-                ? "https://mcp-staging.ivy.app"
-                : "https://mcp.ivy.app";
-
-            var result = await IvyAskService.AskAsync(questions[idx], baseUrl);
+            var result = await IvyAskService.AskAsync(questions[idx], BaseUrl);
             completed.Set([.. completed.Value, result]);
             runningIndex.Set(idx + 1);
         }, [runningIndex.ToTrigger()]);
@@ -82,7 +77,6 @@ public class RunApp : ViewBase
         // ── Controls bar ──────────────────────────────────────────────────────
         var controls = new Card(
             Layout.Horizontal()
-            | env.ToSelectInput(EnvOptions).Disabled(isRunning)
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(isRunning)
             | new Spacer()
             | new Button(isRunning ? "Running…" : "Run All",
