@@ -286,33 +286,157 @@ jobs:
           IVY_VERSION="${{ needs.check-ivy-version.outputs.latest-version }}"
           echo "Comparing against latest stable Ivy version: $IVY_VERSION"
 
-          for csproj in $(find . -name "*.csproj"); do
-            if grep -q 'PackageReference Include="Ivy"' "$csproj"; then
-              proj_version=$(grep -oE 'PackageReference Include="Ivy" Version="[^"]*"' "$csproj" | grep -oE 'Version="[^"]*"' | sed 's/Version="\(.*\)"/\1/' | head -n 1)
-              
+          packages=(
+            "Ivy"
+            "Ivy.Auth.Supabase"
+            "Ivy.Auth.Authelia"
+            "Ivy.Auth.Auth0"
+            "Ivy.Auth.MicrosoftEntra"
+            "Ivy.Analyser"
+            "Ivy.Auth.GitHub"
+            "Ivy.Auth.Clerk"
+            "Ivy.Auth.Sliplan"
+          )
+
+          # Shared function: check version guards and update a file
+          update_package_version() {
+            local file="$1"
+            local package="$2"
+            local pattern="$3"   # regex to extract current version
+            local replace="$4"   # sed expression to replace version
+
+            proj_version=$(grep -oE "$pattern" "$file" | grep -oE 'Version="[^"]*"' | sed 's/Version="\(.*\)"/\1/' | head -n 1)
+
+            if [ -z "$proj_version" ] || [ "$proj_version" == "$IVY_VERSION" ]; then
+              return
+            fi
+
+            # Always replace wildcard/floating versions (e.g. "1.*", "*", "1.2.*")
+            if [[ "$proj_version" == *\** ]]; then
+              echo "Updating: $file ($package) from wildcard $proj_version to $IVY_VERSION"
+              sed -i "$replace" "$file"
+              return
+            fi
+
+            proj_base=$(echo "$proj_version" | cut -d'-' -f1)
+
+            # Do not downgrade pre-releases of the current stable version
+            if [[ "$proj_version" == *-* ]] && [ "$proj_base" == "$IVY_VERSION" ]; then
+              echo "Skipping $file ($package has pre-release $proj_version matching latest stable $IVY_VERSION)"
+              return
+            fi
+
+            # Do not downgrade to an older stable version if project is on a newer version
+            higher_version=$(printf "%s\n%s" "$proj_base" "$IVY_VERSION" | sort -V | tail -n1)
+            if [ "$higher_version" == "$proj_base" ] && [ "$proj_base" != "$IVY_VERSION" ]; then
+              echo "Skipping $file ($package has newer version $proj_version than latest stable $IVY_VERSION)"
+              return
+            fi
+
+            echo "Updating: $file ($package) from $proj_version to $IVY_VERSION"
+            sed -i "$replace" "$file"
+          }
+
+          # --- 1. Update .csproj files (PackageReference) ---
+          while IFS= read -r -d '' csproj; do
+            for package in "${packages[@]}"; do
+              if ! grep -q "PackageReference Include=\"$package\"" "$csproj"; then
+                continue
+              fi
+              update_package_version \
+                "$csproj" \
+                "$package" \
+                "PackageReference Include=\"$package\" Version=\"[^\"]*\"" \
+                "s|<PackageReference Include=\"$package\" Version=\"[^\"]*\"|<PackageReference Include=\"$package\" Version=\"$IVY_VERSION\"|g"
+            done
+          done < <(find . -name "*.csproj" -print0)
+
+          # --- 2. Update Directory.Packages.props files (Central Package Management) ---
+          # CPM uses <PackageVersion Include="Pkg" Version="x.x.x" /> — no version in .csproj
+          while IFS= read -r -d '' props; do
+            echo "Checking CPM file: $props"
+            for package in "${packages[@]}"; do
+              if ! grep -q "PackageVersion Include=\"$package\"" "$props"; then
+                continue
+              fi
+              update_package_version \
+                "$props" \
+                "$package" \
+                "PackageVersion Include=\"$package\" Version=\"[^\"]*\"" \
+                "s|<PackageVersion Include=\"$package\" Version=\"[^\"]*\"|<PackageVersion Include=\"$package\" Version=\"$IVY_VERSION\"|g"
+            done
+          done < <(find . -name "Directory.Packages.props" -print0)
+
+          # --- 3. Update Directory.Build.props / *.props files that pin versions ---
+          # Some projects define versions via <IvyVersion> or similar MSBuild properties
+          while IFS= read -r -d '' props; do
+            # Skip Directory.Packages.props (already handled above)
+            [[ "$(basename "$props")" == "Directory.Packages.props" ]] && continue
+            echo "Checking props file: $props"
+            for package in "${packages[@]}"; do
+              if ! grep -q "PackageReference Include=\"$package\"" "$props" && \
+                 ! grep -q "PackageVersion Include=\"$package\"" "$props"; then
+                continue
+              fi
+              # Handle PackageReference in props
+              if grep -q "PackageReference Include=\"$package\"" "$props"; then
+                update_package_version \
+                  "$props" \
+                  "$package" \
+                  "PackageReference Include=\"$package\" Version=\"[^\"]*\"" \
+                  "s|<PackageReference Include=\"$package\" Version=\"[^\"]*\"|<PackageReference Include=\"$package\" Version=\"$IVY_VERSION\"|g"
+              fi
+              # Handle PackageVersion in props
+              if grep -q "PackageVersion Include=\"$package\"" "$props"; then
+                update_package_version \
+                  "$props" \
+                  "$package" \
+                  "PackageVersion Include=\"$package\" Version=\"[^\"]*\"" \
+                  "s|<PackageVersion Include=\"$package\" Version=\"[^\"]*\"|<PackageVersion Include=\"$package\" Version=\"$IVY_VERSION\"|g"
+              fi
+            done
+          done < <(find . -name "*.props" -not -path "*/bin/*" -not -path "*/obj/*" -print0)
+
+          # --- 4. Update file-based programs (.NET 10) ---
+          # These use "#:package PackageName@version" directives directly in .cs files
+          while IFS= read -r -d '' csfile; do
+            for package in "${packages[@]}"; do
+              if ! grep -q "^#:package ${package}@" "$csfile"; then
+                continue
+              fi
+
+              proj_version=$(grep -oE "^#:package ${package}@[^ ]+" "$csfile" | sed "s|#:package ${package}@||" | head -n 1)
+
               if [ -z "$proj_version" ] || [ "$proj_version" == "$IVY_VERSION" ]; then
                 continue
               fi
-              
-              proj_base=$(echo "$proj_version" | cut -d'-' -f1)
-              
-              # Do not downgrade pre-releases of the current stable version
-              if [[ "$proj_version" == *-* ]] && [ "$proj_base" == "$IVY_VERSION" ]; then
-                echo "Skipping $csproj (has pre-release $proj_version matching latest stable $IVY_VERSION)"
+
+              # Always replace wildcard/floating versions (e.g. "1.*", "*", "1.2.*")
+              if [[ "$proj_version" == *\** ]]; then
+                echo "Updating: $csfile ($package) from wildcard $proj_version to $IVY_VERSION"
+                sed -i "s|^#:package ${package}@[^ ]*|#:package ${package}@${IVY_VERSION}|g" "$csfile"
                 continue
               fi
-              
+
+              proj_base=$(echo "$proj_version" | cut -d'-' -f1)
+
+              # Do not downgrade pre-releases of the current stable version
+              if [[ "$proj_version" == *-* ]] && [ "$proj_base" == "$IVY_VERSION" ]; then
+                echo "Skipping $csfile ($package has pre-release $proj_version matching latest stable $IVY_VERSION)"
+                continue
+              fi
+
               # Do not downgrade to an older stable version if project is on a newer version
               higher_version=$(printf "%s\n%s" "$proj_base" "$IVY_VERSION" | sort -V | tail -n1)
               if [ "$higher_version" == "$proj_base" ] && [ "$proj_base" != "$IVY_VERSION" ]; then
-                echo "Skipping $csproj (has newer version $proj_version than latest stable $IVY_VERSION)"
+                echo "Skipping $csfile ($package has newer version $proj_version than latest stable $IVY_VERSION)"
                 continue
               fi
-              
-              echo "Updating: $csproj from $proj_version to $IVY_VERSION"
-              sed -i "s|<PackageReference Include=\"Ivy\" Version=\"[^\"]*\"|<PackageReference Include=\"Ivy\" Version=\"$IVY_VERSION\"|g" "$csproj"
-            fi
-          done
+
+              echo "Updating: $csfile ($package) from $proj_version to $IVY_VERSION"
+              sed -i "s|^#:package ${package}@[^ ]*|#:package ${package}@${IVY_VERSION}|g" "$csfile"
+            done
+          done < <(grep -rl "^#:package Ivy" . --include="*.cs" -Z 2>/dev/null)
 
       - name: Save changes for commit
         id: save-changes
@@ -332,6 +456,9 @@ jobs:
           name: updated-csproj-files
           path: |
             **/*.csproj
+            **/Directory.Packages.props
+            **/*.props
+            **/*.cs
           retention-days: 1
 
   check-build-results:
