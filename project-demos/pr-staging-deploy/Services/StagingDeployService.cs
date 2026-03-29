@@ -24,16 +24,18 @@ public class StagingDeployService
     public string DocsDockerfile => _config["Staging:DocsDockerfile"] ?? "Dockerfile";
     public int ExpiryDays => int.TryParse(_config["Staging:ExpiryDays"], out var d) ? d : 7;
 
-    public async Task<StagingDeployResult> DeployBranchAsync(string apiToken, string branchName)
+    public async Task<StagingDeployResult> DeployBranchAsync(string apiToken, string branchName, int prNumber, string? samplesRepoOverride = null)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
         var serverId = _config["Sliplane:ServerId"] ?? "";
         if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(serverId))
             return new StagingDeployResult(false, "Sliplane:ProjectId and ServerId required.");
 
-        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
-        var docsName = $"ivy-staging-docs-{safe}";
-        var samplesName = $"ivy-staging-samples-{safe}";
+        var docsName = $"ivy-staging-docs-{prNumber}";
+        var samplesName = $"ivy-staging-samples-{prNumber}";
+
+        // For fork PRs use the fork's clone URL so Sliplane can find the branch.
+        var samplesRepo = !string.IsNullOrEmpty(samplesRepoOverride) ? samplesRepoOverride : SamplesRepo;
 
         string? docsUrl = null;
         string? samplesUrl = null;
@@ -55,7 +57,7 @@ public class StagingDeployService
 
             var samplesResult = await _sliplane.CreateServiceAsync(
                 apiToken, projectId, serverId,
-                samplesName, SamplesRepo, branchName, SamplesDockerfile, SamplesContext);
+                samplesName, samplesRepo, branchName, SamplesDockerfile, SamplesContext);
             if (samplesResult.Service != null)
             {
                 samplesId = samplesResult.Service.Id;
@@ -76,13 +78,12 @@ public class StagingDeployService
         }
     }
 
-    public async Task<StagingDeployResult> RedeployBranchAsync(string apiToken, string branchName)
+    public async Task<StagingDeployResult> RedeployBranchAsync(string apiToken, string branchName, int prNumber)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
         var services = await _sliplane.ListStagingServicesAsync(apiToken, projectId, "ivy-staging-");
-        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
-        var docsSvc = services.FirstOrDefault(s => s.Name == $"ivy-staging-docs-{safe}");
-        var samplesSvc = services.FirstOrDefault(s => s.Name == $"ivy-staging-samples-{safe}");
+        var docsSvc = services.FirstOrDefault(s => s.Name == $"ivy-staging-docs-{prNumber}");
+        var samplesSvc = services.FirstOrDefault(s => s.Name == $"ivy-staging-samples-{prNumber}");
 
         var triggered = 0;
         if (docsSvc != null && await _sliplane.RedeployServiceAsync(apiToken, projectId, docsSvc.Id))
@@ -93,12 +94,11 @@ public class StagingDeployService
         return new StagingDeployResult(triggered > 0, $"Redeploy triggered for {triggered} service(s).");
     }
 
-    /// <summary>Resolves docs/samples URLs from existing Sliplane services for a branch (e.g. after redeploy).</summary>
-    public async Task<(string? DocsUrl, string? SamplesUrl)> GetDeploymentUrlsForBranchAsync(string apiToken, string branchName)
+    /// <summary>Resolves docs/samples URLs from existing Sliplane services for a PR (e.g. after redeploy).</summary>
+    public async Task<(string? DocsUrl, string? SamplesUrl)> GetDeploymentUrlsForPrAsync(string apiToken, int prNumber)
     {
         var list = await ListDeploymentsAsync(apiToken);
-        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
-        var dep = list.FirstOrDefault(d => string.Equals(d.BranchSafe, safe, StringComparison.OrdinalIgnoreCase));
+        var dep = list.FirstOrDefault(d => string.Equals(d.BranchSafe, prNumber.ToString(), StringComparison.OrdinalIgnoreCase));
         if (dep == null)
             return (null, null);
         return (dep.DocsUrl, dep.SamplesUrl);
@@ -124,21 +124,19 @@ public class StagingDeployService
         return (docsEvents, samplesEvents);
     }
 
-    public async Task<StagingDeployment?> GetDeploymentByBranchAsync(string apiToken, string branchName)
+    public async Task<StagingDeployment?> GetDeploymentByPrNumberAsync(string apiToken, int prNumber)
     {
         var list = await ListDeploymentsAsync(apiToken);
-        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
-        return list.FirstOrDefault(d => string.Equals(d.BranchSafe, safe, StringComparison.OrdinalIgnoreCase));
+        return list.FirstOrDefault(d => string.Equals(d.BranchSafe, prNumber.ToString(), StringComparison.OrdinalIgnoreCase));
     }
 
-    public async Task<StagingDeleteResult> DeleteBranchAsync(string apiToken, string branchName)
+    public async Task<StagingDeleteResult> DeleteBranchAsync(string apiToken, int prNumber)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
-        var safe = SliplaneStagingClient.SanitizeBranchName(branchName);
 
         var services = await _sliplane.ListStagingServicesAsync(apiToken, projectId, "ivy-staging-");
         var toDelete = services
-            .Where(s => s.Name == $"ivy-staging-docs-{safe}" || s.Name == $"ivy-staging-samples-{safe}")
+            .Where(s => s.Name == $"ivy-staging-docs-{prNumber}" || s.Name == $"ivy-staging-samples-{prNumber}")
             .ToList();
 
         var deleteTasks = toDelete.Select(svc => DeleteWithRetryAsync(apiToken, projectId, svc.Id));
@@ -219,15 +217,16 @@ public class StagingDeployService
             return new StagingDeleteResult(false, "GitHub:Owner/Repo not configured, skipping expiry cleanup.");
 
         var openPrs = await _github.GetPullRequestsAsync(owner, repo, ghToken, "open");
-        var openBranchSafes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var openPrNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var pr in openPrs)
-            openBranchSafes.Add(SliplaneStagingClient.SanitizeBranchName(pr.HeadRef));
+            openPrNumbers.Add(pr.Number.ToString());
 
-        var toDelete = expired.Where(d => !openBranchSafes.Contains(d.BranchSafe)).ToList();
+        var toDelete = expired.Where(d => !openPrNumbers.Contains(d.BranchSafe)).ToList();
         var deleted = 0;
         foreach (var d in toDelete)
         {
-            var r = await DeleteBranchAsync(apiToken, d.BranchSafe);
+            if (!int.TryParse(d.BranchSafe, out var prNum)) continue;
+            var r = await DeleteBranchAsync(apiToken, prNum);
             if (r.Success) deleted++;
         }
         return new StagingDeleteResult(deleted > 0, $"Deleted {deleted} expired deployment(s) (closed PRs only).");
