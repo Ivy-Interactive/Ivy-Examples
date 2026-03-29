@@ -94,7 +94,7 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                 samplesServiceId, samplesEvents);
 
             // Fetch URLs on each iteration so we can show partial links as they appear.
-            var urls = await _deployService.GetDeploymentUrlsForBranchAsync(apiToken, req.BranchName);
+            var urls = await _deployService.GetDeploymentUrlsForPrAsync(apiToken, req.PrNumber);
             var hasAnyUrl = !string.IsNullOrWhiteSpace(urls.DocsUrl) || !string.IsNullOrWhiteSpace(urls.SamplesUrl);
 
             // Check if any individual service already has an error event

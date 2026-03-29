@@ -59,8 +59,7 @@ public class PrStagingDeployApp : ViewBase
                 var rows = new List<PrRow>();
                 foreach (var pr in prs)
                 {
-                    var branchSafe = SliplaneStagingClient.SanitizeBranchName(pr.HeadRef);
-                    var dep = deployments.FirstOrDefault(d => d.BranchSafe == branchSafe);
+                    var dep = deployments.FirstOrDefault(d => d.BranchSafe == pr.Number.ToString());
 
                     string status;
                     Icons statusIcon;
@@ -304,7 +303,7 @@ public class PrStagingDeployApp : ViewBase
                         forceNewComment: true);
                 }
 
-                var result = await deploySvc.DeployBranchAsync(t, branchName);
+                var result = await deploySvc.DeployBranchAsync(t, branchName, prNumber);
                 ShowMessage(result.Message, !result.Success);
 
                 // Once Sliplane has registered the service (or failed), remove from deployingBranches.
@@ -389,7 +388,7 @@ public class PrStagingDeployApp : ViewBase
                         logLines: null);
                 }
 
-                var result = await deploySvc.DeleteBranchAsync(t, branchName);
+                var result = await deploySvc.DeleteBranchAsync(t, prNumber);
                 ShowMessage(result.Message, !result.Success);
                 if (result.Success)
                 {
