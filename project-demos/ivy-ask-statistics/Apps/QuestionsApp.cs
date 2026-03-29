@@ -18,6 +18,8 @@ public class QuestionsApp : ViewBase
         var generatingStatus  = UseState("");
         var pendingRefreshFor = UseState(""); // widget whose table row is reloading after generation
         var deleteRequest     = UseState<string?>(null); // widget name to delete questions for (UseEffect runs DB work)
+        var viewDialogOpen    = UseState(false);
+        var viewDialogWidget  = UseState("");
         var refreshToken      = UseRefreshToken();
         var (alertView, showAlert) = UseAlert();
 
@@ -152,6 +154,7 @@ public class QuestionsApp : ViewBase
             .Width(r => r.LastUpdated,  Size.Px(170))
             .Width(r => r.Status,       Size.Px(280))
             .RowActions(
+                MenuItem.Default(Icons.List, "questions").Label("View questions").Tag("questions"),
                 MenuItem.Default(Icons.Sparkles, "generate").Label("Generate questions").Tag("generate"),
                 MenuItem.Default(Icons.Trash2, "delete").Label("Delete questions").Tag("delete"))
             .OnRowAction(e =>
@@ -159,6 +162,15 @@ public class QuestionsApp : ViewBase
                 var args = e.Value;
                 var tag  = args?.Tag?.ToString();
                 if (string.IsNullOrEmpty(tag)) return ValueTask.CompletedTask;
+
+                if (tag == "questions")
+                {
+                    var viewName = args.Id?.ToString() ?? "";
+                    if (string.IsNullOrEmpty(viewName)) return ValueTask.CompletedTask;
+                    viewDialogWidget.Set(viewName);
+                    viewDialogOpen.Set(true);
+                    return ValueTask.CompletedTask;
+                }
 
                 if (tag == "generate")
                 {
@@ -232,9 +244,14 @@ public class QuestionsApp : ViewBase
                 config.ShowIndexColumn = false;
             });
 
+        object? questionsDialog = viewDialogOpen.Value && !string.IsNullOrEmpty(viewDialogWidget.Value)
+            ? new WidgetQuestionsDialog(viewDialogOpen, viewDialogWidget.Value)
+            : null;
+
         return Layout.Vertical().Height(Size.Full())
                | alertView
-               | table;
+               | table
+               | questionsDialog;
     }
 
     private static async Task<WidgetTableData> LoadWidgetTableDataAsync(
