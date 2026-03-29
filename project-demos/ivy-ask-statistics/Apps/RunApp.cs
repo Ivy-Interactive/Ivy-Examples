@@ -6,7 +6,6 @@ public class RunApp : ViewBase
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
     private const string BaseUrl = "https://mcp.ivy.app";
 
-    // Implements IBuilder<T> so TableBuilder can render custom cells
     private class CellBuilder(Func<QuestionRow, object?, object?> build) : IBuilder<QuestionRow>
     {
         public object? Build(object? value, QuestionRow record) => build(record, value);
@@ -14,33 +13,27 @@ public class RunApp : ViewBase
 
     public override object? Build()
     {
+        var factory = UseService<AppDbContextFactory>();
         var client = UseService<IClientProvider>();
 
         // ── State ─────────────────────────────────────────────────────────────
         var difficultyFilter = UseState("all");
-
-        // runningIndex drives the step-by-step runner:
-        //   -1       = idle
-        //   0..n-1   = currently processing question at that index
-        //   ≥ count  = finished (effect resets to -1)
         var runningIndex = UseState(-1);
         var completed = UseState<List<QuestionRun>>([]);
 
         // ── Hooks (must be at top, before derived values) ─────────────────────
-        // Reset when difficulty filter changes
         UseEffect(() =>
         {
             completed.Set([]);
             runningIndex.Set(-1);
         }, [difficultyFilter.ToTrigger()]);
 
-        // Step runner: each index change processes one question then increments
         UseEffect(async () =>
         {
             var idx = runningIndex.Value;
             if (idx < 0) return;
 
-            var questions = GetFiltered(difficultyFilter.Value);
+            var questions = await LoadQuestionsAsync(factory, difficultyFilter.Value);
 
             if (idx >= questions.Count)
             {
@@ -55,10 +48,15 @@ public class RunApp : ViewBase
             runningIndex.Set(idx + 1);
         }, [runningIndex.ToTrigger()]);
 
-        // ── Derived values ────────────────────────────────────────────────────
-        var questions = GetFiltered(difficultyFilter.Value);
+        // ── Queries ───────────────────────────────────────────────────────────
+        var questionsQuery = UseQuery<List<TestQuestion>, string>(
+            key: $"questions-{difficultyFilter.Value}",
+            fetcher: async (_, ct) => await LoadQuestionsAsync(factory, difficultyFilter.Value));
+
+        var questions = questionsQuery.Value ?? [];
         var isRunning = runningIndex.Value >= 0;
 
+        // ── Derived values ────────────────────────────────────────────────────
         var done = completed.Value.Count;
         var success = completed.Value.Count(r => r.Status == "success");
         var noAnswer = completed.Value.Count(r => r.Status == "no_answer");
@@ -78,6 +76,7 @@ public class RunApp : ViewBase
         var controls = new Card(
             Layout.Horizontal()
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(isRunning)
+            | Text.Muted($"{questions.Count} questions")
             | new Spacer()
             | new Button(isRunning ? "Running…" : "Run All",
                 onClick: _ =>
@@ -87,7 +86,7 @@ public class RunApp : ViewBase
                 })
                 .Primary()
                 .Icon(isRunning ? Icons.Loader : Icons.Play)
-                .Disabled(isRunning)
+                .Disabled(isRunning || questionsQuery.Loading || questions.Count == 0)
         );
 
         // ── Progress bar ──────────────────────────────────────────────────────
@@ -132,29 +131,35 @@ public class RunApp : ViewBase
                | table;
     }
 
+    private static async Task<List<TestQuestion>> LoadQuestionsAsync(
+        AppDbContextFactory factory,
+        string difficulty)
+    {
+        await using var ctx = factory.CreateDbContext();
+        var query = ctx.Questions.AsQueryable();
+        if (difficulty != "all")
+            query = query.Where(q => q.Difficulty == difficulty);
+
+        var entities = await query
+            .OrderBy(q => q.Widget)
+            .ThenBy(q => q.Difficulty)
+            .ToListAsync();
+
+        return entities
+            .Select(e => new TestQuestion(e.Id.ToString(), e.Widget, e.Difficulty, e.QuestionText))
+            .ToList();
+    }
+
     private static object BuildSummary(int success, int noAnswer, int errors, int total, int avgMs)
     {
         var rate = total > 0 ? success * 100 / total : 0;
 
         return new Card(
             Layout.Horizontal()
-            | new Details([
-                new Detail("Success Rate", $"{rate}%  ({success}/{total})", false),
-            ])
-            | new Details([
-                new Detail("No Answer", noAnswer.ToString(), false),
-            ])
-            | new Details([
-                new Detail("Errors", errors.ToString(), false),
-            ])
-            | new Details([
-                new Detail("Avg Time", $"{avgMs} ms", false),
-            ])
+            | new Details([new Detail("Success Rate", $"{rate}%  ({success}/{total})", false)])
+            | new Details([new Detail("No Answer", noAnswer.ToString(), false)])
+            | new Details([new Detail("Errors", errors.ToString(), false)])
+            | new Details([new Detail("Avg Time", $"{avgMs} ms", false)])
         );
     }
-
-    private static List<TestQuestion> GetFiltered(string difficulty) =>
-        difficulty == "all"
-            ? Questions.All
-            : Questions.All.Where(q => q.Difficulty == difficulty).ToList();
 }

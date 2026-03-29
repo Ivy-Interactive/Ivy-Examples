@@ -1,11 +1,6 @@
-namespace IvyAskStatistics;
+namespace IvyAskStatistics.Models;
 
-public record TestQuestion(
-    string Id,
-    string Widget,
-    string Difficulty,
-    string Question
-);
+public record TestQuestion(string Id, string Widget, string Difficulty, string Question);
 
 public record QuestionRun(
     TestQuestion Question,
@@ -14,7 +9,7 @@ public record QuestionRun(
     int HttpStatus
 );
 
-// Flat row used for the TableBuilder display
+// Flat row for the TableBuilder in RunApp
 public record QuestionRow(
     string Id,
     string Widget,

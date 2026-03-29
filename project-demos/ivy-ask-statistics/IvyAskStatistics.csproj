@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <NoWarn>CS8618;CS8603;CS8602;CS8604;CS9113</NoWarn>
     <RootNamespace>IvyAskStatistics</RootNamespace>
+    <UserSecretsId>ivy-ask-statistics-a3f2c1d4</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,10 +16,17 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Apps" />
+    <Folder Include="Connections" />
+    <Folder Include="Models" />
     <Folder Include="Services" />
   </ItemGroup>
 
