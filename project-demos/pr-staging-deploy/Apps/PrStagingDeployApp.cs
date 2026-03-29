@@ -293,20 +293,9 @@ public class PrStagingDeployApp : ViewBase
                 var owner = config["GitHub:Owner"] ?? "";
                 var repo = config["GitHub:Repo"] ?? "";
 
-                if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
-                {
-                    await prComments.TryPostOrUpdateStagingCommentAsync(
-                        owner, repo, prNumber,
-                        docsUrl: null, samplesUrl: null,
-                        status: "Deploying...",
-                        logLines: null,
-                        forceNewComment: true);
-                }
-
                 var result = await deploySvc.DeployBranchAsync(t, branchName, prNumber);
                 ShowMessage(result.Message, !result.Success);
 
-                // Once Sliplane has registered the service (or failed), remove from deployingBranches.
                 deployingBranches.Set(prev =>
                 {
                     var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase);
@@ -320,14 +309,14 @@ public class PrStagingDeployApp : ViewBase
 
                     if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
                     {
-                        // We need at least one service correctly created to start tracking progress.
                         if (string.IsNullOrEmpty(result.DocsServiceId) && string.IsNullOrEmpty(result.SamplesServiceId))
                         {
                             await prComments.TryPostOrUpdateStagingCommentAsync(
                                 owner, repo, prNumber,
                                 docsUrl: null, samplesUrl: null,
                                 status: "Deploy failed",
-                                logLines: new[] { "No Sliplane services were created: " + TruncLine(result.Message, 200) });
+                                logLines: new[] { "No Sliplane services were created: " + TruncLine(result.Message, 200) },
+                                forceNewComment: true);
                             return;
                         }
 
@@ -342,19 +331,14 @@ public class PrStagingDeployApp : ViewBase
                         return;
                     }
                 }
-                else
+                else if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
                 {
-                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
-                    {
-                        await prComments.TryPostOrUpdateStagingCommentAsync(
-                            owner,
-                            repo,
-                            prNumber,
-                            docsUrl: null,
-                            samplesUrl: null,
-                            status: "Deploy failed",
-                            logLines: new[] { TruncLine(result.Message, 240) });
-                    }
+                    await prComments.TryPostOrUpdateStagingCommentAsync(
+                        owner, repo, prNumber,
+                        docsUrl: null, samplesUrl: null,
+                        status: "Deploy failed",
+                        logLines: new[] { TruncLine(result.Message, 240) },
+                        forceNewComment: true);
                 }
             }
             catch (Exception ex)
@@ -379,14 +363,6 @@ public class PrStagingDeployApp : ViewBase
             {
                 var owner = config["GitHub:Owner"] ?? "";
                 var repo = config["GitHub:Repo"] ?? "";
-                if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
-                {
-                    await prComments.TryPostOrUpdateStagingCommentAsync(
-                        owner, repo, prNumber,
-                        docsUrl: null, samplesUrl: null,
-                        status: "Deleting...",
-                        logLines: null);
-                }
 
                 var result = await deploySvc.DeleteBranchAsync(t, prNumber);
                 ShowMessage(result.Message, !result.Success);
@@ -396,28 +372,21 @@ public class PrStagingDeployApp : ViewBase
                     if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
                     {
                         await prComments.TryPostOrUpdateStagingCommentAsync(
-                            owner,
-                            repo,
-                            prNumber,
-                            docsUrl: null,
-                            samplesUrl: null,
+                            owner, repo, prNumber,
+                            docsUrl: null, samplesUrl: null,
                             status: "Deleted",
-                            logLines: null);
+                            logLines: null,
+                            forceNewComment: true);
                     }
                 }
-                else
+                else if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
                 {
-                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
-                    {
-                        await prComments.TryPostOrUpdateStagingCommentAsync(
-                            owner,
-                            repo,
-                            prNumber,
-                            docsUrl: null,
-                            samplesUrl: null,
-                            status: "Delete failed",
-                            logLines: new[] { TruncLine(result.Message, 240) });
-                    }
+                    await prComments.TryPostOrUpdateStagingCommentAsync(
+                        owner, repo, prNumber,
+                        docsUrl: null, samplesUrl: null,
+                        status: "Delete failed",
+                        logLines: new[] { TruncLine(result.Message, 240) },
+                        forceNewComment: true);
                 }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }

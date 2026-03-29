@@ -104,84 +104,40 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
 
             if (combined == "failed")
             {
-                // All services are resolved and at least one failed.
-                // Show error logs (as requested), plus any partial links that did succeed.
                 var logLines = BuildRecentLogLines(docsEvents, samplesEvents, maxLines: 10);
                 await _commentService.TryPostOrUpdateStagingCommentAsync(
-                    req.Owner,
-                    req.Repo,
-                    req.PrNumber,
-                    docsUrl: urls.DocsUrl,
-                    samplesUrl: urls.SamplesUrl,
+                    req.Owner, req.Repo, req.PrNumber,
+                    docsUrl: urls.DocsUrl, samplesUrl: urls.SamplesUrl,
                     status: "Deploy failed",
                     logLines: logLines,
-                    cancellationToken: ct);
+                    forceNewComment: true,
+                    cancellationToken: CancellationToken.None);
                 return;
             }
 
             if (combined == "deployed")
             {
-                // All services deployed successfully.
-                // Wait for BOTH managed domains before finalizing — give up only after 25 iterations.
                 var bothUrlsReady = !string.IsNullOrWhiteSpace(urls.DocsUrl) && !string.IsNullOrWhiteSpace(urls.SamplesUrl);
                 if (bothUrlsReady || iteration > 25)
                 {
                     await _commentService.TryPostOrUpdateStagingCommentAsync(
-                        req.Owner,
-                        req.Repo,
-                        req.PrNumber,
-                        docsUrl: urls.DocsUrl,
-                        samplesUrl: urls.SamplesUrl,
+                        req.Owner, req.Repo, req.PrNumber,
+                        docsUrl: urls.DocsUrl, samplesUrl: urls.SamplesUrl,
                         status: "Deployed",
                         logLines: null,
-                        cancellationToken: ct);
+                        forceNewComment: true,
+                        cancellationToken: CancellationToken.None);
                     return;
                 }
-
-                // Deployed events came but managed domains not attached yet — keep polling silently.
+                // Deployed but managed domains not ready yet — keep polling silently.
             }
-            else
-            {
-                // combined == "pending": some services still in progress.
-                // Update the comment periodically (no logs during normal deploy).
-                // If there is already a partial failure event, show error details as context.
-                if (iteration == 1 || iteration % 2 == 0 || hasAnyFailureEvent)
-                {
-                    IReadOnlyList<string>? logLines = hasAnyFailureEvent
-                        ? BuildRecentLogLines(docsEvents, samplesEvents, maxLines: 10)
-                        : null;
-
-                    await _commentService.TryPostOrUpdateStagingCommentAsync(
-                        req.Owner,
-                        req.Repo,
-                        req.PrNumber,
-                        docsUrl: null,
-                        samplesUrl: null,
-                        status: "Deploying...",
-                        logLines: logLines,
-                        cancellationToken: ct);
-                }
-            }
+            // combined == "pending": poll silently, no intermediate comment
 
             await Task.Delay(delayMs, ct);
             if (delayMs < maxDelayMs)
                 delayMs = Math.Min(maxDelayMs, (int)(delayMs * 1.25));
         }
-
-        // Cancellation: best-effort leave comment in Deploying state.
-        try
-        {
-            await _commentService.TryPostOrUpdateStagingCommentAsync(
-                req.Owner,
-                req.Repo,
-                req.PrNumber,
-                docsUrl: null,
-                samplesUrl: null,
-                status: "Deploying...",
-                logLines: null,
-                cancellationToken: CancellationToken.None);
-        }
-        catch { }
+        // App shutting down — do nothing, startup scan will resume on next deploy.
     }
 
     private static IReadOnlyList<string> BuildRecentLogLines(
