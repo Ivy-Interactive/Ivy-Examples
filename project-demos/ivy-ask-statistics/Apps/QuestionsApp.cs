@@ -1,10 +1,12 @@
 namespace IvyAskStatistics.Apps;
 
-file record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, int QueryKey);
+internal sealed record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, int QueryKey);
 
 [App(icon: Icons.Database, title: "Questions")]
 public class QuestionsApp : ViewBase
 {
+    private const int TableQueryKey = 0;
+
     public override object? Build()
     {
         var factory       = UseService<AppDbContextFactory>();
@@ -14,86 +16,15 @@ public class QuestionsApp : ViewBase
         var generateRequest   = UseState<IvyWidget?>(null);
         var generatingWidget  = UseState("");
         var generatingStatus  = UseState("");
-        var refreshTick       = UseState(0);
         var pendingRefreshFor = UseState(""); // widget whose table row is reloading after generation
+        var deleteRequest     = UseState<string?>(null); // widget name to delete questions for (UseEffect runs DB work)
         var refreshToken      = UseRefreshToken();
         var (alertView, showAlert) = UseAlert();
 
         var tableQuery = UseQuery<WidgetTableData, int>(
-            key: refreshTick.Value,
-            fetcher: async (queryKey, ct) =>
-            {
-                await using var ctx = factory.CreateDbContext();
-
-                var grouped = await ctx.Questions
-                    .AsNoTracking()
-                    .GroupBy(q => new { q.Widget, q.Category, q.Difficulty })
-                    .Select(g => new
-                    {
-                        g.Key.Widget,
-                        g.Key.Category,
-                        g.Key.Difficulty,
-                        Count   = g.Count(),
-                        MaxDate = g.Max(x => x.CreatedAt)
-                    })
-                    .ToListAsync(ct);
-
-                var countsByWidget = grouped
-                    .GroupBy(x => x.Widget)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => (
-                            category:  g.Select(x => x.Category).FirstOrDefault() ?? "",
-                            easy:      g.FirstOrDefault(x => x.Difficulty == "easy")?.Count   ?? 0,
-                            medium:    g.FirstOrDefault(x => x.Difficulty == "medium")?.Count ?? 0,
-                            hard:      g.FirstOrDefault(x => x.Difficulty == "hard")?.Count   ?? 0,
-                            updatedAt: g.Max(x => x.MaxDate)
-                        ));
-
-                List<IvyWidget> catalog = [];
-                try { catalog = await IvyAskService.GetWidgetsAsync(); }
-                catch { /* offline */ }
-
-                var byName = catalog.ToDictionary(w => w.Name);
-                foreach (var (widget, info) in countsByWidget)
-                    if (!byName.ContainsKey(widget))
-                        byName[widget] = new IvyWidget(widget, info.category, "");
-
-                var rows = byName.Values
-                    .OrderBy(w => string.IsNullOrEmpty(w.Category) ? "zzz" : w.Category)
-                    .ThenBy(w => w.Name)
-                    .Select(w =>
-                    {
-                        var c        = countsByWidget.GetValueOrDefault(w.Name);
-                        var category = string.IsNullOrEmpty(w.Category) ? "Unclassified" : w.Category;
-                        var updated  = c.updatedAt == default
-                            ? "—"
-                            : c.updatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm");
-                        return new WidgetRow(w.Name, category, c.easy, c.medium, c.hard, updated, "");
-                    })
-                    .ToList();
-
-                return new WidgetTableData(rows, catalog, queryKey);
-            },
+            key: TableQueryKey,
+            fetcher: async (qk, ct) => await LoadWidgetTableDataAsync(factory, qk, ct),
             options: new QueryOptions { KeepPrevious = true });
-
-        // Clear "Updating…" once the query result matches the current refreshTick (KeepPrevious-safe)
-        UseEffect(async () =>
-        {
-            if (string.IsNullOrEmpty(pendingRefreshFor.Value)) return;
-            var targetKey = refreshTick.Value;
-            for (var guard = 0; guard < 600; guard++)
-            {
-                if (tableQuery.Value?.QueryKey == targetKey && !tableQuery.Loading)
-                    break;
-                await Task.Delay(16);
-            }
-            if (!string.IsNullOrEmpty(pendingRefreshFor.Value))
-            {
-                pendingRefreshFor.Set("");
-                refreshToken.Refresh();
-            }
-        }, [refreshTick.ToTrigger()]);
 
         UseEffect(() => { refreshToken.Refresh(); },
             [generatingWidget.ToTrigger(), generatingStatus.ToTrigger()]);
@@ -112,7 +43,12 @@ public class QuestionsApp : ViewBase
                     new Progress<string>(msg => generatingStatus.Set(msg)));
 
                 pendingRefreshFor.Set(widget.Name);
-                refreshTick.Set(refreshTick.Value + 1);
+                refreshToken.Refresh();
+
+                var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                pendingRefreshFor.Set("");
+                refreshToken.Refresh();
                 client.Toast($"Generated 30 questions for {widget.Name}");
             }
             catch (Exception ex)
@@ -128,14 +64,46 @@ public class QuestionsApp : ViewBase
             }
         }, [generateRequest.ToTrigger()]);
 
+        UseEffect(async () =>
+        {
+            var widgetName = deleteRequest.Value;
+            if (string.IsNullOrEmpty(widgetName)) return;
+
+            try
+            {
+                await using var ctx = factory.CreateDbContext();
+                var list = await ctx.Questions.Where(q => q.Widget == widgetName).ToListAsync();
+                if (list.Count == 0)
+                {
+                    client.Toast("No questions to delete.");
+                    return;
+                }
+                ctx.Questions.RemoveRange(list);
+                await ctx.SaveChangesAsync();
+
+                var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                refreshToken.Refresh();
+                client.Toast($"Deleted {list.Count} question(s) for \"{widgetName}\".");
+            }
+            catch (Exception ex)
+            {
+                client.Toast($"Error: {ex.Message}");
+            }
+            finally
+            {
+                deleteRequest.Set(null);
+            }
+        }, [deleteRequest.ToTrigger()]);
+
         // ── Derived state ─────────────────────────────────────────────────────
         var baseRows     = tableQuery.Value?.Rows    ?? [];
         var catalog      = tableQuery.Value?.Catalog ?? [];
         var generating   = generatingWidget.Value;
         var isGenerating = !string.IsNullOrEmpty(generating);
-        // Only the initial mount uses the full-screen loader. After refreshTick bumps (post-generation
-        // refetch), never swap the whole view for Loading — avoids the table vanishing mid-flow.
-        var firstLoad    = tableQuery.Loading && tableQuery.Value == null && refreshTick.Value == 0;
+        var isDeleting   = !string.IsNullOrEmpty(deleteRequest.Value);
+        // Full-screen loader only before the first successful query payload (KeepPrevious keeps rows during Mutate).
+        var firstLoad    = tableQuery.Loading && tableQuery.Value == null;
         var pendingRow   = pendingRefreshFor.Value;
 
         static string IdleStatus(WidgetRow r)
@@ -166,7 +134,7 @@ public class QuestionsApp : ViewBase
         var table = rows.AsQueryable()
             .ToDataTable(r => r.Widget)
             .RefreshToken(refreshToken)
-            // Stable key: do not tie to refreshTick — that remounted the whole table after each generation.
+            // Stable key: Mutator.Mutate + RefreshToken update rows; changing Key remounted the grid and made it disappear on delete.
             .Key("questions-widgets")
             .Height(Size.Full())
             .Header(r => r.Widget,      "Widget")
@@ -184,32 +152,76 @@ public class QuestionsApp : ViewBase
             .Width(r => r.LastUpdated,  Size.Px(170))
             .Width(r => r.Status,       Size.Px(280))
             .RowActions(
-                MenuItem.Default(Icons.Sparkles, "generate").Label("Generate questions").Tag("generate"))
+                MenuItem.Default(Icons.Sparkles, "generate").Label("Generate questions").Tag("generate"),
+                MenuItem.Default(Icons.Trash2, "delete").Label("Delete questions").Tag("delete"))
             .OnRowAction(e =>
             {
                 var args = e.Value;
-                if (args?.Tag?.ToString() != "generate") return ValueTask.CompletedTask;
-                if (isGenerating)
+                var tag  = args?.Tag?.ToString();
+                if (string.IsNullOrEmpty(tag)) return ValueTask.CompletedTask;
+
+                if (tag == "generate")
                 {
-                    client.Toast("Already generating — please wait");
+                    if (isDeleting)
+                    {
+                        client.Toast("Please wait — delete in progress");
+                        return ValueTask.CompletedTask;
+                    }
+                    if (isGenerating)
+                    {
+                        client.Toast("Already generating — please wait");
+                        return ValueTask.CompletedTask;
+                    }
+                    var genName = args.Id?.ToString() ?? "";
+                    var widget = catalog.FirstOrDefault(w => w.Name == genName)
+                        ?? new IvyWidget(genName, rows.FirstOrDefault(r => r.Widget == genName)?.Category ?? "", "");
+                    showAlert(
+                        $"Generate 30 questions for the \"{widget.Name}\" widget?\n\nIvy Ask will be called three times (easy / medium / hard). Any previously generated questions for this widget will be replaced.",
+                        result =>
+                        {
+                            if (!result.IsOk()) return;
+                            generatingWidget.Set(widget.Name);
+                            generatingStatus.Set("Starting…");
+                            generateRequest.Set(widget);
+                            refreshToken.Refresh();
+                        },
+                        "Generate questions",
+                        AlertButtonSet.OkCancel);
                     return ValueTask.CompletedTask;
                 }
-                var name   = args.Id?.ToString() ?? "";
-                var widget = catalog.FirstOrDefault(w => w.Name == name)
-                    ?? new IvyWidget(name, rows.FirstOrDefault(r => r.Widget == name)?.Category ?? "", "");
-                showAlert(
-                    $"Generate 30 questions for the \"{widget.Name}\" widget?\n\nIvy Ask will be called three times (easy / medium / hard). Any previously generated questions for this widget will be replaced.",
-                    result =>
+
+                if (tag == "delete")
+                {
+                    if (isDeleting)
                     {
-                        if (!result.IsOk()) return;
-                        // Same pattern as pr-staging-deploy: update UI immediately on confirm, then run async work.
-                        generatingWidget.Set(widget.Name);
-                        generatingStatus.Set("Starting…");
-                        generateRequest.Set(widget);
-                        refreshToken.Refresh();
-                    },
-                    "Generate questions",
-                    AlertButtonSet.OkCancel);
+                        client.Toast("Delete already in progress — please wait");
+                        return ValueTask.CompletedTask;
+                    }
+                    if (isGenerating)
+                    {
+                        client.Toast("Already generating — please wait");
+                        return ValueTask.CompletedTask;
+                    }
+                    var delName = args.Id?.ToString() ?? "";
+                    var row     = rows.FirstOrDefault(r => r.Widget == delName);
+                    var n       = row == null ? 0 : row.Easy + row.Medium + row.Hard;
+                    if (n == 0)
+                    {
+                        client.Toast("No questions to delete for this widget.");
+                        return ValueTask.CompletedTask;
+                    }
+                    showAlert(
+                        $"Delete all {n} question(s) for the \"{delName}\" widget?\n\nThis cannot be undone.",
+                        result =>
+                        {
+                            if (!result.IsOk()) return;
+                            deleteRequest.Set(delName);
+                        },
+                        "Delete questions",
+                        AlertButtonSet.OkCancel);
+                    return ValueTask.CompletedTask;
+                }
+
                 return ValueTask.CompletedTask;
             })
             .Config(config =>
@@ -223,5 +235,63 @@ public class QuestionsApp : ViewBase
         return Layout.Vertical().Height(Size.Full())
                | alertView
                | table;
+    }
+
+    private static async Task<WidgetTableData> LoadWidgetTableDataAsync(
+        AppDbContextFactory factory,
+        int queryKey,
+        CancellationToken ct)
+    {
+        await using var ctx = factory.CreateDbContext();
+
+        var grouped = await ctx.Questions
+            .AsNoTracking()
+            .GroupBy(q => new { q.Widget, q.Category, q.Difficulty })
+            .Select(g => new
+            {
+                g.Key.Widget,
+                g.Key.Category,
+                g.Key.Difficulty,
+                Count   = g.Count(),
+                MaxDate = g.Max(x => x.CreatedAt)
+            })
+            .ToListAsync(ct);
+
+        var countsByWidget = grouped
+            .GroupBy(x => x.Widget)
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    category:  g.Select(x => x.Category).FirstOrDefault() ?? "",
+                    easy:      g.FirstOrDefault(x => x.Difficulty == "easy")?.Count   ?? 0,
+                    medium:    g.FirstOrDefault(x => x.Difficulty == "medium")?.Count ?? 0,
+                    hard:      g.FirstOrDefault(x => x.Difficulty == "hard")?.Count   ?? 0,
+                    updatedAt: g.Max(x => x.MaxDate)
+                ));
+
+        List<IvyWidget> catalog = [];
+        try { catalog = await IvyAskService.GetWidgetsAsync(); }
+        catch { /* offline */ }
+
+        var byName = catalog.ToDictionary(w => w.Name);
+        foreach (var (widget, info) in countsByWidget)
+            if (!byName.ContainsKey(widget))
+                byName[widget] = new IvyWidget(widget, info.category, "");
+
+        var rows = byName.Values
+            .OrderBy(w => string.IsNullOrEmpty(w.Category) ? "zzz" : w.Category)
+            .ThenBy(w => w.Name)
+            .Select(w =>
+            {
+                var c        = countsByWidget.GetValueOrDefault(w.Name);
+                var category = string.IsNullOrEmpty(w.Category) ? "Unclassified" : w.Category;
+                var updated  = c.updatedAt == default
+                    ? "—"
+                    : c.updatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm");
+                return new WidgetRow(w.Name, category, c.easy, c.medium, c.hard, updated, "");
+            })
+            .ToList();
+
+        return new WidgetTableData(rows, catalog, queryKey);
     }
 }
