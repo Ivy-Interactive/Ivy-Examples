@@ -1,39 +1,45 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
 using IvyAskStatistics.Connections;
 using Microsoft.EntityFrameworkCore;
 
 namespace IvyAskStatistics.Services;
 
+/// <summary>
+/// Generates test questions via the same Ivy Ask HTTP API as the runner
+/// (<c>GET {base}/questions?question=...</c> on <c>mcp.ivy.app</c>).
+/// Uses meta-prompts that ask for a JSON array of question strings; Ivy Ask answers from docs + model.
+/// Does not embed full widget markdown in the URL (GET length limits).
+/// </summary>
 public static class QuestionGeneratorService
 {
-    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(60) };
-    private const string OpenAiUrl = "https://api.openai.com/v1/chat/completions";
-
     /// <summary>
     /// Generates 10 questions per difficulty (easy / medium / hard) for a widget
-    /// and saves them to the database, replacing any previously generated ones.
+    /// and saves them to the database, replacing any previously MCP-generated ones.
     /// </summary>
     public static async Task GenerateAndSaveAsync(
         IvyWidget widget,
-        string openAiKey,
         AppDbContextFactory factory,
-        IProgress<string>? progress = null)
+        string askBaseUrl,
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
     {
-        var docs = await IvyAskService.GetWidgetDocsAsync(widget.DocLink);
-
         foreach (var difficulty in new[] { "easy", "medium", "hard" })
         {
-            progress?.Report($"Generating {difficulty} questions for {widget.Name}…");
+            progress?.Report($"Ivy Ask: {difficulty} questions for {widget.Name}…");
 
-            var questions = await GenerateQuestionsAsync(widget.Name, docs, difficulty, openAiKey);
+            var prompt = BuildMetaPrompt(widget.Name, widget.Category, difficulty);
+            var body = await IvyAskService.FetchAnswerBodyAsync(askBaseUrl, prompt, ct)
+                ?? throw new InvalidOperationException("Ivy Ask returned no body (check network and base URL).");
+
+            var questions = IvyAskService.ParseQuestionStringsFromBody(body, 10);
+            if (questions.Count == 0)
+                throw new InvalidOperationException(
+                    "Could not parse questions from Ivy Ask response. Try again or inspect logs.");
 
             await using var ctx = factory.CreateDbContext();
 
             var existing = await ctx.Questions
-                .Where(q => q.Widget == widget.Name && q.Difficulty == difficulty && q.Source == "generated")
-                .ToListAsync();
+                .Where(q => q.Widget == widget.Name && q.Difficulty == difficulty && q.Source == "ivy_ask_meta")
+                .ToListAsync(ct);
             ctx.Questions.RemoveRange(existing);
 
             ctx.Questions.AddRange(questions.Select(q => new QuestionEntity
@@ -42,68 +48,36 @@ public static class QuestionGeneratorService
                 Category = widget.Category,
                 Difficulty = difficulty,
                 QuestionText = q,
-                Source = "generated",
+                Source = "ivy_ask_meta",
                 CreatedAt = DateTime.UtcNow
             }));
 
-            await ctx.SaveChangesAsync();
+            await ctx.SaveChangesAsync(ct);
         }
     }
 
-    private static async Task<List<string>> GenerateQuestionsAsync(
-        string widgetName,
-        string docs,
-        string difficulty,
-        string openAiKey)
+    private static string BuildMetaPrompt(string widgetName, string category, string difficulty)
     {
-        var prompt = $$"""
-            You are an expert in the Ivy Framework for C#.
-
-            Here is the documentation for the "{{widgetName}}" widget:
-
-            {{docs}}
-
-            Generate exactly 10 {{difficulty}} questions that a developer might ask about this widget.
-
-            DIFFICULTY GUIDELINES:
-            - easy:   Basic usage ("how to create", "how to show", simple properties)
-            - medium: Specific features, configuration, event handlers, styling
-            - hard:   Advanced patterns, combining with other widgets, dynamic data, edge cases
-
-            Rules:
-            1. Each question must be specific and about the {{widgetName}} widget in Ivy
-            2. No compound questions - one concept per question
-            3. Keep questions concise (under 20 words)
-            4. Return ONLY valid JSON in this exact format: {"questions": ["q1", "q2", "q3"]}
-            """;
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, OpenAiUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", openAiKey);
-        request.Content = JsonContent.Create(new
+        var difficultyHint = difficulty switch
         {
-            model = "gpt-4o-mini",
-            messages = new[] { new { role = "user", content = prompt } },
-            temperature = 0.7,
-            response_format = new { type = "json_object" }
-        });
+            "easy" => "basic usage, creating the widget, simple properties",
+            "medium" => "events, styling, configuration, common patterns",
+            _ => "advanced composition, edge cases, integration with other Ivy widgets"
+        };
 
-        var response = await _http.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        return $"""
+            You are generating automated test questions for the Ivy UI framework documentation system.
 
-        var root = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var content = root
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? "{}";
+            Widget name: {widgetName}
+            Widget category (folder): {category}
+            Difficulty: {difficulty} — {difficultyHint}
 
-        var parsed = JsonSerializer.Deserialize<JsonElement>(content);
-        return parsed
-            .GetProperty("questions")
-            .EnumerateArray()
-            .Select(q => q.GetString() ?? "")
-            .Where(q => !string.IsNullOrWhiteSpace(q))
-            .Take(10)
-            .ToList();
+            Generate exactly 10 distinct questions that a C# developer might ask about this Ivy widget.
+            Each question must be a single sentence, under 25 words, about the "{widgetName}" widget only.
+            Do not combine multiple unrelated topics in one question.
+
+            Respond with ONLY a JSON array of 10 strings (no markdown fences, no keys, no commentary).
+            Example shape: ["question1?", "question2?", ...]
+            """;
     }
 }
