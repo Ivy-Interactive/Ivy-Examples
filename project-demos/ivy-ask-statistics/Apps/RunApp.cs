@@ -6,11 +6,6 @@ public class RunApp : ViewBase
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
     private const string BaseUrl = "https://mcp.ivy.app";
 
-    private class CellBuilder(Func<QuestionRow, object?, object?> build) : IBuilder<QuestionRow>
-    {
-        public object? Build(object? value, QuestionRow record) => build(record, value);
-    }
-
     public override object? Build()
     {
         var factory = UseService<AppDbContextFactory>();
@@ -99,30 +94,25 @@ public class RunApp : ViewBase
             ? BuildSummary(success, noAnswer, errors, done, avgMs)
             : null;
 
-        // ── Questions table ───────────────────────────────────────────────────
-        var table = new TableBuilder<QuestionRow>(rows)
-            .Builder(x => x.Difficulty, _ => new CellBuilder((row, _) =>
-                new Badge(row.Difficulty).Variant(row.Difficulty switch
-                {
-                    "easy" => BadgeVariant.Success,
-                    "medium" => BadgeVariant.Info,
-                    "hard" => BadgeVariant.Destructive,
-                    _ => BadgeVariant.Secondary
-                })))
-            .Builder(x => x.Status, _ => new CellBuilder((row, _) =>
-                row.Status switch
-                {
-                    "success" => (object)(Layout.Horizontal()
-                        | new Badge("answered").Variant(BadgeVariant.Success)
-                        | Text.Muted($"{row.ResponseTimeMs}ms")),
-                    "no_answer" => new Badge("no answer").Variant(BadgeVariant.Destructive),
-                    "error" => new Badge("error").Variant(BadgeVariant.Warning),
-                    "running" => new Badge("running…").Variant(BadgeVariant.Info),
-                    _ => new Badge("pending").Variant(BadgeVariant.Secondary)
-                }))
-            .Remove(x => x.Id)
-            .Remove(x => x.ResponseTimeMs)
-            .Build();
+        // ── Questions DataTable ───────────────────────────────────────────────
+        var table = rows.AsQueryable()
+            .ToDataTable()
+            .Hidden(r => r.Id)
+            .Hidden(r => r.ResponseTimeMs)
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.Difficulty, "Difficulty")
+            .Header(r => r.Question, "Question")
+            .Header(r => r.Status, "Status")
+            .Width(r => r.Widget, Size.Px(120))
+            .Width(r => r.Difficulty, Size.Px(100))
+            .Width(r => r.Status, Size.Px(120))
+            .Config(config =>
+            {
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.ShowSearch = true;
+                config.ShowIndexColumn = true;
+            });
 
         return Layout.Vertical()
                | controls

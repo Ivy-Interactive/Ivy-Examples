@@ -3,11 +3,6 @@ namespace IvyAskStatistics.Apps;
 [App(icon: Icons.Database, title: "Questions")]
 public class QuestionsApp : ViewBase
 {
-    private class CellBuilder(Func<WidgetRow, object?, object?> build) : IBuilder<WidgetRow>
-    {
-        public object? Build(object? value, WidgetRow record) => build(record, value);
-    }
-
     public override object? Build()
     {
         var factory = UseService<AppDbContextFactory>();
@@ -22,7 +17,6 @@ public class QuestionsApp : ViewBase
         var refreshTick = UseState(0);
 
         // ── Hooks ─────────────────────────────────────────────────────────────
-        // Async generate flow triggered by state change
         UseEffect(async () =>
         {
             var widget = generateRequest.Value;
@@ -81,17 +75,16 @@ public class QuestionsApp : ViewBase
         // ── Build rows ────────────────────────────────────────────────────────
         var widgets = widgetsQuery.Value ?? [];
         var counts = countsQuery.Value ?? new Dictionary<string, (int, int, int)>();
+        var hasKey = !string.IsNullOrWhiteSpace(openAiKey.Value);
+        var totalQuestions = counts.Values.Sum(c => c.easy + c.medium + c.hard);
 
         var rows = widgets.Select(w =>
         {
             var (easy, medium, hard) = counts.GetValueOrDefault(w.Name);
             return new WidgetRow(w.Name, w.Category, easy, medium, hard);
-        }).ToList(); // Actions defaults to ""
+        }).ToList();
 
-        // ── OpenAI key + seed bar ─────────────────────────────────────────────
-        var hasKey = !string.IsNullOrWhiteSpace(openAiKey.Value);
-        var totalQuestions = rows.Sum(r => r.Easy + r.Medium + r.Hard);
-
+        // ── Header card ───────────────────────────────────────────────────────
         var headerCard = new Card(
             Layout.Vertical().Gap(3)
             | (Layout.Horizontal().Gap(3)
@@ -100,54 +93,54 @@ public class QuestionsApp : ViewBase
                   | openAiKey.ToPasswordInput().Placeholder("sk-…").Width(Size.Units(80)))
                | new Spacer()
                | Text.Block($"{totalQuestions} total questions in DB").Muted().Small())
-            | (isGenerating.Value
+            | (widgetsQuery.Loading
                 ? (object)(Layout.Horizontal().Gap(2)
                    | new Icon(Icons.Loader).Small()
-                   | Text.Muted(generatingStatus.Value))
-                : null)
+                   | Text.Muted("Loading widgets…"))
+                : isGenerating.Value
+                    ? (Layout.Horizontal().Gap(2)
+                       | new Icon(Icons.Loader).Small()
+                       | Text.Muted(generatingStatus.Value))
+                    : null)
         );
 
-        // ── Widgets table ─────────────────────────────────────────────────────
-        if (widgetsQuery.Loading)
-        {
-            return Layout.Vertical()
-                   | headerCard
-                   | new Progress(-1).Goal("Loading widgets…");
-        }
-
-        var table = new TableBuilder<WidgetRow>(rows)
-            .Builder(x => x.Easy, _ => new CellBuilder((row, _) =>
-                row.Easy > 0
-                    ? (object)new Badge(row.Easy.ToString()).Variant(BadgeVariant.Success)
-                    : Text.Muted("–")))
-            .Builder(x => x.Medium, _ => new CellBuilder((row, _) =>
-                row.Medium > 0
-                    ? (object)new Badge(row.Medium.ToString()).Variant(BadgeVariant.Info)
-                    : Text.Muted("–")))
-            .Builder(x => x.Hard, _ => new CellBuilder((row, _) =>
-                row.Hard > 0
-                    ? (object)new Badge(row.Hard.ToString()).Variant(BadgeVariant.Destructive)
-                    : Text.Muted("–")))
-            .Builder(x => x.Actions, _ => new CellBuilder((row, _) =>
-                new Button("Generate", onClick: _ =>
+        // ── Widgets DataTable ─────────────────────────────────────────────────
+        var table = rows.AsQueryable()
+            .ToDataTable(r => r.Widget)
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.Category, "Category")
+            .Header(r => r.Easy, "Easy")
+            .Header(r => r.Medium, "Medium")
+            .Header(r => r.Hard, "Hard")
+            .Width(r => r.Category, Size.Px(120))
+            .Width(r => r.Easy, Size.Px(70))
+            .Width(r => r.Medium, Size.Px(80))
+            .Width(r => r.Hard, Size.Px(70))
+            .RowActions(
+                MenuItem.Default(Icons.Sparkles, "generate").Label("Generate").Tag("generate"))
+            .OnRowAction(e =>
+            {
+                var args = e.Value;
+                if (args?.Tag?.ToString() != "generate") return ValueTask.CompletedTask;
+                if (!hasKey)
                 {
-                    if (!hasKey)
-                    {
-                        client.Toast("Enter your OpenAI API key first");
-                        return;
-                    }
-                    var widget = widgets.FirstOrDefault(w => w.Name == row.Widget);
-                    if (widget != null) generateRequest.Set(widget);
-                })
-                .Small()
-                .Variant(ButtonVariant.Outline)
-                .Disabled(isGenerating.Value)
-                .Icon(Icons.Sparkles)))
-            .Build();
+                    client.Toast("Enter your OpenAI API key first");
+                    return ValueTask.CompletedTask;
+                }
+                var widget = widgets.FirstOrDefault(w => w.Name == args.Id?.ToString());
+                if (widget != null) generateRequest.Set(widget);
+                return ValueTask.CompletedTask;
+            })
+            .Config(config =>
+            {
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.ShowSearch = true;
+                config.ShowIndexColumn = false;
+            });
 
         return Layout.Vertical()
                | headerCard
                | table;
     }
-
 }
