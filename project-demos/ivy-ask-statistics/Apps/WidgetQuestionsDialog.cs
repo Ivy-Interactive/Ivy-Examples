@@ -5,22 +5,27 @@ internal sealed class WidgetQuestionsDialog(
     IState<bool> isOpen,
     string widgetName,
     IState<bool> editSheetOpen,
-    IState<Guid> editQuestionId,
-    RefreshToken dialogRefresh) : ViewBase
+    IState<Guid> editQuestionId) : ViewBase
 {
     public override object? Build()
     {
-        var factory = UseService<AppDbContextFactory>();
-        var client  = UseService<IClientProvider>();
+        var factory       = UseService<AppDbContextFactory>();
+        var client        = UseService<IClientProvider>();
+        var queryService  = UseService<IQueryService>();
+        var refreshToken  = UseRefreshToken();
 
         var (alertView, showAlert) = UseAlert();
 
         var tableQuery = UseQuery<List<QuestionDetailRow>, string>(
             key: widgetName,
-            fetcher: async (name, ct) => await LoadQuestionsAsync(factory, name, ct),
-            options: new QueryOptions { KeepPrevious = true });
-
-        UseEffect(() => { tableQuery.Mutator.Revalidate(); }, [dialogRefresh.ToTrigger()]);
+            fetcher: async (name, ct) =>
+            {
+                var result = await LoadQuestionsAsync(factory, name, ct);
+                refreshToken.Refresh();
+                return result;
+            },
+            options: new QueryOptions { KeepPrevious = true },
+            tags: [("widget-questions", widgetName)]);
 
         var firstLoad = tableQuery.Loading && tableQuery.Value == null;
         var rows      = tableQuery.Value ?? [];
@@ -40,6 +45,8 @@ internal sealed class WidgetQuestionsDialog(
                 }
                 var updated = rows.Where(r => r.Id != id).ToList();
                 tableQuery.Mutator.Mutate(updated, revalidate: false);
+                refreshToken.Refresh();
+                queryService.RevalidateByTag("widget-summary");
             }
             catch (Exception ex)
             {
@@ -66,6 +73,7 @@ internal sealed class WidgetQuestionsDialog(
                 .ToDataTable(r => r.Id)
                 .Key($"widget-questions-{widgetName}")
                 .Height(Size.Units(120))
+                .RefreshToken(refreshToken)
                 .Header(r => r.Difficulty,   "Difficulty")
                 .Header(r => r.Category,     "Category")
                 .Header(r => r.QuestionText, "Question")

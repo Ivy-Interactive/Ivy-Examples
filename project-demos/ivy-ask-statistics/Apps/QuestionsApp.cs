@@ -22,14 +22,19 @@ public class QuestionsApp : ViewBase
         var viewDialogWidget  = UseState("");
         var editSheetOpen     = UseState(false);
         var editQuestionId    = UseState(Guid.Empty);
-        var dialogRefresh     = UseRefreshToken();
         var refreshToken      = UseRefreshToken();
         var (alertView, showAlert) = UseAlert();
 
         var tableQuery = UseQuery<WidgetTableData, int>(
             key: TableQueryKey,
-            fetcher: async (qk, ct) => await LoadWidgetTableDataAsync(factory, qk, ct),
-            options: new QueryOptions { KeepPrevious = true });
+            fetcher: async (qk, ct) =>
+            {
+                var result = await LoadWidgetTableDataAsync(factory, qk, ct);
+                refreshToken.Refresh();
+                return result;
+            },
+            options: new QueryOptions { KeepPrevious = true },
+            tags: ["widget-summary"]);
 
         UseEffect(() => { refreshToken.Refresh(); },
             [generatingWidget.ToTrigger(), generatingStatus.ToTrigger()]);
@@ -248,11 +253,11 @@ public class QuestionsApp : ViewBase
             });
 
         object? questionsDialog = viewDialogOpen.Value && !string.IsNullOrEmpty(viewDialogWidget.Value)
-            ? new WidgetQuestionsDialog(viewDialogOpen, viewDialogWidget.Value, editSheetOpen, editQuestionId, dialogRefresh)
+            ? new WidgetQuestionsDialog(viewDialogOpen, viewDialogWidget.Value, editSheetOpen, editQuestionId)
             : null;
 
         object? editSheet = editSheetOpen.Value && editQuestionId.Value != Guid.Empty
-            ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value, () => dialogRefresh.Refresh())
+            ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value)
             : null;
 
         return Layout.Vertical().Height(Size.Full())

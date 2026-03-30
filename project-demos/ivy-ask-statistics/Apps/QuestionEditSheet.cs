@@ -1,6 +1,6 @@
 namespace IvyAskStatistics.Apps;
 
-internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId, Action onSaved) : ViewBase
+internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : ViewBase
 {
     private record EditRequest
     {
@@ -15,7 +15,8 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId, Ac
 
     public override object? Build()
     {
-        var factory = UseService<AppDbContextFactory>();
+        var factory      = UseService<AppDbContextFactory>();
+        var queryService = UseService<IQueryService>();
 
         var questionQuery = UseQuery<QuestionEntity?, Guid>(
             key: questionId,
@@ -56,8 +57,9 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId, Ac
             entity.Difficulty   = request.Difficulty;
             entity.Category     = request.Category.Trim();
             await ctx.SaveChangesAsync();
+            queryService.RevalidateByTag(("widget-questions", entity.Widget));
+            queryService.RevalidateByTag("widget-summary");
             isOpen.Set(false);
-            onSaved();
         }
     }
 }
