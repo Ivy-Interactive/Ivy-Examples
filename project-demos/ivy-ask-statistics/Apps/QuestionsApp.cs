@@ -20,6 +20,9 @@ public class QuestionsApp : ViewBase
         var deleteRequest     = UseState<string?>(null); // widget name to delete questions for (UseEffect runs DB work)
         var viewDialogOpen    = UseState(false);
         var viewDialogWidget  = UseState("");
+        var editSheetOpen     = UseState(false);
+        var editQuestionId    = UseState(Guid.Empty);
+        var dialogRefresh     = UseRefreshToken();
         var refreshToken      = UseRefreshToken();
         var (alertView, showAlert) = UseAlert();
 
@@ -245,13 +248,18 @@ public class QuestionsApp : ViewBase
             });
 
         object? questionsDialog = viewDialogOpen.Value && !string.IsNullOrEmpty(viewDialogWidget.Value)
-            ? new WidgetQuestionsDialog(viewDialogOpen, viewDialogWidget.Value)
+            ? new WidgetQuestionsDialog(viewDialogOpen, viewDialogWidget.Value, editSheetOpen, editQuestionId, dialogRefresh)
+            : null;
+
+        object? editSheet = editSheetOpen.Value && editQuestionId.Value != Guid.Empty
+            ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value, () => dialogRefresh.Refresh())
             : null;
 
         return Layout.Vertical().Height(Size.Full())
                | alertView
                | table
-               | questionsDialog;
+               | questionsDialog
+               | editSheet;
     }
 
     private static async Task<WidgetTableData> LoadWidgetTableDataAsync(

@@ -1,4 +1,5 @@
 global using Ivy;
+global using System.ComponentModel.DataAnnotations;
 global using IvyAskStatistics.Models;
 global using IvyAskStatistics.Services;
 global using IvyAskStatistics.Connections;
