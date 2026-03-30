@@ -9,17 +9,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore
-COPY ["CSSGradientTextGenerator.csproj", "./"]
-RUN dotnet restore "CSSGradientTextGenerator.csproj"
+COPY ["RickAndMortyGraphQL.csproj", "./"]
+RUN dotnet restore "RickAndMortyGraphQL.csproj"
 
 # Copy everything and build
 COPY . .
-RUN dotnet build "CSSGradientTextGenerator.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "RickAndMortyGraphQL.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "CSSGradientTextGenerator.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "RickAndMortyGraphQL.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final runtime image
 FROM base AS final
@@ -31,4 +31,4 @@ ENV PORT=80
 ENV ASPNETCORE_URLS="http://+:80"
 
 # Run the executable
-ENTRYPOINT ["dotnet","./CSSGradientTextGenerator.dll"]
+ENTRYPOINT ["dotnet","./RickAndMortyGraphQL.dll"]
