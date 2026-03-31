@@ -47,6 +47,11 @@ public sealed class AppDbContextFactory : IDbContextFactory<AppDbContext>
                     "Source"       VARCHAR(20)  NOT NULL DEFAULT 'manual',
                     "CreatedAt"    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
                 );
+                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunStatus"        VARCHAR(20);
+                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunResponseTimeMs" INTEGER;
+                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunHttpStatus"     INTEGER;
+                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunAnswerText"     TEXT;
+                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunAt"             TIMESTAMPTZ;
                 """);
             _initialized = true;
         }

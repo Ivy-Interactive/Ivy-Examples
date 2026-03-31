@@ -42,7 +42,8 @@ public static class IvyAskService
                 _ => "error"
             };
 
-            return new QuestionRun(question, status, ms, httpStatus);
+            var answerText = status == "success" ? body : "";
+            return new QuestionRun(question, status, ms, httpStatus, answerText);
         }
         catch
         {

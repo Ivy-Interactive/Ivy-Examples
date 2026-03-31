@@ -4,9 +4,10 @@ public record TestQuestion(string Id, string Widget, string Difficulty, string Q
 
 public record QuestionRun(
     TestQuestion Question,
-    string Status,      // "success" | "no_answer" | "error"
+    string Status,          // "success" | "no_answer" | "error"
     int ResponseTimeMs,
-    int HttpStatus
+    int HttpStatus,
+    string AnswerText = ""  // raw response body; empty when no_answer or error
 );
 
 public record QuestionRow(

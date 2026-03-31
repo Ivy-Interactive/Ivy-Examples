@@ -14,12 +14,14 @@ public class RunApp : ViewBase
         var difficultyFilter = UseState("all");
         var runningIndex = UseState(-1);
         var completed = UseState<List<QuestionRun>>([]);
+        var runQueue = UseState<List<TestQuestion>>([]);
         var refreshToken = UseRefreshToken();
 
         UseEffect(() =>
         {
             completed.Set([]);
             runningIndex.Set(-1);
+            runQueue.Set([]);
         }, [difficultyFilter.ToTrigger()]);
 
         UseEffect(async () =>
@@ -27,19 +29,25 @@ public class RunApp : ViewBase
             var idx = runningIndex.Value;
             if (idx < 0) return;
 
-            var questions = await LoadQuestionsAsync(factory, difficultyFilter.Value);
+            var questions = runQueue.Value;
 
             if (idx >= questions.Count)
             {
                 runningIndex.Set(-1);
+                runQueue.Set([]);
                 refreshToken.Refresh();
                 var s = completed.Value.Count(r => r.Status == "success");
                 client.Toast($"Done! {s}/{questions.Count} answered");
                 return;
             }
 
+            // Let the table paint the current row as "in progress" before awaiting the HTTP call.
+            refreshToken.Refresh();
+            await Task.Yield();
+
             var result = await IvyAskService.AskAsync(questions[idx], BaseUrl);
             completed.Set([.. completed.Value, result]);
+            _ = SaveResultAsync(factory, result);
             refreshToken.Refresh();
             runningIndex.Set(idx + 1);
         }, [runningIndex.ToTrigger()]);
@@ -48,8 +56,8 @@ public class RunApp : ViewBase
             key: $"questions-{difficultyFilter.Value}",
             fetcher: async (_, ct) => await LoadQuestionsAsync(factory, difficultyFilter.Value));
 
-        var questions = questionsQuery.Value ?? [];
         var isRunning = runningIndex.Value >= 0;
+        var questions = isRunning && runQueue.Value.Count > 0 ? runQueue.Value : questionsQuery.Value ?? [];
 
         var done = completed.Value.Count;
         var success = completed.Value.Count(r => r.Status == "success");
@@ -91,7 +99,10 @@ public class RunApp : ViewBase
             | new Button(isRunning ? "Running…" : "Run All",
                 onClick: _ =>
                 {
+                    var snapshot = questionsQuery.Value ?? [];
+                    if (snapshot.Count == 0) return;
                     completed.Set([]);
+                    runQueue.Set(snapshot);
                     runningIndex.Set(0);
                 })
                 .Primary()
@@ -146,6 +157,29 @@ public class RunApp : ViewBase
         return entities
             .Select(e => new TestQuestion(e.Id.ToString(), e.Widget, e.Difficulty, e.QuestionText))
             .ToList();
+    }
+
+    private static async Task SaveResultAsync(AppDbContextFactory factory, QuestionRun result)
+    {
+        try
+        {
+            if (!Guid.TryParse(result.Question.Id, out var questionId)) return;
+            await using var ctx = factory.CreateDbContext();
+            var entity = await ctx.Questions.FindAsync(questionId);
+            if (entity == null) return;
+
+            entity.LastRunStatus         = result.Status;
+            entity.LastRunResponseTimeMs = result.ResponseTimeMs;
+            entity.LastRunHttpStatus     = result.HttpStatus;
+            entity.LastRunAnswerText     = result.AnswerText;
+            entity.LastRunAt             = DateTime.UtcNow;
+
+            await ctx.SaveChangesAsync();
+        }
+        catch
+        {
+            // silently ignore — run results are best-effort
+        }
     }
 
     private static string ToStatusLabel(string status) => status switch
