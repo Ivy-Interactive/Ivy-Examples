@@ -75,32 +75,51 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
             return;
         }
 
-        // Poll until either "failed" or "deployed". No fixed short timeout.
-        // Safety: bounded by cancellation token only (worker stop) + bounded channel size upstream.
         var delayMs = 2500;
         const int maxDelayMs = 20000;
-        var iteration = 0;
+        const int maxTotalMinutes = 30;
+        var deadline = DateTime.UtcNow.AddMinutes(maxTotalMinutes);
+        DateTime? deployedAt = null;
+        // After this long stuck on "pending" via events, cross-check listing status.
+        const int listingFallbackMinutes = 5;
+        var pendingSince = DateTime.UtcNow;
 
         while (!ct.IsCancellationRequested)
         {
-            iteration++;
+            if (DateTime.UtcNow >= deadline)
+            {
+                await _commentService.TryPostOrUpdateStagingCommentAsync(
+                    req.Owner, req.Repo, req.PrNumber,
+                    docsUrl: null, samplesUrl: null,
+                    status: "Deploy timed out",
+                    logLines: new[] { $"No terminal state received from Sliplane after {maxTotalMinutes} minutes." },
+                    forceNewComment: true,
+                    cancellationToken: CancellationToken.None);
+                return;
+            }
+
             var (docsEvents, samplesEvents) = await _deployService.GetDeploymentEventsForServicesAsync(
-                apiToken,
-                docsServiceId,
-                samplesServiceId);
+                apiToken, docsServiceId, samplesServiceId);
 
             var combined = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
-                docsServiceId, docsEvents,
-                samplesServiceId, samplesEvents);
+                docsServiceId, docsEvents, samplesServiceId, samplesEvents);
 
-            // Fetch URLs on each iteration so we can show partial links as they appear.
+            _logger.LogDebug("PR #{Pr} deploy status from events: {Status} (docs={DocsEvents}, samples={SamplesEvents} events)",
+                req.PrNumber, combined, docsEvents.Count, samplesEvents.Count);
+
+            // If events API is not returning useful data after a while, fall back to the service
+            // status field from the listing API (Sliplane always populates this, even when events lag).
+            if (combined == "pending" && (DateTime.UtcNow - pendingSince).TotalMinutes >= listingFallbackMinutes)
+            {
+                var dep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, req.PrNumber);
+                var listingStatus = ResolveStatusFromListing(dep, docsServiceId, samplesServiceId);
+                _logger.LogDebug("PR #{Pr} listing fallback status: {Status} (DocsStatus={Docs}, SamplesStatus={Samples})",
+                    req.PrNumber, listingStatus, dep?.DocsStatus, dep?.SamplesStatus);
+                if (listingStatus != "pending")
+                    combined = listingStatus;
+            }
+
             var urls = await _deployService.GetDeploymentUrlsForPrAsync(apiToken, req.PrNumber);
-            var hasAnyUrl = !string.IsNullOrWhiteSpace(urls.DocsUrl) || !string.IsNullOrWhiteSpace(urls.SamplesUrl);
-
-            // Check if any individual service already has an error event
-            // (so we can show error details even while other service is still pending).
-            var hasAnyFailureEvent = docsEvents.Any(SliplaneDeploymentStatusResolver.IsFailEvent)
-                                    || samplesEvents.Any(SliplaneDeploymentStatusResolver.IsFailEvent);
 
             if (combined == "failed")
             {
@@ -117,8 +136,14 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
 
             if (combined == "deployed")
             {
+                // Track when "deployed" was first seen.
+                deployedAt ??= DateTime.UtcNow;
+
                 var bothUrlsReady = !string.IsNullOrWhiteSpace(urls.DocsUrl) && !string.IsNullOrWhiteSpace(urls.SamplesUrl);
-                if (bothUrlsReady || iteration > 25)
+                var urlWaitExpired = (DateTime.UtcNow - deployedAt.Value).TotalSeconds >= 30;
+
+                // Post as soon as both URLs are available, or after 30s if they never appear.
+                if (bothUrlsReady || urlWaitExpired)
                 {
                     await _commentService.TryPostOrUpdateStagingCommentAsync(
                         req.Owner, req.Repo, req.PrNumber,
@@ -129,15 +154,51 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                         cancellationToken: CancellationToken.None);
                     return;
                 }
-                // Deployed but managed domains not ready yet — keep polling silently.
+                // URLs not ready yet — keep polling with short delay.
+                await Task.Delay(2500, ct);
+                continue;
             }
-            // combined == "pending": poll silently, no intermediate comment
 
+            // combined == "pending": poll silently, no intermediate comment
             await Task.Delay(delayMs, ct);
             if (delayMs < maxDelayMs)
                 delayMs = Math.Min(maxDelayMs, (int)(delayMs * 1.25));
         }
         // App shutting down — do nothing, startup scan will resume on next deploy.
+    }
+
+    /// <summary>
+    /// Determines deploy status from the Sliplane listing's status field.
+    /// Used as a fallback when the events API returns no data.
+    /// Sliplane status values include: "live", "deploying", "building", "error", "dead", "starting".
+    /// </summary>
+    private static string ResolveStatusFromListing(StagingDeployment? dep, string? docsServiceId, string? samplesServiceId)
+    {
+        if (dep == null) return "pending";
+
+        var statuses = new List<string?>();
+        if (!string.IsNullOrEmpty(docsServiceId) && dep.DocsServiceId == docsServiceId)
+            statuses.Add(dep.DocsStatus);
+        if (!string.IsNullOrEmpty(samplesServiceId) && dep.SamplesServiceId == samplesServiceId)
+            statuses.Add(dep.SamplesStatus);
+
+        // If we couldn't match the specific service IDs, use whatever status is available.
+        if (statuses.Count == 0)
+            statuses = new List<string?> { dep.DocsStatus, dep.SamplesStatus };
+
+        var relevant = statuses.Where(s => !string.IsNullOrEmpty(s)).ToList();
+        if (relevant.Count == 0) return "pending";
+
+        // Any terminal-failure state → report failed.
+        if (relevant.Any(s => s is "error" or "dead" or "crashed" or "unhealthy"))
+            return "failed";
+
+        // All live → deployed.
+        if (relevant.All(s => s == "live"))
+            return "deployed";
+
+        // Still building / deploying / starting → pending.
+        return "pending";
     }
 
     private static IReadOnlyList<string> BuildRecentLogLines(
