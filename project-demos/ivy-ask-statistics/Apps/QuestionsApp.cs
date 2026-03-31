@@ -47,9 +47,10 @@ public class QuestionsApp : ViewBase
             generatingWidget.Set(widget.Name);
             try
             {
-                var baseUrl = configuration["IvyAsk:BaseUrl"] ?? IvyAskService.DefaultMcpBaseUrl;
+                var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set. Run: dotnet user-secrets set \"OpenAI:ApiKey\" \"<key>\"");
+                var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set. Run: dotnet user-secrets set \"OpenAI:BaseUrl\" \"<url>\"");
                 await QuestionGeneratorService.GenerateAndSaveAsync(
-                    widget, factory, baseUrl,
+                    widget, factory, apiKey, baseUrl,
                     new Progress<string>(msg => generatingStatus.Set(msg)));
 
                 pendingRefreshFor.Set(widget.Name);

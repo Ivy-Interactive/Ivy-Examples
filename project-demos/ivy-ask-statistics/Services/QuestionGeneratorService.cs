@@ -1,83 +1,129 @@
 using IvyAskStatistics.Connections;
 using Microsoft.EntityFrameworkCore;
+using OpenAI;
+using OpenAI.Chat;
+using System.ClientModel;
 
 namespace IvyAskStatistics.Services;
 
 /// <summary>
-/// Generates test questions via the same Ivy Ask HTTP API as the runner
-/// (<c>GET {base}/questions?question=...</c> on <c>mcp.ivy.app</c>).
-/// Uses meta-prompts that ask for a JSON array of question strings; Ivy Ask answers from docs + model.
-/// Does not embed full widget markdown in the URL (GET length limits).
+/// Generates test questions by fetching the full widget Markdown documentation
+/// from mcp.ivy.app and passing it to OpenAI as context.
+/// Uses <c>OpenAI:ApiKey</c> and <c>OpenAI:BaseUrl</c> from configuration / user secrets.
 /// </summary>
 public static class QuestionGeneratorService
 {
     /// <summary>
     /// Generates 10 questions per difficulty (easy / medium / hard) for a widget
-    /// and saves them to the database, replacing any previously MCP-generated ones.
+    /// and saves them to the database, replacing any previously generated ones.
     /// </summary>
     public static async Task GenerateAndSaveAsync(
         IvyWidget widget,
         AppDbContextFactory factory,
-        string askBaseUrl,
+        string openAiApiKey,
+        string openAiBaseUrl,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
+        progress?.Report($"Fetching docs for {widget.Name}…");
+
+        var markdown = await FetchDocsMarkdownAsync(widget, ct);
+
+        var chatClient = BuildChatClient(openAiApiKey, openAiBaseUrl);
+
         foreach (var difficulty in new[] { "easy", "medium", "hard" })
         {
-            progress?.Report($"Ivy Ask: {difficulty} questions for {widget.Name}…");
+            progress?.Report($"OpenAI: generating {difficulty} questions for {widget.Name}…");
 
-            var prompt = BuildMetaPrompt(widget.Name, widget.Category, difficulty);
-            var body = await IvyAskService.FetchAnswerBodyAsync(askBaseUrl, prompt, ct)
-                ?? throw new InvalidOperationException("Ivy Ask returned no body (check network and base URL).");
+            var messages = BuildMessages(widget, difficulty, markdown);
+            var response = await chatClient.CompleteChatAsync(messages, cancellationToken: ct);
+            var body = response.Value.Content[0].Text ?? "";
 
             var questions = IvyAskService.ParseQuestionStringsFromBody(body, 10);
             if (questions.Count == 0)
                 throw new InvalidOperationException(
-                    "Could not parse questions from Ivy Ask response. Try again or inspect logs.");
+                    $"Could not parse {difficulty} questions from OpenAI response. Body: {body[..Math.Min(200, body.Length)]}");
 
             await using var ctx = factory.CreateDbContext();
 
             var existing = await ctx.Questions
-                .Where(q => q.Widget == widget.Name && q.Difficulty == difficulty && q.Source == "ivy_ask_meta")
+                .Where(q => q.Widget == widget.Name && q.Difficulty == difficulty && q.Source == "openai_docs")
                 .ToListAsync(ct);
             ctx.Questions.RemoveRange(existing);
 
             ctx.Questions.AddRange(questions.Select(q => new QuestionEntity
             {
-                Widget = widget.Name,
-                Category = widget.Category,
+                Widget     = widget.Name,
+                Category   = widget.Category,
                 Difficulty = difficulty,
                 QuestionText = q,
-                Source = "ivy_ask_meta",
-                CreatedAt = DateTime.UtcNow
+                Source     = "openai_docs",
+                CreatedAt  = DateTime.UtcNow
             }));
 
             await ctx.SaveChangesAsync(ct);
         }
     }
 
-    private static string BuildMetaPrompt(string widgetName, string category, string difficulty)
+    private static async Task<string> FetchDocsMarkdownAsync(IvyWidget widget, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(widget.DocLink))
+            return $"No documentation link available for widget \"{widget.Name}\".";
+
+        try
+        {
+            return await IvyAskService.GetWidgetDocsAsync(widget.DocLink);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to fetch docs for \"{widget.Name}\" (link: {widget.DocLink}): {ex.Message}", ex);
+        }
+    }
+
+    private static ChatClient BuildChatClient(string apiKey, string baseUrl)
+    {
+        var options = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(baseUrl.TrimEnd('/'))
+        };
+        var client = new OpenAIClient(new ApiKeyCredential(apiKey), options);
+        return client.GetChatClient("gemini-3.1-flash-lite");
+    }
+
+    private static List<OpenAI.Chat.ChatMessage> BuildMessages(IvyWidget widget, string difficulty, string markdown)
     {
         var difficultyHint = difficulty switch
         {
-            "easy" => "basic usage, creating the widget, simple properties",
+            "easy"   => "basic usage, creating the widget, simple properties",
             "medium" => "events, styling, configuration, common patterns",
-            _ => "advanced composition, edge cases, integration with other Ivy widgets"
+            _        => "advanced composition, edge cases, integration with other Ivy widgets"
         };
 
-        return $"""
-            You are generating automated test questions for the Ivy UI framework documentation system.
+        var system = new SystemChatMessage("""
+            You are generating automated test questions for the Ivy UI framework documentation QA system.
+            You will receive the full Markdown documentation for a specific Ivy widget.
+            Base your questions ONLY on what is documented in the provided content.
+            Do not invent APIs, properties, or behaviors not mentioned in the documentation.
+            """);
 
-            Widget name: {widgetName}
-            Widget category (folder): {category}
+        var user = new UserChatMessage($"""
+            Widget name: {widget.Name}
+            Widget category: {widget.Category}
             Difficulty: {difficulty} — {difficultyHint}
 
-            Generate exactly 10 distinct questions that a C# developer might ask about this Ivy widget.
-            Each question must be a single sentence, under 25 words, about the "{widgetName}" widget only.
+            --- DOCUMENTATION ---
+            {markdown}
+            --- END DOCUMENTATION ---
+
+            Generate exactly 10 distinct {difficulty}-level questions that a C# developer might ask about the "{widget.Name}" widget.
+            Each question must be a single sentence, under 25 words, and grounded in the documentation above.
             Do not combine multiple unrelated topics in one question.
 
             Respond with ONLY a JSON array of 10 strings (no markdown fences, no keys, no commentary).
             Example shape: ["question1?", "question2?", ...]
-            """;
+            """);
+
+        return [system, user];
     }
 }
