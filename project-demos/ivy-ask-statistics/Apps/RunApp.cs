@@ -54,7 +54,12 @@ public class RunApp : ViewBase
 
         var questionsQuery = UseQuery<List<TestQuestion>, string>(
             key: $"questions-{difficultyFilter.Value}",
-            fetcher: async (_, ct) => await LoadQuestionsAsync(factory, difficultyFilter.Value));
+            fetcher: async (_, ct) =>
+            {
+                var result = await LoadQuestionsAsync(factory, difficultyFilter.Value);
+                refreshToken.Refresh();
+                return result;
+            });
 
         var isRunning = runningIndex.Value >= 0;
         var questions = isRunning && runQueue.Value.Count > 0 ? runQueue.Value : questionsQuery.Value ?? [];

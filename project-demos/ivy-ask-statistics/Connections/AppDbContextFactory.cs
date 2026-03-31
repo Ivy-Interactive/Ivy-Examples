@@ -17,24 +17,24 @@ public sealed class AppDbContextFactory : IDbContextFactory<AppDbContext>
 
     public AppDbContext CreateDbContext()
     {
-        var cs = _config["DB_CONNECTION_STRING"]
-            ?? throw new InvalidOperationException(
-                "DB_CONNECTION_STRING not set. Run: dotnet user-secrets set \"DB_CONNECTION_STRING\" \"<your connection string>\"");
-
-        return new AppDbContext(
-            new DbContextOptionsBuilder<AppDbContext>()
-                .UseNpgsql(cs)
-                .Options);
+        var ctx = new AppDbContext(BuildOptions());
+        EnsureInitialized(ctx);
+        return ctx;
     }
 
     private void EnsureInitialized()
+    {
+        using var ctx = new AppDbContext(BuildOptions());
+        EnsureInitialized(ctx);
+    }
+
+    private void EnsureInitialized(AppDbContext ctx)
     {
         if (_initialized) return;
         _initLock.Wait();
         try
         {
             if (_initialized) return;
-            using var ctx = CreateDbContext();
             // EnsureCreated() does nothing when the database already exists (e.g. Supabase).
             // Use explicit CREATE TABLE IF NOT EXISTS instead.
             ctx.Database.ExecuteSqlRaw("""
@@ -59,5 +59,16 @@ public sealed class AppDbContextFactory : IDbContextFactory<AppDbContext>
         {
             _initLock.Release();
         }
+    }
+
+    private DbContextOptions<AppDbContext> BuildOptions()
+    {
+        var cs = _config["DB_CONNECTION_STRING"]
+            ?? throw new InvalidOperationException(
+                "DB_CONNECTION_STRING not set. Run: dotnet user-secrets set \"DB_CONNECTION_STRING\" \"<your connection string>\"");
+
+        return new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(cs)
+            .Options;
     }
 }
