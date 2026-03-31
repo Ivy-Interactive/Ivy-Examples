@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace IvyAskStatistics.Apps;
 
 internal sealed record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, int QueryKey);
@@ -13,11 +15,8 @@ public class QuestionsApp : ViewBase
         var configuration = UseService<IConfiguration>();
         var client        = UseService<IClientProvider>();
 
-        var generateRequest   = UseState<IvyWidget?>(null);
-        var generatingWidget  = UseState("");
-        var generatingStatus  = UseState("");
-        var pendingRefreshFor = UseState(""); // widget whose table row is reloading after generation
-        var deleteRequest     = UseState<string?>(null); // widget name to delete questions for (UseEffect runs DB work)
+        var generatingWidgets = UseState(ImmutableHashSet<string>.Empty);
+        var deleteRequest     = UseState<string?>(null);
         var viewDialogOpen    = UseState(false);
         var viewDialogWidget  = UseState("");
         var editSheetOpen     = UseState(false);
@@ -35,45 +34,6 @@ public class QuestionsApp : ViewBase
             },
             options: new QueryOptions { KeepPrevious = true },
             tags: ["widget-summary"]);
-
-        UseEffect(() => { refreshToken.Refresh(); },
-            [generatingWidget.ToTrigger(), generatingStatus.ToTrigger()]);
-
-        UseEffect(async () =>
-        {
-            var widget = generateRequest.Value;
-            if (widget == null) return;
-
-            generatingWidget.Set(widget.Name);
-            try
-            {
-                var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set. Run: dotnet user-secrets set \"OpenAI:ApiKey\" \"<key>\"");
-                var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set. Run: dotnet user-secrets set \"OpenAI:BaseUrl\" \"<url>\"");
-                await QuestionGeneratorService.GenerateAndSaveAsync(
-                    widget, factory, apiKey, baseUrl,
-                    new Progress<string>(msg => generatingStatus.Set(msg)));
-
-                pendingRefreshFor.Set(widget.Name);
-                refreshToken.Refresh();
-
-                var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
-                tableQuery.Mutator.Mutate(fresh, revalidate: false);
-                pendingRefreshFor.Set("");
-                refreshToken.Refresh();
-                client.Toast($"Generated 30 questions for {widget.Name}");
-            }
-            catch (Exception ex)
-            {
-                client.Toast($"Error: {ex.Message}");
-                pendingRefreshFor.Set("");
-            }
-            finally
-            {
-                generatingWidget.Set("");
-                generatingStatus.Set("");
-                generateRequest.Set(null);
-            }
-        }, [generateRequest.ToTrigger()]);
 
         UseEffect(async () =>
         {
@@ -107,15 +67,44 @@ public class QuestionsApp : ViewBase
             }
         }, [deleteRequest.ToTrigger()]);
 
-        // ── Derived state ─────────────────────────────────────────────────────
-        var baseRows     = tableQuery.Value?.Rows    ?? [];
-        var catalog      = tableQuery.Value?.Catalog ?? [];
-        var generating   = generatingWidget.Value;
-        var isGenerating = !string.IsNullOrEmpty(generating);
-        var isDeleting   = !string.IsNullOrEmpty(deleteRequest.Value);
-        // Full-screen loader only before the first successful query payload (KeepPrevious keeps rows during Mutate).
-        var firstLoad    = tableQuery.Loading && tableQuery.Value == null;
-        var pendingRow   = pendingRefreshFor.Value;
+        async Task GenerateWidgetAsync(IvyWidget widget)
+        {
+            try
+            {
+                var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set.");
+                var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set.");
+                await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl);
+
+                var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                refreshToken.Refresh();
+                client.Toast($"Generated 30 questions for {widget.Name}");
+            }
+            catch (Exception ex)
+            {
+                client.Toast($"Error ({widget.Name}): {ex.Message}");
+            }
+            finally
+            {
+                generatingWidgets.Set(s => s.Remove(widget.Name));
+                refreshToken.Refresh();
+            }
+        }
+
+        void MarkGenerating(IEnumerable<string> widgetNames)
+        {
+            var names = widgetNames.Where(n => !string.IsNullOrEmpty(n)).ToHashSet();
+            if (names.Count == 0) return;
+
+            generatingWidgets.Set(s => s.Union(names).ToImmutableHashSet());
+            refreshToken.Refresh();
+        }
+
+        var generating = generatingWidgets.Value;
+        var baseRows   = tableQuery.Value?.Rows ?? [];
+        var catalog    = tableQuery.Value?.Catalog ?? [];
+        var isDeleting = !string.IsNullOrEmpty(deleteRequest.Value);
+        var firstLoad  = tableQuery.Loading && tableQuery.Value == null;
 
         static string IdleStatus(WidgetRow r)
         {
@@ -123,19 +112,11 @@ public class QuestionsApp : ViewBase
             return n == 0 ? "○ Not generated" : "✓ Generated";
         }
 
-        // Status per row: generating / updating DB / idle
         var rows = baseRows.Select(r =>
-        {
-            if (r.Widget == generating)
-            {
-                return r with { Status = $"Generating…" };
-            }
-
-            if (r.Widget == pendingRow)
-                return r with { Status = "Updating…" };
-
-            return r with { Status = IdleStatus(r) };
-        }).ToList();
+            generating.Contains(r.Widget)
+                ? r with { Status = "Generating…" }
+                : r with { Status = IdleStatus(r) }
+        ).ToList();
 
         if (firstLoad)
             return Layout.Center()
@@ -145,7 +126,6 @@ public class QuestionsApp : ViewBase
         var table = rows.AsQueryable()
             .ToDataTable(r => r.Widget)
             .RefreshToken(refreshToken)
-            // Stable key: Mutator.Mutate + RefreshToken update rows; changing Key remounted the grid and made it disappear on delete.
             .Key("questions-widgets")
             .Height(Size.Full())
             .Header(r => r.Widget,      "Widget")
@@ -188,23 +168,24 @@ public class QuestionsApp : ViewBase
                         client.Toast("Please wait — delete in progress");
                         return ValueTask.CompletedTask;
                     }
-                    if (isGenerating)
+
+                    var genName = args.Id?.ToString() ?? "";
+                    if (generating.Contains(genName))
                     {
-                        client.Toast("Already generating — please wait");
+                        client.Toast($"\"{genName}\" is already being generated");
                         return ValueTask.CompletedTask;
                     }
-                    var genName = args.Id?.ToString() ?? "";
+
                     var widget = catalog.FirstOrDefault(w => w.Name == genName)
                         ?? new IvyWidget(genName, rows.FirstOrDefault(r => r.Widget == genName)?.Category ?? "", "");
+
                     showAlert(
-                        $"Generate 30 questions for the \"{widget.Name}\" widget?\n\nIvy Ask will be called three times (easy / medium / hard). Any previously generated questions for this widget will be replaced.",
+                        $"Generate 30 questions for the \"{widget.Name}\" widget?\n\nOpenAI will be called three times (easy / medium / hard). Any previously generated questions for this widget will be replaced.",
                         result =>
                         {
                             if (!result.IsOk()) return;
-                            generatingWidget.Set(widget.Name);
-                            generatingStatus.Set("Starting…");
-                            generateRequest.Set(widget);
-                            refreshToken.Refresh();
+                            MarkGenerating([widget.Name]);
+                            _ = GenerateWidgetAsync(widget);
                         },
                         "Generate questions",
                         AlertButtonSet.OkCancel);
@@ -218,19 +199,22 @@ public class QuestionsApp : ViewBase
                         client.Toast("Delete already in progress — please wait");
                         return ValueTask.CompletedTask;
                     }
-                    if (isGenerating)
+
+                    var delName = args.Id?.ToString() ?? "";
+                    if (generating.Contains(delName))
                     {
-                        client.Toast("Already generating — please wait");
+                        client.Toast($"\"{delName}\" is currently being generated — please wait");
                         return ValueTask.CompletedTask;
                     }
-                    var delName = args.Id?.ToString() ?? "";
-                    var row     = rows.FirstOrDefault(r => r.Widget == delName);
-                    var n       = row == null ? 0 : row.Easy + row.Medium + row.Hard;
+
+                    var row = rows.FirstOrDefault(r => r.Widget == delName);
+                    var n   = row == null ? 0 : row.Easy + row.Medium + row.Hard;
                     if (n == 0)
                     {
                         client.Toast("No questions to delete for this widget.");
                         return ValueTask.CompletedTask;
                     }
+
                     showAlert(
                         $"Delete all {n} question(s) for the \"{delName}\" widget?\n\nThis cannot be undone.",
                         result =>
@@ -302,7 +286,7 @@ public class QuestionsApp : ViewBase
 
         List<IvyWidget> catalog = [];
         try { catalog = await IvyAskService.GetWidgetsAsync(); }
-        catch { /* offline */ }
+        catch { }
 
         var byName = catalog.ToDictionary(w => w.Name);
         foreach (var (widget, info) in countsByWidget)
