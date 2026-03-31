@@ -1,6 +1,6 @@
 namespace IvyAskStatistics.Apps;
 
-[App(icon: Icons.ChartBar, title: "IVY Ask Statistics")]
+[App(icon: Icons.ChartBar, title: "Run Tests")]
 public class RunApp : ViewBase
 {
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
@@ -11,12 +11,11 @@ public class RunApp : ViewBase
         var factory = UseService<AppDbContextFactory>();
         var client = UseService<IClientProvider>();
 
-        // ── State ─────────────────────────────────────────────────────────────
         var difficultyFilter = UseState("all");
         var runningIndex = UseState(-1);
         var completed = UseState<List<QuestionRun>>([]);
+        var refreshToken = UseRefreshToken();
 
-        // ── Hooks (must be at top, before derived values) ─────────────────────
         UseEffect(() =>
         {
             completed.Set([]);
@@ -33,6 +32,7 @@ public class RunApp : ViewBase
             if (idx >= questions.Count)
             {
                 runningIndex.Set(-1);
+                refreshToken.Refresh();
                 var s = completed.Value.Count(r => r.Status == "success");
                 client.Toast($"Done! {s}/{questions.Count} answered");
                 return;
@@ -40,10 +40,10 @@ public class RunApp : ViewBase
 
             var result = await IvyAskService.AskAsync(questions[idx], BaseUrl);
             completed.Set([.. completed.Value, result]);
+            refreshToken.Refresh();
             runningIndex.Set(idx + 1);
         }, [runningIndex.ToTrigger()]);
 
-        // ── Queries ───────────────────────────────────────────────────────────
         var questionsQuery = UseQuery<List<TestQuestion>, string>(
             key: $"questions-{difficultyFilter.Value}",
             fetcher: async (_, ct) => await LoadQuestionsAsync(factory, difficultyFilter.Value));
@@ -51,7 +51,6 @@ public class RunApp : ViewBase
         var questions = questionsQuery.Value ?? [];
         var isRunning = runningIndex.Value >= 0;
 
-        // ── Derived values ────────────────────────────────────────────────────
         var done = completed.Value.Count;
         var success = completed.Value.Count(r => r.Status == "success");
         var noAnswer = completed.Value.Count(r => r.Status == "no_answer");
@@ -59,20 +58,36 @@ public class RunApp : ViewBase
         var avgMs = done > 0 ? (int)completed.Value.Average(r => r.ResponseTimeMs) : 0;
         var progressPct = questions.Count > 0 ? done * 100 / questions.Count : 0;
 
-        // ── Build display rows ────────────────────────────────────────────────
         var rows = questions.Select((q, i) =>
         {
             var r = completed.Value.FirstOrDefault(x => x.Question.Id == q.Id);
-            var status = r?.Status ?? (i == runningIndex.Value ? "running" : "pending");
-            return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, status, r?.ResponseTimeMs);
+            Icons icon;
+            string status, time;
+            if (r != null)
+            {
+                icon = r.Status == "success" ? Icons.CircleCheck : Icons.CircleX;
+                status = ToStatusLabel(r.Status);
+                time = $"{r.ResponseTimeMs}ms";
+            }
+            else if (i == runningIndex.Value)
+            {
+                icon = Icons.Loader;
+                status = "in progress";
+                time = "";
+            }
+            else
+            {
+                icon = Icons.Clock;
+                status = "pending";
+                time = "";
+            }
+            return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, status, time);
         }).ToList();
 
-        // ── Controls bar ──────────────────────────────────────────────────────
-        var controls = new Card(
-            Layout.Horizontal()
+        var controls = Layout.Horizontal().Height(Size.Fit())
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(isRunning)
             | Text.Muted($"{questions.Count} questions")
-            | new Spacer()
+            | (isRunning ? new Progress(progressPct).Goal($"{done}/{questions.Count}") : null)
             | new Button(isRunning ? "Running…" : "Run All",
                 onClick: _ =>
                 {
@@ -81,31 +96,26 @@ public class RunApp : ViewBase
                 })
                 .Primary()
                 .Icon(isRunning ? Icons.Loader : Icons.Play)
-                .Disabled(isRunning || questionsQuery.Loading || questions.Count == 0)
-        );
+                .Disabled(isRunning || questionsQuery.Loading || questions.Count == 0);
 
-        // ── Progress bar ──────────────────────────────────────────────────────
-        object? progressSection = isRunning || done > 0
-            ? new Progress(progressPct).Goal($"{done} / {questions.Count} questions")
-            : null;
-
-        // ── Summary card (only after run completes) ───────────────────────────
-        object? summarySection = done > 0 && !isRunning
-            ? BuildSummary(success, noAnswer, errors, done, avgMs)
-            : null;
-
-        // ── Questions DataTable ───────────────────────────────────────────────
         var table = rows.AsQueryable()
             .ToDataTable()
+            .RefreshToken(refreshToken)
+            .Key("run-tests-table")
+            .Height(Size.Full())
             .Hidden(r => r.Id)
-            .Hidden(r => r.ResponseTimeMs)
             .Header(r => r.Widget, "Widget")
             .Header(r => r.Difficulty, "Difficulty")
             .Header(r => r.Question, "Question")
+            .Header(r => r.ResultIcon, "Icon")
             .Header(r => r.Status, "Status")
+            .Header(r => r.Time, "Time")
+            .Width(r => r.ResultIcon, Size.Px(50))
             .Width(r => r.Widget, Size.Px(120))
-            .Width(r => r.Difficulty, Size.Px(100))
-            .Width(r => r.Status, Size.Px(120))
+            .Width(r => r.Difficulty, Size.Px(80))
+            .Width(r => r.Status, Size.Px(100))
+            .Width(r => r.Time, Size.Px(80))
+            .Width(r => r.Question, Size.Px(400))
             .Config(config =>
             {
                 config.AllowSorting = true;
@@ -114,10 +124,8 @@ public class RunApp : ViewBase
                 config.ShowIndexColumn = true;
             });
 
-        return Layout.Vertical()
+        return Layout.Vertical().Height(Size.Full())
                | controls
-               | progressSection
-               | summarySection
                | table;
     }
 
@@ -140,16 +148,11 @@ public class RunApp : ViewBase
             .ToList();
     }
 
-    private static object BuildSummary(int success, int noAnswer, int errors, int total, int avgMs)
+    private static string ToStatusLabel(string status) => status switch
     {
-        var rate = total > 0 ? success * 100 / total : 0;
-
-        return new Card(
-            Layout.Horizontal()
-            | new Details([new Detail("Success Rate", $"{rate}%  ({success}/{total})", false)])
-            | new Details([new Detail("No Answer", noAnswer.ToString(), false)])
-            | new Details([new Detail("Errors", errors.ToString(), false)])
-            | new Details([new Detail("Avg Time", $"{avgMs} ms", false)])
-        );
-    }
+        "success" => "answered",
+        "no_answer" => "no answer",
+        "error" => "error",
+        _ => status.Replace('_', ' ')
+    };
 }

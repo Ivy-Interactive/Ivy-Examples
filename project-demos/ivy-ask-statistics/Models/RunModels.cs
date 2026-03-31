@@ -9,12 +9,12 @@ public record QuestionRun(
     int HttpStatus
 );
 
-// Flat row for the TableBuilder in RunApp
 public record QuestionRow(
     string Id,
     string Widget,
     string Difficulty,
     string Question,
+    Icons ResultIcon,
     string Status,
-    int? ResponseTimeMs
+    string Time
 );
