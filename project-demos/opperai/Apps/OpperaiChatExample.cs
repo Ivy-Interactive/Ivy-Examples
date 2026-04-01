@@ -275,12 +275,12 @@ namespace OpperaiExample.Apps
             // Header: Title (left) | Model Selection and buttons (right)
             var header = Layout.Vertical()
                 | (Layout.Horizontal()
-                | (Layout.Vertical().Align(Align.Left)
+                | (Layout.Vertical().AlignContent(Align.Left)
                     | Text.H4("OpperAI Chat")).Width(Size.Fraction(0.4f))
-                | (Layout.Horizontal().Align(Align.Right)
+                | (Layout.Horizontal().AlignContent(Align.Right)
                     | selectedModel.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search and select model...")
                         .Disabled(!hasApiKey))
-                | (Layout.Vertical().Align(Align.Right)
+                | (Layout.Vertical().AlignContent(Align.Right)
                     | new Button(
                         "API key/Settings",
                         onClick: _ => isSettingsDialogOpen.Set(true)
@@ -312,7 +312,7 @@ namespace OpperaiExample.Apps
             //     | ;
 
             return Layout.Horizontal()
-                    | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
+                    | (Layout.Vertical().Gap(2).AlignContent(Align.TopCenter)
                         | header.Width(Size.Fraction(0.6f)).Height(Size.Fit().Max(Size.Fraction(0.1f)))
                         | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Full().Max(Size.Fraction(0.9f)))
                         )
