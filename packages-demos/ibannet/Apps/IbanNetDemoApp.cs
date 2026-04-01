@@ -73,7 +73,7 @@
                         | Callout.Info("IBAN (International Bank Account Number) is a standardized format for bank account identification.", "About IBAN"))
             ).Width(Size.Fraction(0.55f)).Height(Size.Fit().Min(Size.Full()));
 
-            return Layout.Horizontal().Gap(10).Align(Align.TopCenter)
+            return Layout.Horizontal().Gap(10).AlignContent(Align.TopCenter)
                 | leftCard
                 | rightCard;
 
