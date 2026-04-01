@@ -128,7 +128,7 @@ public class CreateNewDocumentApp : ViewBase
                 {
                     cardContent.Add(new StackLayout([
                         Text.Muted("Generating...")
-                    ], Ivy.Orientation.Horizontal, align: Align.Center, gap: 2));
+                    ], Ivy.Orientation.Horizontal, alignContent: Align.Center, gap: 2));
                 }
                 
                 // Error message
