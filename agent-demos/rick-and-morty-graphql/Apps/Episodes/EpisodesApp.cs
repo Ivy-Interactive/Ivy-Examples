@@ -64,7 +64,7 @@ public class EpisodesApp : ViewBase
     {
         var characterCount = ep.Characters?.Count ?? 0;
 
-        var header = Layout.Horizontal().Align(Align.Left)
+        var header = Layout.Horizontal().AlignContent(Align.Left)
             | new Badge(ep.Episode1 ?? "?").Color(Colors.Primary)
             | Text.P(ep.Name ?? "Unknown").Bold()
             | Text.Muted(ep.AirDate ?? "")
@@ -87,7 +87,7 @@ public class EpisodesApp : ViewBase
 
     private static object BuildPagination(IState<int> page, EpisodeInfo info)
     {
-        return Layout.Horizontal().Align(Align.Center)
+        return Layout.Horizontal().AlignContent(Align.Center)
             | new Button("Previous", () => page.Set(page.Value - 1))
                 .Disabled(page.Value <= 1)
             | Text.P($"Page {page.Value} of {info.Pages}")

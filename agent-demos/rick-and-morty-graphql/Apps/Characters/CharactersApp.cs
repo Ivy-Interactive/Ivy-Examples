@@ -86,7 +86,7 @@ public class CharactersApp : ViewBase
             }
 
             
-            var pagination = Layout.Horizontal().Align(Align.Center).Gap(2)
+            var pagination = Layout.Horizontal().AlignContent(Align.Center).Gap(2)
                 | new Button("Previous", () => page.Set(Math.Max(1, page.Value - 1)))
                     .Outline()
                     .Disabled(page.Value <= 1)

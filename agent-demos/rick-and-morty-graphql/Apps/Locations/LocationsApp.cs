@@ -64,7 +64,7 @@ public class LocationsApp : ViewBase
                     | typeFilter.ToTextInput().Placeholder("Filter by type...")
                     | dimensionFilter.ToTextInput().Placeholder("Filter by dimension..."))
                 | BuildContent()
-                | (Layout.Horizontal().Align(Align.Center)
+                | (Layout.Horizontal().AlignContent(Align.Center)
                     | new Button("Previous").OnClick(() => page.Set(Math.Max(1, page.Value - 1))).Disabled(page.Value <= 1)
                     | Text.P($"Page {page.Value} of {totalPages}")
                     | new Button("Next").OnClick(() => page.Set(page.Value + 1)).Disabled(page.Value >= totalPages))
