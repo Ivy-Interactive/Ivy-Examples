@@ -15,12 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.27" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.27">
+    <PackageReference Include="Ivy" Version="1.2.34" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.34">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.11.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.11.1" />
   </ItemGroup>
 
 </Project>

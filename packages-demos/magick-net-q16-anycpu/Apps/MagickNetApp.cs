@@ -317,7 +317,7 @@ public class MagickNetApp : ViewBase
                        | Text.H3("Image Preview")
                        | Text.Muted(resultState.Value)
                        | new Spacer().Height(Size.Units(10))
-                       | (Layout.Horizontal().Align(Align.Center)
+                       | (Layout.Center()
                        | new Image(processedImageDataUri.Value))
                        
                      );
