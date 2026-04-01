@@ -825,8 +825,7 @@ public class EditServiceSheet : ViewBase
                     new TableCell(e.Key),
                     new TableCell(displayValue),
                     new TableCell(
-                        Layout.Horizontal()
-                            .Align(Align.Right)
+                        Layout.Horizontal().AlignContent(Align.Right)
                             | new Button().Icon(Icons.Pencil)
                                 .Variant(ButtonVariant.Outline)
                                 .OnClick(_ =>
@@ -889,7 +888,7 @@ public class EditServiceSheet : ViewBase
             | Text.H4("Optional")
             | cmd.ToTextInput().Placeholder("Start command (e.g. npm start)").WithField().Label("Start command (e.g. npm start)")
             | healthcheck.ToTextInput().Placeholder("Health check path (e.g. /health)").WithField().Label("Health check path (e.g. /health)")
-            | (Layout.Horizontal().Align(Align.Left)
+            | (Layout.Horizontal().AlignContent(Align.Left)
                 | Text.H4("Environment variables")
                 | new Button("Add variable").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => showAddEnvDialog.Set(true))
                 )
@@ -1035,7 +1034,7 @@ public class EditServiceSheet : ViewBase
                     new TableCell(v.Name),
                     new TableCell(v.MountPath),
                     new TableCell(
-                        Layout.Horizontal().Align(Align.Right)
+                        Layout.Horizontal().AlignContent(Align.Right)
                         | new Button().Icon(Icons.Trash2)
                             .Destructive()
                             .OnClick(_ =>
@@ -1052,7 +1051,7 @@ public class EditServiceSheet : ViewBase
             : new Table(new[] { headerRow }.Concat(dataRows).ToArray()).Width(Size.Full());
 
         return Layout.Vertical()
-            | (Layout.Horizontal().Align(Align.Left)
+            | (Layout.Horizontal().AlignContent(Align.Left)
                 | Text.H4("Volumes")
                 | new Button("Add volume").Icon(Icons.Plus).Variant(ButtonVariant.Outline).OnClick(_ => onAdd())
               )
