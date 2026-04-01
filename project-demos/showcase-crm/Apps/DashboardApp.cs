@@ -23,7 +23,7 @@ public class DashboardApp : ViewBase
             dataReady.Set(true);
         }, EffectTrigger.OnMount());
 
-        var header = Layout.Horizontal().Align(Align.Right)
+        var header = Layout.Horizontal().AlignContent(Align.Right)
                     | range.ToDateRangeInput();
 
         var fromDate = range.Value.fromDate;
@@ -65,7 +65,7 @@ public class DashboardApp : ViewBase
                 | new Skeleton().Height(Size.Units(80)).Width(Size.Full())
                 | new Skeleton().Height(Size.Units(80)).Width(Size.Full());
 
-        return Layout.Horizontal().Align(Align.Center) |
+        return Layout.Horizontal().AlignContent(Align.Center) |
                new HeaderLayout(header, Layout.Vertical()
                             | metrics
                             | charts
