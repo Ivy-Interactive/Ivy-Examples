@@ -1,9 +1,13 @@
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
+
 namespace IvyAskStatistics.Apps;
 
 [App(icon: Icons.ChartBar, title: "Run Tests")]
 public class RunApp : ViewBase
 {
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
+    private static readonly string[] ConcurrencyOptions = ["1", "3", "5", "10", "20"];
     private const string BaseUrl = "https://mcp.ivy.app";
 
     public override object? Build()
@@ -13,9 +17,11 @@ public class RunApp : ViewBase
 
         var ivyVersion = UseState("");
         var difficultyFilter = UseState("all");
-        var runningIndex = UseState(-1);
-        var completed = UseState<List<QuestionRun>>([]);
-        var runQueue = UseState<List<TestQuestion>>([]);
+        var concurrency = UseState("20");
+        var isRunning = UseState(false);
+        var completed = UseState<ImmutableList<QuestionRun>>(ImmutableList<QuestionRun>.Empty);
+        var activeIds = UseState(ImmutableHashSet<string>.Empty);
+        var allQuestions = UseState<List<TestQuestion>>([]);
         var persistToDb = UseState(false);
         var activeRunId = UseState(Guid.Empty);
         var refreshToken = UseRefreshToken();
@@ -23,43 +29,11 @@ public class RunApp : ViewBase
 
         UseEffect(() =>
         {
-            completed.Set([]);
-            runningIndex.Set(-1);
-            runQueue.Set([]);
+            completed.Set(ImmutableList<QuestionRun>.Empty);
+            activeIds.Set(ImmutableHashSet<string>.Empty);
+            allQuestions.Set([]);
             runFinished.Set(false);
         }, [difficultyFilter.ToTrigger()]);
-
-        UseEffect(async () =>
-        {
-            var idx = runningIndex.Value;
-            if (idx < 0) return;
-
-            var questions = runQueue.Value;
-
-            if (idx >= questions.Count)
-            {
-                if (persistToDb.Value && activeRunId.Value != Guid.Empty)
-                    await FinalizeRunAsync(factory, activeRunId.Value, completed.Value);
-
-                runningIndex.Set(-1);
-                runQueue.Set([]);
-                runFinished.Set(true);
-                refreshToken.Refresh();
-                return;
-            }
-
-            refreshToken.Refresh();
-            await Task.Yield();
-
-            var result = await IvyAskService.AskAsync(questions[idx], BaseUrl);
-            completed.Set([.. completed.Value, result]);
-
-            if (persistToDb.Value && activeRunId.Value != Guid.Empty)
-                _ = SaveResultAsync(factory, activeRunId.Value, result);
-
-            refreshToken.Refresh();
-            runningIndex.Set(idx + 1);
-        }, [runningIndex.ToTrigger()]);
 
         var questionsQuery = UseQuery<List<TestQuestion>, string>(
             key: $"questions-{difficultyFilter.Value}",
@@ -70,94 +44,145 @@ public class RunApp : ViewBase
                 return result;
             });
 
-        var isRunning = runningIndex.Value >= 0;
-        var questions = isRunning && runQueue.Value.Count > 0 ? runQueue.Value : questionsQuery.Value ?? [];
+        var running = isRunning.Value;
+        var firstLoad = questionsQuery.Loading && questionsQuery.Value == null && !running;
+        var questions = running && allQuestions.Value.Count > 0 ? allQuestions.Value : questionsQuery.Value ?? [];
+        var completedList = completed.Value;
+        var active = activeIds.Value;
 
-        var done = completed.Value.Count;
-        var success = completed.Value.Count(r => r.Status == "success");
-        var noAnswer = completed.Value.Count(r => r.Status == "no_answer");
-        var errors = completed.Value.Count(r => r.Status == "error");
-        var avgMs = done > 0 ? (int)completed.Value.Average(r => r.ResponseTimeMs) : 0;
+        var done = completedList.Count;
+        var success = completedList.Count(r => r.Status == "success");
+        var noAnswer = completedList.Count(r => r.Status == "no_answer");
+        var errors = completedList.Count(r => r.Status == "error");
+        var avgMs = done > 0 ? (int)completedList.Average(r => r.ResponseTimeMs) : 0;
         var progressPct = questions.Count > 0 ? done * 100 / questions.Count : 0;
 
-        var rows = questions.Select((q, i) =>
+        var completedById = completedList.ToDictionary(r => r.Question.Id);
+        var rows = questions.Select(q =>
         {
-            var r = completed.Value.FirstOrDefault(x => x.Question.Id == q.Id);
-            Icons icon;
-            string status, time;
-            if (r != null)
+            if (completedById.TryGetValue(q.Id, out var r))
             {
-                icon = r.Status == "success" ? Icons.CircleCheck : Icons.CircleX;
-                status = ToStatusLabel(r.Status);
-                time = $"{r.ResponseTimeMs}ms";
+                var icon = r.Status == "success" ? Icons.CircleCheck : Icons.CircleX;
+                return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, ToStatusLabel(r.Status), $"{r.ResponseTimeMs}ms");
             }
-            else if (i == runningIndex.Value)
+
+            if (active.Contains(q.Id))
+                return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Loader, "running", "");
+
+            return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Clock, "pending", "");
+        }).ToList();
+
+        async Task StartRunAsync()
+        {
+            var snapshot = questionsQuery.Value ?? [];
+            if (snapshot.Count == 0) return;
+
+            var version = ivyVersion.Value.Trim();
+            if (string.IsNullOrEmpty(version))
             {
-                icon = Icons.Loader;
-                status = "running";
-                time = "";
+                client.Toast("Please enter an Ivy version before running.");
+                return;
+            }
+
+            var shouldPersist = !await RunExistsAsync(factory, version);
+            persistToDb.Set(shouldPersist);
+
+            Guid runId = Guid.Empty;
+            if (shouldPersist)
+            {
+                runId = await CreateRunAsync(factory, version, snapshot.Count);
+                activeRunId.Set(runId);
             }
             else
             {
-                icon = Icons.Clock;
-                status = "pending";
-                time = "";
+                activeRunId.Set(Guid.Empty);
             }
-            return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, status, time);
-        }).ToList();
+
+            completed.Set(ImmutableList<QuestionRun>.Empty);
+            activeIds.Set(ImmutableHashSet<string>.Empty);
+            allQuestions.Set(snapshot);
+            runFinished.Set(false);
+            isRunning.Set(true);
+            refreshToken.Refresh();
+
+            var maxParallel = int.TryParse(concurrency.Value, out var c) ? c : 5;
+
+            _ = Task.Run(async () =>
+            {
+                var bag = new ConcurrentBag<QuestionRun>();
+                var inFlight = new ConcurrentDictionary<string, bool>();
+                using var sem = new SemaphoreSlim(maxParallel);
+
+                using var ticker = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+                var tickerCts = new CancellationTokenSource();
+                var uiTask = Task.Run(async () =>
+                {
+                    while (!tickerCts.IsCancellationRequested)
+                    {
+                        try { await ticker.WaitForNextTickAsync(tickerCts.Token); } catch { break; }
+                        completed.Set(_ => bag.ToImmutableList());
+                        activeIds.Set(_ => inFlight.Keys.ToImmutableHashSet());
+                        refreshToken.Refresh();
+                    }
+                });
+
+                var tasks = snapshot.Select(async q =>
+                {
+                    await sem.WaitAsync();
+                    inFlight[q.Id] = true;
+
+                    try
+                    {
+                        var result = await IvyAskService.AskAsync(q, BaseUrl);
+                        bag.Add(result);
+
+                        if (shouldPersist && runId != Guid.Empty)
+                            _ = SaveResultAsync(factory, runId, result);
+                    }
+                    finally
+                    {
+                        inFlight.TryRemove(q.Id, out _);
+                        sem.Release();
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+                tickerCts.Cancel();
+                await uiTask;
+
+                completed.Set(_ => bag.ToImmutableList());
+                activeIds.Set(ImmutableHashSet<string>.Empty);
+
+                var finalResults = bag.ToList();
+                if (shouldPersist && runId != Guid.Empty)
+                    await FinalizeRunAsync(factory, runId, finalResults);
+
+                isRunning.Set(false);
+                runFinished.Set(true);
+                refreshToken.Refresh();
+            });
+        }
+
+        if (firstLoad)
+            return Layout.Center()
+                   | new Icon(Icons.Loader)
+                   | Text.Muted("Loading questions…");
 
         var controls = Layout.Horizontal().Height(Size.Fit()).Gap(2)
-            | ivyVersion.ToTextInput().Placeholder("e.g. v2.4.0").Disabled(isRunning)
-            | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(isRunning)
-            | new Badge($"{questions.Count} questions")
-            | new Button("Run All",
-                onClick: async _ =>
-                {
-                    var snapshot = questionsQuery.Value ?? [];
-                    if (snapshot.Count == 0) return;
-
-                    var version = ivyVersion.Value.Trim();
-                    if (string.IsNullOrEmpty(version))
-                    {
-                        client.Toast("Please enter an Ivy version before running.");
-                        return;
-                    }
-
-                    var shouldPersist = !await RunExistsAsync(factory, version);
-                    persistToDb.Set(shouldPersist);
-
-                    if (shouldPersist)
-                    {
-                        var runId = await CreateRunAsync(factory, version, snapshot.Count);
-                        activeRunId.Set(runId);
-                    }
-                    else
-                    {
-                        activeRunId.Set(Guid.Empty);
-                    }
-
-                    completed.Set([]);
-                    runFinished.Set(false);
-                    runQueue.Set(snapshot);
-                    runningIndex.Set(0);
-                })
+            | ivyVersion.ToTextInput().Placeholder("e.g. v2.4.0").Disabled(running)
+            | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(running)
+            | new Button("Run All", onClick: async _ => await StartRunAsync())
                 .Primary()
                 .Icon(Icons.Play)
-                .Disabled(isRunning || questionsQuery.Loading || questions.Count == 0);
+                .Disabled(running || questionsQuery.Loading || questions.Count == 0);
 
         object statusBar;
-        if (isRunning)
+        if (running)
         {
-            var currentQ = runningIndex.Value < questions.Count
-                ? questions[runningIndex.Value]
-                : null;
-            var label = currentQ != null
-                ? $"Running {done + 1}/{questions.Count}: {currentQ.Widget} — {currentQ.Question}"
-                : $"Finishing…";
-
+            var inFlight = active.Count;
             statusBar = new Callout(
                 Layout.Vertical().Gap(2)
-                    | Text.Block(label)
+                    | Text.Block($"Running {done}/{questions.Count} completed, {inFlight} in flight (x{concurrency.Value} parallel)")
                     | new Progress(progressPct).Goal($"{done}/{questions.Count}"),
                 variant: CalloutVariant.Info);
         }
@@ -179,7 +204,7 @@ public class RunApp : ViewBase
         object kpiCards;
         if (done > 0)
         {
-            var rate = done > 0 ? Math.Round(success * 100.0 / done, 1) : 0;
+            var rate = Math.Round(success * 100.0 / done, 1);
             kpiCards = Layout.Grid().Columns(4).Gap(3).Height(Size.Fit())
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
@@ -199,7 +224,7 @@ public class RunApp : ViewBase
                 | new Card(
                     Layout.Vertical().Gap(2).Padding(3)
                         | Text.H3($"{avgMs} ms")
-                        | Text.Block($"fastest {(done > 0 ? completed.Value.Min(r => r.ResponseTimeMs) : 0)} ms · slowest {(done > 0 ? completed.Value.Max(r => r.ResponseTimeMs) : 0)} ms").Muted()
+                        | Text.Block($"fastest {completedList.Min(r => r.ResponseTimeMs)} ms · slowest {completedList.Max(r => r.ResponseTimeMs)} ms").Muted()
                 ).Title("Avg Response").Icon(Icons.Timer);
         }
         else
@@ -216,11 +241,13 @@ public class RunApp : ViewBase
             .Header(r => r.Widget, "Widget")
             .Header(r => r.Difficulty, "Difficulty")
             .Header(r => r.Question, "Question")
-            .Header(r => r.ResultIcon, "")
+            .Header(r => r.ResultIcon, "Icon")
             .Header(r => r.Status, "Status")
             .Header(r => r.Time, "Time")
-            .Width(r => r.ResultIcon, Size.Px(40))
+            .Width(r => r.ResultIcon, Size.Px(50))
+            .Align(r => r.ResultIcon, Align.Center)
             .Width(r => r.Widget, Size.Px(140))
+            .Width(r => r.Question, Size.Px(400))
             .Width(r => r.Difficulty, Size.Px(80))
             .Width(r => r.Status, Size.Px(90))
             .Width(r => r.Time, Size.Px(80))
