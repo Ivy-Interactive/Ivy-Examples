@@ -74,7 +74,7 @@ public class HandlebarsNetApp : ViewBase
         // Run once initially to populate the output
         Render();
 
-        return Layout.Horizontal().Gap(10).Padding(3).Align(Align.TopCenter)
+        return Layout.Horizontal().Gap(10).Padding(3).AlignContent(Align.TopCenter)
             | new Card(
                 Layout.Vertical()
                     | Layout.Tabs(
