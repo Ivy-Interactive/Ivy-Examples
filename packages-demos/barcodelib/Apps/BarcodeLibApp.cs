@@ -44,7 +44,7 @@ namespace BarcodeLibExample.Apps
                 .Icon(Icons.ChevronDown)
                 .WithDropDown(typeItems);
 
-            var controls = Layout.Horizontal().Gap(2).Align(Align.Center)
+            var controls = Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                 | typeDropDown
                 | new Button(includeLabel.Value ? "Label: ON" : "Label: OFF")
                     .Primary()
@@ -85,10 +85,10 @@ namespace BarcodeLibExample.Apps
                 | Layout.Horizontal(
                  (previewUri.Value is string uri && !string.IsNullOrEmpty(uri)
                     ? new Image(uri) // Use intrinsic size to avoid scaling blur
-                    : Text.Muted("No preview"))).Align(Align.Center)
+                    : Text.Muted("No preview"))).AlignContent(Align.Center)
             ).Width(Size.Fraction(0.45f)).Height(Size.Units(110));
 
-            return Layout.Horizontal().Gap(6).Align(Align.Center)
+            return Layout.Horizontal().Gap(6).AlignContent(Align.Center)
                 | leftCard
                 | rightCard;
         }
