@@ -23,7 +23,7 @@ public class CharactersView : ViewBase
             : people.Where(p => p.Name.Contains(search.Value, StringComparison.OrdinalIgnoreCase)).ToList();
 
         var content = Layout.Vertical()
-            | (Layout.Horizontal().Align(Align.Left)
+            | (Layout.Horizontal().Left()
                 | Text.H2("Characters")
                 | new Badge($"{people.Count} total").Secondary())
             | search.ToTextInput().Placeholder("Search characters...")

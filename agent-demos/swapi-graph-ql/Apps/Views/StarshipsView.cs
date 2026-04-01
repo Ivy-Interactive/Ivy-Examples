@@ -23,7 +23,7 @@ public class StarshipsView : ViewBase
             : ships.Where(s => s.Name.Contains(search.Value, StringComparison.OrdinalIgnoreCase)).ToList();
 
         var content = Layout.Vertical()
-            | (Layout.Horizontal().Align(Align.Left)
+            | (Layout.Horizontal().Left()
                 | Text.H2("Starships")
                 | new Badge($"{ships.Count} total").Secondary())
             | search.ToTextInput().Placeholder("Search starships...")
