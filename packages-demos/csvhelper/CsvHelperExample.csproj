@@ -15,8 +15,8 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="Ivy" Version="1.2.27" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.27">
+    <PackageReference Include="Ivy" Version="1.2.34" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.34">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
