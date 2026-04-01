@@ -25,7 +25,7 @@ public class MainMenuBlade : ViewBase
         var content = Layout.Vertical()
                 | new Card(
                     Layout.Horizontal().Gap(3)
-                    | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
+                    | (Layout.Vertical().Gap(2).AlignContent(Align.Center).Width(Size.Fit())
                     | new Icon(Icons.MessageSquare).Size(Size.Units(16)))
                     | (Layout.Vertical().Gap(2)
                         | Text.H3("Simple Chat").Bold()
@@ -37,7 +37,7 @@ public class MainMenuBlade : ViewBase
                 )
                 | new Card(
                     Layout.Horizontal().Gap(3)
-                    | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
+                    | (Layout.Vertical().Gap(2).AlignContent(Align.Center).Width(Size.Fit())
                         | new Icon(Icons.Bot).Size(Size.Units(16)))
                     | (Layout.Vertical().Gap(2)
                         | Text.H3("Agent with Tools").Bold()

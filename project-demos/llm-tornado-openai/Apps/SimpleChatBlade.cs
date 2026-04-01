@@ -40,7 +40,7 @@ public class SimpleChatBlade : ViewBase
         }, EffectTrigger.OnMount());
 
         var header = Layout.Horizontal().Gap(2)
-                | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
+                | (Layout.Vertical().Gap(2).AlignContent(Align.Center).Width(Size.Fit())
                     | new Icon(Icons.MessageSquare).Size(Size.Units(8)))
                 | Text.H4($"Simple Chat - {_modelName}");
 
