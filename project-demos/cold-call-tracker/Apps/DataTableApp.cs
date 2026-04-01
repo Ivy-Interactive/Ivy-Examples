@@ -761,15 +761,6 @@ public class DataTableApp : ViewBase
             .DataTypeHint(e => e.Url, ColType.Link)
             .DataTypeHint(e => e.LinkedInUrl, ColType.Link)
 
-            // Alignments
-            .Align(e => e.Title, Align.Left)
-            .Align(e => e.Url, Align.Left)
-            .Align(e => e.ContactEmail, Align.Left)
-            .Align(e => e.PhoneNumber, Align.Left)
-            .Align(e => e.LinkedInUrl, Align.Left)
-            .Align(e => e.ServicesSummary, Align.Left)
-            .Align(e => e.Score, Align.Right)
-
             // Configuration
             .Config(config =>
             {
@@ -787,13 +778,13 @@ public class DataTableApp : ViewBase
             });
 
         // Return data table with a floating action button to view API response
-        return new Fragment([
+        return new Fragment(
             dataTable,
             new FloatingPanel(
                 new Button("View API Response", _ => showExampleData.Set(_ => true))
                     .Variant(ButtonVariant.Outline),
-                align: Align.BottomRight
+                Align.BottomRight
             )
-        ]);
+        );
     }
 }
