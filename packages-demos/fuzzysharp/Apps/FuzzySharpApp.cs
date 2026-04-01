@@ -86,7 +86,7 @@ public class FuzzySharpApp : ViewBase
                     | Text.Muted("• 'smoothie' → finds 'Tropical Pineapple Smoothie'"))
         ).Width(Size.Fraction(0.45f)).Height(Size.Units(110));
 
-        return Layout.Horizontal().Gap(6).Align(Align.Center)
+        return Layout.Horizontal().Gap(6).AlignContent(Align.Center)
             | leftCard
             | rightCard;
     }
