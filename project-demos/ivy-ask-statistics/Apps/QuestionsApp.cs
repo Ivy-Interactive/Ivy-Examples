@@ -38,6 +38,13 @@ public class QuestionsApp : ViewBase
             options: new QueryOptions { KeepPrevious = true, RefreshInterval = TimeSpan.FromSeconds(10), RevalidateOnMount = true },
             tags: ["widget-summary"]);
 
+        UseEffect(() =>
+        {
+            if (tableQuery.Value == null) return;
+            if (!GenerateAllBridge.Consume()) return;
+            OnGenerateAll();
+        }, EffectTrigger.OnBuild());
+
         UseEffect(async () =>
         {
             var widgetName = deleteRequest.Value;
@@ -169,13 +176,6 @@ public class QuestionsApp : ViewBase
                 "Generate All Questions",
                 AlertButtonSet.OkCancel);
         }
-
-        UseEffect(() =>
-        {
-            if (tableQuery.Value == null) return;
-            if (!GenerateAllBridge.Consume()) return;
-            OnGenerateAll();
-        }, EffectTrigger.OnBuild());
 
         var generating = generatingWidgets.Value;
         var baseRows   = tableQuery.Value?.Rows ?? [];

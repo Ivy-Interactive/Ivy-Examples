@@ -19,12 +19,14 @@ public class RunApp : ViewBase
         var persistToDb = UseState(false);
         var activeRunId = UseState(Guid.Empty);
         var refreshToken = UseRefreshToken();
+        var runFinished = UseState(false);
 
         UseEffect(() =>
         {
             completed.Set([]);
             runningIndex.Set(-1);
             runQueue.Set([]);
+            runFinished.Set(false);
         }, [difficultyFilter.ToTrigger()]);
 
         UseEffect(async () =>
@@ -41,10 +43,8 @@ public class RunApp : ViewBase
 
                 runningIndex.Set(-1);
                 runQueue.Set([]);
+                runFinished.Set(true);
                 refreshToken.Refresh();
-                var s = completed.Value.Count(r => r.Status == "success");
-                var suffix = persistToDb.Value ? " (saved to DB)" : " (local only)";
-                client.Toast($"Done! {s}/{questions.Count} answered{suffix}");
                 return;
             }
 
@@ -94,7 +94,7 @@ public class RunApp : ViewBase
             else if (i == runningIndex.Value)
             {
                 icon = Icons.Loader;
-                status = "in progress";
+                status = "running";
                 time = "";
             }
             else
@@ -106,17 +106,11 @@ public class RunApp : ViewBase
             return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, status, time);
         }).ToList();
 
-        var versionInput = ivyVersion.ToTextInput()
-            .Placeholder("e.g. v2.4.0")
-            .Disabled(isRunning);
-
         var controls = Layout.Horizontal().Height(Size.Fit()).Gap(2)
-            | Text.Block("Ivy Version:").Muted()
-            | versionInput
+            | ivyVersion.ToTextInput().Placeholder("e.g. v2.4.0").Disabled(isRunning)
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(isRunning)
-            | Text.Muted($"{questions.Count} questions")
-            | (isRunning ? new Progress(progressPct).Goal($"{done}/{questions.Count}") : null)
-            | new Button(isRunning ? "Running…" : "Run All",
+            | new Badge($"{questions.Count} questions")
+            | new Button("Run All",
                 onClick: async _ =>
                 {
                     var snapshot = questionsQuery.Value ?? [];
@@ -140,25 +134,78 @@ public class RunApp : ViewBase
                     else
                     {
                         activeRunId.Set(Guid.Empty);
-                        client.Toast($"Run for \"{version}\" already exists — results will be shown locally only.");
                     }
 
                     completed.Set([]);
+                    runFinished.Set(false);
                     runQueue.Set(snapshot);
                     runningIndex.Set(0);
                 })
                 .Primary()
-                .Icon(isRunning ? Icons.Loader : Icons.Play)
+                .Icon(Icons.Play)
                 .Disabled(isRunning || questionsQuery.Loading || questions.Count == 0);
 
-        var statsRow = done > 0
-            ? Layout.Horizontal().Height(Size.Fit()).Gap(3)
-                | Text.Muted($"Answered: {success}")
-                | Text.Muted($"No answer: {noAnswer}")
-                | Text.Muted($"Errors: {errors}")
-                | Text.Muted($"Avg: {avgMs}ms")
-                | (persistToDb.Value ? Text.Block("Saving to DB").Muted() : Text.Block("Local only").Muted())
-            : null;
+        object statusBar;
+        if (isRunning)
+        {
+            var currentQ = runningIndex.Value < questions.Count
+                ? questions[runningIndex.Value]
+                : null;
+            var label = currentQ != null
+                ? $"Running {done + 1}/{questions.Count}: {currentQ.Widget} — {currentQ.Question}"
+                : $"Finishing…";
+
+            statusBar = new Callout(
+                Layout.Vertical().Gap(2)
+                    | Text.Block(label)
+                    | new Progress(progressPct).Goal($"{done}/{questions.Count}"),
+                variant: CalloutVariant.Info);
+        }
+        else if (runFinished.Value && done > 0)
+        {
+            var suffix = persistToDb.Value ? "Results saved to database." : "Local only — this version was already tested.";
+            var hasErrors = errors > 0;
+            statusBar = new Callout(
+                Text.Block(hasErrors
+                    ? $"Completed: {success}/{done} answered, {noAnswer} no answer, {errors} error(s). {suffix}"
+                    : $"Done! {success}/{done} answered, {noAnswer} no answer. {suffix}"),
+                variant: hasErrors ? CalloutVariant.Warning : CalloutVariant.Success);
+        }
+        else
+        {
+            statusBar = Text.Muted("");
+        }
+
+        object kpiCards;
+        if (done > 0)
+        {
+            var rate = done > 0 ? Math.Round(success * 100.0 / done, 1) : 0;
+            kpiCards = Layout.Grid().Columns(4).Gap(3).Height(Size.Fit())
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3($"{rate}%")
+                        | Text.Block($"{success} of {done} answered").Muted()
+                ).Title("Answer Rate").Icon(Icons.CircleCheck)
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3($"{noAnswer}")
+                        | Text.Block("no answer").Muted()
+                ).Title("No Answer").Icon(Icons.Ban)
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3($"{errors}")
+                        | Text.Block("failed").Muted()
+                ).Title("Errors").Icon(Icons.CircleX)
+                | new Card(
+                    Layout.Vertical().Gap(2).Padding(3)
+                        | Text.H3($"{avgMs} ms")
+                        | Text.Block($"fastest {(done > 0 ? completed.Value.Min(r => r.ResponseTimeMs) : 0)} ms · slowest {(done > 0 ? completed.Value.Max(r => r.ResponseTimeMs) : 0)} ms").Muted()
+                ).Title("Avg Response").Icon(Icons.Timer);
+        }
+        else
+        {
+            kpiCards = Text.Muted("");
+        }
 
         var table = rows.AsQueryable()
             .ToDataTable()
@@ -169,15 +216,14 @@ public class RunApp : ViewBase
             .Header(r => r.Widget, "Widget")
             .Header(r => r.Difficulty, "Difficulty")
             .Header(r => r.Question, "Question")
-            .Header(r => r.ResultIcon, "Icon")
+            .Header(r => r.ResultIcon, "")
             .Header(r => r.Status, "Status")
             .Header(r => r.Time, "Time")
-            .Width(r => r.ResultIcon, Size.Px(50))
-            .Width(r => r.Widget, Size.Px(120))
+            .Width(r => r.ResultIcon, Size.Px(40))
+            .Width(r => r.Widget, Size.Px(140))
             .Width(r => r.Difficulty, Size.Px(80))
-            .Width(r => r.Status, Size.Px(100))
+            .Width(r => r.Status, Size.Px(90))
             .Width(r => r.Time, Size.Px(80))
-            .Width(r => r.Question, Size.Px(400))
             .Config(config =>
             {
                 config.AllowSorting = true;
@@ -186,9 +232,10 @@ public class RunApp : ViewBase
                 config.ShowIndexColumn = true;
             });
 
-        return Layout.Vertical().Height(Size.Full())
+        return Layout.Vertical().Gap(3).Height(Size.Full())
                | controls
-               | statsRow
+               | statusBar
+               | kpiCards
                | table;
     }
 
