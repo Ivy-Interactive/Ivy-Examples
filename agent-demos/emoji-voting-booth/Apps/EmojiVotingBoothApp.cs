@@ -24,7 +24,7 @@ public class EmojiVotingBoothApp : ViewBase
             var isLeader = emoji == leader;
             var capturedEmoji = emoji;
 
-            var card = Layout.Vertical().Align(Align.Center).Gap(2);
+            var card = Layout.Vertical().Center().Gap(2);
             card |= Text.H1(emoji);
             card |= Text.P($"{count} votes").Bold();
             card |= new Button("Vote", () =>
