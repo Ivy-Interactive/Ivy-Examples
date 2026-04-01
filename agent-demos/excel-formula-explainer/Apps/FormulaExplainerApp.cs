@@ -47,7 +47,7 @@ public class FormulaExplainerApp : ViewBase
 
     private static object BuildHeader()
     {
-        return Layout.Vertical().Gap(2).Align(Align.Center)
+        return Layout.Vertical().Gap(2).AlignContent(Align.Center)
             | new Icon(Icons.FileSpreadsheet).Large()
             | Text.H1("Excel Formula Explainer")
             | Text.Muted("Paste any Excel formula to get a plain-English explanation");
