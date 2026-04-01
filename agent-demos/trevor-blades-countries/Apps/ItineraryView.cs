@@ -23,7 +23,7 @@ public class ItineraryView : ViewBase
             .Select(c => new Option<string>($"{c.Emoji} {c.Name}", c.Code))
             .ToArray();
 
-        var addSection = Layout.Horizontal().Align(Align.Left)
+        var addSection = Layout.Horizontal().Left()
             | selectedCountry.ToSelectInput(availableCountries, placeholder: "Select a country to add...")
                 .Searchable()
             | new Button("Add to Itinerary", () =>

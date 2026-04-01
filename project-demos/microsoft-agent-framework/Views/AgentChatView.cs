@@ -200,7 +200,7 @@ public class AgentChatView : ViewBase
         }
 
         // Edit button for header
-        var editButton = Layout.Horizontal().Gap(2).Align(Align.Center)
+        var editButton = Layout.Horizontal().Gap(2).AlignContent(Align.Center)
             | Text.Label(_agent.Name).Bold()
             | new Button("Edit", icon: Icons.Pencil, onClick: _ =>
             {

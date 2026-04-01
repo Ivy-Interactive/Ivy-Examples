@@ -98,16 +98,16 @@ public class PullRequestsSlide : ViewBase
 
         var insight = BuildInsight(_targetMergeRate, _targetMerged, _targetCreated);
 
-        return Layout.Vertical().Gap(4).Align(Align.Center)
+        return Layout.Vertical().Gap(4).AlignContent(Align.Center)
                | Text.H2($"{animatedCreated.Value} Pull Requests").Bold().Italic()
                | Text.Block("ideas turned into pull requests").Muted()
                | Layout.Vertical().Height(Size.Units(10))
                | (Layout.Grid().Gap(3).Columns(2).Width(Size.Fraction(0.8f))
-                   | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
+                   | new Card(Layout.Vertical().Gap(2).AlignContent(Align.Center)
                        | Text.H2(animatedMerged.Value.ToString()).Bold().Italic()
                        | Text.Block("Pull Requests successfully merged").Muted())
                        .Title("Merged").Icon(Icons.GitPullRequestArrow)
-                   | new Card(Layout.Vertical().Gap(2).Align(Align.Center)
+                   | new Card(Layout.Vertical().Gap(2).AlignContent(Align.Center)
                        | Text.H2($"{animatedRate.Value}%").Bold().Italic()
                        | Text.Block("Merge success rate").Muted())
                        .Title("Success Rate").Icon(Icons.TrendingUp))
@@ -146,8 +146,8 @@ public class PullRequestsSlide : ViewBase
             subInsight = "Keep collaborating and improving codebases.";
         }
 
-        return Layout.Vertical().Gap(2).Align(Align.Center)
-            | (Layout.Horizontal().Align(Align.Center)
+        return Layout.Vertical().Gap(2).AlignContent(Align.Center)
+            | (Layout.Horizontal().AlignContent(Align.Center)
                 | Icons.GitPullRequestCreate.ToIcon()
                 | Text.Block(mainInsight).Bold())
             | Text.Block(subInsight).Muted();

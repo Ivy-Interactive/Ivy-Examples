@@ -88,7 +88,7 @@ public class EPPlusApp : ViewBase
                 .Builder(p => p.Title, f => f.Text())
                 .Builder(p => p.Author, f => f.Text())
                 .Builder(p => p.Year, f => f.Default())
-            | (Layout.Horizontal().Gap(2).Align(Align.Center)
+            | (Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                 | downloadBtn
                 | deleteBtn
                 | generateBtn)

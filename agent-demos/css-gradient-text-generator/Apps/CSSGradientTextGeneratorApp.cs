@@ -141,7 +141,7 @@ public class ColorStopView : ViewBase
             })
             : null;
 
-        return Layout.Horizontal().Align(Align.Left)
+        return Layout.Horizontal().AlignContent(Align.Left)
             | colorState.ToColorInput().WithField().Label($"Color {_index + 1}")
             | removeBtn;
     }

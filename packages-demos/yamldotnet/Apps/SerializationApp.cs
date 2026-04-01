@@ -27,7 +27,7 @@ Addresses = new Dictionary<string, Address> {
         var errorMessage = this.UseState<string>();
         var resultOutput = this.UseState<string>();
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
             | (Layout.Vertical().Width(Size.Fraction(0.7f))
             | Text.H2("Serialize a Person Object to YAML")
             | Text.Muted("Edit the C# Person object below to see how YamlDotNet serializes it into YAML.")

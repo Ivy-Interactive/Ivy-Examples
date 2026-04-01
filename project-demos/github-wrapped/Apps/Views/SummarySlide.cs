@@ -58,9 +58,9 @@ public class SummarySlide : ViewBase
             .OrderByDescending(kvp => kvp.Value)
             .FirstOrDefault();
 
-        return Layout.Vertical().Gap(4).Align(Align.Center)
+        return Layout.Vertical().Gap(4).AlignContent(Align.Center)
                 | Text.H1("My2025").Bold().WithConfetti(AnimationTrigger.Auto)
-                | (Layout.Horizontal().Gap(4).Align(Align.Stretch).Width(Size.Fraction(0.8f)).Height(Size.Full())
+                | (Layout.Horizontal().Gap(4).AlignContent(Align.Stretch).Width(Size.Fraction(0.8f)).Height(Size.Full())
                     | BuildStatsCard(animatedCommits.Value, animatedPRs.Value, animatedDays.Value)
                     | (Layout.Vertical().Gap(3).Height(Size.Full())
                         | BuildStatusCard(userStatus)
@@ -506,9 +506,9 @@ public class SummarySlide : ViewBase
     private object BuildStatusCard((string Title, string MainText, string SubText, string Narrative) userStatus)
     {
         return new Card(Layout.Horizontal().Gap(3).Height(Size.Full())
-            | (Layout.Vertical().Gap(3).Align(Align.Center).Width(Size.Fit()).Padding(3)
+            | (Layout.Vertical().Gap(3).AlignContent(Align.Center).Width(Size.Fit()).Padding(3)
                 | (Layout.Vertical().Height(Size.Units(40)).Width(Size.Units(40)) | Icons.Trophy.ToIcon()))
-            | (Layout.Vertical().Gap(3).Align(Align.Center)
+            | (Layout.Vertical().Gap(3).AlignContent(Align.Center)
                 | Text.Block("Your Developer Status — 2025").Muted()
                 | Text.H1(userStatus.Title.ToUpper()).Bold()
                 | Text.Block(userStatus.MainText)
@@ -519,13 +519,13 @@ public class SummarySlide : ViewBase
     private object BuildStatsCard(int animatedCommits, int animatedPRs, int animatedDays)
     {
         return new Card(Layout.Vertical()
-            | (Layout.Vertical().Align(Align.Center)
+            | (Layout.Vertical().AlignContent(Align.Center)
                 | Text.H2($"{animatedDays.ToString()} days").Bold()
                 | Text.Block("You showed up again and again").Muted())
-            | (Layout.Vertical().Gap(2).Align(Align.Center)
+            | (Layout.Vertical().Gap(2).AlignContent(Align.Center)
                 | Text.H2($"{animatedCommits.ToString()} commits").Bold()
                 | Text.Block("Progress in small steps").Muted())
-            | (Layout.Vertical().Gap(2).Align(Align.Center)
+            | (Layout.Vertical().Gap(2).AlignContent(Align.Center)
                 | Text.H2($"{animatedPRs.ToString()} PRs").Bold()
                 | Text.Block("You didn't just code — you shipped").Muted())).Width(Size.Fraction(0.5f));
     }
@@ -550,7 +550,7 @@ public class SummarySlide : ViewBase
                 ? "More than half of your code was written in this language. You know what you're doing!"
                 : "This language helped you realize most of your ideas this year. Keep it up!";
 
-        return new Card(Layout.Vertical().Gap(4).Align(Align.Center).Height(Size.Full())
+        return new Card(Layout.Vertical().Gap(4).AlignContent(Align.Center).Height(Size.Full())
             | Text.H1($"{languageName.ToUpper()} - {mainText} ").Bold()
             | Text.Block(subText).Muted()
             | Text.Block(motivationalText).Muted())

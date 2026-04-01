@@ -47,7 +47,7 @@ namespace BogusExample.Apps
                   fruits.Value.Length > 0
                       ? Layout.Vertical().Gap(2)
                         | fruits.Value.Select(f =>
-                              Layout.Horizontal().Width(Size.Full()).Gap(2).Align(Align.Center)
+                              Layout.Horizontal().Width(Size.Full()).Gap(2).AlignContent(Align.Center)
                               | Text.Literal(f).Width(Size.Grow())
                               | new Button(null, _ => fruits.Set(fruits.Value.Remove(f)))
                                   .Icon(Icons.Trash)
@@ -101,7 +101,7 @@ namespace BogusExample.Apps
                   .Header(p => p.Item, "Fruit")
                   .Header(p => p.Quantity, "Qty")
                   .Header(p => p.LotNumber, "Lot #")
-                  .Align(p => p.OrderId, Align.Left)
+                  .AlignContent(p => p.OrderId, Align.Left)
                   .Empty(
                       Layout.Vertical().Gap(3)
                       | Text.Muted("No orders yet.")

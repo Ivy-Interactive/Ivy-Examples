@@ -62,7 +62,7 @@ public class JwtDemoApp : ViewBase
             validationResult.Set("");
         });
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
                | (new Card(
                    Layout.Vertical().Gap(6).Padding(2)
                    | Text.H2("JWT Demo Application")

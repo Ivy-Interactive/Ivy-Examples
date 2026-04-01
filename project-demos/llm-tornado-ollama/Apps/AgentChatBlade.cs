@@ -161,10 +161,10 @@ public class AgentChatBlade : ViewBase
                 width: Size.Units(125));
 
         var header = Layout.Horizontal().Gap(2)
-                    | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
+                    | (Layout.Vertical().Gap(2).AlignContent(Align.Center).Width(Size.Fit())
                         | new Icon(Icons.Bot).Size(Size.Units(8)))
                     | Text.H4($"Agent Chat - {_modelName}")
-                    | (Layout.Vertical().Gap(2).Align(Align.Center).Width(Size.Fit())
+                    | (Layout.Vertical().Gap(2).AlignContent(Align.Center).Width(Size.Fit())
                         | new Button("Settings", icon: Icons.Settings, onClick: _ =>
                         {
                             instructionsForm.Set(new InstructionsModel(instructions.Value));

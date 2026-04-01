@@ -77,7 +77,7 @@ public class DashboardApp : ViewBase
 
         if (isLoading.Value || brandData.Value.Count == 0)
         {
-            return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
+            return Layout.Vertical().Gap(4).Padding(4).AlignContent(Align.TopCenter)
                 | Text.H1("Snowflake Dashboard")
                 | Text.Muted($"Analyzing Top {LIMIT} Brands")
                 | Text.Muted("Loading data...")
@@ -200,7 +200,7 @@ public class DashboardApp : ViewBase
             .Large()
             .WithSheet(() => new CodeView(), "SnowflakeDashboard/Apps/DashboardApp.cs", width: Size.Fraction(1 / 2f))
             ;
-        return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
+        return Layout.Vertical().Gap(4).Padding(4).AlignContent(Align.TopCenter)
             | Text.H1("Snowflake Dashboard")
             | Text.Label($"Analyzing Top {LIMIT} Brands").Bold().Muted()
             | new FloatingPanel(showCodeButton, Align.BottomRight).Offset(new Thickness(0, 0, 15, 2))

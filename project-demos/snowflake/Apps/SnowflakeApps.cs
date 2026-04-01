@@ -703,19 +703,19 @@ public class SnowflakeApp : ViewBase
         {
             new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(databasesDisplayValue.ToString("N0"))
             ).Title(currentHasDatabase ? $"Databases: {currentSelectedDb}" : "Databases").Icon(Icons.Database)
                 .Key($"databases-{totalDatabases.Value}-{currentSelectedDb ?? "none"}"),
             new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(schemasDisplayValue.ToString("N0"))
             ).Title(currentHasDatabase ? $"Schemas in {currentSelectedDb}" : "Schemas").Icon(Icons.Layers)
                 .Key($"schemas-{totalSchemas.Value}-{totalSchemasAll.Value}-{currentSelectedDb ?? "all"}"),
             new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(tablesDisplayValue.ToString("N0"))
             ).Title(currentHasDatabase ? $"Tables in {currentSelectedDb}" : "Tables").Icon(Icons.Table)
                 .Key($"tables-{totalTables.Value}-{totalTablesAll.Value}-{currentSelectedDb ?? "all"}")
@@ -726,7 +726,7 @@ public class SnowflakeApp : ViewBase
             metricsList.Add(
                 new Card(
                     Layout.Vertical().Gap(2).Padding(3)
-                        | Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                             | Text.H3(tablesInSchemaDisplayValue.ToString("N0"))
                 ).Title($"Tables in {currentSelectedSchema}").Icon(Icons.Table)
                     .Key($"tables-in-schema-{totalTablesInSchema.Value}-{currentSelectedSchema}")
@@ -741,7 +741,7 @@ public class SnowflakeApp : ViewBase
         }
         else
         {
-            var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
+            var layout = Layout.Horizontal().Gap(4).AlignContent(Align.TopCenter);
             foreach (var metric in metricsList)
             {
                 layout = layout | metric;
@@ -823,7 +823,7 @@ public class SnowflakeApp : ViewBase
         ).Width(Size.Fraction(0.7f));
 
         return Layout.Vertical().Gap(2)
-            | (Layout.Vertical().Gap(2).Align(Align.TopCenter)
+            | (Layout.Vertical().Gap(2).AlignContent(Align.TopCenter)
             | Text.H1("Snowflake Database Explorer")
             | Text.Muted("Explore your Snowflake databases, schemas, and tables"))
             | statsCards
@@ -836,7 +836,7 @@ public class SnowflakeApp : ViewBase
             | (Layout.Horizontal().Gap(4)
                 | leftSection
                 | rightSection)
-            | (Layout.Vertical().Gap(4).Align(Align.TopCenter)
+            | (Layout.Vertical().Gap(4).AlignContent(Align.TopCenter)
             | Text.Block("This demo uses Snowflake to explore databases, schemas, and tables.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Snowflake](https://www.snowflake.com/)"))
             ;
@@ -878,9 +878,9 @@ public class SnowflakeApp : ViewBase
         var snowflakeService = CreateSnowflakeService(configuration, account, user, password);
         if (snowflakeService == null) return Text.Muted("Error creating service");
 
-        var controlsHeader = Layout.Vertical().Align(Align.TopCenter)
+        var controlsHeader = Layout.Vertical().AlignContent(Align.TopCenter)
             | (Layout.Vertical().Gap(3).Padding(3).Width(Size.Fraction(0.8f))
-                | (Layout.Horizontal().Align(Align.TopCenter)
+                | (Layout.Horizontal().AlignContent(Align.TopCenter)
                         | sortBy.ToSelectInput(new[] { "ItemCount", "AvgPrice", "MinPrice", "MaxPrice", "TotalSize", "AvgSize", "Brand" }.ToOptions())
                             .WithField()
                             .Label("Sort by:")
@@ -917,7 +917,7 @@ public class SnowflakeApp : ViewBase
         {
             return new HeaderLayout(
                 header: controlsHeader,
-                content: Layout.Vertical().Gap(3).Padding(4).Align(Align.TopCenter)
+                content: Layout.Vertical().Gap(3).Padding(4).AlignContent(Align.TopCenter)
                     | pageHeader.Width(Size.Fraction(0.8f))
                     | (Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(0.8f))
                         | new Skeleton().Height(Size.Units(60))
@@ -974,22 +974,22 @@ public class SnowflakeApp : ViewBase
         var overallMetrics = Layout.Grid().Columns(4).Gap(3)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(totalItems.ToString("N0"))
             ).Title("Total Items").Icon(Icons.Database)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(minPrice.ToString("C2"))
             ).Title("Min Price").Icon(Icons.ArrowDown)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(maxPrice.ToString("C2"))
             ).Title("Max Price").Icon(Icons.ArrowUp)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Layout.Horizontal().Gap(2).Align(Align.Center)
+                    | Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                         | Text.H3(totalValue.ToString("C0"))
             ).Title("Total Inventory Value").Icon(Icons.DollarSign)
             | new MetricView("Avg Price", Icons.CreditCard,
@@ -1075,7 +1075,7 @@ public class SnowflakeApp : ViewBase
                 | maxPriceChart
         ).Title("Max Price by Brand");
 
-        var content = Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter)
+        var content = Layout.Vertical().Gap(4).Padding(4).AlignContent(Align.TopCenter)
             | pageHeader.Width(Size.Fraction(0.8f))
             | overallMetrics.Width(Size.Fraction(0.8f))
             | barChartCard.Width(Size.Fraction(0.8f))
@@ -1102,7 +1102,7 @@ public class SnowflakeApp : ViewBase
 
     private object BuildStatsSkeletons()
     {
-        var layout = Layout.Horizontal().Gap(4).Align(Align.TopCenter);
+        var layout = Layout.Horizontal().Gap(4).AlignContent(Align.TopCenter);
         foreach (var _ in Enumerable.Range(0, 3))
         {
             layout = layout | new Skeleton().Height(Size.Units(50));

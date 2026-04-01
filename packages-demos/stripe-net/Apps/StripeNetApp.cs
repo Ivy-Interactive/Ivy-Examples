@@ -74,7 +74,7 @@
                 checkoutUrl.Value = string.Empty;
             }
 
-            return Layout.Vertical().Align(Align.TopCenter)
+            return Layout.Vertical().AlignContent(Align.TopCenter)
                 | (Layout.Vertical().Width(Size.Fraction(0.4f))
                 | Text.H2("Stripe.Net")
                 | Text.Muted("This demo uses the Stripe Checkout library for payments; enter the details below, create a session, and complete it.")

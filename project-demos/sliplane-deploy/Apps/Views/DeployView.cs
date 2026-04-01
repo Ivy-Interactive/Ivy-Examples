@@ -137,13 +137,13 @@ public class DeployView : ViewBase
             }
         }
 
-        var headerSection = Layout.Vertical().Align(Align.Center).Gap(4)
+        var headerSection = Layout.Vertical().AlignContent(Align.Center).Gap(4)
             | Icons.Rocket.ToIcon()
             | Text.H1("Deploy to Sliplane")
             | Text.Lead("Configure and deploy your Ivy app in seconds.");
 
         var actionsRow = Layout.Vertical()
-            | (Layout.Horizontal().Align(Align.Center)
+            | (Layout.Horizontal().AlignContent(Align.Center)
                 | new Button("Deploy").Icon(Icons.Rocket).Primary().Large()
                     .Loading(loading || isDeploying.Value).Disabled(loading || isDeploying.Value)
                     .Width(Size.Fraction(0.5f))

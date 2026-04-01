@@ -88,7 +88,7 @@ public class ContactDetailsBlade(int contactId) : ViewBase
             }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.FullName, e => e.CopyToClipboard()),
-            footer: Layout.Horizontal().Gap(2).Align(Align.Right)
+            footer: Layout.Horizontal().Gap(2).AlignContent(Align.Right)
                     | deleteBtn
                     | editBtn
         ).Title("Contact Details").Width(Size.Units(100));

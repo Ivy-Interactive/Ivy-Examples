@@ -86,8 +86,8 @@ public class CommitsSlide : ViewBase
             ? months.Skip(peakMonthIndex + 1).Count(m => _stats.CommitsByMonth.GetValueOrDefault(m, 0) > 0)
             : 0;
 
-        return Layout.Vertical().Gap(6).Align(Align.Center)
-               | (Layout.Vertical().Gap(4).Align(Align.Center)
+        return Layout.Vertical().Gap(6).AlignContent(Align.Center)
+               | (Layout.Vertical().Gap(4).AlignContent(Align.Center)
                   | Text.H2($"{animatedCommits.Value} Commits").Bold().Italic()
                   | Text.Block("shipped in 2025").Muted()
                   | Text.Block($"That's ~{animatedCommitsPerWeek.Value} commits per active week.").Muted())
@@ -165,8 +165,8 @@ public class CommitsSlide : ViewBase
             subInsight = "Keep building momentum — you're on the right track.";
         }
 
-        return Layout.Vertical().Gap(2).Align(Align.Center)
-            | (Layout.Horizontal().Align(Align.Center)
+        return Layout.Vertical().Gap(2).AlignContent(Align.Center)
+            | (Layout.Horizontal().AlignContent(Align.Center)
                 | Icons.Activity.ToIcon()
                 | Text.Block(mainInsight).Bold())
             | Text.Block(subInsight).Muted();

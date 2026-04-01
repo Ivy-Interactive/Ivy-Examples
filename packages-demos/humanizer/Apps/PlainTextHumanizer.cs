@@ -12,7 +12,7 @@ public class PlainTextHumanizerApp : ViewBase
         var selectedTransformation = this.UseState("");
         PlainTextOptions options = new(inputText, humanizedTexts, truncateValue, selectedTransformation);
 
-        return Layout.Horizontal().Gap(15).Width(Size.Full()).Align(Align.TopCenter)
+        return Layout.Horizontal().Gap(15).Width(Size.Full()).AlignContent(Align.TopCenter)
             // Left Card - Input Section
             | new Card(
                 Layout.Vertical().Gap(4)

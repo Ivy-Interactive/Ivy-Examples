@@ -53,7 +53,7 @@ public class TestAuthApp : ViewBase
         if (loading.Value)
         {
             return Layout.Center()
-                   | new Card(Layout.Vertical().Align(Align.Center)
+                   | new Card(Layout.Vertical().AlignContent(Align.Center)
                        | Icons.Github.ToIcon()
                        | Text.H3("GitHub Authentication Test"))
                      .Width(Size.Fraction(0.4f));
@@ -71,7 +71,7 @@ public class TestAuthApp : ViewBase
         return new Fragment()
                | (Layout.Center()
                    | new Card(Layout.Vertical().Gap(4)
-                       | (Layout.Vertical().Gap(2).Align(Align.Center)
+                       | (Layout.Vertical().Gap(2).AlignContent(Align.Center)
                           | new Avatar(userInfo.Value.FullName ?? userInfo.Value.Id, userInfo.Value.AvatarUrl)
                               .Height(Size.Units(60)).Width(Size.Units(60))
                           | Text.H3($"Welcome, {userInfo.Value.FullName ?? userInfo.Value.Id}!"))
@@ -120,7 +120,7 @@ public class TestAuthApp : ViewBase
             }.ToDetails()
                 .RemoveEmpty();
             
-            var content = Layout.Vertical().Align(Align.Center)
+            var content = Layout.Vertical().AlignContent(Align.Center)
                 | Text.Block(repo.Name).Italic().Bold()
                 | details;
             

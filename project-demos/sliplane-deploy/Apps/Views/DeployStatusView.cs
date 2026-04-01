@@ -85,10 +85,10 @@ public class DeployStatusView : ViewBase
         object? linkSection = null;
         if (status == DeployStatus.Success && !string.IsNullOrEmpty(siteUrlAbsolute))
         {
-            linkSection = (Layout.Horizontal().Align(Align.Left)| Text.Block("URL:").Bold() | new Button(siteUrl).Link().Url(siteUrlAbsolute).Width(Size.Fit()));
+            linkSection = (Layout.Horizontal().AlignContent(Align.Left)| Text.Block("URL:").Bold() | new Button(siteUrl).Link().Url(siteUrlAbsolute).Width(Size.Fit()));
         }
 
-        var content = Layout.Vertical().Gap(1).Align(Align.Left)
+        var content = Layout.Vertical().Gap(1).AlignContent(Align.Left)
             | header;
         if (progressBar != null)
             content = content | progressBar;

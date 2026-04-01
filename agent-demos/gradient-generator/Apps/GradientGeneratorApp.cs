@@ -92,7 +92,7 @@ public class GradientGeneratorApp : ViewBase
             | (Layout.Vertical().Padding(6)
                 | Text.H1("Gradient Generator").NoWrap()
                 | Text.Lead("Build beautiful CSS gradients visually")
-                | (Layout.Horizontal().Gap(6).Align(Align.TopLeft)
+                | (Layout.Horizontal().Gap(6).AlignContent(Align.TopLeft)
                     | (Layout.Vertical().Width(Size.Units(80)) | controlsPanel)
                     | (Layout.Vertical().Width(Size.Full()) | previewPanel)));
     }
@@ -139,7 +139,7 @@ public class ColorStopRow : ViewBase
             _onUpdate(new ColorStop(color.Value, position.Value));
         }, color, position);
 
-        return Layout.Horizontal().Align(Align.BottomLeft).Gap(2)
+        return Layout.Horizontal().AlignContent(Align.BottomLeft).Gap(2)
             | color.ToColorInput().Variant(ColorInputVariant.TextAndPicker)
                 .WithField().Label($"Color {_index + 1}")
             | position.ToNumberInput(min: 0, max: 100)

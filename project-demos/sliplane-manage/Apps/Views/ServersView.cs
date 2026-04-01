@@ -108,10 +108,10 @@ public class ServersView : ViewBase
         var cards = list
             .Select(s =>
             {
-                var header = Layout.Horizontal().Align(Align.Center)
-                    | (Layout.Vertical().Align(Align.Left)
+                var header = Layout.Horizontal().AlignContent(Align.Center)
+                    | (Layout.Vertical().AlignContent(Align.Left)
                         | Text.H3(s.Name))
-                    | (Layout.Vertical().Align(Align.Right).Width(Size.Fit())
+                    | (Layout.Vertical().AlignContent(Align.Right).Width(Size.Fit())
                         | Icons.Server.ToIcon());
 
                 // Sliplane returns short location codes (e.g. "fsn", "sin").

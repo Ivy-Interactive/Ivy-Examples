@@ -83,7 +83,7 @@ public class ProfileApp : ViewBase
                 Layout.Vertical().Padding(2)
                 | Text.H2("Your QR Code")
                 | Text.Block("Scan this QR code with your phone to automatically add this contact to your contacts:")
-                | (Layout.Horizontal().Align(Align.Center)
+                | (Layout.Horizontal().AlignContent(Align.Center)
                 | new Image($"data:image/png;base64,{qrCodeBase64.Value}"))
             ).Height(Size.Fit().Min(Size.Full()))
             : new Card(

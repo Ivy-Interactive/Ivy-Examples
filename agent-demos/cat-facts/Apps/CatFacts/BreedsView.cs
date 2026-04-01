@@ -49,7 +49,7 @@ public class BreedsView : ViewBase
                     .Header(b => b.Pattern, "Pattern")
                     .Builder(b => b.Breed, f => BuilderFactoryExtensions.Func<BreedInfo, string>(f, val => Text.Block(val).Bold()))
                     .Builder(b => b.Origin, f => BuilderFactoryExtensions.Func<BreedInfo, string>(f, val => new Badge(val)))
-                | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                | (Layout.Horizontal().Gap(2).Center()
                     | new Button("Previous", () => page.Set(page.Value - 1))
                         .Icon(Icons.ChevronLeft).Outline()
                         .Disabled(data.CurrentPage <= 1)

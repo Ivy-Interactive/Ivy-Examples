@@ -13,7 +13,7 @@ public class FavoritesView : ViewBase
         if (favorites.Count == 0)
         {
             return Layout.Center()
-                | (Layout.Vertical().Gap(2).Align(Align.Center)
+                | (Layout.Vertical().Gap(2).Center()
                     | Icons.Heart.ToIcon().Large().Color(Colors.Gray)
                     | Text.P("No favorite facts yet").Color(Colors.Gray)
                     | Text.Muted("Go to the Daily Fact tab and heart some facts!"));

@@ -76,7 +76,7 @@ public class DealDetailsBlade(int dealId) : ViewBase
                 .ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
-            footer: Layout.Horizontal().Gap(2).Align(Align.Right)
+            footer: Layout.Horizontal().Gap(2).AlignContent(Align.Right)
                     | deleteBtn
                     | editBtn
         ).Title("Deal Details").Width(Size.Units(100));

@@ -13,7 +13,7 @@ public class DashboardApp : ViewBase
             return (fromDate: initialDate, toDate: initialDate.AddDays(30));
         });
         
-        var header = Layout.Horizontal().Align(Align.Right)
+        var header = Layout.Horizontal().AlignContent(Align.Right)
                     | range.ToDateRangeInput();
         
         var fromDate = range.Value.fromDate;
@@ -27,7 +27,7 @@ public class DashboardApp : ViewBase
                 Layout.Grid().Columns(3)
 | new DailyLeadsCreatedLineChartView(fromDate, toDate).Key(fromDate, toDate)| new DailyMessagesSentLineChartView(fromDate, toDate).Key(fromDate, toDate)| new LeadConversionBySourcePieChartView(fromDate, toDate).Key(fromDate, toDate)| new DailyCallDurationsLineChartView(fromDate, toDate).Key(fromDate, toDate)| new TaskCompletionRateLineChartView(fromDate, toDate).Key(fromDate, toDate)| new VehicleStatusDistributionPieChartView(fromDate, toDate).Key(fromDate, toDate)            ;
 
-        return Layout.Horizontal().Align(Align.Center) | 
+        return Layout.Horizontal().AlignContent(Align.Center) | 
                new HeaderLayout(header, Layout.Vertical() 
                             | metrics
                             | charts

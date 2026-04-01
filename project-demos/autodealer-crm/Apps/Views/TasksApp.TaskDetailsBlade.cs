@@ -64,7 +64,7 @@ public class TaskDetailsBlade(int taskId) : ViewBase
             .ToDetails()
             .Multiline(e => e.Description)
             .RemoveEmpty(),
-            footer: Layout.Horizontal().Gap(2).Align(Align.Right)
+            footer: Layout.Horizontal().Gap(2).AlignContent(Align.Right)
                 | dropDown
                 | editBtn
         ).Title("Task Details").Width(Size.Units(100));

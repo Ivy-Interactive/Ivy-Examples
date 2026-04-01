@@ -74,7 +74,7 @@ public class WorkbooksViewerApp : ViewBase
             | tableContent
         ).Width(Size.Fraction(0.45f)).Height(Size.Fit().Min(110));
         
-        return Layout.Horizontal().Gap(6).Align(Align.Center)
+        return Layout.Horizontal().Gap(6).AlignContent(Align.Center)
             | leftCard
             | rightCard;
     }

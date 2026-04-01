@@ -51,11 +51,11 @@ public class DailyFactView : ViewBase
                               .Variant(isFav ? ButtonVariant.Primary: ButtonVariant.Outline))))
                 | (Layout.Horizontal().Gap(6)
                     | (new Card()
-                        | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | (Layout.Horizontal().Gap(2).Center()
                             | new Icon(Icons.Eye)
                             | Text.Block($"{seenCount} facts seen")))
                     | (new Card()
-                        | (Layout.Horizontal().Gap(2).Align(Align.Center)
+                        | (Layout.Horizontal().Gap(2).Center()
                             | new Icon(Icons.Heart)
                             | Text.Block($"{service.FavoriteFacts.Count} favorites")))));
     }

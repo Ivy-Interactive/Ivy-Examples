@@ -44,7 +44,7 @@ public class GitHubWrappedApp : ViewBase
         if (stats.Value == null)
         {
             return Layout.Center()
-                   | new Card(Layout.Vertical().Gap(4).Align(Align.Center)
+                   | new Card(Layout.Vertical().Gap(4).AlignContent(Align.Center)
                        | Icons.Github.ToIcon().Height(Size.Units(40)).Width(Size.Units(40))
                        | Text.H2("Preparing your 2025 Wrap...").Bold()
                        | Text.Block("Gathering your GitHub activity data").Muted()
@@ -63,14 +63,14 @@ public class GitHubWrappedApp : ViewBase
             new StepperItem("6", null, "Summary", "2025 highlights")
         };
 
-        return Layout.Vertical().Height(Size.Full()).Align(Align.TopCenter)
+        return Layout.Vertical().Height(Size.Full()).AlignContent(Align.TopCenter)
                     | (Layout.Vertical().Height(Size.Fit()).Width(Size.Fraction(0.7f))
                         | new Stepper(OnSelect, selectedIndex.Value, stepperItems)
                             .AllowSelectForward())
                     | (Layout.Vertical().Height(Size.Full()).Width(Size.Fraction(0.7f))
                     | new FooterLayout(
                         footer: (Layout.Horizontal()
-                            | (Layout.Vertical().Align(Align.Left)
+                            | (Layout.Vertical().AlignContent(Align.Left)
                                 | new Button("Previous")
                                     .Icon(Icons.ChevronLeft)
                                     .Variant(ButtonVariant.Outline)
@@ -79,7 +79,7 @@ public class GitHubWrappedApp : ViewBase
                                     {
                                         selectedIndex.Set(Math.Max(0, selectedIndex.Value - 1));
                                     }))
-                            | (Layout.Vertical().Align(Align.Right)
+                            | (Layout.Vertical().AlignContent(Align.Right)
                                 | (selectedIndex.Value == stepperItems.Length - 1
                                     ? BuildShareButton(downloadUrl)
                                     : new Button(selectedIndex.Value == 0 ? "Start the recap" : "Show me more")
@@ -88,7 +88,7 @@ public class GitHubWrappedApp : ViewBase
                                         {
                                             selectedIndex.Set(Math.Min(stepperItems.Length - 1, selectedIndex.Value + 1));
                                         })))),
-                        content: (Layout.Vertical().Align(Align.Center)
+                        content: (Layout.Vertical().AlignContent(Align.Center)
                             | BuildCurrentSlide(selectedIndex.Value, stats.Value))));
 
         ValueTask OnSelect(Event<Stepper, int> e)
