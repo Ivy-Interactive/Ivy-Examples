@@ -56,7 +56,7 @@ public class SmartFormatNetApp : ViewBase
         }
 
         return
-        Layout.Horizontal().Align(Align.TopCenter)
+        Layout.Horizontal().AlignContent(Align.TopCenter)
             | new Card(
             Layout.Vertical()
                 | Text.H3("SmartFormat.NET")
