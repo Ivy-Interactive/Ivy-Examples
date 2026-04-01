@@ -21,7 +21,8 @@ public class QuestionsApp : ViewBase
         var viewDialogWidget  = UseState("");
         var editSheetOpen     = UseState(false);
         var editQuestionId    = UseState(Guid.Empty);
-        var refreshToken      = UseRefreshToken();
+        var refreshToken        = UseRefreshToken();
+        var generateAllPending  = UseState(false);
         var (alertView, showAlert) = UseAlert();
 
         var tableQuery = UseQuery<WidgetTableData, int>(
@@ -32,7 +33,7 @@ public class QuestionsApp : ViewBase
                 refreshToken.Refresh();
                 return result;
             },
-            options: new QueryOptions { KeepPrevious = true },
+            options: new QueryOptions { KeepPrevious = true, RefreshInterval = TimeSpan.FromSeconds(10), RevalidateOnMount = true },
             tags: ["widget-summary"]);
 
         UseEffect(async () =>
@@ -67,18 +68,57 @@ public class QuestionsApp : ViewBase
             }
         }, [deleteRequest.ToTrigger()]);
 
+        UseEffect(() =>
+        {
+            var action = GenerateAllBridge.Consume();
+            if (action == "generate-all")
+                generateAllPending.Set(true);
+
+            if (!generateAllPending.Value) return;
+
+            var allWidgets = tableQuery.Value?.Catalog ?? [];
+            if (allWidgets.Count == 0) return;
+
+            generateAllPending.Set(false);
+
+            var allRows = tableQuery.Value?.Rows ?? [];
+            var notGenerated = allWidgets
+                .Where(w => !allRows.Any(r => r.Widget == w.Name && r.Easy + r.Medium + r.Hard > 0))
+                .ToList();
+
+            if (notGenerated.Count == 0)
+            {
+                client.Toast("All widgets already have generated questions.");
+                return;
+            }
+
+            showAlert(
+                $"Generate questions for {notGenerated.Count} widget(s) that don't have questions yet?\n\nOpenAI will be called 3 times per widget (easy / medium / hard).",
+                result =>
+                {
+                    if (!result.IsOk()) return;
+                    MarkGenerating(notGenerated.Select(w => w.Name));
+                    Task.Run(() => GenerateBatchAsync(notGenerated));
+                },
+                "Generate All Questions",
+                AlertButtonSet.OkCancel);
+        }, EffectTrigger.OnBuild());
+
+        async Task GenerateOneAsync(IvyWidget widget)
+        {
+            var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set.");
+            var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set.");
+            await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl);
+        }
+
         async Task GenerateWidgetAsync(IvyWidget widget)
         {
             try
             {
-                var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set.");
-                var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set.");
-                await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl);
+                await GenerateOneAsync(widget);
 
                 var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(fresh, revalidate: false);
-                refreshToken.Refresh();
-                client.Toast($"Generated 30 questions for {widget.Name}");
             }
             catch (Exception ex)
             {
@@ -89,6 +129,47 @@ public class QuestionsApp : ViewBase
                 generatingWidgets.Set(s => s.Remove(widget.Name));
                 refreshToken.Refresh();
             }
+        }
+
+        async Task GenerateBatchAsync(List<IvyWidget> widgets)
+        {
+            const int maxRetries = 2;
+            var failed = new List<string>();
+            var done = 0;
+
+            foreach (var widget in widgets)
+            {
+                var success = false;
+                for (var attempt = 1; attempt <= maxRetries && !success; attempt++)
+                {
+                    try
+                    {
+                        client.Toast($"Generating {done + 1}/{widgets.Count}: {widget.Name}…");
+                        await GenerateOneAsync(widget);
+                        success = true;
+                    }
+                    catch
+                    {
+                        if (attempt < maxRetries)
+                            await Task.Delay(2000);
+                    }
+                }
+
+                if (success)
+                    done++;
+                else
+                    failed.Add(widget.Name);
+            }
+
+            var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+            tableQuery.Mutator.Mutate(fresh, revalidate: false);
+            generatingWidgets.Set(_ => ImmutableHashSet<string>.Empty);
+            refreshToken.Refresh();
+
+            if (failed.Count == 0)
+                client.Toast($"Done! Generated questions for all {done} widget(s).");
+            else
+                client.Toast($"Done: {done}/{widgets.Count} succeeded. Failed: {string.Join(", ", failed)}");
         }
 
         void MarkGenerating(IEnumerable<string> widgetNames)
@@ -123,6 +204,7 @@ public class QuestionsApp : ViewBase
                    | new Icon(Icons.Loader)
                    | Text.Muted("Loading…");
 
+        var isGeneratingAny = generating.Count > 0;
         var table = rows.AsQueryable()
             .ToDataTable(r => r.Widget)
             .RefreshToken(refreshToken)
