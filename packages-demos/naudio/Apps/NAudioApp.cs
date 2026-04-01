@@ -79,7 +79,7 @@ public class NAudioApp : ViewBase
         var uploadUrl = uploadBase.Accept("audio/*").MaxFileSize(50 * 1024 * 1024);
         try { MediaFoundationApi.Startup(); } catch { }
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
             | new Card(
                 Layout.Vertical()
                 | Text.H1("NAudio")
