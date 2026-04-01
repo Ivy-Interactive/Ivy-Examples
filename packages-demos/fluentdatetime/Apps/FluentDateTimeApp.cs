@@ -14,7 +14,7 @@ public class FluentDateTimeApp : ViewBase
         var amountInt = (int)Math.Abs(amount.Value);
         var resultDate = ComputeDate(baseDateTime.Value, operation.Value, unit.Value, amountInt);
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
                | (new Card(
                    Layout.Vertical().Gap(4)
                    | Text.H2("Date Calculator")
