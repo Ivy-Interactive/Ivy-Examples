@@ -80,7 +80,7 @@ public class SliplaneDeployApp : ViewBase
         if (string.IsNullOrWhiteSpace(apiToken))
         {
             return Layout.Center()
-                | (Layout.Vertical().Align(Align.Center).Gap(6)
+                | (Layout.Vertical().AlignContent(Align.Center).Gap(6)
                     | Icons.Rocket.ToIcon()
                     | Text.H2("Deploy to Sliplane")
                     | (draft is not null

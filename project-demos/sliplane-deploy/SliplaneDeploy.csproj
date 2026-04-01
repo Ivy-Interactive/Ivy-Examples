@@ -9,12 +9,12 @@
     <UserSecretsId>3901cf22-a0ae-47ab-879c-682515e69029</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.27" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.27">
+    <PackageReference Include="Ivy" Version="1.2.34" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.34">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.27" />
+    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.34" />
   </ItemGroup>
 </Project>
 
