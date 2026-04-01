@@ -65,7 +65,7 @@ public class CustomerDetailsBlade(int customerId) : ViewBase
             }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
-            footer: Layout.Horizontal().Gap(2).Align(Align.Right)
+            footer: Layout.Horizontal().Gap(2).AlignContent(Align.Right)
                     | dropDown
                     | editBtn
         ).Title("Customer Details").Width(Size.Units(100));

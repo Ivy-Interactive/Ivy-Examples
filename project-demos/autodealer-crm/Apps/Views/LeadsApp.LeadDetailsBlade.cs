@@ -73,7 +73,7 @@ public class LeadDetailsBlade(int leadId) : ViewBase
             }.ToDetails()
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
-            footer: Layout.Horizontal().Gap(2).Align(Align.Right)
+            footer: Layout.Horizontal().Gap(2).AlignContent(Align.Right)
                     | dropDown
                     | editBtn
         ).Title("Lead Details").Width(Size.Units(100));
