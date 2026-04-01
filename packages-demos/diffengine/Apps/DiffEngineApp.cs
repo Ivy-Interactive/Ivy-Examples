@@ -156,7 +156,7 @@ public class DiffEngineApp : ViewBase
 
         // outer card wide enough to allow side-by-side on big screens
         return Layout.Vertical()
-            | (Layout.Horizontal().Gap(2).Align(Align.Center)
+            | (Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                 | new Card(tabsView).Width(Size.Fraction(MainCardWidthFraction)));
     }
 }
