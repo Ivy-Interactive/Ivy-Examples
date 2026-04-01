@@ -4,6 +4,8 @@ namespace IvyAskStatistics.Apps;
 
 internal sealed record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, int QueryKey);
 
+internal sealed record GenProgress(string CurrentWidget, int Done, int Total, List<string> Failed, bool Active);
+
 [App(icon: Icons.Database, title: "Questions")]
 public class QuestionsApp : ViewBase
 {
@@ -21,8 +23,8 @@ public class QuestionsApp : ViewBase
         var viewDialogWidget  = UseState("");
         var editSheetOpen     = UseState(false);
         var editQuestionId    = UseState(Guid.Empty);
-        var refreshToken        = UseRefreshToken();
-        var generateAllPending  = UseState(false);
+        var refreshToken      = UseRefreshToken();
+        var genProgress       = UseState<GenProgress?>(null);
         var (alertView, showAlert) = UseAlert();
 
         var tableQuery = UseQuery<WidgetTableData, int>(
@@ -45,64 +47,23 @@ public class QuestionsApp : ViewBase
             {
                 await using var ctx = factory.CreateDbContext();
                 var list = await ctx.Questions.Where(q => q.Widget == widgetName).ToListAsync();
-                if (list.Count == 0)
-                {
-                    client.Toast("No questions to delete.");
-                    return;
-                }
+                if (list.Count == 0) return;
                 ctx.Questions.RemoveRange(list);
                 await ctx.SaveChangesAsync();
 
                 var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(fresh, revalidate: false);
                 refreshToken.Refresh();
-                client.Toast($"Deleted {list.Count} question(s) for \"{widgetName}\".");
             }
-            catch (Exception ex)
+            catch
             {
-                client.Toast($"Error: {ex.Message}");
+                // best-effort
             }
             finally
             {
                 deleteRequest.Set(null);
             }
         }, [deleteRequest.ToTrigger()]);
-
-        UseEffect(() =>
-        {
-            var action = GenerateAllBridge.Consume();
-            if (action == "generate-all")
-                generateAllPending.Set(true);
-
-            if (!generateAllPending.Value) return;
-
-            var allWidgets = tableQuery.Value?.Catalog ?? [];
-            if (allWidgets.Count == 0) return;
-
-            generateAllPending.Set(false);
-
-            var allRows = tableQuery.Value?.Rows ?? [];
-            var notGenerated = allWidgets
-                .Where(w => !allRows.Any(r => r.Widget == w.Name && r.Easy + r.Medium + r.Hard > 0))
-                .ToList();
-
-            if (notGenerated.Count == 0)
-            {
-                client.Toast("All widgets already have generated questions.");
-                return;
-            }
-
-            showAlert(
-                $"Generate questions for {notGenerated.Count} widget(s) that don't have questions yet?\n\nOpenAI will be called 3 times per widget (easy / medium / hard).",
-                result =>
-                {
-                    if (!result.IsOk()) return;
-                    MarkGenerating(notGenerated.Select(w => w.Name));
-                    Task.Run(() => GenerateBatchAsync(notGenerated));
-                },
-                "Generate All Questions",
-                AlertButtonSet.OkCancel);
-        }, EffectTrigger.OnBuild());
 
         async Task GenerateOneAsync(IvyWidget widget)
         {
@@ -115,14 +76,16 @@ public class QuestionsApp : ViewBase
         {
             try
             {
+                genProgress.Set(new GenProgress(widget.Name, 0, 1, [], true));
                 await GenerateOneAsync(widget);
 
                 var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                genProgress.Set(new GenProgress(widget.Name, 1, 1, [], false));
             }
-            catch (Exception ex)
+            catch
             {
-                client.Toast($"Error ({widget.Name}): {ex.Message}");
+                genProgress.Set(new GenProgress(widget.Name, 0, 1, [widget.Name], false));
             }
             finally
             {
@@ -139,12 +102,14 @@ public class QuestionsApp : ViewBase
 
             foreach (var widget in widgets)
             {
+                genProgress.Set(new GenProgress(widget.Name, done, widgets.Count, failed, true));
+                refreshToken.Refresh();
+
                 var success = false;
                 for (var attempt = 1; attempt <= maxRetries && !success; attempt++)
                 {
                     try
                     {
-                        client.Toast($"Generating {done + 1}/{widgets.Count}: {widget.Name}…");
                         await GenerateOneAsync(widget);
                         success = true;
                     }
@@ -159,33 +124,66 @@ public class QuestionsApp : ViewBase
                     done++;
                 else
                     failed.Add(widget.Name);
+
+                generatingWidgets.Set(s => s.Remove(widget.Name));
+
+                var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                refreshToken.Refresh();
             }
 
-            var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
-            tableQuery.Mutator.Mutate(fresh, revalidate: false);
             generatingWidgets.Set(_ => ImmutableHashSet<string>.Empty);
+            genProgress.Set(new GenProgress("", done, widgets.Count, failed, false));
             refreshToken.Refresh();
-
-            if (failed.Count == 0)
-                client.Toast($"Done! Generated questions for all {done} widget(s).");
-            else
-                client.Toast($"Done: {done}/{widgets.Count} succeeded. Failed: {string.Join(", ", failed)}");
         }
 
         void MarkGenerating(IEnumerable<string> widgetNames)
         {
             var names = widgetNames.Where(n => !string.IsNullOrEmpty(n)).ToHashSet();
             if (names.Count == 0) return;
-
             generatingWidgets.Set(s => s.Union(names).ToImmutableHashSet());
             refreshToken.Refresh();
         }
+
+        void OnGenerateAll()
+        {
+            var allWidgets = tableQuery.Value?.Catalog ?? [];
+            if (allWidgets.Count == 0) return;
+
+            var allRows = tableQuery.Value?.Rows ?? [];
+            var notGenerated = allWidgets
+                .Where(w => !allRows.Any(r => r.Widget == w.Name && r.Easy + r.Medium + r.Hard > 0))
+                .ToList();
+
+            if (notGenerated.Count == 0) return;
+
+            showAlert(
+                $"Generate questions for {notGenerated.Count} widget(s) that don't have questions yet?\n\nOpenAI will be called 3 times per widget (easy / medium / hard).",
+                result =>
+                {
+                    if (!result.IsOk()) return;
+                    MarkGenerating(notGenerated.Select(w => w.Name));
+                    genProgress.Set(new GenProgress(notGenerated[0].Name, 0, notGenerated.Count, [], true));
+                    Task.Run(() => GenerateBatchAsync(notGenerated));
+                },
+                "Generate All Questions",
+                AlertButtonSet.OkCancel);
+        }
+
+        UseEffect(() =>
+        {
+            if (tableQuery.Value == null) return;
+            if (!GenerateAllBridge.Consume()) return;
+            OnGenerateAll();
+        }, EffectTrigger.OnBuild());
 
         var generating = generatingWidgets.Value;
         var baseRows   = tableQuery.Value?.Rows ?? [];
         var catalog    = tableQuery.Value?.Catalog ?? [];
         var isDeleting = !string.IsNullOrEmpty(deleteRequest.Value);
         var firstLoad  = tableQuery.Loading && tableQuery.Value == null;
+        var progress   = genProgress.Value;
+        var isGenerating = generating.Count > 0;
 
         static string IdleStatus(WidgetRow r)
         {
@@ -204,7 +202,34 @@ public class QuestionsApp : ViewBase
                    | new Icon(Icons.Loader)
                    | Text.Muted("Loading…");
 
-        var isGeneratingAny = generating.Count > 0;
+        var notGeneratedCount = baseRows.Count(r => r.Easy + r.Medium + r.Hard == 0);
+
+        object progressBar;
+        if (progress is { Active: true })
+        {
+            var pct = progress.Total > 0 ? progress.Done * 100 / progress.Total : 0;
+            progressBar = new Callout(
+                Layout.Vertical().Gap(2)
+                    | Text.Block($"Generating {progress.Done + 1}/{progress.Total}: {progress.CurrentWidget}…")
+                    | new Progress(pct).Goal($"{progress.Done}/{progress.Total}"),
+                variant: CalloutVariant.Info);
+        }
+        else if (progress is { Active: false, Total: > 0 })
+        {
+            var failCount = progress.Failed.Count;
+            progressBar = new Callout(
+                Layout.Horizontal().Gap(2)
+                    | Text.Block(failCount == 0
+                        ? $"Done! Generated questions for {progress.Done}/{progress.Total} widget(s)."
+                        : $"Completed: {progress.Done}/{progress.Total} succeeded. Failed: {string.Join(", ", progress.Failed)}")
+                    | new Button("Dismiss", onClick: _ => genProgress.Set(null)).Small(),
+                variant: failCount == 0 ? CalloutVariant.Success : CalloutVariant.Warning);
+        }
+        else
+        {
+            progressBar = Text.Muted("");
+        }
+
         var table = rows.AsQueryable()
             .ToDataTable(r => r.Widget)
             .RefreshToken(refreshToken)
@@ -245,18 +270,10 @@ public class QuestionsApp : ViewBase
 
                 if (tag == "generate")
                 {
-                    if (isDeleting)
-                    {
-                        client.Toast("Please wait — delete in progress");
-                        return ValueTask.CompletedTask;
-                    }
+                    if (isDeleting || isGenerating) return ValueTask.CompletedTask;
 
                     var genName = args.Id?.ToString() ?? "";
-                    if (generating.Contains(genName))
-                    {
-                        client.Toast($"\"{genName}\" is already being generated");
-                        return ValueTask.CompletedTask;
-                    }
+                    if (generating.Contains(genName)) return ValueTask.CompletedTask;
 
                     var widget = catalog.FirstOrDefault(w => w.Name == genName)
                         ?? new IvyWidget(genName, rows.FirstOrDefault(r => r.Widget == genName)?.Category ?? "", "");
@@ -276,26 +293,14 @@ public class QuestionsApp : ViewBase
 
                 if (tag == "delete")
                 {
-                    if (isDeleting)
-                    {
-                        client.Toast("Delete already in progress — please wait");
-                        return ValueTask.CompletedTask;
-                    }
+                    if (isDeleting || isGenerating) return ValueTask.CompletedTask;
 
                     var delName = args.Id?.ToString() ?? "";
-                    if (generating.Contains(delName))
-                    {
-                        client.Toast($"\"{delName}\" is currently being generated — please wait");
-                        return ValueTask.CompletedTask;
-                    }
+                    if (generating.Contains(delName)) return ValueTask.CompletedTask;
 
                     var row = rows.FirstOrDefault(r => r.Widget == delName);
                     var n   = row == null ? 0 : row.Easy + row.Medium + row.Hard;
-                    if (n == 0)
-                    {
-                        client.Toast("No questions to delete for this widget.");
-                        return ValueTask.CompletedTask;
-                    }
+                    if (n == 0) return ValueTask.CompletedTask;
 
                     showAlert(
                         $"Delete all {n} question(s) for the \"{delName}\" widget?\n\nThis cannot be undone.",
@@ -329,6 +334,7 @@ public class QuestionsApp : ViewBase
 
         return Layout.Vertical().Height(Size.Full())
                | alertView
+               | progressBar
                | table
                | questionsDialog
                | editSheet;

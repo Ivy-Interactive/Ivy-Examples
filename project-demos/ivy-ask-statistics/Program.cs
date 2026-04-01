@@ -17,7 +17,7 @@ var appShellSettings = new AppShellSettings()
         var list = items.ToList();
         list.Add(MenuItem.Default("Generate All Questions").Icon(Icons.Sparkles).OnSelect(() =>
         {
-            GenerateAllBridge.Request("generate-all");
+            GenerateAllBridge.Request();
             navigator.Navigate(typeof(QuestionsApp));
         }));
         return list;

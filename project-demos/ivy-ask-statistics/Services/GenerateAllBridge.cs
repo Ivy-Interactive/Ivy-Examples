@@ -2,14 +2,14 @@ namespace IvyAskStatistics.Apps;
 
 public static class GenerateAllBridge
 {
-    static string? _pending;
+    static volatile bool _pending;
 
-    public static void Request(string action) => _pending = action;
+    public static void Request() => _pending = true;
 
-    public static string? Consume()
+    public static bool Consume()
     {
-        var val = _pending;
-        _pending = null;
-        return val;
+        if (!_pending) return false;
+        _pending = false;
+        return true;
     }
 }
