@@ -55,7 +55,7 @@ public class EventBrowseView : ViewBase
         object content;
         if (filtered.Count == 0)
         {
-            content = Layout.Vertical().Align(Align.Center).Padding(20)
+            content = Layout.Vertical().Center().Padding(20)
                 | Icons.Search.ToIcon().Large()
                 | Text.H3("No events found")
                 | Text.Muted("Try adjusting your search or filter criteria");

@@ -15,7 +15,7 @@ public class EventDetailView(string eventId) : ViewBase
         if (evt is null)
         {
             return Layout.Center()
-                | (Layout.Vertical().Align(Align.Center).Gap(2)
+                | (Layout.Vertical().Center().Gap(2)
                     | Icons.CalendarX.ToIcon().Large()
                     | Text.H3("Event not found")
                     | Text.Muted("This event may have been removed."));
