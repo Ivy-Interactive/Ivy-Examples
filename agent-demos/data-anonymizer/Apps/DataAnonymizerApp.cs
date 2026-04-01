@@ -68,7 +68,7 @@ public class DataAnonymizerApp : ViewBase
         {
             return Layout.TopCenter()
                 | (body.Margin(10)
-                    | (Layout.Vertical().Align(Align.Center).Gap(2)
+                    | (Layout.Vertical().AlignContent(Align.Center).Gap(2)
                         | new Icon(Icons.ShieldCheck).Large()
                         | Text.H2("Data Anonymizer")
                         | Text.Muted("Upload a CSV file to anonymize sensitive data"))
@@ -76,7 +76,7 @@ public class DataAnonymizerApp : ViewBase
         }
 
         body = body
-            | (Layout.Horizontal().Align(Align.Left)
+            | (Layout.Horizontal().AlignContent(Align.Left)
                 | new Badge(fileState.Value.FileName)
                 | new Button("Clear").Variant(ButtonVariant.Destructive).Small()
                     .OnClick(() => fileState.Set(null)));
@@ -250,7 +250,7 @@ internal class ColumnConfigRow : ViewBase
         var col = _columns.Value[_index];
         var strategyOptions = Enum.GetNames<AnonymizationStrategy>();
 
-        return Layout.Horizontal().Align(Align.Left)
+        return Layout.Horizontal().AlignContent(Align.Left)
             | Text.Block(col.Name).Width(Size.Units(40))
             | enabledState.ToSwitchInput(label: "Anonymize")
             | strategyState.ToSelectInput(strategyOptions, placeholder: "Strategy")
