@@ -143,7 +143,7 @@ public class ExcelDataReaderApp : ViewBase
                     isAnalyzing.Value ?
                         Layout.Horizontal(
                             Text.Label("Analyzing file...")
-                        ).Align(Align.Left) : null
+                        ).AlignContent(Align.Left) : null
                 )
             ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full())),
 
