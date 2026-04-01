@@ -190,7 +190,7 @@ public class RestSharpApp : ViewBase
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [RestSharp](https://github.com/restsharp/RestSharp)")
         ).Width(Size.Fraction(0.45f));
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
             | mainCard.Height(Size.Fit().Min(Size.Full()));
     }
 
