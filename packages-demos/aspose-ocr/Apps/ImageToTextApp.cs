@@ -50,7 +50,7 @@ public class ImageToTextApp : ViewBase
 
         var rightCard = new Card(rightCardBody).Width(Size.Fraction(0.45f)).Height(Size.Units(130));
 
-        return Layout.Horizontal().Gap(6).Align(Align.Center)
+        return Layout.Horizontal().Gap(6).AlignContent(Align.Center)
             | leftCard
             | rightCard;
     }
