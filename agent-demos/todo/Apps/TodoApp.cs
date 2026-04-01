@@ -53,7 +53,7 @@ public class TodoApp : ViewBase
 
             if (todos.Value.Any(t => t.IsDone))
             {
-                layout |= (Layout.Horizontal().Align(Align.Center)
+                layout |= (Layout.Horizontal().AlignContent(Align.Center)
                     | new Button("Delete all checked", () =>
                     {
                         todos.Set(todos.Value.Where(t => !t.IsDone).ToList());
@@ -61,7 +61,7 @@ public class TodoApp : ViewBase
             }
         }
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
             | (layout.Width(Size.Units(160)));
     }
 }
@@ -86,7 +86,7 @@ public class TodoItemRow(TodoItem todo, int index, IState<List<TodoItem>> todos)
             ? Text.Block(todo.Text).StrikeThrough().Color(Colors.Muted)
             : Text.Block(todo.Text);
 
-        return Layout.Horizontal().Align(Align.Left)
+        return Layout.Horizontal().AlignContent(Align.Left)
             | isDone.ToBoolInput().Variant(BoolInputVariant.Checkbox)
             | label.Width(Size.Full())
             | new Button(onClick: () =>
