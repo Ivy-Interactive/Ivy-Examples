@@ -95,8 +95,8 @@ public class RepositoriesSlide : ViewBase
             ? $"{animatedTopRepoCommits.Value} commits in your top repository"
             : "Start building your next project";
 
-        return Layout.Vertical().Gap(6).Align(Align.Center)
-               | (Layout.Vertical().Gap(4).Align(Align.Center)
+        return Layout.Vertical().Gap(6).AlignContent(Align.Center)
+               | (Layout.Vertical().Gap(4).AlignContent(Align.Center)
                   | Text.H2($"{repoName} Repository").Bold().Italic()
                   | Text.Block(headline).Muted()
                   | Text.Block(subheadline).Muted())
@@ -113,7 +113,7 @@ public class RepositoriesSlide : ViewBase
     {
         if (_stats.TopRepos.Count == 0)
         {
-            return Layout.Horizontal().Align(Align.Center)
+            return Layout.Horizontal().AlignContent(Align.Center)
                    | Text.Block("No repository data available").Muted();
         }
 
@@ -136,7 +136,7 @@ public class RepositoriesSlide : ViewBase
             var firstRow = cardsList.Take(2).ToList();
             if (firstRow.Count > 0)
             {
-                rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | firstRow);
+                rows.Add(Layout.Horizontal().Gap(3).AlignContent(Align.Center) | firstRow);
             }
         }
 
@@ -146,7 +146,7 @@ public class RepositoriesSlide : ViewBase
             var secondRow = cardsList.Skip(2).Take(3).ToList();
             if (secondRow.Count > 0)
             {
-                rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | secondRow);
+                rows.Add(Layout.Horizontal().Gap(3).AlignContent(Align.Center) | secondRow);
             }
         }
 
@@ -156,11 +156,11 @@ public class RepositoriesSlide : ViewBase
             var remainingRow = cardsList.Skip(5).ToList();
             if (remainingRow.Count > 0)
             {
-                rows.Add(Layout.Horizontal().Gap(3).Align(Align.Center) | remainingRow);
+                rows.Add(Layout.Horizontal().Gap(3).AlignContent(Align.Center) | remainingRow);
             }
         }
 
-        return Layout.Vertical().Gap(3).Align(Align.Center) | rows;
+        return Layout.Vertical().Gap(3).AlignContent(Align.Center) | rows;
     }
 
     private object BuildInsights(RepoStats? topRepo, int repoCount, int topRepoCommits)
@@ -194,8 +194,8 @@ public class RepositoriesSlide : ViewBase
             subInsight = $"You balanced your top {repoCount} repositories while keeping focus — that's how you ship!";
         }
 
-        return Layout.Vertical().Gap(2).Align(Align.Center)
-            | (Layout.Horizontal().Align(Align.Center)
+        return Layout.Vertical().Gap(2).AlignContent(Align.Center)
+            | (Layout.Horizontal().AlignContent(Align.Center)
                 | Icons.Folder.ToIcon()
                 | Text.Block(mainInsight).Bold())
             | Text.Block(subInsight).Muted();

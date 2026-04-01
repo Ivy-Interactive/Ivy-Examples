@@ -46,7 +46,7 @@ public class RepoCardView : ViewBase
             });
         });
 
-        return new Card(Layout.Vertical().Align(Align.Center)
+        return new Card(Layout.Vertical().AlignContent(Align.Center)
                 | Text.H2($"{animatedPercentage.Value}%").Bold().Italic()
                 | Text.Block($"{_repo.CommitCount} commits").Muted())
             .Title($"{_repo.Name}")

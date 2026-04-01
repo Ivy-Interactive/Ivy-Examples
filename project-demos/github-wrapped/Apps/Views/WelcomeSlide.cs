@@ -15,8 +15,8 @@ public class WelcomeSlide : ViewBase
     {
         var userName = _stats.UserInfo.FullName ?? _stats.UserInfo.Id;
 
-        return Layout.Vertical().Gap(5).Align(Align.Center).Width(Size.Fraction(0.8f))
-                   | (Layout.Vertical().Gap(4).Align(Align.Center)
+        return Layout.Vertical().Gap(5).AlignContent(Align.Center).Width(Size.Fraction(0.8f))
+                   | (Layout.Vertical().Gap(4).AlignContent(Align.Center)
                       | (Layout.Vertical().Height(Size.Units(100)).Width(Size.Units(100))
                           | new Avatar(userName, _stats.UserInfo.AvatarUrl))
                       | Text.H1($"Hey, {userName}, your year on GitHub — wrapped.").Bold()

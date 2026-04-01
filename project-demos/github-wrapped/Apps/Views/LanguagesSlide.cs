@@ -93,8 +93,8 @@ public class LanguagesSlide : ViewBase
             ? $"Over two thirds of your code came from one language"
             : $"{animatedTopLanguagePercentage.Value}% of your code was written in it";
 
-        return Layout.Vertical().Gap(6).Align(Align.Center)
-               | (Layout.Vertical().Gap(4).Align(Align.Center)
+        return Layout.Vertical().Gap(6).AlignContent(Align.Center)
+               | (Layout.Vertical().Gap(4).AlignContent(Align.Center)
                   | Text.H2($"{_topLanguage.Key} Language" ?? "N/A").Bold().Italic()
                   | Text.Block(headline).Muted()
                   | Text.Block(subheadline).Muted())
@@ -111,7 +111,7 @@ public class LanguagesSlide : ViewBase
     {
         if (_stats.LanguageBreakdown.Count == 0)
         {
-            return Layout.Horizontal().Align(Align.Center)
+            return Layout.Horizontal().AlignContent(Align.Center)
                    | Text.Block("No language data available").Muted();
         }
 
@@ -184,8 +184,8 @@ public class LanguagesSlide : ViewBase
             subInsight = "You stayed focused and turned ideas into working code — consistency wins!";
         }
 
-        return Layout.Vertical().Gap(2).Align(Align.Center)
-            | (Layout.Horizontal().Align(Align.Center)
+        return Layout.Vertical().Gap(2).AlignContent(Align.Center)
+            | (Layout.Horizontal().AlignContent(Align.Center)
                 | Icons.Code.ToIcon()
                 | Text.Block(mainInsight).Bold())
             | Text.Block(subInsight).Muted();

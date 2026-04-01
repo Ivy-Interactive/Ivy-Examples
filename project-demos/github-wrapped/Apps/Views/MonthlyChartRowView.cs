@@ -46,14 +46,14 @@ public class MonthlyChartRowView : ViewBase
 
         if (_count == 0)
         {
-            return Layout.Horizontal().Gap(2).Align(Align.Center)
+            return Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                    | Text.Block(_month).Width(10).Muted()
                    | new Progress(progressState)
                        .Height(Size.Units(4))
                    | Text.Block("0").Width(10).Muted();
         }
 
-        return Layout.Horizontal().Gap(2).Align(Align.Center)
+        return Layout.Horizontal().Gap(2).AlignContent(Align.Center)
                | Text.Block(_month).Width(10).Bold(_isPeak)
                | new Progress(progressState)
                    .Goal(_count > 0 ? _count.ToString() : null)
