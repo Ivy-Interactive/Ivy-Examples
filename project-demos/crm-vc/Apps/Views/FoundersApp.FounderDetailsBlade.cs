@@ -57,7 +57,7 @@ public class FounderDetailsBlade(int founderId) : ViewBase
             .ToDetails()
             .RemoveEmpty()
             .Builder(e => e.Email, e => e.CopyToClipboard()),
-            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
+            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).AlignContent(Align.Right)
                 | dropDown
                 | editBtn
         ).Title("Founder Details");

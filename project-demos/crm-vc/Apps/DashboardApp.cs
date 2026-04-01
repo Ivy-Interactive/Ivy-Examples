@@ -9,7 +9,7 @@ public class DashboardApp : ViewBase
     {
         var range = this.UseState(() => (fromDate:DateTime.Today.Date.AddDays(-30), toDate:DateTime.Today.Date));
 
-        var header = Layout.Horizontal().Align(Align.Right) | range.ToDateRangeInput();
+        var header = Layout.Horizontal().AlignContent(Align.Right) | range.ToDateRangeInput();
         
         var fromDate = range.Value.fromDate;
         var toDate = range.Value.toDate;
@@ -24,7 +24,7 @@ public class DashboardApp : ViewBase
                 | new DailyDealAmountsLineChartView(fromDate, toDate).Key(fromDate, toDate) | new IndustryDistributionOfStartupsPieChartView(fromDate, toDate).Key(fromDate, toDate) | new GenderDistributionOfFoundersPieChartView(fromDate, toDate).Key(fromDate, toDate) 
             ;
 
-        return Layout.Horizontal().Align(Align.Center) | 
+        return Layout.Horizontal().AlignContent(Align.Center) | 
                new HeaderLayout(header, Layout.Vertical() 
                             | metrics
                             | charts

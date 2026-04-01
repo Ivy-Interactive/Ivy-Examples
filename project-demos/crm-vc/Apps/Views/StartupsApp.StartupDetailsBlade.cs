@@ -58,7 +58,7 @@ public class StartupDetailsBlade(int startupId) : ViewBase
                 .RemoveEmpty()
                 .Multiline(e => e.Description)
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
-            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).Align(Align.Right)
+            footer: Layout.Horizontal().Width(Size.Full()).Gap(1).AlignContent(Align.Right)
                     | dropDown
                     | editBtn
         )
