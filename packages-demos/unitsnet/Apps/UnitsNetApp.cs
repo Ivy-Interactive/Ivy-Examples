@@ -150,7 +150,7 @@ public class UnitsNetApp : ViewBase
             | resultCard);
 
         // Main vertical layout
-        return Layout.Vertical().Align(Align.TopCenter).Gap(3)
+        return Layout.Vertical().AlignContent(Align.TopCenter).Gap(3)
             | headerCard.Width(Size.Fraction(0.7f))
             | quantityCard.Width(Size.Fraction(0.7f))
             | unitCardsRow.Width(Size.Fraction(0.7f))
