@@ -15,8 +15,8 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="Humanizer" Version="3.0.1" />
-    <PackageReference Include="Ivy" Version="1.2.27" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.27">
+    <PackageReference Include="Ivy" Version="1.2.34" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.34">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
