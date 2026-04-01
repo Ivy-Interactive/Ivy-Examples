@@ -147,7 +147,7 @@ public class GitHubExampleApp : ViewBase
 				).Width(Size.Fraction(0.35f)).Height(Size.Fit());
 
 		return rightContent != null 
-			? (Layout.Horizontal().Gap(20).Align(Align.Center) | leftCard | rightContent)
+			? (Layout.Horizontal().Gap(20).AlignContent(Align.Center) | leftCard | rightContent)
 			: Layout.Center() | leftCard;
 	}
 
