@@ -47,11 +47,34 @@ public sealed class AppDbContextFactory : IDbContextFactory<AppDbContext>
                     "Source"       VARCHAR(20)  NOT NULL DEFAULT 'manual',
                     "CreatedAt"    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
                 );
-                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunStatus"        VARCHAR(20);
-                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunResponseTimeMs" INTEGER;
-                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunHttpStatus"     INTEGER;
-                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunAnswerText"     TEXT;
-                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "LastRunAt"             TIMESTAMPTZ;
+                ALTER TABLE ivy_ask_questions ADD COLUMN IF NOT EXISTS "IsActive" BOOLEAN NOT NULL DEFAULT TRUE;
+
+                CREATE TABLE IF NOT EXISTS ivy_ask_test_runs (
+                    "Id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    "IvyVersion"     VARCHAR(50)  NOT NULL DEFAULT '',
+                    "Environment"    VARCHAR(50)  NOT NULL DEFAULT 'production',
+                    "TotalQuestions"  INTEGER      NOT NULL DEFAULT 0,
+                    "SuccessCount"   INTEGER      NOT NULL DEFAULT 0,
+                    "NoAnswerCount"  INTEGER      NOT NULL DEFAULT 0,
+                    "ErrorCount"     INTEGER      NOT NULL DEFAULT 0,
+                    "StartedAt"      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    "CompletedAt"    TIMESTAMPTZ
+                );
+                CREATE INDEX IF NOT EXISTS ix_test_runs_ivy_version ON ivy_ask_test_runs ("IvyVersion");
+
+                CREATE TABLE IF NOT EXISTS ivy_ask_test_results (
+                    "Id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    "TestRunId"      UUID         NOT NULL REFERENCES ivy_ask_test_runs("Id") ON DELETE CASCADE,
+                    "QuestionId"     UUID         NOT NULL REFERENCES ivy_ask_questions("Id") ON DELETE CASCADE,
+                    "ResponseText"   TEXT         NOT NULL DEFAULT '',
+                    "ResponseTimeMs" INTEGER      NOT NULL DEFAULT 0,
+                    "IsSuccess"      BOOLEAN      NOT NULL DEFAULT FALSE,
+                    "HttpStatus"     INTEGER      NOT NULL DEFAULT 0,
+                    "ErrorMessage"   VARCHAR(500),
+                    "CreatedAt"      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS ix_test_results_run_id      ON ivy_ask_test_results ("TestRunId");
+                CREATE INDEX IF NOT EXISTS ix_test_results_question_id ON ivy_ask_test_results ("QuestionId");
                 """);
             _initialized = true;
         }

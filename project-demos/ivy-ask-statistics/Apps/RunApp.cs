@@ -11,10 +11,13 @@ public class RunApp : ViewBase
         var factory = UseService<AppDbContextFactory>();
         var client = UseService<IClientProvider>();
 
+        var ivyVersion = UseState("");
         var difficultyFilter = UseState("all");
         var runningIndex = UseState(-1);
         var completed = UseState<List<QuestionRun>>([]);
         var runQueue = UseState<List<TestQuestion>>([]);
+        var persistToDb = UseState(false);
+        var activeRunId = UseState(Guid.Empty);
         var refreshToken = UseRefreshToken();
 
         UseEffect(() =>
@@ -33,21 +36,27 @@ public class RunApp : ViewBase
 
             if (idx >= questions.Count)
             {
+                if (persistToDb.Value && activeRunId.Value != Guid.Empty)
+                    await FinalizeRunAsync(factory, activeRunId.Value, completed.Value);
+
                 runningIndex.Set(-1);
                 runQueue.Set([]);
                 refreshToken.Refresh();
                 var s = completed.Value.Count(r => r.Status == "success");
-                client.Toast($"Done! {s}/{questions.Count} answered");
+                var suffix = persistToDb.Value ? " (saved to DB)" : " (local only)";
+                client.Toast($"Done! {s}/{questions.Count} answered{suffix}");
                 return;
             }
 
-            // Let the table paint the current row as "in progress" before awaiting the HTTP call.
             refreshToken.Refresh();
             await Task.Yield();
 
             var result = await IvyAskService.AskAsync(questions[idx], BaseUrl);
             completed.Set([.. completed.Value, result]);
-            _ = SaveResultAsync(factory, result);
+
+            if (persistToDb.Value && activeRunId.Value != Guid.Empty)
+                _ = SaveResultAsync(factory, activeRunId.Value, result);
+
             refreshToken.Refresh();
             runningIndex.Set(idx + 1);
         }, [runningIndex.ToTrigger()]);
@@ -97,15 +106,43 @@ public class RunApp : ViewBase
             return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, status, time);
         }).ToList();
 
-        var controls = Layout.Horizontal().Height(Size.Fit())
+        var versionInput = ivyVersion.ToTextInput()
+            .Placeholder("e.g. v2.4.0")
+            .Disabled(isRunning);
+
+        var controls = Layout.Horizontal().Height(Size.Fit()).Gap(2)
+            | Text.Block("Ivy Version:").Muted()
+            | versionInput
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(isRunning)
             | Text.Muted($"{questions.Count} questions")
             | (isRunning ? new Progress(progressPct).Goal($"{done}/{questions.Count}") : null)
             | new Button(isRunning ? "Running…" : "Run All",
-                onClick: _ =>
+                onClick: async _ =>
                 {
                     var snapshot = questionsQuery.Value ?? [];
                     if (snapshot.Count == 0) return;
+
+                    var version = ivyVersion.Value.Trim();
+                    if (string.IsNullOrEmpty(version))
+                    {
+                        client.Toast("Please enter an Ivy version before running.");
+                        return;
+                    }
+
+                    var shouldPersist = !await RunExistsAsync(factory, version);
+                    persistToDb.Set(shouldPersist);
+
+                    if (shouldPersist)
+                    {
+                        var runId = await CreateRunAsync(factory, version, snapshot.Count);
+                        activeRunId.Set(runId);
+                    }
+                    else
+                    {
+                        activeRunId.Set(Guid.Empty);
+                        client.Toast($"Run for \"{version}\" already exists — results will be shown locally only.");
+                    }
+
                     completed.Set([]);
                     runQueue.Set(snapshot);
                     runningIndex.Set(0);
@@ -113,6 +150,15 @@ public class RunApp : ViewBase
                 .Primary()
                 .Icon(isRunning ? Icons.Loader : Icons.Play)
                 .Disabled(isRunning || questionsQuery.Loading || questions.Count == 0);
+
+        var statsRow = done > 0
+            ? Layout.Horizontal().Height(Size.Fit()).Gap(3)
+                | Text.Muted($"Answered: {success}")
+                | Text.Muted($"No answer: {noAnswer}")
+                | Text.Muted($"Errors: {errors}")
+                | Text.Muted($"Avg: {avgMs}ms")
+                | (persistToDb.Value ? Text.Block("Saving to DB").Muted() : Text.Block("Local only").Muted())
+            : null;
 
         var table = rows.AsQueryable()
             .ToDataTable()
@@ -142,6 +188,7 @@ public class RunApp : ViewBase
 
         return Layout.Vertical().Height(Size.Full())
                | controls
+               | statsRow
                | table;
     }
 
@@ -150,7 +197,7 @@ public class RunApp : ViewBase
         string difficulty)
     {
         await using var ctx = factory.CreateDbContext();
-        var query = ctx.Questions.AsQueryable();
+        var query = ctx.Questions.Where(q => q.IsActive);
         if (difficulty != "all")
             query = query.Where(q => q.Difficulty == difficulty);
 
@@ -164,26 +211,68 @@ public class RunApp : ViewBase
             .ToList();
     }
 
-    private static async Task SaveResultAsync(AppDbContextFactory factory, QuestionRun result)
+    private static async Task<bool> RunExistsAsync(AppDbContextFactory factory, string ivyVersion)
+    {
+        await using var ctx = factory.CreateDbContext();
+        return await ctx.TestRuns.AnyAsync(r => r.IvyVersion == ivyVersion);
+    }
+
+    private static async Task<Guid> CreateRunAsync(AppDbContextFactory factory, string ivyVersion, int totalQuestions)
+    {
+        await using var ctx = factory.CreateDbContext();
+        var run = new TestRunEntity
+        {
+            IvyVersion = ivyVersion,
+            TotalQuestions = totalQuestions,
+            StartedAt = DateTime.UtcNow
+        };
+        ctx.TestRuns.Add(run);
+        await ctx.SaveChangesAsync();
+        return run.Id;
+    }
+
+    private static async Task SaveResultAsync(AppDbContextFactory factory, Guid testRunId, QuestionRun result)
     {
         try
         {
             if (!Guid.TryParse(result.Question.Id, out var questionId)) return;
             await using var ctx = factory.CreateDbContext();
-            var entity = await ctx.Questions.FindAsync(questionId);
-            if (entity == null) return;
+            ctx.TestResults.Add(new TestResultEntity
+            {
+                TestRunId = testRunId,
+                QuestionId = questionId,
+                ResponseText = result.AnswerText,
+                ResponseTimeMs = result.ResponseTimeMs,
+                IsSuccess = result.Status == "success",
+                HttpStatus = result.HttpStatus,
+                ErrorMessage = result.Status == "error" ? result.AnswerText : null
+            });
+            await ctx.SaveChangesAsync();
+        }
+        catch
+        {
+            // best-effort
+        }
+    }
 
-            entity.LastRunStatus         = result.Status;
-            entity.LastRunResponseTimeMs = result.ResponseTimeMs;
-            entity.LastRunHttpStatus     = result.HttpStatus;
-            entity.LastRunAnswerText     = result.AnswerText;
-            entity.LastRunAt             = DateTime.UtcNow;
+    private static async Task FinalizeRunAsync(AppDbContextFactory factory, Guid runId, List<QuestionRun> results)
+    {
+        try
+        {
+            await using var ctx = factory.CreateDbContext();
+            var run = await ctx.TestRuns.FindAsync(runId);
+            if (run == null) return;
+
+            run.SuccessCount = results.Count(r => r.Status == "success");
+            run.NoAnswerCount = results.Count(r => r.Status == "no_answer");
+            run.ErrorCount = results.Count(r => r.Status == "error");
+            run.CompletedAt = DateTime.UtcNow;
 
             await ctx.SaveChangesAsync();
         }
         catch
         {
-            // silently ignore — run results are best-effort
+            // best-effort
         }
     }
 

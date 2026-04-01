@@ -11,6 +11,8 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
         public string Difficulty { get; init; } = "";
 
         public string Category { get; init; } = "";
+
+        public bool IsActive { get; init; } = true;
     }
 
     public override object? Build()
@@ -36,6 +38,7 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
             QuestionText = q.QuestionText ?? "",
             Difficulty   = q.Difficulty,
             Category     = q.Category,
+            IsActive     = q.IsActive,
         };
 
         var difficulties = new[] { "easy", "medium", "hard" }.ToOptions();
@@ -56,6 +59,7 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
             entity.QuestionText = request.QuestionText.Trim();
             entity.Difficulty   = request.Difficulty;
             entity.Category     = request.Category.Trim();
+            entity.IsActive     = request.IsActive;
             await ctx.SaveChangesAsync();
             queryService.RevalidateByTag(("widget-questions", entity.Widget));
             queryService.RevalidateByTag("widget-summary");

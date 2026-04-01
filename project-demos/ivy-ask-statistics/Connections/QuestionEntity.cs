@@ -22,13 +22,9 @@ public class QuestionEntity
     [MaxLength(20)]
     public string Source { get; set; } = "manual";
 
+    public bool IsActive { get; set; } = true;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Last run result
-    [MaxLength(20)]
-    public string? LastRunStatus { get; set; }
-    public int? LastRunResponseTimeMs { get; set; }
-    public int? LastRunHttpStatus { get; set; }
-    public string? LastRunAnswerText { get; set; }
-    public DateTime? LastRunAt { get; set; }
+    public List<TestResultEntity> TestResults { get; set; } = [];
 }
