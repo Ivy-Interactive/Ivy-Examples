@@ -24,7 +24,7 @@ addresses:
         var errorMessage = this.UseState<string>();
         var resultOutput = this.UseState<string>();
 
-        return Layout.Vertical().Align(Align.TopCenter)
+        return Layout.Vertical().AlignContent(Align.TopCenter)
             | (Layout.Vertical().Width(Size.Fraction(0.7f))
             | Text.H2("Deserialize YAML to a Person Object")
             | Text.Muted("Edit the YAML below to see how YamlDotNet deserializes it into a Person object:")
