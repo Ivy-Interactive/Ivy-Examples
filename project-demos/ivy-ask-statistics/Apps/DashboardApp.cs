@@ -3,309 +3,453 @@ namespace IvyAskStatistics.Apps;
 [App(icon: Icons.LayoutDashboard, title: "Dashboard")]
 public class DashboardApp : ViewBase
 {
-    private const float ContentWidth = 0.95f;
-
     public override object? Build()
     {
         var factory = UseService<AppDbContextFactory>();
 
-        var selectedVersion = UseState("");
-        var refreshToken = UseRefreshToken();
-
-        var versionsQuery = UseQuery<List<RunSummaryRow>, int>(
+        var dashQuery = UseQuery<DashboardPageModel?, int>(
             key: 0,
-            fetcher: async (_, ct) => await LoadRunSummariesAsync(factory, ct),
-            options: new QueryOptions { KeepPrevious = true });
+            fetcher: async (_, ct) => await LoadDashboardPageAsync(factory, ct),
+            options: new QueryOptions { KeepPrevious = true, RevalidateOnMount = true },
+            tags: ["dashboard-stats"]);
 
-        var statsQuery = UseQuery<DashboardStats?, string>(
-            key: selectedVersion.Value,
-            fetcher: async (version, ct) =>
-            {
-                if (string.IsNullOrEmpty(version)) return null;
-                return await LoadStatsForVersionAsync(factory, version, ct);
-            },
-            options: new QueryOptions { KeepPrevious = true });
+        if (dashQuery.Loading && dashQuery.Value == null)
+            return Layout.Vertical().Gap(3).Padding(4).Height(Size.Full())
+                   | Text.H3("Dashboard")
+                   | Text.Muted("Loading…")
+                   | Layout.Center().Height(Size.Units(40)) | new Icon(Icons.Loader);
 
-        var versions = versionsQuery.Value ?? [];
+        if (dashQuery.Value == null)
+            return Layout.Vertical().Gap(3).Padding(4).Height(Size.Full()).Align(Align.Center)
+                   | new Icon(Icons.LayoutDashboard)
+                   | Text.H3("No dashboard data yet")
+                   | Text.Block(
+                       "Run tests from the Run tab to record results. Statistics and version charts appear after the first completed run.")
+                       .Muted()
+                       .Width(Size.Fraction(0.5f));
 
-        if (versionsQuery.Loading && versions.Count == 0)
-            return Layout.Center()
-                   | new Icon(Icons.Loader)
-                   | Text.Muted("Loading dashboard…");
+        var page = dashQuery.Value;
+        var data = page.Detail;
+        var versionTrend = page.VersionTrend;
 
-        if (versions.Count == 0)
-            return Layout.Center() | Text.Muted("No test runs yet. Run some tests first.");
+        var header = Layout.Vertical().Gap(1)
+            | Text.H3("Dashboard")
+            | Text.Block($"Ivy {page.IvyVersion} · {page.RunStartedAt.ToLocalTime():g}").Muted();
 
-        if (string.IsNullOrEmpty(selectedVersion.Value) && versions.Count > 0)
-            selectedVersion.Set(versions[0].IvyVersion);
+        // ── Level 1: Summary KPIs with deltas (vs previous Ivy version when possible) ──
+        var rateStr = $"{data.AnswerRate:F1}%";
+        var rateDelta = data.PrevAnswerRate.HasValue
+            ? FormatDelta(data.AnswerRate - data.PrevAnswerRate.Value, "%", higherIsBetter: true)
+            : Text.Muted("first version");
 
-        var versionOptions = versions.Select(v => v.IvyVersion).Distinct().ToArray();
-        var stats = statsQuery.Value;
+        var avgMsStr = $"{data.AvgMs} ms";
+        var avgMsDelta = data.PrevAvgMs.HasValue
+            ? FormatDelta(data.AvgMs - data.PrevAvgMs.Value, "ms", higherIsBetter: false)
+            : Text.Muted("first version");
 
-        var versionSelector = Layout.Horizontal().Height(Size.Fit()).Gap(2)
-            | Text.Block("Ivy Version:").Muted()
-            | selectedVersion.ToSelectInput(versionOptions);
+        var failedCount = data.NoAnswer + data.Errors;
 
-        if (stats == null)
-            return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter).Height(Size.Full())
-                   | versionSelector
-                   | (Layout.Center() | Text.Muted("No data for this version."));
-
-        var kpiRow = Layout.Grid().Columns(4).Gap(3).Width(Size.Fraction(ContentWidth))
+        var kpiRow = Layout.Grid().Columns(4).Gap(3).Height(Size.Fit())
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(stats.TotalResults.ToString("N0"))
-                    | Text.Block("questions tested").Muted()
-            ).Title("Total Questions").Icon(Icons.Play)
+                    | Text.H3(rateStr)
+                    | rateDelta
+            ).Title("Success Rate").Icon(Icons.CircleCheck)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(stats.AnswerRate.ToString("F1") + "%")
-                    | Text.Block($"{stats.Answered} answered / {stats.NoAnswer} no answer / {stats.Errors} errors").Muted()
-            ).Title("Answer Rate").Icon(Icons.CircleCheck)
+                    | Text.H3(avgMsStr)
+                    | avgMsDelta
+            ).Title("Avg Response").Icon(Icons.Timer)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(stats.AvgResponseMs + " ms")
-                    | Text.Block($"fastest {stats.MinResponseMs} ms · slowest {stats.MaxResponseMs} ms").Muted()
-            ).Title("Avg Response Time").Icon(Icons.Timer)
+                    | Text.H3(failedCount.ToString())
+                    | Text.Block($"{data.NoAnswer} no answer · {data.Errors} errors").Muted()
+            ).Title("Failed Questions").Icon(Icons.CircleX)
             | new Card(
                 Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(stats.WorstWidget)
-                    | Text.Block($"{stats.WorstWidgetRate:F1}% answer rate").Muted()
-            ).Title("Weakest Widget").Icon(Icons.CircleX);
+                    | Text.H3(data.WorstWidgets.Count > 0 ? data.WorstWidgets[0].Widget : "—")
+                    | Text.Block(data.WorstWidgets.Count > 0 ? $"{data.WorstWidgets[0].AnswerRate:F1}% answer rate" : "").Muted()
+            ).Title("Weakest Widget").Icon(Icons.Ban);
 
-        var distributionData = new[]
+        // ── Version history (one point = latest completed run per Ivy version) ──
+        object versionChartsRow;
+        if (versionTrend.Count >= 1)
         {
-            new { Label = "Answered",  Count = stats.Answered },
-            new { Label = "No answer", Count = stats.NoAnswer },
-            new { Label = "Error",     Count = stats.Errors   }
-        }.Where(x => x.Count > 0).ToList();
+            var rateByVersion = versionTrend.ToBarChart()
+                .Dimension("Version", x => x.Version)
+                .Measure("Success %", x => x.Sum(f => f.AnswerRate));
 
-        var pieChart = distributionData.ToPieChart(
-            dimension: x => x.Label,
-            measure: x => x.Sum(f => f.Count),
-            PieChartStyles.Dashboard,
-            new PieChartTotal(stats.TotalResults.ToString("N0"), "Total"));
+            var latencyByVersion = versionTrend.ToBarChart()
+                .Dimension("Version", x => x.Version)
+                .Measure("Avg ms", x => x.Sum(f => f.AvgMs));
 
-        var answerRateData = stats.WidgetStats
-            .OrderBy(w => w.AnswerRate)
-            .ToList();
+            var outcomesByVersion = versionTrend.ToBarChart()
+                .Dimension("Version", x => x.Version)
+                .Measure("Answered", x => x.Sum(f => f.Answered))
+                .Measure("No answer", x => x.Sum(f => f.NoAnswer))
+                .Measure("Error", x => x.Sum(f => f.Errors));
 
-        var answerRateChart = answerRateData.ToBarChart()
+            versionChartsRow = Layout.Grid().Columns(3).Gap(3).Height(Size.Fit())
+                | new Card(rateByVersion).Title("Success rate by Ivy version").Height(Size.Units(70))
+                | new Card(latencyByVersion).Title("Avg response by Ivy version").Height(Size.Units(70))
+                | new Card(outcomesByVersion).Title("Outcomes by Ivy version").Height(Size.Units(70));
+        }
+        else
+        {
+            versionChartsRow = Layout.Vertical();
+        }
+
+        // ── Level 2: Problem tables ──
+        var worstTable = data.WorstWidgets.AsQueryable()
+            .ToDataTable(r => r.Widget)
+            .Key("worst-widgets")
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.AnswerRate, "Rate %")
+            .Header(r => r.Failed, "Failed")
+            .Header(r => r.Tested, "Tested")
+            .Width(r => r.Widget, Size.Px(140))
+            .Width(r => r.AnswerRate, Size.Px(70))
+            .Width(r => r.Failed, Size.Px(70))
+            .Width(r => r.Tested, Size.Px(70))
+            .Config(c => { c.ShowIndexColumn = false; c.AllowSorting = true; });
+
+        var slowestTable = data.SlowestWidgets.AsQueryable()
+            .ToDataTable(r => r.Widget)
+            .Key("slowest-widgets")
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.AvgMs, "Avg ms")
+            .Header(r => r.MaxMs, "Max ms")
+            .Width(r => r.Widget, Size.Px(140))
+            .Width(r => r.AvgMs, Size.Px(80))
+            .Width(r => r.MaxMs, Size.Px(80))
+            .Config(c => { c.ShowIndexColumn = false; c.AllowSorting = true; });
+
+        var worstChart = data.WorstWidgets.ToBarChart()
             .Dimension("Widget", x => x.Widget)
             .Measure("Answer rate %", x => x.Sum(f => f.AnswerRate));
 
-        var responseTimeData = stats.WidgetStats
-            .OrderByDescending(w => w.AvgMs)
-            .ToList();
+        var resultDistribution = new[]
+        {
+            new { Label = "Answered", Count = data.Answered },
+            new { Label = "No answer", Count = data.NoAnswer },
+            new { Label = "Error", Count = data.Errors }
+        }.Where(x => x.Count > 0).ToList();
 
-        var responseTimeChart = responseTimeData.ToBarChart()
-            .Dimension("Widget", x => x.Widget)
-            .Measure("Avg ms", x => x.Sum(f => f.AvgMs));
+        var pieChart = resultDistribution.ToPieChart(
+            dimension: x => x.Label,
+            measure: x => x.Sum(f => f.Count),
+            PieChartStyles.Dashboard,
+            new PieChartTotal(data.Total.ToString("N0"), "Total"));
 
-        var diffData = stats.DifficultyStats;
-
-        var diffChart = diffData.ToBarChart()
+        var difficultyChart = data.DifficultyBreakdown.ToBarChart()
             .Dimension("Difficulty", x => x.Difficulty)
-            .Measure("Answered",  x => x.Sum(f => f.Answered))
+            .Measure("Answered", x => x.Sum(f => f.Answered))
             .Measure("No answer", x => x.Sum(f => f.NoAnswer))
-            .Measure("Error",     x => x.Sum(f => f.Errors));
+            .Measure("Error", x => x.Sum(f => f.Errors));
 
-        var widgetTable = stats.WidgetStats
-            .OrderBy(w => w.AnswerRate)
-            .AsQueryable()
-            .ToDataTable(r => r.Widget)
-            .Key("dashboard-widget-table")
-            .Header(r => r.Widget,     "Widget")
-            .Header(r => r.TotalRuns,  "Tested")
-            .Header(r => r.Answered,   "Answered")
-            .Header(r => r.NoAnswer,   "No Answer")
-            .Header(r => r.Errors,     "Errors")
-            .Header(r => r.AnswerRate, "Answer Rate %")
-            .Header(r => r.AvgMs,      "Avg ms")
-            .Width(r => r.Widget,     Size.Px(160))
-            .Width(r => r.TotalRuns,  Size.Px(70))
-            .Width(r => r.Answered,   Size.Px(90))
-            .Width(r => r.NoAnswer,   Size.Px(100))
-            .Width(r => r.Errors,     Size.Px(70))
-            .Width(r => r.AnswerRate, Size.Px(120))
-            .Width(r => r.AvgMs,      Size.Px(80))
+        var chartsRow = Layout.Grid().Columns(3).Gap(3).Height(Size.Fit())
+            | new Card(worstChart).Title("Worst Widgets").Height(Size.Units(70))
+            | new Card(difficultyChart).Title("Results by Difficulty").Height(Size.Units(70))
+            | new Card(pieChart).Title("Result Distribution").Height(Size.Units(70));
+
+        var problemRow = Layout.Grid().Columns(2).Gap(3).Height(Size.Fit())
+            | new Card(worstTable).Title("Worst Widgets (top 10)")
+            | new Card(slowestTable).Title("Slowest Widgets (top 10)");
+
+        // ── Level 3: Failed questions debug table ──
+        var failedTable = data.FailedQuestions.AsQueryable()
+            .ToDataTable()
+            .Key("failed-questions")
+            .Height(Size.Full())
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.Difficulty, "Difficulty")
+            .Header(r => r.Question, "Question")
+            .Header(r => r.Status, "Status")
+            .Header(r => r.ResponseTimeMs, "Time (ms)")
+            .Width(r => r.Widget, Size.Px(140))
+            .Width(r => r.Difficulty, Size.Px(90))
+            .Width(r => r.Status, Size.Px(90))
+            .Width(r => r.ResponseTimeMs, Size.Px(90))
             .Config(c =>
             {
-                c.AllowSorting   = true;
+                c.AllowSorting = true;
                 c.AllowFiltering = true;
-                c.ShowSearch     = true;
+                c.ShowSearch = true;
+                c.ShowIndexColumn = true;
             });
 
-        var runHistoryTable = versions.AsQueryable()
-            .ToDataTable(r => r.IvyVersion)
-            .Key("run-history-table")
-            .Header(r => r.IvyVersion,   "Ivy Version")
-            .Header(r => r.TotalQuestions, "Questions")
-            .Header(r => r.SuccessCount,  "Answered")
-            .Header(r => r.NoAnswerCount, "No Answer")
-            .Header(r => r.ErrorCount,    "Errors")
-            .Header(r => r.SuccessRate,   "Success %")
-            .Header(r => r.StartedAt,     "Started")
-            .Header(r => r.Duration,      "Duration")
-            .Width(r => r.IvyVersion,    Size.Px(120))
-            .Width(r => r.TotalQuestions, Size.Px(90))
-            .Width(r => r.SuccessCount,  Size.Px(90))
-            .Width(r => r.NoAnswerCount, Size.Px(90))
-            .Width(r => r.ErrorCount,    Size.Px(70))
-            .Width(r => r.SuccessRate,   Size.Px(100))
-            .Width(r => r.StartedAt,     Size.Px(170))
-            .Width(r => r.Duration,      Size.Px(100))
-            .Config(c =>
-            {
-                c.AllowSorting   = true;
-                c.ShowIndexColumn = false;
-            });
-
-        return Layout.Vertical().Gap(4).Padding(4).Align(Align.TopCenter).Height(Size.Full())
-               | versionSelector
+        return Layout.Vertical().Gap(3).Padding(4).Height(Size.Full())
+               | header
                | kpiRow
-               | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(ContentWidth))
-                   | new Card(pieChart).Title("Result Distribution")
-                   | new Card(diffChart).Title("Results by Difficulty"))
-               | (Layout.Grid().Columns(2).Gap(3).Width(Size.Fraction(ContentWidth))
-                   | new Card(answerRateChart).Title("Answer Rate by Widget (worst first)")
-                   | new Card(responseTimeChart).Title("Avg Response Time by Widget (slowest first)"))
-               | (Layout.Vertical().Gap(2).Width(Size.Fraction(ContentWidth))
-                   | new Card(widgetTable).Title("Per-Widget Breakdown"))
-               | (Layout.Vertical().Gap(2).Width(Size.Fraction(ContentWidth))
-                   | new Card(runHistoryTable).Title("Run History"));
+               | versionChartsRow
+               | chartsRow
+               | problemRow
+               | new Card(failedTable).Title($"Failed Questions ({failedCount})");
     }
 
-    private static async Task<List<RunSummaryRow>> LoadRunSummariesAsync(
+    private static object FormatDelta(double delta, string unit, bool higherIsBetter)
+    {
+        if (Math.Abs(delta) < 0.05) return Text.Muted("no change");
+        var sign = delta > 0 ? "+" : "";
+        var label = unit == "%" ? $"{sign}{delta:F1}{unit}" : $"{sign}{(int)delta} {unit}";
+        var isGood = higherIsBetter ? delta > 0 : delta < 0;
+        return isGood ? Text.Block(label).Color(Colors.Emerald) : Text.Block(label).Color(Colors.Red);
+    }
+
+    private static async Task<DashboardPageModel?> LoadDashboardPageAsync(
         AppDbContextFactory factory, CancellationToken ct)
     {
         await using var ctx = factory.CreateDbContext();
 
-        var runs = await ctx.TestRuns
-            .AsNoTracking()
+        var runIdsWithData = await ctx.TestResults.AsNoTracking()
+            .Select(r => r.TestRunId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (runIdsWithData.Count == 0) return null;
+
+        var runs = await ctx.TestRuns.AsNoTracking()
+            .Where(r => r.CompletedAt != null && runIdsWithData.Contains(r.Id))
             .OrderByDescending(r => r.StartedAt)
             .ToListAsync(ct);
 
-        return runs.Select(r =>
+        if (runs.Count == 0) return null;
+
+        var latestRun = runs[0];
+
+        var seenVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var latestRunPerVersion = new List<TestRunEntity>();
+        foreach (var r in runs)
         {
-            var total = r.TotalQuestions;
-            var rate = total > 0 ? Math.Round(r.SuccessCount * 100.0 / total, 1) : 0;
-            var duration = r.CompletedAt.HasValue
-                ? $"{(r.CompletedAt.Value - r.StartedAt).TotalSeconds:F0}s"
-                : "in progress";
-            var started = r.StartedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm");
-            return new RunSummaryRow(r.IvyVersion, total, r.SuccessCount, r.NoAnswerCount, r.ErrorCount, rate, started, duration);
-        }).ToList();
-    }
+            var v = (r.IvyVersion ?? "").Trim();
+            if (string.IsNullOrEmpty(v)) continue;
+            if (!seenVersions.Add(v)) continue;
+            latestRunPerVersion.Add(r);
+        }
 
-    private static async Task<DashboardStats?> LoadStatsForVersionAsync(
-        AppDbContextFactory factory, string ivyVersion, CancellationToken ct)
-    {
-        await using var ctx = factory.CreateDbContext();
-
-        var run = await ctx.TestRuns
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.IvyVersion == ivyVersion, ct);
-
-        if (run == null) return null;
-
-        var results = await ctx.TestResults
-            .AsNoTracking()
+        var trendRunIds = latestRunPerVersion.Select(r => r.Id).ToList();
+        var trendResults = await ctx.TestResults.AsNoTracking()
             .Include(r => r.Question)
-            .Where(r => r.TestRunId == run.Id)
+            .Where(r => trendRunIds.Contains(r.TestRunId))
             .ToListAsync(ct);
 
-        if (results.Count == 0) return null;
+        // Use TestRun row counters for outcomes/rate so charts match ivy_ask_test_runs (FinalizeRun totals).
+        // Row-level ivy_ask_test_results can be short if historical runs failed mid-persist; averages still use rows when present.
+        var versionTrend = new List<VersionTrendRow>();
+        foreach (var r in latestRunPerVersion)
+        {
+            var res = trendResults.Where(x => x.TestRunId == r.Id).ToList();
+            var answered = r.SuccessCount;
+            var noAnswer = r.NoAnswerCount;
+            var errors = r.ErrorCount;
+            var t = r.TotalQuestions;
+            var rate = t > 0 ? Math.Round(answered * 100.0 / t, 1) : 0;
+            var avgMs = res.Count > 0 ? Math.Round(res.Average(x => (double)x.ResponseTimeMs), 0) : 0;
+            versionTrend.Add(new VersionTrendRow(
+                (r.IvyVersion ?? "").Trim(),
+                rate,
+                avgMs,
+                answered,
+                noAnswer,
+                errors,
+                t,
+                r.StartedAt));
+        }
 
-        var totalResults = results.Count;
-        var answered     = results.Count(r => r.IsSuccess);
-        var noAnswer     = results.Count(r => !r.IsSuccess && r.HttpStatus == 404);
-        var errors       = results.Count(r => !r.IsSuccess && r.HttpStatus != 404);
-        var answerRate   = totalResults > 0 ? answered * 100.0 / totalResults : 0;
-        var avgMs        = (int)results.Average(r => r.ResponseTimeMs);
-        var minMs        = results.Min(r => r.ResponseTimeMs);
-        var maxMs        = results.Max(r => r.ResponseTimeMs);
+        versionTrend.Sort((a, b) => CompareVersionStrings(a.Version, b.Version));
 
-        var widgetStats = results
+        var latestResults = await ctx.TestResults.AsNoTracking()
+            .Include(r => r.Question)
+            .Where(r => r.TestRunId == latestRun.Id)
+            .ToListAsync(ct);
+
+        if (latestResults.Count == 0 && (latestRun.CompletedAt == null || latestRun.TotalQuestions == 0))
+            return null;
+
+        double? prevAnswerRate = null;
+        int? prevAvgMs = null;
+        var currentV = (latestRun.IvyVersion ?? "").Trim();
+        var idx = versionTrend.FindIndex(r => string.Equals(r.Version, currentV, StringComparison.OrdinalIgnoreCase));
+        if (idx > 0)
+        {
+            var prev = versionTrend[idx - 1];
+            prevAnswerRate = prev.AnswerRate;
+            prevAvgMs = (int)prev.AvgMs;
+        }
+        else
+        {
+            var prevRun = await ctx.TestRuns.AsNoTracking()
+                .Where(r => r.StartedAt < latestRun.StartedAt && r.CompletedAt != null && runIdsWithData.Contains(r.Id))
+                .OrderByDescending(r => r.StartedAt)
+                .FirstOrDefaultAsync(ct);
+            if (prevRun != null)
+            {
+                var prevResults = await ctx.TestResults.AsNoTracking()
+                    .Where(r => r.TestRunId == prevRun.Id)
+                    .ToListAsync(ct);
+                if (prevRun.TotalQuestions > 0 && prevResults.Count == prevRun.TotalQuestions)
+                {
+                    var prevAns = prevResults.Count(r => r.IsSuccess);
+                    prevAnswerRate = Math.Round(prevAns * 100.0 / prevResults.Count, 1);
+                    prevAvgMs = (int)prevResults.Average(r => r.ResponseTimeMs);
+                }
+                else if (prevRun.TotalQuestions > 0)
+                {
+                    prevAnswerRate = Math.Round(prevRun.SuccessCount * 100.0 / prevRun.TotalQuestions, 1);
+                    prevAvgMs = prevResults.Count > 0 ? (int)prevResults.Average(r => r.ResponseTimeMs) : 0;
+                }
+            }
+        }
+
+        var detail = BuildDashboardData(latestResults, prevAnswerRate, prevAvgMs, latestRun);
+
+        return new DashboardPageModel(
+            currentV,
+            latestRun.StartedAt,
+            detail,
+            versionTrend);
+    }
+
+    private static DashboardData BuildDashboardData(
+        List<TestResultEntity> results,
+        double? prevAnswerRate,
+        int? prevAvgMs,
+        TestRunEntity? run = null)
+    {
+        var useRunSummary = run != null && run.TotalQuestions > 0
+            && (results.Count == 0 || results.Count != run.TotalQuestions);
+
+        int total, answered, noAnswer, errors;
+        double answerRate;
+        int avgMs;
+        if (useRunSummary)
+        {
+            total = run!.TotalQuestions;
+            answered = run.SuccessCount;
+            noAnswer = run.NoAnswerCount;
+            errors = run.ErrorCount;
+            answerRate = total > 0 ? Math.Round(answered * 100.0 / total, 1) : 0;
+            avgMs = results.Count > 0 ? (int)results.Average(r => r.ResponseTimeMs) : 0;
+        }
+        else if (results.Count == 0)
+        {
+            return new DashboardData(
+                0, 0, 0, 0, 0, 0, prevAnswerRate, prevAvgMs,
+                [], [], [], []);
+        }
+        else
+        {
+            total = results.Count;
+            answered = results.Count(r => r.IsSuccess);
+            noAnswer = results.Count(r => !r.IsSuccess && r.HttpStatus == 404);
+            errors = results.Count(r => !r.IsSuccess && r.HttpStatus != 404);
+            answerRate = total > 0 ? Math.Round(answered * 100.0 / total, 1) : 0;
+            avgMs = (int)results.Average(r => r.ResponseTimeMs);
+        }
+
+        var widgetGroups = results
             .GroupBy(r => r.Question.Widget)
             .Select(g =>
             {
-                var total = g.Count();
-                var ans   = g.Count(r => r.IsSuccess);
-                var noAns = g.Count(r => !r.IsSuccess && r.HttpStatus == 404);
-                var err   = g.Count(r => !r.IsSuccess && r.HttpStatus != 404);
-                var rate  = total > 0 ? Math.Round(ans * 100.0 / total, 1) : 0;
-                var avg   = (int)g.Average(r => r.ResponseTimeMs);
-                return new WidgetStatRow(g.Key, total, ans, noAns, err, rate, avg);
+                var t = g.Count();
+                var a = g.Count(r => r.IsSuccess);
+                var rate = t > 0 ? Math.Round(a * 100.0 / t, 1) : 0;
+                var avg = (int)g.Average(r => r.ResponseTimeMs);
+                var max = g.Max(r => r.ResponseTimeMs);
+                return new WidgetProblem(g.Key, rate, t - a, t, avg, max);
             })
-            .OrderBy(w => w.Widget)
             .ToList();
 
-        var worstWidget = widgetStats.MinBy(w => w.AnswerRate);
+        var worstWidgets = widgetGroups.OrderBy(w => w.AnswerRate).Take(10).ToList();
+        var slowestWidgets = widgetGroups.OrderByDescending(w => w.AvgMs).Take(10).ToList();
 
-        var diffStats = results
+        var diffBreakdown = results
             .GroupBy(r => r.Question.Difficulty)
             .Select(g =>
             {
-                var ans   = g.Count(r => r.IsSuccess);
-                var noAns = g.Count(r => !r.IsSuccess && r.HttpStatus == 404);
-                var err   = g.Count(r => !r.IsSuccess && r.HttpStatus != 404);
-                return new DifficultyStatRow(g.Key, ans, noAns, err);
+                var t = g.Count();
+                var a = g.Count(r => r.IsSuccess);
+                var na = g.Count(r => !r.IsSuccess && r.HttpStatus == 404);
+                var err = g.Count(r => !r.IsSuccess && r.HttpStatus != 404);
+                var rate = t > 0 ? Math.Round(a * 100.0 / t, 1) : 0;
+                return new DifficultyRow(g.Key, rate, a, na, err, t);
             })
             .OrderBy(d => d.Difficulty == "easy" ? 0 : d.Difficulty == "medium" ? 1 : 2)
             .ToList();
 
-        return new DashboardStats(
-            TotalResults:    totalResults,
-            Answered:        answered,
-            NoAnswer:        noAnswer,
-            Errors:          errors,
-            AnswerRate:      Math.Round(answerRate, 1),
-            AvgResponseMs:   avgMs,
-            MinResponseMs:   minMs,
-            MaxResponseMs:   maxMs,
-            WorstWidget:     worstWidget?.Widget ?? "—",
-            WorstWidgetRate: worstWidget?.AnswerRate ?? 0,
-            WidgetStats:     widgetStats,
-            DifficultyStats: diffStats);
+        var failedQuestions = results
+            .Where(r => !r.IsSuccess)
+            .OrderBy(r => r.Question.Widget)
+            .ThenBy(r => r.Question.Difficulty)
+            .Select(r => new FailedQuestion(
+                r.Question.Widget,
+                r.Question.Difficulty,
+                r.Question.QuestionText,
+                r.HttpStatus == 404 ? "no answer" : "error",
+                r.ResponseTimeMs))
+            .ToList();
+
+        return new DashboardData(
+            total, answered, noAnswer, errors, answerRate, avgMs,
+            prevAnswerRate, prevAvgMs,
+            worstWidgets, slowestWidgets, diffBreakdown, failedQuestions);
+    }
+
+    /// <summary>Semantic-ish ordering so 1.2.26 &lt; 1.2.27 &lt; 1.10.0.</summary>
+    private static int CompareVersionStrings(string? a, string? b)
+    {
+        if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (string.IsNullOrEmpty(a)) return -1;
+        if (string.IsNullOrEmpty(b)) return 1;
+
+        var pa = a.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var pb = b.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var n = Math.Max(pa.Length, pb.Length);
+        for (var i = 0; i < n; i++)
+        {
+            var sa = i < pa.Length ? pa[i] : "";
+            var sb = i < pb.Length ? pb[i] : "";
+            var na = int.TryParse(sa, out var ia) ? ia : int.MinValue;
+            var nb = int.TryParse(sb, out var ib) ? ib : int.MinValue;
+            if (na != int.MinValue && nb != int.MinValue)
+            {
+                if (na != nb) return na.CompareTo(nb);
+                continue;
+            }
+
+            var cmp = string.Compare(sa, sb, StringComparison.OrdinalIgnoreCase);
+            if (cmp != 0) return cmp;
+        }
+
+        return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
     }
 }
 
-internal record RunSummaryRow(
+internal record DashboardPageModel(
     string IvyVersion,
-    int    TotalQuestions,
-    int    SuccessCount,
-    int    NoAnswerCount,
-    int    ErrorCount,
-    double SuccessRate,
-    string StartedAt,
-    string Duration);
+    DateTime RunStartedAt,
+    DashboardData Detail,
+    List<VersionTrendRow> VersionTrend);
 
-internal record DashboardStats(
-    int    TotalResults,
-    int    Answered,
-    int    NoAnswer,
-    int    Errors,
+internal record VersionTrendRow(
+    string Version,
     double AnswerRate,
-    int    AvgResponseMs,
-    int    MinResponseMs,
-    int    MaxResponseMs,
-    string WorstWidget,
-    double WorstWidgetRate,
-    List<WidgetStatRow>     WidgetStats,
-    List<DifficultyStatRow> DifficultyStats);
+    double AvgMs,
+    int Answered,
+    int NoAnswer,
+    int Errors,
+    int Total,
+    DateTime RunAt);
 
-internal record WidgetStatRow(
-    string Widget,
-    int    TotalRuns,
-    int    Answered,
-    int    NoAnswer,
-    int    Errors,
-    double AnswerRate,
-    int    AvgMs);
+internal record DashboardData(
+    int Total, int Answered, int NoAnswer, int Errors,
+    double AnswerRate, int AvgMs,
+    double? PrevAnswerRate, int? PrevAvgMs,
+    List<WidgetProblem> WorstWidgets,
+    List<WidgetProblem> SlowestWidgets,
+    List<DifficultyRow> DifficultyBreakdown,
+    List<FailedQuestion> FailedQuestions);
 
-internal record DifficultyStatRow(
-    string Difficulty,
-    int    Answered,
-    int    NoAnswer,
-    int    Errors);
+internal record WidgetProblem(string Widget, double AnswerRate, int Failed, int Tested, int AvgMs, int MaxMs);
+internal record DifficultyRow(string Difficulty, double Rate, int Answered, int NoAnswer, int Errors, int Total);
+internal record FailedQuestion(string Widget, string Difficulty, string Question, string Status, int ResponseTimeMs);

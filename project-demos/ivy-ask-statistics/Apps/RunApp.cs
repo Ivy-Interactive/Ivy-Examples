@@ -14,6 +14,7 @@ public class RunApp : ViewBase
     {
         var factory = UseService<AppDbContextFactory>();
         var client = UseService<IClientProvider>();
+        var queryService = UseService<IQueryService>();
 
         var ivyVersion = UseState("");
         var difficultyFilter = UseState("all");
@@ -23,7 +24,6 @@ public class RunApp : ViewBase
         var activeIds = UseState(ImmutableHashSet<string>.Empty);
         var allQuestions = UseState<List<TestQuestion>>([]);
         var persistToDb = UseState(false);
-        var activeRunId = UseState(Guid.Empty);
         var refreshToken = UseRefreshToken();
         var runFinished = UseState(false);
 
@@ -87,17 +87,6 @@ public class RunApp : ViewBase
             var shouldPersist = !await RunExistsAsync(factory, version);
             persistToDb.Set(shouldPersist);
 
-            Guid runId = Guid.Empty;
-            if (shouldPersist)
-            {
-                runId = await CreateRunAsync(factory, version, snapshot.Count);
-                activeRunId.Set(runId);
-            }
-            else
-            {
-                activeRunId.Set(Guid.Empty);
-            }
-
             completed.Set(ImmutableList<QuestionRun>.Empty);
             activeIds.Set(ImmutableHashSet<string>.Empty);
             allQuestions.Set(snapshot);
@@ -109,6 +98,7 @@ public class RunApp : ViewBase
 
             _ = Task.Run(async () =>
             {
+                var runStartedUtc = DateTime.UtcNow;
                 var bag = new ConcurrentBag<QuestionRun>();
                 var inFlight = new ConcurrentDictionary<string, bool>();
                 using var sem = new SemaphoreSlim(maxParallel);
@@ -135,9 +125,6 @@ public class RunApp : ViewBase
                     {
                         var result = await IvyAskService.AskAsync(q, BaseUrl);
                         bag.Add(result);
-
-                        if (shouldPersist && runId != Guid.Empty)
-                            _ = SaveResultAsync(factory, runId, result);
                     }
                     finally
                     {
@@ -153,9 +140,15 @@ public class RunApp : ViewBase
                 completed.Set(_ => bag.ToImmutableList());
                 activeIds.Set(ImmutableHashSet<string>.Empty);
 
-                var finalResults = bag.ToList();
-                if (shouldPersist && runId != Guid.Empty)
-                    await FinalizeRunAsync(factory, runId, finalResults);
+                var finalResults = OrderResultsLikeSnapshot(snapshot, bag.ToList());
+                if (shouldPersist)
+                {
+                    var saved = await PersistNewRunAsync(factory, version, snapshot, finalResults, runStartedUtc);
+                    if (saved)
+                        queryService.RevalidateByTag("dashboard-stats");
+                    else
+                        client.Toast("Could not save results to the database.");
+                }
 
                 isRunning.Set(false);
                 runFinished.Set(true);
@@ -291,62 +284,79 @@ public class RunApp : ViewBase
         return await ctx.TestRuns.AnyAsync(r => r.IvyVersion == ivyVersion);
     }
 
-    private static async Task<Guid> CreateRunAsync(AppDbContextFactory factory, string ivyVersion, int totalQuestions)
+    /// <summary>
+    /// One row per question in <paramref name="snapshot"/> order (fills gaps if the bag is short).
+    /// </summary>
+    private static List<QuestionRun> OrderResultsLikeSnapshot(
+        IReadOnlyList<TestQuestion> snapshot,
+        List<QuestionRun> bag)
     {
+        var byId = bag
+            .GroupBy(r => r.Question.Id)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+        return snapshot
+            .Select(q => byId.TryGetValue(q.Id, out var r)
+                ? r
+                : new QuestionRun(q, "error", 0, 0, ""))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Single transaction: create run + insert every test result, or roll back (no orphan run / partial rows).
+    /// </summary>
+    private static async Task<bool> PersistNewRunAsync(
+        AppDbContextFactory factory,
+        string ivyVersion,
+        IReadOnlyList<TestQuestion> snapshot,
+        List<QuestionRun> ordered,
+        DateTime startedAtUtc)
+    {
+        if (ordered.Count != snapshot.Count)
+            return false;
+
         await using var ctx = factory.CreateDbContext();
-        var run = new TestRunEntity
-        {
-            IvyVersion = ivyVersion,
-            TotalQuestions = totalQuestions,
-            StartedAt = DateTime.UtcNow
-        };
-        ctx.TestRuns.Add(run);
-        await ctx.SaveChangesAsync();
-        return run.Id;
-    }
-
-    private static async Task SaveResultAsync(AppDbContextFactory factory, Guid testRunId, QuestionRun result)
-    {
+        await using var tx = await ctx.Database.BeginTransactionAsync();
         try
         {
-            if (!Guid.TryParse(result.Question.Id, out var questionId)) return;
-            await using var ctx = factory.CreateDbContext();
-            ctx.TestResults.Add(new TestResultEntity
+            var run = new TestRunEntity
             {
-                TestRunId = testRunId,
-                QuestionId = questionId,
-                ResponseText = result.AnswerText,
-                ResponseTimeMs = result.ResponseTimeMs,
-                IsSuccess = result.Status == "success",
-                HttpStatus = result.HttpStatus,
-                ErrorMessage = result.Status == "error" ? result.AnswerText : null
-            });
+                IvyVersion = ivyVersion,
+                TotalQuestions = snapshot.Count,
+                StartedAt = startedAtUtc,
+                SuccessCount = ordered.Count(r => r.Status == "success"),
+                NoAnswerCount = ordered.Count(r => r.Status == "no_answer"),
+                ErrorCount = ordered.Count(r => r.Status == "error"),
+                CompletedAt = DateTime.UtcNow
+            };
+            ctx.TestRuns.Add(run);
+
+            var rows = new List<TestResultEntity>(ordered.Count);
+            foreach (var result in ordered)
+            {
+                if (!Guid.TryParse(result.Question.Id, out var questionId))
+                    throw new InvalidOperationException($"Invalid question id: {result.Question.Id}");
+
+                rows.Add(new TestResultEntity
+                {
+                    TestRunId = run.Id,
+                    QuestionId = questionId,
+                    ResponseText = result.AnswerText ?? "",
+                    ResponseTimeMs = result.ResponseTimeMs,
+                    IsSuccess = result.Status == "success",
+                    HttpStatus = result.HttpStatus,
+                    ErrorMessage = result.Status == "error" ? result.AnswerText : null
+                });
+            }
+
+            ctx.TestResults.AddRange(rows);
             await ctx.SaveChangesAsync();
+            await tx.CommitAsync();
+            return true;
         }
         catch
         {
-            // best-effort
-        }
-    }
-
-    private static async Task FinalizeRunAsync(AppDbContextFactory factory, Guid runId, List<QuestionRun> results)
-    {
-        try
-        {
-            await using var ctx = factory.CreateDbContext();
-            var run = await ctx.TestRuns.FindAsync(runId);
-            if (run == null) return;
-
-            run.SuccessCount = results.Count(r => r.Status == "success");
-            run.NoAnswerCount = results.Count(r => r.Status == "no_answer");
-            run.ErrorCount = results.Count(r => r.Status == "error");
-            run.CompletedAt = DateTime.UtcNow;
-
-            await ctx.SaveChangesAsync();
-        }
-        catch
-        {
-            // best-effort
+            await tx.RollbackAsync();
+            return false;
         }
     }
 
