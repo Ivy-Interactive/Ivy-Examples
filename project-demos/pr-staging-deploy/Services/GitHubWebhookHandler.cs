@@ -134,6 +134,8 @@ public class GitHubWebhookHandler
                             BranchName: branch,
                             DocsServiceId: existingDepOnOpen.DocsServiceId,
                             SamplesServiceId: existingDepOnOpen.SamplesServiceId));
+                        await _prComments.TryNotifyDeployQueuedAsync(
+                            owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusCheckingStaging);
                     }
                     break;
                 }
@@ -149,8 +151,7 @@ public class GitHubWebhookHandler
                             owner, repoName, prNumber,
                             docsUrl: null, samplesUrl: null,
                             status: "Deploy failed",
-                            logLines: new[] { TruncLine(deployResult.Message, 240) },
-                            forceNewComment: true);
+                            logLines: new[] { TruncLine(deployResult.Message, 240) });
                         break;
                     }
 
@@ -161,6 +162,8 @@ public class GitHubWebhookHandler
                         BranchName: branch,
                         DocsServiceId: deployResult.DocsServiceId,
                         SamplesServiceId: deployResult.SamplesServiceId));
+                    await _prComments.TryNotifyDeployQueuedAsync(
+                        owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
                 }
                 else
                 {
@@ -168,8 +171,7 @@ public class GitHubWebhookHandler
                         owner, repoName, prNumber,
                         docsUrl: null, samplesUrl: null,
                         status: "Deploy failed",
-                        logLines: new[] { TruncLine(deployResult.Message, 240) },
-                        forceNewComment: true);
+                        logLines: new[] { TruncLine(deployResult.Message, 240) });
                 }
                 break;
 
@@ -202,6 +204,8 @@ public class GitHubWebhookHandler
                             BranchName: branch,
                             DocsServiceId: fallbackResult.DocsServiceId,
                             SamplesServiceId: fallbackResult.SamplesServiceId));
+                        await _prComments.TryNotifyDeployQueuedAsync(
+                            owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
                     }
                     else
                     {
@@ -209,8 +213,7 @@ public class GitHubWebhookHandler
                             owner, repoName, prNumber,
                             docsUrl: null, samplesUrl: null,
                             status: "Deploy failed",
-                            logLines: new[] { TruncLine(fallbackResult.Message, 240) },
-                            forceNewComment: true);
+                            logLines: new[] { TruncLine(fallbackResult.Message, 240) });
                     }
                     break;
                 }
@@ -222,8 +225,7 @@ public class GitHubWebhookHandler
                         owner, repoName, prNumber,
                         docsUrl: null, samplesUrl: null,
                         status: "Deploy failed",
-                        logLines: new[] { "Redeploy: docs/samples services not found in Sliplane." },
-                        forceNewComment: true);
+                        logLines: new[] { "Redeploy: docs/samples services not found in Sliplane." });
                     break;
                 }
 
@@ -234,6 +236,8 @@ public class GitHubWebhookHandler
                     BranchName: branch,
                     DocsServiceId: syncDep.DocsServiceId,
                     SamplesServiceId: syncDep.SamplesServiceId));
+                await _prComments.TryNotifyDeployQueuedAsync(
+                    owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusRedeployQueued);
 
                 break;
 
@@ -320,6 +324,8 @@ public class GitHubWebhookHandler
                     BranchName: branch,
                     DocsServiceId: existingDep.DocsServiceId,
                     SamplesServiceId: existingDep.SamplesServiceId));
+                await _prComments.TryNotifyDeployQueuedAsync(
+                    owner, repo, prNumber, PrStagingDeployCommentService.CommentStatusCheckingStaging);
             }
             return;
         }
@@ -335,8 +341,7 @@ public class GitHubWebhookHandler
                     owner, repo, prNumber,
                     docsUrl: null, samplesUrl: null,
                     status: "Deploy failed",
-                    logLines: new[] { TruncLine(result.Message, 240) },
-                    forceNewComment: true);
+                    logLines: new[] { TruncLine(result.Message, 240) });
                 return;
             }
 
@@ -347,6 +352,8 @@ public class GitHubWebhookHandler
                 BranchName: branch,
                 DocsServiceId: result.DocsServiceId,
                 SamplesServiceId: result.SamplesServiceId));
+            await _prComments.TryNotifyDeployQueuedAsync(
+                owner, repo, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
         }
         else
         {
@@ -357,8 +364,7 @@ public class GitHubWebhookHandler
                 docsUrl: null,
                 samplesUrl: null,
                 status: "Deploy failed",
-                logLines: new[] { TruncLine(result.Message, 240) },
-                forceNewComment: true);
+                logLines: new[] { TruncLine(result.Message, 240) });
         }
     }
 

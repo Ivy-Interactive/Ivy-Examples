@@ -80,9 +80,6 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
         const int maxTotalMinutes = 30;
         var deadline = DateTime.UtcNow.AddMinutes(maxTotalMinutes);
         DateTime? deployedAt = null;
-        // After this long stuck on "pending" via events, cross-check listing status.
-        const int listingFallbackMinutes = 5;
-        var pendingSince = DateTime.UtcNow;
 
         while (!ct.IsCancellationRequested)
         {
@@ -93,7 +90,6 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                     docsUrl: null, samplesUrl: null,
                     status: "Deploy timed out",
                     logLines: new[] { $"No terminal state received from Sliplane after {maxTotalMinutes} minutes." },
-                    forceNewComment: true,
                     cancellationToken: CancellationToken.None);
                 return;
             }
@@ -101,23 +97,16 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
             var (docsEvents, samplesEvents) = await _deployService.GetDeploymentEventsForServicesAsync(
                 apiToken, docsServiceId, samplesServiceId);
 
-            var combined = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
+            var combinedFromEvents = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
                 docsServiceId, docsEvents, samplesServiceId, samplesEvents);
 
-            _logger.LogDebug("PR #{Pr} deploy status from events: {Status} (docs={DocsEvents}, samples={SamplesEvents} events)",
-                req.PrNumber, combined, docsEvents.Count, samplesEvents.Count);
+            var dep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, req.PrNumber);
+            var combinedFromListing = ResolveStatusFromListing(dep, docsServiceId, samplesServiceId);
+            var combined = MergeEventAndListingStatus(combinedFromEvents, combinedFromListing);
 
-            // If events API is not returning useful data after a while, fall back to the service
-            // status field from the listing API (Sliplane always populates this, even when events lag).
-            if (combined == "pending" && (DateTime.UtcNow - pendingSince).TotalMinutes >= listingFallbackMinutes)
-            {
-                var dep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, req.PrNumber);
-                var listingStatus = ResolveStatusFromListing(dep, docsServiceId, samplesServiceId);
-                _logger.LogDebug("PR #{Pr} listing fallback status: {Status} (DocsStatus={Docs}, SamplesStatus={Samples})",
-                    req.PrNumber, listingStatus, dep?.DocsStatus, dep?.SamplesStatus);
-                if (listingStatus != "pending")
-                    combined = listingStatus;
-            }
+            _logger.LogDebug(
+                "PR #{Pr} deploy status: merged={Merged} (events={Events}, listing={Listing}; docsEv={DocsEv}, samplesEv={SamplesEv})",
+                req.PrNumber, combined, combinedFromEvents, combinedFromListing, docsEvents.Count, samplesEvents.Count);
 
             var urls = await _deployService.GetDeploymentUrlsForPrAsync(apiToken, req.PrNumber);
 
@@ -129,7 +118,6 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                     docsUrl: urls.DocsUrl, samplesUrl: urls.SamplesUrl,
                     status: "Deploy failed",
                     logLines: logLines,
-                    forceNewComment: true,
                     cancellationToken: CancellationToken.None);
                 return;
             }
@@ -150,7 +138,6 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                         docsUrl: urls.DocsUrl, samplesUrl: urls.SamplesUrl,
                         status: "Deployed",
                         logLines: null,
-                        forceNewComment: true,
                         cancellationToken: CancellationToken.None);
                     return;
                 }
@@ -165,6 +152,18 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                 delayMs = Math.Min(maxDelayMs, (int)(delayMs * 1.25));
         }
         // App shutting down — do nothing, startup scan will resume on next deploy.
+    }
+
+    /// <summary>
+    /// Events often lag behind; listing usually shows <c>live</c> sooner. Prefer failure if either source reports it.
+    /// </summary>
+    private static string MergeEventAndListingStatus(string fromEvents, string fromListing)
+    {
+        if (fromEvents == "failed" || fromListing == "failed")
+            return "failed";
+        if (fromEvents == "deployed" || fromListing == "deployed")
+            return "deployed";
+        return "pending";
     }
 
     /// <summary>

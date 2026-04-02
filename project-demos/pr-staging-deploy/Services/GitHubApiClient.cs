@@ -188,7 +188,7 @@ public class GitHubApiClient
         var response = await client.DeleteAsync(
             $"https://api.github.com/repos/{owner}/{repo}/issues/comments/{commentId}",
             cancellationToken);
-        return response.IsSuccessStatusCode;
+        return response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound;
     }
 
     public async Task<bool> AddReactionToIssueCommentAsync(
