@@ -157,11 +157,9 @@ public class RunApp : ViewBase
         }
 
         if (firstLoad)
-            return Layout.Center()
-                   | new Icon(Icons.Loader)
-                   | Text.Muted("Loading questions…");
+            return TabLoadingSkeletons.RunTab();
 
-        var controls = Layout.Horizontal().Height(Size.Fit()).Gap(2)
+        var controls = Layout.Horizontal().Height(Size.Fit())
             | ivyVersion.ToTextInput().Placeholder("e.g. v2.4.0").Disabled(running)
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(running)
             | new Button("Run All", onClick: async _ => await StartRunAsync())
@@ -174,7 +172,7 @@ public class RunApp : ViewBase
         {
             var inFlight = active.Count;
             statusBar = new Callout(
-                Layout.Vertical().Gap(2)
+                Layout.Vertical()
                     | Text.Block($"Running {done}/{questions.Count} completed, {inFlight} in flight (x{concurrency.Value} parallel)")
                     | new Progress(progressPct).Goal($"{done}/{questions.Count}"),
                 variant: CalloutVariant.Info);
@@ -198,24 +196,24 @@ public class RunApp : ViewBase
         if (done > 0)
         {
             var rate = Math.Round(success * 100.0 / done, 1);
-            kpiCards = Layout.Grid().Columns(4).Gap(3).Height(Size.Fit())
+            kpiCards = Layout.Grid().Columns(4).Height(Size.Fit())
                 | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
+                    Layout.Vertical()
                         | Text.H3($"{rate}%")
                         | Text.Block($"{success} of {done} answered").Muted()
                 ).Title("Answer Rate").Icon(Icons.CircleCheck)
                 | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
+                    Layout.Vertical()
                         | Text.H3($"{noAnswer}")
                         | Text.Block("no answer").Muted()
                 ).Title("No Answer").Icon(Icons.Ban)
                 | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
+                    Layout.Vertical()
                         | Text.H3($"{errors}")
                         | Text.Block("failed").Muted()
                 ).Title("Errors").Icon(Icons.CircleX)
                 | new Card(
-                    Layout.Vertical().Gap(2).Padding(3)
+                    Layout.Vertical()
                         | Text.H3($"{avgMs} ms")
                         | Text.Block($"fastest {completedList.Min(r => r.ResponseTimeMs)} ms · slowest {completedList.Max(r => r.ResponseTimeMs)} ms").Muted()
                 ).Title("Avg Response").Icon(Icons.Timer);
@@ -252,7 +250,7 @@ public class RunApp : ViewBase
                 config.ShowIndexColumn = true;
             });
 
-        return Layout.Vertical().Gap(3).Height(Size.Full())
+        return Layout.Vertical().Height(Size.Full())
                | controls
                | statusBar
                | kpiCards

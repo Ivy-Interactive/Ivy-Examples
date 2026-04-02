@@ -198,9 +198,7 @@ public class QuestionsApp : ViewBase
         ).ToList();
 
         if (firstLoad)
-            return Layout.Center()
-                   | new Icon(Icons.Loader)
-                   | Text.Muted("Loading…");
+            return TabLoadingSkeletons.QuestionsTab();
 
         var notGeneratedCount = baseRows.Count(r => r.Easy + r.Medium + r.Hard == 0);
 
@@ -209,7 +207,7 @@ public class QuestionsApp : ViewBase
         {
             var pct = progress.Total > 0 ? progress.Done * 100 / progress.Total : 0;
             progressBar = new Callout(
-                Layout.Vertical().Gap(2)
+                Layout.Vertical()
                     | Text.Block($"Generating {progress.Done + 1}/{progress.Total}: {progress.CurrentWidget}…")
                     | new Progress(pct).Goal($"{progress.Done}/{progress.Total}"),
                 variant: CalloutVariant.Info);
@@ -218,7 +216,7 @@ public class QuestionsApp : ViewBase
         {
             var failCount = progress.Failed.Count;
             progressBar = new Callout(
-                Layout.Horizontal().Gap(2)
+                Layout.Horizontal()
                     | Text.Block(failCount == 0
                         ? $"Done! Generated questions for {progress.Done}/{progress.Total} widget(s)."
                         : $"Completed: {progress.Done}/{progress.Total} succeeded. Failed: {string.Join(", ", progress.Failed)}")

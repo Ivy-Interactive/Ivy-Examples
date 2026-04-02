@@ -56,11 +56,7 @@ internal sealed class WidgetQuestionsDialog(
 
         object body;
         if (firstLoad)
-        {
-            body = Layout.Center()
-                   | new Icon(Icons.Loader)
-                   | Text.Muted("Loading…");
-        }
+            body = TabLoadingSkeletons.DialogTable();
         else if (rows.Count == 0)
         {
             body = new Callout(

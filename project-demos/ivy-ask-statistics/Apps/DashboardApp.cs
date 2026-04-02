@@ -6,70 +6,90 @@ public class DashboardApp : ViewBase
     public override object? Build()
     {
         var factory = UseService<AppDbContextFactory>();
+        var client = UseService<IClientProvider>();
+        var queryService = UseService<IQueryService>();
+        var navigation = Context.UseNavigation();
 
         var dashQuery = UseQuery<DashboardPageModel?, int>(
             key: 0,
-            fetcher: async (_, ct) => await LoadDashboardPageAsync(factory, ct),
-            options: new QueryOptions { KeepPrevious = true, RevalidateOnMount = true },
+            fetcher: async (_, ct) =>
+            {
+                try
+                {
+                    return await LoadDashboardPageAsync(factory, ct);
+                }
+                catch (Exception ex)
+                {
+                    client.Toast($"Could not load dashboard: {ex.Message}");
+                    return null;
+                }
+            },
+            options: new QueryOptions { KeepPrevious = true, RevalidateOnMount = false },
             tags: ["dashboard-stats"]);
 
         if (dashQuery.Loading && dashQuery.Value == null)
-            return Layout.Vertical().Gap(3).Padding(4).Height(Size.Full())
-                   | Text.H3("Dashboard")
-                   | Text.Muted("Loading…")
-                   | Layout.Center().Height(Size.Units(40)) | new Icon(Icons.Loader);
+            return TabLoadingSkeletons.Dashboard();
 
         if (dashQuery.Value == null)
-            return Layout.Vertical().Gap(3).Padding(4).Height(Size.Full()).Align(Align.Center)
+            return Layout.Vertical().Height(Size.Full()).Align(Align.Center)
                    | new Icon(Icons.LayoutDashboard)
-                   | Text.H3("No dashboard data yet")
+                   | Text.H3("No statistics yet")
                    | Text.Block(
-                       "Run tests from the Run tab to record results. Statistics and version charts appear after the first completed run.")
+                       "The database has no completed test run with saved results. "
+                       + "Use Run Tests: set an Ivy version, run all questions, wait until the run finishes.")
                        .Muted()
-                       .Width(Size.Fraction(0.5f));
+                       .Width(Size.Fraction(0.5f))
+                   | Layout.Horizontal()
+                       | new Button("Open Run Tests", onClick: _ => navigation.Navigate(typeof(RunApp)))
+                           .Primary()
+                           .Icon(Icons.Play)
+                       | new Button("Refresh", onClick: _ => queryService.RevalidateByTag("dashboard-stats"))
+                           .Variant(ButtonVariant.Outline)
+                           .Icon(Icons.RefreshCw);
 
         var page = dashQuery.Value;
         var data = page.Detail;
         var versionTrend = page.VersionTrend;
 
-        var header = Layout.Vertical().Gap(1)
-            | Text.H3("Dashboard")
-            | Text.Block($"Ivy {page.IvyVersion} · {page.RunStartedAt.ToLocalTime():g}").Muted();
-
         // ── Level 1: Summary KPIs with deltas (vs previous Ivy version when possible) ──
         var rateStr = $"{data.AnswerRate:F1}%";
         var rateDelta = data.PrevAnswerRate.HasValue
             ? FormatDelta(data.AnswerRate - data.PrevAnswerRate.Value, "%", higherIsBetter: true)
-            : Text.Muted("first version");
+            : Text.Muted("no baseline");
 
         var avgMsStr = $"{data.AvgMs} ms";
         var avgMsDelta = data.PrevAvgMs.HasValue
             ? FormatDelta(data.AvgMs - data.PrevAvgMs.Value, "ms", higherIsBetter: false)
-            : Text.Muted("first version");
+            : Text.Muted("no baseline");
 
         var failedCount = data.NoAnswer + data.Errors;
 
-        var kpiRow = Layout.Grid().Columns(4).Gap(3).Height(Size.Fit())
+        var runVersion = string.IsNullOrWhiteSpace(page.IvyVersion) ? "—" : page.IvyVersion.Trim();
+        var kpiRow = Layout.Grid().Columns(5).Height(Size.Fit())
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(rateStr)
-                    | rateDelta
-            ).Title("Success Rate").Icon(Icons.CircleCheck)
+                Layout.Vertical()
+                    | (Layout.Horizontal().Align(Align.Left)
+                        | Text.H3(rateStr)
+                        | rateDelta)
+            ).Title("Answer success").Icon(Icons.CircleCheck)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(avgMsStr)
-                    | avgMsDelta
-            ).Title("Avg Response").Icon(Icons.Timer)
+                Layout.Vertical()
+                    | (Layout.Horizontal().Align(Align.Left)
+                        | Text.H3(avgMsStr)
+                        | avgMsDelta)
+            ).Title("Avg latency").Icon(Icons.Timer)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
-                    | Text.H3(failedCount.ToString())
-                    | Text.Block($"{data.NoAnswer} no answer · {data.Errors} errors").Muted()
-            ).Title("Failed Questions").Icon(Icons.CircleX)
+                Layout.Vertical()
+                    | Text.H3(failedCount.ToString("N0"))
+            ).Title("Failures").Icon(Icons.CircleX)
             | new Card(
-                Layout.Vertical().Gap(2).Padding(3)
+                Layout.Vertical()
                     | Text.H3(data.WorstWidgets.Count > 0 ? data.WorstWidgets[0].Widget : "—")
-                    | Text.Block(data.WorstWidgets.Count > 0 ? $"{data.WorstWidgets[0].AnswerRate:F1}% answer rate" : "").Muted()
-            ).Title("Weakest Widget").Icon(Icons.Ban);
+            ).Title("Weakest widget").Icon(Icons.Ban)
+            | new Card(
+                Layout.Vertical()
+                    | Text.H3(runVersion)
+            ).Title("Ivy version").Icon(Icons.Tag);
 
         // ── Version history (one point = latest completed run per Ivy version) ──
         object versionChartsRow;
@@ -89,7 +109,7 @@ public class DashboardApp : ViewBase
                 .Measure("No answer", x => x.Sum(f => f.NoAnswer))
                 .Measure("Error", x => x.Sum(f => f.Errors));
 
-            versionChartsRow = Layout.Grid().Columns(3).Gap(3).Height(Size.Fit())
+            versionChartsRow = Layout.Grid().Columns(3).Height(Size.Fit())
                 | new Card(rateByVersion).Title("Success rate by Ivy version").Height(Size.Units(70))
                 | new Card(latencyByVersion).Title("Avg response by Ivy version").Height(Size.Units(70))
                 | new Card(outcomesByVersion).Title("Outcomes by Ivy version").Height(Size.Units(70));
@@ -147,12 +167,12 @@ public class DashboardApp : ViewBase
             .Measure("No answer", x => x.Sum(f => f.NoAnswer))
             .Measure("Error", x => x.Sum(f => f.Errors));
 
-        var chartsRow = Layout.Grid().Columns(3).Gap(3).Height(Size.Fit())
+        var chartsRow = Layout.Grid().Columns(3).Height(Size.Fit())
             | new Card(worstChart).Title("Worst Widgets").Height(Size.Units(70))
             | new Card(difficultyChart).Title("Results by Difficulty").Height(Size.Units(70))
             | new Card(pieChart).Title("Result Distribution").Height(Size.Units(70));
 
-        var problemRow = Layout.Grid().Columns(2).Gap(3).Height(Size.Fit())
+        var problemRow = Layout.Grid().Columns(2).Height(Size.Fit())
             | new Card(worstTable).Title("Worst Widgets (top 10)")
             | new Card(slowestTable).Title("Slowest Widgets (top 10)");
 
@@ -178,8 +198,7 @@ public class DashboardApp : ViewBase
                 c.ShowIndexColumn = true;
             });
 
-        return Layout.Vertical().Gap(3).Padding(4).Height(Size.Full())
-               | header
+        return Layout.Vertical().Height(Size.Full())
                | kpiRow
                | versionChartsRow
                | chartsRow
@@ -229,6 +248,7 @@ public class DashboardApp : ViewBase
 
         var trendRunIds = latestRunPerVersion.Select(r => r.Id).ToList();
         var trendResults = await ctx.TestResults.AsNoTracking()
+            .AsSplitQuery()
             .Include(r => r.Question)
             .Where(r => trendRunIds.Contains(r.TestRunId))
             .ToListAsync(ct);
@@ -259,6 +279,7 @@ public class DashboardApp : ViewBase
         versionTrend.Sort((a, b) => CompareVersionStrings(a.Version, b.Version));
 
         var latestResults = await ctx.TestResults.AsNoTracking()
+            .AsSplitQuery()
             .Include(r => r.Question)
             .Where(r => r.TestRunId == latestRun.Id)
             .ToListAsync(ct);
