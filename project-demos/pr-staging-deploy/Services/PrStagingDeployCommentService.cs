@@ -4,12 +4,23 @@ using System.Text;
 using PrStagingDeploy.Models;
 
 /// <summary>
-/// Posts or updates a single PR comment with staging links using <c>GitHub:PrCommentToken</c> (PAT).
+/// Posts a single PR comment with staging links using <c>GitHub:PrCommentToken</c> (PAT).
+/// Each post removes every prior marker comment and creates a new one so the thread always shows one fresh bot message.
 /// The comment appears as the PAT owner.
 /// </summary>
 public class PrStagingDeployCommentService
 {
     public const string Marker = "<!-- ivy-staging-deploy -->";
+
+    /// <summary>PR comment heading while a fresh deploy is queued (replaces stale "Deleted" immediately).</summary>
+    public const string CommentStatusDeployQueued = "Staging deploy in progress";
+
+    /// <summary>PR comment heading after a push triggered redeploy (matches <see cref="BuildCommentBody"/> redeploy prose).</summary>
+    public const string CommentStatusRedeployQueued = "Redeploying staging";
+
+    /// <summary>PR comment when services already exist and we only re-run the link watcher.</summary>
+    public const string CommentStatusCheckingStaging = "Checking staging deployment";
+
     private const string RocketReaction = "rocket";
 
     private readonly GitHubApiClient _github;
@@ -26,6 +37,9 @@ public class PrStagingDeployCommentService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Deletes all prior staging marker comments on this PR, then posts a new comment with the given body.
+    /// </summary>
     public async Task TryPostOrUpdateStagingCommentAsync(
         string owner,
         string repo,
@@ -34,7 +48,6 @@ public class PrStagingDeployCommentService
         string? samplesUrl,
         string? status = null,
         IReadOnlyList<string>? logLines = null,
-        bool forceNewComment = false,
         CancellationToken cancellationToken = default)
     {
         var pat = _config["GitHub:PrCommentToken"] ?? "";
@@ -42,35 +55,13 @@ public class PrStagingDeployCommentService
             return;
 
         var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines);
-        var comments = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
-        var existingIds = FindCommentIdsByMarker(comments, Marker);
+        await DeleteAllMarkerCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
 
-        if (forceNewComment && existingIds.Any())
-        {
-            foreach (var oldId in existingIds)
-            {
-                await _github.DeleteIssueCommentAsync(owner, repo, oldId, pat, cancellationToken);
-            }
-            existingIds.Clear();
-        }
-
-        if (existingIds.Any())
-        {
-            var existingId = existingIds.Last();
-            var ok = await _github.UpdateIssueCommentAsync(owner, repo, existingId, pat, body, cancellationToken);
-            if (!ok)
-                _logger.LogWarning("Failed to update staging comment {CommentId} on PR #{Pr}", existingId, prNumber);
-            else
-                _logger.LogInformation("Updated staging links comment on PR #{Pr}", prNumber);
-        }
+        var id = await _github.CreateIssueCommentAsync(owner, repo, prNumber, pat, body, cancellationToken);
+        if (id == null)
+            _logger.LogWarning("Failed to create staging comment on PR #{Pr}", prNumber);
         else
-        {
-            var id = await _github.CreateIssueCommentAsync(owner, repo, prNumber, pat, body, cancellationToken);
-            if (id == null)
-                _logger.LogWarning("Failed to create staging comment on PR #{Pr}", prNumber);
-            else
-                _logger.LogInformation("Posted staging links comment on PR #{Pr}", prNumber);
-        }
+            _logger.LogInformation("Posted new staging comment on PR #{Pr} (replaced prior marker comments)", prNumber);
     }
 
     public async Task TryAddRocketReactionAsync(
@@ -83,8 +74,68 @@ public class PrStagingDeployCommentService
         if (string.IsNullOrWhiteSpace(pat))
             return;
 
-        // Creates GitHub reaction (rocket icon) on the `/deploy` comment.
         await _github.AddReactionToIssueCommentAsync(owner, repo, issueCommentId, RocketReaction, pat, cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces the staging thread with a progress comment (deletes old marker comments, posts new).
+    /// </summary>
+    public Task TryNotifyDeployQueuedAsync(
+        string owner,
+        string repo,
+        int prNumber,
+        string progressStatus,
+        CancellationToken cancellationToken = default)
+    {
+        return TryPostOrUpdateStagingCommentAsync(
+            owner,
+            repo,
+            prNumber,
+            docsUrl: null,
+            samplesUrl: null,
+            status: progressStatus,
+            logLines: null,
+            cancellationToken);
+    }
+
+    /// <summary>Removes every issue comment that contains <see cref="Marker"/> (retries per id, re-lists between rounds).</summary>
+    private async Task DeleteAllMarkerCommentsAsync(
+        string owner,
+        string repo,
+        int prNumber,
+        string pat,
+        CancellationToken cancellationToken)
+    {
+        const int maxRounds = 15;
+        for (var round = 0; round < maxRounds; round++)
+        {
+            var comments = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
+            var ids = FindCommentIdsByMarker(comments, Marker);
+            if (ids.Count == 0)
+                return;
+
+            foreach (var id in ids)
+            {
+                var deleted = false;
+                for (var attempt = 0; attempt < 3; attempt++)
+                {
+                    if (await _github.DeleteIssueCommentAsync(owner, repo, id, pat, cancellationToken))
+                    {
+                        deleted = true;
+                        break;
+                    }
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(200 * (attempt + 1)), cancellationToken);
+                }
+
+                if (!deleted)
+                    _logger.LogWarning("Could not delete staging marker comment {CommentId} on PR #{Pr}", id, prNumber);
+            }
+        }
+
+        var finalCheck = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
+        if (FindCommentIdsByMarker(finalCheck, Marker).Count > 0)
+            _logger.LogWarning("Some ivy-staging marker comments may still exist on PR #{Pr} after cleanup", prNumber);
     }
 
     private static string BuildCommentBody(
@@ -102,7 +153,6 @@ public class PrStagingDeployCommentService
                          && !isFailed;
         var isDeleted  = statusText.Contains("deleted",  StringComparison.OrdinalIgnoreCase);
 
-        // Show links only once everything is fully deployed, not during intermediate states.
         var showLinks = isDeployed && !isDeleted;
 
         var sb = new StringBuilder();
@@ -119,7 +169,6 @@ public class PrStagingDeployCommentService
             sb.AppendLine();
         }
 
-        // Show a descriptive prose line for non-final states.
         if (!isDeployed)
         {
             if (isFailed)
@@ -169,8 +218,6 @@ public class PrStagingDeployCommentService
         if (string.IsNullOrWhiteSpace(docsUrl))
             return null;
 
-        // Sliplane docs service usually returns the managed domain for the UI.
-        // We want to show a fully clickable URL, without forcing any extra path.
         return docsUrl.TrimEnd('/');
     }
 
@@ -187,4 +234,3 @@ public class PrStagingDeployCommentService
         return list;
     }
 }
-

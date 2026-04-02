@@ -31,6 +31,11 @@ public class StagingDeployService
         if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(serverId))
             return new StagingDeployResult(false, "Sliplane:ProjectId and ServerId required.");
 
+        // Tear down any existing services for this PR before creating new ones. Otherwise a
+        // fallback deploy (e.g. synchronize when redeploy finds 0 services) can leave orphan
+        // Sliplane services alongside the new pair.
+        await DeleteBranchAsync(apiToken, prNumber);
+
         var docsName = $"ivy-staging-docs-{prNumber}";
         var samplesName = $"ivy-staging-samples-{prNumber}";
 

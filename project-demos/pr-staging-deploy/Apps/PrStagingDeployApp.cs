@@ -315,8 +315,7 @@ public class PrStagingDeployApp : ViewBase
                                 owner, repo, prNumber,
                                 docsUrl: null, samplesUrl: null,
                                 status: "Deploy failed",
-                                logLines: new[] { "No Sliplane services were created: " + TruncLine(result.Message, 200) },
-                                forceNewComment: true);
+                                logLines: new[] { "No Sliplane services were created: " + TruncLine(result.Message, 200) });
                             return;
                         }
 
@@ -327,6 +326,8 @@ public class PrStagingDeployApp : ViewBase
                             BranchName: branchName,
                             DocsServiceId: result.DocsServiceId,
                             SamplesServiceId: result.SamplesServiceId));
+                        await prComments.TryNotifyDeployQueuedAsync(
+                            owner, repo, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
 
                         return;
                     }
@@ -337,8 +338,7 @@ public class PrStagingDeployApp : ViewBase
                         owner, repo, prNumber,
                         docsUrl: null, samplesUrl: null,
                         status: "Deploy failed",
-                        logLines: new[] { TruncLine(result.Message, 240) },
-                        forceNewComment: true);
+                        logLines: new[] { TruncLine(result.Message, 240) });
                 }
             }
             catch (Exception ex)
@@ -375,8 +375,7 @@ public class PrStagingDeployApp : ViewBase
                             owner, repo, prNumber,
                             docsUrl: null, samplesUrl: null,
                             status: "Deleted",
-                            logLines: null,
-                            forceNewComment: true);
+                            logLines: null);
                     }
                 }
                 else if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
@@ -385,8 +384,7 @@ public class PrStagingDeployApp : ViewBase
                         owner, repo, prNumber,
                         docsUrl: null, samplesUrl: null,
                         status: "Delete failed",
-                        logLines: new[] { TruncLine(result.Message, 240) },
-                        forceNewComment: true);
+                        logLines: new[] { TruncLine(result.Message, 240) });
                 }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }
