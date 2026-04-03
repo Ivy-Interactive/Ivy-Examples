@@ -97,20 +97,36 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
             var (docsEvents, samplesEvents) = await _deployService.GetDeploymentEventsForServicesAsync(
                 apiToken, docsServiceId, samplesServiceId);
 
-            var combinedFromEvents = SliplaneDeploymentStatusResolver.ResolveCombinedStatus(
-                docsServiceId, docsEvents, samplesServiceId, samplesEvents);
-
             var dep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, req.PrNumber);
-            var combinedFromListing = ResolveStatusFromListing(dep, docsServiceId, samplesServiceId);
-            var combined = MergeEventAndListingStatus(combinedFromEvents, combinedFromListing);
+            var docsMerged = MergeServiceWithListing(
+                docsServiceId, docsEvents, GetListingFieldForService(dep, docsServiceId, docs: true));
+            var samplesMerged = MergeServiceWithListing(
+                samplesServiceId, samplesEvents, GetListingFieldForService(dep, samplesServiceId, docs: false));
+            var overall = SliplaneDeploymentStatusResolver.ResolveOverallTerminal(docsMerged, samplesMerged);
 
             _logger.LogDebug(
-                "PR #{Pr} deploy status: merged={Merged} (events={Events}, listing={Listing}; docsEv={DocsEv}, samplesEv={SamplesEv})",
-                req.PrNumber, combined, combinedFromEvents, combinedFromListing, docsEvents.Count, samplesEvents.Count);
+                "PR #{Pr} deploy status: overall={Overall} (docs={Docs}, samples={Samples}; docsEv={DocsEv}, samplesEv={SamplesEv})",
+                req.PrNumber, overall, docsMerged, samplesMerged, docsEvents.Count, samplesEvents.Count);
 
             var urls = await _deployService.GetDeploymentUrlsForPrAsync(apiToken, req.PrNumber);
 
-            if (combined == "failed")
+            if (overall == "partial")
+            {
+                var logLines = BuildLogLinesForFailedServicesOnly(
+                    docsMerged, samplesMerged, docsEvents, samplesEvents, maxLines: 12);
+                var breakdown = new StagingCommentPartialBreakdown(
+                    docsMerged, samplesMerged, urls.DocsUrl, urls.SamplesUrl);
+                await _commentService.TryPostOrUpdateStagingCommentAsync(
+                    req.Owner, req.Repo, req.PrNumber,
+                    docsUrl: urls.DocsUrl, samplesUrl: urls.SamplesUrl,
+                    status: null,
+                    logLines: logLines,
+                    partial: breakdown,
+                    cancellationToken: CancellationToken.None);
+                return;
+            }
+
+            if (overall == "failed")
             {
                 var logLines = BuildRecentLogLines(docsEvents, samplesEvents, maxLines: 10);
                 await _commentService.TryPostOrUpdateStagingCommentAsync(
@@ -122,16 +138,18 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                 return;
             }
 
-            if (combined == "deployed")
+            if (overall == "deployed")
             {
-                // Track when "deployed" was first seen.
                 deployedAt ??= DateTime.UtcNow;
 
-                var bothUrlsReady = !string.IsNullOrWhiteSpace(urls.DocsUrl) && !string.IsNullOrWhiteSpace(urls.SamplesUrl);
+                var docsWantsUrl = !string.IsNullOrEmpty(docsServiceId);
+                var samplesWantsUrl = !string.IsNullOrEmpty(samplesServiceId);
+                var urlsReady =
+                    (!docsWantsUrl || !string.IsNullOrWhiteSpace(urls.DocsUrl))
+                    && (!samplesWantsUrl || !string.IsNullOrWhiteSpace(urls.SamplesUrl));
                 var urlWaitExpired = (DateTime.UtcNow - deployedAt.Value).TotalSeconds >= 30;
 
-                // Post as soon as both URLs are available, or after 30s if they never appear.
-                if (bothUrlsReady || urlWaitExpired)
+                if (urlsReady || urlWaitExpired)
                 {
                     await _commentService.TryPostOrUpdateStagingCommentAsync(
                         req.Owner, req.Repo, req.PrNumber,
@@ -141,12 +159,12 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
                         cancellationToken: CancellationToken.None);
                     return;
                 }
-                // URLs not ready yet — keep polling with short delay.
+
                 await Task.Delay(2500, ct);
                 continue;
             }
 
-            // combined == "pending": poll silently, no intermediate comment
+            // overall == "pending": poll silently, no intermediate comment
             await Task.Delay(delayMs, ct);
             if (delayMs < maxDelayMs)
                 delayMs = Math.Min(maxDelayMs, (int)(delayMs * 1.25));
@@ -154,50 +172,43 @@ public class PrStagingDeployCommentUpdateBackgroundService : BackgroundService
         // App shutting down — do nothing, startup scan will resume on next deploy.
     }
 
-    /// <summary>
-    /// Events often lag behind; listing usually shows <c>live</c> sooner. Prefer failure if either source reports it.
-    /// </summary>
-    private static string MergeEventAndListingStatus(string fromEvents, string fromListing)
+    private static string? GetListingFieldForService(StagingDeployment? dep, string? serviceId, bool docs)
     {
-        if (fromEvents == "failed" || fromListing == "failed")
-            return "failed";
-        if (fromEvents == "deployed" || fromListing == "deployed")
-            return "deployed";
-        return "pending";
+        if (dep == null || string.IsNullOrEmpty(serviceId))
+            return null;
+        if (docs)
+            return dep.DocsServiceId == serviceId ? dep.DocsStatus : null;
+        return dep.SamplesServiceId == serviceId ? dep.SamplesStatus : null;
     }
 
-    /// <summary>
-    /// Determines deploy status from the Sliplane listing's status field.
-    /// Used as a fallback when the events API returns no data.
-    /// Sliplane status values include: "live", "deploying", "building", "error", "dead", "starting".
-    /// </summary>
-    private static string ResolveStatusFromListing(StagingDeployment? dep, string? docsServiceId, string? samplesServiceId)
+    private static string MergeServiceWithListing(string? serviceId, List<SliplaneServiceEvent> events, string? listingField)
     {
-        if (dep == null) return "pending";
+        if (string.IsNullOrEmpty(serviceId))
+            return "skipped";
+        var fromEvents = SliplaneDeploymentStatusResolver.ResolveStatusFromEvents(events);
+        var fromListing = string.IsNullOrEmpty(listingField)
+            ? "pending"
+            : SliplaneDeploymentStatusResolver.ListingFieldToState(listingField);
+        return SliplaneDeploymentStatusResolver.MergeServiceState(fromEvents, fromListing);
+    }
 
-        var statuses = new List<string?>();
-        if (!string.IsNullOrEmpty(docsServiceId) && dep.DocsServiceId == docsServiceId)
-            statuses.Add(dep.DocsStatus);
-        if (!string.IsNullOrEmpty(samplesServiceId) && dep.SamplesServiceId == samplesServiceId)
-            statuses.Add(dep.SamplesStatus);
+    private static IReadOnlyList<string> BuildLogLinesForFailedServicesOnly(
+        string docsMerged,
+        string samplesMerged,
+        List<SliplaneServiceEvent> docsEvents,
+        List<SliplaneServiceEvent> samplesEvents,
+        int maxLines)
+    {
+        if (docsMerged == "failed" && samplesMerged == "failed")
+            return BuildRecentLogLines(docsEvents, samplesEvents, maxLines);
 
-        // If we couldn't match the specific service IDs, use whatever status is available.
-        if (statuses.Count == 0)
-            statuses = new List<string?> { dep.DocsStatus, dep.SamplesStatus };
+        if (docsMerged == "failed")
+            return BuildRecentLogLines(docsEvents, new List<SliplaneServiceEvent>(), maxLines);
 
-        var relevant = statuses.Where(s => !string.IsNullOrEmpty(s)).ToList();
-        if (relevant.Count == 0) return "pending";
+        if (samplesMerged == "failed")
+            return BuildRecentLogLines(new List<SliplaneServiceEvent>(), samplesEvents, maxLines);
 
-        // Any terminal-failure state → report failed.
-        if (relevant.Any(s => s is "error" or "dead" or "crashed" or "unhealthy"))
-            return "failed";
-
-        // All live → deployed.
-        if (relevant.All(s => s == "live"))
-            return "deployed";
-
-        // Still building / deploying / starting → pending.
-        return "pending";
+        return Array.Empty<string>();
     }
 
     private static IReadOnlyList<string> BuildRecentLogLines(
