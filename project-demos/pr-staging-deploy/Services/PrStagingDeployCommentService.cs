@@ -3,6 +3,13 @@ namespace PrStagingDeploy.Services;
 using System.Text;
 using PrStagingDeploy.Models;
 
+/// <summary>Per-service outcome for a partial docs/samples deploy (states: skipped, pending, deployed, failed).</summary>
+public record StagingCommentPartialBreakdown(
+    string DocsState,
+    string SamplesState,
+    string? DocsUrl,
+    string? SamplesUrl);
+
 /// <summary>
 /// Posts a single PR comment with staging links using <c>GitHub:PrCommentToken</c> (PAT).
 /// Each post removes every prior marker comment and creates a new one so the thread always shows one fresh bot message.
@@ -48,13 +55,14 @@ public class PrStagingDeployCommentService
         string? samplesUrl,
         string? status = null,
         IReadOnlyList<string>? logLines = null,
+        StagingCommentPartialBreakdown? partial = null,
         CancellationToken cancellationToken = default)
     {
         var pat = _config["GitHub:PrCommentToken"] ?? "";
         if (string.IsNullOrWhiteSpace(pat))
             return;
 
-        var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines);
+        var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines, partial);
         await DeleteAllMarkerCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
 
         var id = await _github.CreateIssueCommentAsync(owner, repo, prNumber, pat, body, cancellationToken);
@@ -95,6 +103,7 @@ public class PrStagingDeployCommentService
             samplesUrl: null,
             status: progressStatus,
             logLines: null,
+            partial: null,
             cancellationToken);
     }
 
@@ -142,8 +151,12 @@ public class PrStagingDeployCommentService
         string? docsUrl,
         string? samplesUrl,
         string? status,
-        IReadOnlyList<string>? logLines)
+        IReadOnlyList<string>? logLines,
+        StagingCommentPartialBreakdown? partial = null)
     {
+        if (partial != null)
+            return BuildPartialDeploymentBody(logLines, partial);
+
         var statusText = string.IsNullOrWhiteSpace(status)
             ? "Staging preview"
             : status.Trim();
@@ -189,20 +202,58 @@ public class PrStagingDeployCommentService
             }
         }
 
-        if (logLines is { Count: > 0 })
-        {
-            sb.AppendLine();
-            sb.AppendLine("### Logs");
-            sb.AppendLine();
-            sb.AppendLine("```");
-            foreach (var line in logLines)
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                sb.AppendLine(line);
-            }
-            sb.AppendLine("```");
-        }
+        AppendLogSection(sb, logLines);
         return sb.ToString();
+    }
+
+    private static string BuildPartialDeploymentBody(
+        IReadOnlyList<string>? logLines,
+        StagingCommentPartialBreakdown p)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(Marker);
+        sb.AppendLine();
+        sb.AppendLine("### Partial deployment");
+        sb.AppendLine();
+        sb.AppendLine(FormatPartialServiceLine("Docs", p.DocsState, p.DocsUrl));
+        sb.AppendLine(FormatPartialServiceLine("Samples", p.SamplesState, p.SamplesUrl));
+        sb.AppendLine();
+        sb.AppendLine("Docs and samples are separate services: one succeeded and the other failed or was not created. Check Sliplane for full logs.");
+        AppendLogSection(sb, logLines);
+        return sb.ToString();
+    }
+
+    private static string FormatPartialServiceLine(string label, string state, string? url)
+    {
+        return state switch
+        {
+            "deployed" when !string.IsNullOrWhiteSpace(url) =>
+                $"**{label}:** OK — [{url}]({url})",
+            "deployed" =>
+                $"**{label}:** OK (live)",
+            "failed" =>
+                $"**{label}:** Failed (build or deploy)",
+            "skipped" =>
+                $"**{label}:** Not provisioned (no Sliplane service for this PR)",
+            _ =>
+                $"**{label}:** In progress…"
+        };
+    }
+
+    private static void AppendLogSection(StringBuilder sb, IReadOnlyList<string>? logLines)
+    {
+        if (logLines is not { Count: > 0 })
+            return;
+        sb.AppendLine();
+        sb.AppendLine("### Logs");
+        sb.AppendLine();
+        sb.AppendLine("```");
+        foreach (var line in logLines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            sb.AppendLine(line);
+        }
+        sb.AppendLine("```");
     }
 
     private static string FormatLinkLine(string label, string? url)

@@ -14,23 +14,62 @@ public static class SliplaneDeploymentStatusResolver
         string? samplesServiceId,
         List<SliplaneServiceEvent> samplesEvents)
     {
+        var docs = string.IsNullOrEmpty(docsServiceId) ? "skipped" : GetStatusFromEvents(docsEvents);
+        var samples = string.IsNullOrEmpty(samplesServiceId) ? "skipped" : GetStatusFromEvents(samplesEvents);
+        return ResolveOverallTerminal(docs, samples);
+    }
+
+    /// <summary>Per-service state from the events API: <c>pending</c>, <c>deployed</c>, or <c>failed</c>.</summary>
+    public static string ResolveStatusFromEvents(List<SliplaneServiceEvent> events) => GetStatusFromEvents(events);
+
+    /// <summary>Maps Sliplane listing <c>status</c> field to pending/deployed/failed.</summary>
+    public static string ListingFieldToState(string? listingStatus)
+    {
+        if (string.IsNullOrWhiteSpace(listingStatus))
+            return "pending";
+        var s = listingStatus.ToLowerInvariant();
+        if (s is "error" or "dead" or "crashed" or "unhealthy")
+            return "failed";
+        if (s == "live")
+            return "deployed";
+        return "pending";
+    }
+
+    /// <summary>Merge events + listing for one service (same rules as the background worker used for combined).</summary>
+    public static string MergeServiceState(string fromEvents, string fromListing)
+    {
+        if (fromEvents == "failed" || fromListing == "failed")
+            return "failed";
+        if (fromEvents == "deployed" || fromListing == "deployed")
+            return "deployed";
+        return "pending";
+    }
+
+    /// <param name="docs">skipped | pending | deployed | failed</param>
+    /// <param name="samples">skipped | pending | deployed | failed</param>
+    /// <returns>pending | deployed | failed | partial</returns>
+    public static string ResolveOverallTerminal(string docs, string samples)
+    {
         var parts = new List<string>();
-        if (!string.IsNullOrEmpty(docsServiceId))
-            parts.Add(GetStatusFromEvents(docsEvents));
-        if (!string.IsNullOrEmpty(samplesServiceId))
-            parts.Add(GetStatusFromEvents(samplesEvents));
+        if (docs != "skipped")
+            parts.Add(docs);
+        if (samples != "skipped")
+            parts.Add(samples);
 
         if (parts.Count == 0)
             return "pending";
-
-        // If anything is still pending — keep waiting. Don't stop just because one failed.
         if (parts.Exists(p => p == "pending"))
             return "pending";
-
-        // All services resolved: report failed if any failed, otherwise deployed.
+        if (parts.Exists(p => p == "deployed") && parts.Exists(p => p == "failed"))
+            return "partial";
+        if (parts.Exists(p => p == "deployed") && parts.Exists(p => p == "skipped"))
+            return "partial";
+        if (parts.All(p => p == "deployed"))
+            return "deployed";
+        if (parts.Exists(p => p == "failed") && parts.Exists(p => p == "skipped"))
+            return "partial";
         if (parts.Exists(p => p == "failed"))
             return "failed";
-
         return "deployed";
     }
 
