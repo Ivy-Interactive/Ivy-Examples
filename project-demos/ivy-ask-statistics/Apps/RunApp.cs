@@ -236,7 +236,7 @@ public class RunApp : ViewBase
             .Header(r => r.Status, "Status")
             .Header(r => r.Time, "Time")
             .Width(r => r.ResultIcon, Size.Px(50))
-            .Align(r => r.ResultIcon, Align.Center)
+            .AlignContent(r => r.ResultIcon, Align.Center)
             .Width(r => r.Widget, Size.Px(140))
             .Width(r => r.Question, Size.Px(400))
             .Width(r => r.Difficulty, Size.Px(80))

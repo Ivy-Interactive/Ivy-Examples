@@ -31,7 +31,7 @@ public class DashboardApp : ViewBase
             return TabLoadingSkeletons.Dashboard();
 
         if (dashQuery.Value == null)
-            return Layout.Vertical().Height(Size.Full()).Align(Align.Center)
+            return Layout.Vertical().Height(Size.Full()).AlignContent(Align.Center)
                    | new Icon(Icons.LayoutDashboard)
                    | Text.H3("No statistics yet")
                    | Text.Block(
@@ -68,13 +68,13 @@ public class DashboardApp : ViewBase
         var kpiRow = Layout.Grid().Columns(5).Height(Size.Fit())
             | new Card(
                 Layout.Vertical()
-                    | (Layout.Horizontal().Align(Align.Left)
+                    | (Layout.Horizontal().AlignContent(Align.Left)
                         | Text.H3(rateStr)
                         | rateDelta)
             ).Title("Answer success").Icon(Icons.CircleCheck)
             | new Card(
                 Layout.Vertical()
-                    | (Layout.Horizontal().Align(Align.Left)
+                    | (Layout.Horizontal().AlignContent(Align.Left)
                         | Text.H3(avgMsStr)
                         | avgMsDelta)
             ).Title("Avg latency").Icon(Icons.Timer)
