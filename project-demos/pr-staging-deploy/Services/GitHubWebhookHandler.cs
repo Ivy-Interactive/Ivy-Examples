@@ -12,7 +12,7 @@ public class GitHubWebhookHandler
     private readonly StagingDeployService _deployService;
     private readonly GitHubApiClient _github;
     private readonly PrStagingDeployCommentService _prComments;
-    private readonly PrStagingDeployCommentUpdateQueue _commentUpdateQueue;
+    private readonly StagingErrorWatcherQueue _errorWatcher;
     private readonly IConfiguration _config;
     private readonly ILogger<GitHubWebhookHandler> _logger;
 
@@ -20,14 +20,14 @@ public class GitHubWebhookHandler
         StagingDeployService deployService,
         GitHubApiClient github,
         PrStagingDeployCommentService prComments,
-        PrStagingDeployCommentUpdateQueue commentUpdateQueue,
+        StagingErrorWatcherQueue errorWatcher,
         IConfiguration config,
         ILogger<GitHubWebhookHandler> logger)
     {
         _deployService = deployService;
         _github = github;
         _prComments = prComments;
-        _commentUpdateQueue = commentUpdateQueue;
+        _errorWatcher = errorWatcher;
         _config = config;
         _logger = logger;
     }
@@ -88,8 +88,6 @@ public class GitHubWebhookHandler
         var owner = repoEl.GetProperty("owner").GetProperty("login").GetString() ?? "";
         var repoName = repoEl.GetProperty("name").GetString() ?? "";
 
-        // For fork PRs the head repo differs from the base repo.
-        // Sliplane must clone from the fork URL, otherwise the branch won't be found.
         var headRepoEl = pr.GetProperty("head").GetProperty("repo");
         var headRepoCloneUrl = headRepoEl.TryGetProperty("clone_url", out var cu)
             ? cu.GetString()
@@ -116,63 +114,44 @@ public class GitHubWebhookHandler
                     break;
                 }
 
-                // Check if staging services already exist for this PR.
                 var existingDepOnOpen = await _deployService.GetDeploymentByPrNumberAsync(apiToken, prNumber);
                 if (existingDepOnOpen != null)
                 {
                     _logger.LogInformation(
                         "Staging services already exist for PR #{Pr} branch={Branch}, skipping deploy",
                         prNumber, branch);
-
-                    // Re-enqueue so the background worker posts the final result when ready.
                     if (!string.IsNullOrEmpty(existingDepOnOpen.DocsServiceId) || !string.IsNullOrEmpty(existingDepOnOpen.SamplesServiceId))
                     {
-                        await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
-                            Owner: owner,
-                            Repo: repoName,
-                            PrNumber: prNumber,
-                            BranchName: branch,
-                            DocsServiceId: existingDepOnOpen.DocsServiceId,
-                            SamplesServiceId: existingDepOnOpen.SamplesServiceId));
-                        await _prComments.TryNotifyDeployQueuedAsync(
-                            owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusCheckingStaging);
+                        await _prComments.TryPostStagingAsync(
+                            owner, repoName, prNumber,
+                            existingDepOnOpen.DocsUrl, existingDepOnOpen.SamplesUrl, error: null);
                     }
+
                     break;
                 }
 
                 _logger.LogInformation("PR #{Pr} opened: {Title} branch={Branch}", prNumber, title, branch);
-                var deployResult = await _deployService.DeployBranchAsync(apiToken, branch, prNumber, headRepoCloneUrl);
+                var deployResult = await _deployService.DeployBranchAsync(
+                    apiToken, branch, prNumber, headRepoCloneUrl, owner, repoName);
                 _logger.LogInformation("Deploy result: {Success} - {Message}", deployResult.Success, deployResult.Message);
-                if (deployResult.Success)
+                if (deployResult.SkippedBecausePrNotOpen)
                 {
-                    if (string.IsNullOrEmpty(deployResult.DocsServiceId) && string.IsNullOrEmpty(deployResult.SamplesServiceId))
-                    {
-                        await _prComments.TryPostOrUpdateStagingCommentAsync(
-                            owner, repoName, prNumber,
-                            docsUrl: null, samplesUrl: null,
-                            status: "Deploy failed",
-                            logLines: new[] { TruncLine(deployResult.Message, 240) });
-                        break;
-                    }
+                    _logger.LogInformation("Skip staging deploy for PR #{Pr}: already closed or merged", prNumber);
+                    break;
+                }
 
-                    await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
-                        Owner: owner,
-                        Repo: repoName,
-                        PrNumber: prNumber,
-                        BranchName: branch,
-                        DocsServiceId: deployResult.DocsServiceId,
-                        SamplesServiceId: deployResult.SamplesServiceId));
-                    await _prComments.TryNotifyDeployQueuedAsync(
-                        owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
+                if (deployResult.Success && (!string.IsNullOrEmpty(deployResult.DocsServiceId) || !string.IsNullOrEmpty(deployResult.SamplesServiceId)))
+                {
+                    await _prComments.TryPostStagingAsync(
+                        owner, repoName, prNumber, deployResult.DocsUrl, deployResult.SamplesUrl, error: null);
+                    await EnqueueErrorWatchAsync(owner, repoName, prNumber, deployResult.DocsServiceId, deployResult.SamplesServiceId);
                 }
                 else
                 {
-                    await _prComments.TryPostOrUpdateStagingCommentAsync(
-                        owner, repoName, prNumber,
-                        docsUrl: null, samplesUrl: null,
-                        status: "Deploy failed",
-                        logLines: new[] { TruncLine(deployResult.Message, 240) });
+                    await _prComments.TryPostStagingAsync(
+                        owner, repoName, prNumber, null, null, TruncLine(deployResult.Message, 500));
                 }
+
                 break;
 
             case "synchronize":
@@ -190,54 +169,37 @@ public class GitHubWebhookHandler
 
                 if (!redeployResult.Success)
                 {
-                    // Services don't exist yet — fall back to a fresh deploy.
                     _logger.LogInformation("PR #{Pr} redeploy found 0 services, falling back to fresh deploy", prNumber);
-                    var fallbackResult = await _deployService.DeployBranchAsync(apiToken, branch, prNumber, headRepoCloneUrl);
+                    var fallbackResult = await _deployService.DeployBranchAsync(
+                        apiToken, branch, prNumber, headRepoCloneUrl, owner, repoName);
                     _logger.LogInformation("Fallback deploy result: {Success} - {Message}", fallbackResult.Success, fallbackResult.Message);
+
+                    if (fallbackResult.SkippedBecausePrNotOpen)
+                    {
+                        _logger.LogInformation("Skip fallback deploy for PR #{Pr}: already closed or merged", prNumber);
+                        break;
+                    }
 
                     if (fallbackResult.Success && (!string.IsNullOrEmpty(fallbackResult.DocsServiceId) || !string.IsNullOrEmpty(fallbackResult.SamplesServiceId)))
                     {
-                        await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
-                            Owner: owner,
-                            Repo: repoName,
-                            PrNumber: prNumber,
-                            BranchName: branch,
-                            DocsServiceId: fallbackResult.DocsServiceId,
-                            SamplesServiceId: fallbackResult.SamplesServiceId));
-                        await _prComments.TryNotifyDeployQueuedAsync(
-                            owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
+                        await _prComments.TryPostStagingAsync(
+                            owner, repoName, prNumber, fallbackResult.DocsUrl, fallbackResult.SamplesUrl, error: null);
+                        await EnqueueErrorWatchAsync(owner, repoName, prNumber, fallbackResult.DocsServiceId, fallbackResult.SamplesServiceId);
                     }
                     else
                     {
-                        await _prComments.TryPostOrUpdateStagingCommentAsync(
-                            owner, repoName, prNumber,
-                            docsUrl: null, samplesUrl: null,
-                            status: "Deploy failed",
-                            logLines: new[] { TruncLine(fallbackResult.Message, 240) });
+                        await _prComments.TryPostStagingAsync(
+                            owner, repoName, prNumber, null, null, TruncLine(fallbackResult.Message, 500));
                     }
+
                     break;
                 }
 
+                // Redeploy triggered OK — post current known links, service will rebuild in background.
                 var syncDep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, prNumber);
-                if (syncDep is null || string.IsNullOrEmpty(syncDep.DocsServiceId) || string.IsNullOrEmpty(syncDep.SamplesServiceId))
-                {
-                    await _prComments.TryPostOrUpdateStagingCommentAsync(
-                        owner, repoName, prNumber,
-                        docsUrl: null, samplesUrl: null,
-                        status: "Deploy failed",
-                        logLines: new[] { "Redeploy: docs/samples services not found in Sliplane." });
-                    break;
-                }
-
-                await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
-                    Owner: owner,
-                    Repo: repoName,
-                    PrNumber: prNumber,
-                    BranchName: branch,
-                    DocsServiceId: syncDep.DocsServiceId,
-                    SamplesServiceId: syncDep.SamplesServiceId));
-                await _prComments.TryNotifyDeployQueuedAsync(
-                    owner, repoName, prNumber, PrStagingDeployCommentService.CommentStatusRedeployQueued);
+                await _prComments.TryPostStagingAsync(
+                    owner, repoName, prNumber, syncDep?.DocsUrl, syncDep?.SamplesUrl, error: null);
+                await EnqueueErrorWatchAsync(owner, repoName, prNumber, syncDep?.DocsServiceId, syncDep?.SamplesServiceId);
 
                 break;
 
@@ -246,14 +208,7 @@ public class GitHubWebhookHandler
                 var deleteResult = await _deployService.DeleteBranchAsync(apiToken, prNumber);
                 _logger.LogInformation("Delete result: {Success} - {Message}", deleteResult.Success, deleteResult.Message);
                 if (deleteResult.Success)
-                    await _prComments.TryPostOrUpdateStagingCommentAsync(
-                        owner,
-                        repoName,
-                        prNumber,
-                        docsUrl: null,
-                        samplesUrl: null,
-                        status: "Deleted",
-                        logLines: null);
+                    await _prComments.TryPostStagingRemovedAsync(owner, repoName, prNumber);
                 break;
 
             default:
@@ -277,7 +232,7 @@ public class GitHubWebhookHandler
 
         var issue = root.GetProperty("issue");
         if (!issue.TryGetProperty("pull_request", out _))
-            return; // not a PR comment
+            return;
 
         var prNumber = issue.GetProperty("number").GetInt32();
         var owner = root.GetProperty("repository").GetProperty("owner").GetProperty("login").GetString() ?? "";
@@ -307,65 +262,49 @@ public class GitHubWebhookHandler
             return;
         }
 
-        // Let users know the bot read the `/deploy` command.
         await _prComments.TryAddRocketReactionAsync(owner, repo, commentId);
 
-        // Check if services already exist for this PR — avoid creating duplicates.
         var existingDep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, prNumber);
         if (existingDep != null)
         {
-            _logger.LogInformation("Staging services already exist for PR #{Pr}, re-enqueueing monitor", prNumber);
+            _logger.LogInformation("Staging services already exist for PR #{Pr}, posting current links", prNumber);
             if (!string.IsNullOrEmpty(existingDep.DocsServiceId) || !string.IsNullOrEmpty(existingDep.SamplesServiceId))
             {
-                await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
-                    Owner: owner,
-                    Repo: repo,
-                    PrNumber: prNumber,
-                    BranchName: branch,
-                    DocsServiceId: existingDep.DocsServiceId,
-                    SamplesServiceId: existingDep.SamplesServiceId));
-                await _prComments.TryNotifyDeployQueuedAsync(
-                    owner, repo, prNumber, PrStagingDeployCommentService.CommentStatusCheckingStaging);
+                await _prComments.TryPostStagingAsync(
+                    owner, repo, prNumber, existingDep.DocsUrl, existingDep.SamplesUrl, error: null);
             }
+
             return;
         }
 
         _logger.LogInformation("PR #{Pr} /deploy comment: {Branch}", prNumber, branch);
-        var result = await _deployService.DeployBranchAsync(apiToken, branch, prNumber);
+        var result = await _deployService.DeployBranchAsync(apiToken, branch, prNumber, null, owner, repo);
         _logger.LogInformation("Deploy result: {Success} - {Message}", result.Success, result.Message);
-        if (result.Success)
+        if (result.SkippedBecausePrNotOpen)
         {
-            if (string.IsNullOrEmpty(result.DocsServiceId) && string.IsNullOrEmpty(result.SamplesServiceId))
-            {
-                await _prComments.TryPostOrUpdateStagingCommentAsync(
-                    owner, repo, prNumber,
-                    docsUrl: null, samplesUrl: null,
-                    status: "Deploy failed",
-                    logLines: new[] { TruncLine(result.Message, 240) });
-                return;
-            }
+            _logger.LogInformation("Skip /deploy for PR #{Pr}: already closed or merged", prNumber);
+            return;
+        }
 
-            await _commentUpdateQueue.EnqueueAsync(new PrStagingDeployCommentUpdateRequest(
-                Owner: owner,
-                Repo: repo,
-                PrNumber: prNumber,
-                BranchName: branch,
-                DocsServiceId: result.DocsServiceId,
-                SamplesServiceId: result.SamplesServiceId));
-            await _prComments.TryNotifyDeployQueuedAsync(
-                owner, repo, prNumber, PrStagingDeployCommentService.CommentStatusDeployQueued);
+        if (result.Success && (!string.IsNullOrEmpty(result.DocsServiceId) || !string.IsNullOrEmpty(result.SamplesServiceId)))
+        {
+            await _prComments.TryPostStagingAsync(owner, repo, prNumber, result.DocsUrl, result.SamplesUrl, error: null);
+            await EnqueueErrorWatchAsync(owner, repo, prNumber, result.DocsServiceId, result.SamplesServiceId);
         }
         else
         {
-            await _prComments.TryPostOrUpdateStagingCommentAsync(
-                owner,
-                repo,
-                prNumber,
-                docsUrl: null,
-                samplesUrl: null,
-                status: "Deploy failed",
-                logLines: new[] { TruncLine(result.Message, 240) });
+            await _prComments.TryPostStagingAsync(owner, repo, prNumber, null, null, TruncLine(result.Message, 500));
         }
+    }
+
+    private ValueTask EnqueueErrorWatchAsync(
+        string owner, string repo, int prNumber,
+        string? docsServiceId, string? samplesServiceId)
+    {
+        if (string.IsNullOrEmpty(docsServiceId) && string.IsNullOrEmpty(samplesServiceId))
+            return ValueTask.CompletedTask;
+        return _errorWatcher.EnqueueAsync(
+            new StagingErrorWatchRequest(owner, repo, prNumber, docsServiceId, samplesServiceId));
     }
 
     private string GetApiToken()
@@ -373,7 +312,6 @@ public class GitHubWebhookHandler
         return _config["Sliplane:ApiToken"] ?? "";
     }
 
-    /// <summary>Matches /deploy or /publish, optionally followed by extra text (e.g. "/deploy this app").</summary>
     private static bool IsDeployCommand(string trimmed)
     {
         foreach (var cmd in new[] { "/deploy", "/publish" })
@@ -383,6 +321,7 @@ public class GitHubWebhookHandler
             if (trimmed.StartsWith(cmd + " ", StringComparison.OrdinalIgnoreCase))
                 return true;
         }
+
         return false;
     }
 
@@ -391,38 +330,5 @@ public class GitHubWebhookHandler
         if (string.IsNullOrWhiteSpace(s)) return "";
         var line = s.Trim().Replace("\r", "").Replace("\n", " ");
         return line.Length <= maxLen ? line : line[..maxLen] + "...";
-    }
-
-    private static IReadOnlyList<string> BuildRecentLogLines(
-        List<SliplaneServiceEvent> docsEvents,
-        List<SliplaneServiceEvent> samplesEvents,
-        int maxLines)
-    {
-        var combined = docsEvents.Concat(samplesEvents)
-            .OrderByDescending(e => e.CreatedAt)
-            .Take(maxLines)
-            .ToList();
-
-        if (combined.Count == 0)
-            return new[] { "Waiting for Sliplane events..." };
-
-        return combined.Select(e =>
-        {
-            var time = e.CreatedAt.ToLocalTime().ToString("HH:mm:ss");
-            var type = (e.Type ?? "").Trim();
-            var msg = !string.IsNullOrWhiteSpace(e.Message) ? e.Message : e.Reason;
-            var friendly = type switch
-            {
-                "service_deploy_success" => "Service deployed successfully",
-                "service_deploy_failed" => "Service deploy failed",
-                "service_build_failed" => "Build failed",
-                "service_build" => "Service build",
-                "service_deploy" => "Deploy started",
-                _ => type
-            };
-
-            var text = string.IsNullOrWhiteSpace(msg) ? friendly : $"{friendly}: {TruncLine(msg, 180)}";
-            return $"{time} {text}";
-        }).ToList();
     }
 }

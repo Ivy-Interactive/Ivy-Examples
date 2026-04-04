@@ -3,30 +3,12 @@ namespace PrStagingDeploy.Services;
 using System.Text;
 using PrStagingDeploy.Models;
 
-/// <summary>Per-service outcome for a partial docs/samples deploy (states: skipped, pending, deployed, failed).</summary>
-public record StagingCommentPartialBreakdown(
-    string DocsState,
-    string SamplesState,
-    string? DocsUrl,
-    string? SamplesUrl);
-
 /// <summary>
-/// Posts a single PR comment with staging links using <c>GitHub:PrCommentToken</c> (PAT).
-/// Each post removes every prior marker comment and creates a new one so the thread always shows one fresh bot message.
-/// The comment appears as the PAT owner.
+/// Posts a single PR comment with <c>GitHub:PrCommentToken</c>. Replaces prior marker comments.
 /// </summary>
 public class PrStagingDeployCommentService
 {
     public const string Marker = "<!-- ivy-staging-deploy -->";
-
-    /// <summary>PR comment heading while a fresh deploy is queued (replaces stale "Deleted" immediately).</summary>
-    public const string CommentStatusDeployQueued = "Staging deploy in progress";
-
-    /// <summary>PR comment heading after a push triggered redeploy (matches <see cref="BuildCommentBody"/> redeploy prose).</summary>
-    public const string CommentStatusRedeployQueued = "Redeploying staging";
-
-    /// <summary>PR comment when services already exist and we only re-run the link watcher.</summary>
-    public const string CommentStatusCheckingStaging = "Checking staging deployment";
 
     private const string RocketReaction = "rocket";
 
@@ -45,31 +27,33 @@ public class PrStagingDeployCommentService
     }
 
     /// <summary>
-    /// Deletes all prior staging marker comments on this PR, then posts a new comment with the given body.
+    /// Replaces every prior staging marker comment, then posts a new one with links.
+    /// If <paramref name="error"/> is set, the comment shows the error instead of links —
+    /// call this to replace the earlier links comment when a failure is detected.
+    /// New commits trigger the same path so the old comment is always removed first.
     /// </summary>
-    public async Task TryPostOrUpdateStagingCommentAsync(
+    public Task TryPostStagingAsync(
         string owner,
         string repo,
         int prNumber,
         string? docsUrl,
         string? samplesUrl,
-        string? status = null,
-        IReadOnlyList<string>? logLines = null,
-        StagingCommentPartialBreakdown? partial = null,
+        string? error,
         CancellationToken cancellationToken = default)
     {
-        var pat = _config["GitHub:PrCommentToken"] ?? "";
-        if (string.IsNullOrWhiteSpace(pat))
-            return;
+        var body = BuildBody(docsUrl, samplesUrl, error, removed: false);
+        return PostMarkerCommentAsync(owner, repo, prNumber, body, cancellationToken);
+    }
 
-        var body = BuildCommentBody(docsUrl, samplesUrl, status, logLines, partial);
-        await DeleteAllMarkerCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
-
-        var id = await _github.CreateIssueCommentAsync(owner, repo, prNumber, pat, body, cancellationToken);
-        if (id == null)
-            _logger.LogWarning("Failed to create staging comment on PR #{Pr}", prNumber);
-        else
-            _logger.LogInformation("Posted new staging comment on PR #{Pr} (replaced prior marker comments)", prNumber);
+    /// <summary>PR closed / staging torn down.</summary>
+    public Task TryPostStagingRemovedAsync(
+        string owner,
+        string repo,
+        int prNumber,
+        CancellationToken cancellationToken = default)
+    {
+        var body = BuildBody(docsUrl: null, samplesUrl: null, error: null, removed: true);
+        return PostMarkerCommentAsync(owner, repo, prNumber, body, cancellationToken);
     }
 
     public async Task TryAddRocketReactionAsync(
@@ -85,29 +69,62 @@ public class PrStagingDeployCommentService
         await _github.AddReactionToIssueCommentAsync(owner, repo, issueCommentId, RocketReaction, pat, cancellationToken);
     }
 
-    /// <summary>
-    /// Replaces the staging thread with a progress comment (deletes old marker comments, posts new).
-    /// </summary>
-    public Task TryNotifyDeployQueuedAsync(
+    private async Task PostMarkerCommentAsync(
         string owner,
         string repo,
         int prNumber,
-        string progressStatus,
-        CancellationToken cancellationToken = default)
+        string body,
+        CancellationToken cancellationToken)
     {
-        return TryPostOrUpdateStagingCommentAsync(
-            owner,
-            repo,
-            prNumber,
-            docsUrl: null,
-            samplesUrl: null,
-            status: progressStatus,
-            logLines: null,
-            partial: null,
-            cancellationToken);
+        var pat = _config["GitHub:PrCommentToken"] ?? "";
+        if (string.IsNullOrWhiteSpace(pat))
+            return;
+
+        await DeleteAllMarkerCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
+        var id = await _github.CreateIssueCommentAsync(owner, repo, prNumber, pat, body, cancellationToken);
+        if (id == null)
+            _logger.LogWarning("Failed to create staging comment on PR #{Pr}", prNumber);
+        else
+            _logger.LogInformation("Replaced staging comment on PR #{Pr} (deleted prior marker comments)", prNumber);
     }
 
-    /// <summary>Removes every issue comment that contains <see cref="Marker"/> (retries per id, re-lists between rounds).</summary>
+    private static string BuildBody(string? docsUrl, string? samplesUrl, string? error, bool removed)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(Marker);
+        sb.AppendLine();
+
+        if (removed)
+        {
+            sb.AppendLine("### Staging removed");
+            sb.AppendLine();
+            sb.AppendLine("Staging environment has been deleted for this PR.");
+            return sb.ToString();
+        }
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            sb.AppendLine("### Staging deploy failed");
+            sb.AppendLine();
+            var oneLine = error.Trim().Replace("\r", "").Replace("\n", " ");
+            sb.AppendLine($"> {oneLine}");
+            return sb.ToString();
+        }
+
+        sb.AppendLine("### Staging preview");
+        sb.AppendLine();
+        sb.AppendLine(FormatLinkLine("📄 Docs", docsUrl));
+        sb.AppendLine(FormatLinkLine("🧪 Samples", samplesUrl));
+        return sb.ToString();
+    }
+
+    private static string FormatLinkLine(string label, string? url)
+    {
+        if (!string.IsNullOrWhiteSpace(url))
+            return $"**{label}:** [{url}]({url})";
+        return $"**{label}:** _not available_";
+    }
+
     private async Task DeleteAllMarkerCommentsAsync(
         string owner,
         string repo,
@@ -145,131 +162,6 @@ public class PrStagingDeployCommentService
         var finalCheck = await _github.ListIssueCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
         if (FindCommentIdsByMarker(finalCheck, Marker).Count > 0)
             _logger.LogWarning("Some ivy-staging marker comments may still exist on PR #{Pr} after cleanup", prNumber);
-    }
-
-    private static string BuildCommentBody(
-        string? docsUrl,
-        string? samplesUrl,
-        string? status,
-        IReadOnlyList<string>? logLines,
-        StagingCommentPartialBreakdown? partial = null)
-    {
-        if (partial != null)
-            return BuildPartialDeploymentBody(logLines, partial);
-
-        var statusText = string.IsNullOrWhiteSpace(status)
-            ? "Staging preview"
-            : status.Trim();
-
-        var isFailed   = statusText.Contains("failed",   StringComparison.OrdinalIgnoreCase);
-        var isDeployed = statusText.Contains("deployed", StringComparison.OrdinalIgnoreCase)
-                         && !isFailed;
-        var isDeleted  = statusText.Contains("deleted",  StringComparison.OrdinalIgnoreCase);
-
-        var showLinks = isDeployed && !isDeleted;
-
-        var sb = new StringBuilder();
-        sb.AppendLine(Marker);
-        sb.AppendLine();
-        sb.AppendLine("### " + statusText);
-        sb.AppendLine();
-
-        if (showLinks)
-        {
-            var docsPageUrl = BuildDocsIntroPageUrl(docsUrl);
-            sb.AppendLine(FormatLinkLine("Docs", docsPageUrl));
-            sb.AppendLine(FormatLinkLine("Samples", samplesUrl));
-            sb.AppendLine();
-        }
-
-        if (!isDeployed)
-        {
-            if (isFailed)
-            {
-                sb.AppendLine("Deployment stopped due to an error. I'm attaching the latest Sliplane events below.");
-            }
-            else if (statusText.Contains("redeploy", StringComparison.OrdinalIgnoreCase))
-            {
-                sb.AppendLine("Updating this PR deployment — I'll keep the comment updated until Sliplane finishes.");
-            }
-            else if (isDeleted)
-            {
-                sb.AppendLine("Staging services have been deleted.");
-            }
-            else
-            {
-                sb.AppendLine("I'm preparing your docs & samples for this PR. I'll update the comment as Sliplane reports progress.");
-            }
-        }
-
-        AppendLogSection(sb, logLines);
-        return sb.ToString();
-    }
-
-    private static string BuildPartialDeploymentBody(
-        IReadOnlyList<string>? logLines,
-        StagingCommentPartialBreakdown p)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine(Marker);
-        sb.AppendLine();
-        sb.AppendLine("### Partial deployment");
-        sb.AppendLine();
-        sb.AppendLine(FormatPartialServiceLine("Docs", p.DocsState, p.DocsUrl));
-        sb.AppendLine(FormatPartialServiceLine("Samples", p.SamplesState, p.SamplesUrl));
-        sb.AppendLine();
-        sb.AppendLine("Docs and samples are separate services: one succeeded and the other failed or was not created. Check Sliplane for full logs.");
-        AppendLogSection(sb, logLines);
-        return sb.ToString();
-    }
-
-    private static string FormatPartialServiceLine(string label, string state, string? url)
-    {
-        return state switch
-        {
-            "deployed" when !string.IsNullOrWhiteSpace(url) =>
-                $"**{label}:** OK — [{url}]({url})",
-            "deployed" =>
-                $"**{label}:** OK (live)",
-            "failed" =>
-                $"**{label}:** Failed (build or deploy)",
-            "skipped" =>
-                $"**{label}:** Not provisioned (no Sliplane service for this PR)",
-            _ =>
-                $"**{label}:** In progress…"
-        };
-    }
-
-    private static void AppendLogSection(StringBuilder sb, IReadOnlyList<string>? logLines)
-    {
-        if (logLines is not { Count: > 0 })
-            return;
-        sb.AppendLine();
-        sb.AppendLine("### Logs");
-        sb.AppendLine();
-        sb.AppendLine("```");
-        foreach (var line in logLines)
-        {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            sb.AppendLine(line);
-        }
-        sb.AppendLine("```");
-    }
-
-    private static string FormatLinkLine(string label, string? url)
-    {
-        if (!string.IsNullOrWhiteSpace(url))
-            return $"**{label}:** [{url}]({url})";
-
-        return $"**{label}:** _pending_";
-    }
-
-    private static string? BuildDocsIntroPageUrl(string? docsUrl)
-    {
-        if (string.IsNullOrWhiteSpace(docsUrl))
-            return null;
-
-        return docsUrl.TrimEnd('/');
     }
 
     private static List<long> FindCommentIdsByMarker(
