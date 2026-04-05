@@ -3,11 +3,16 @@ namespace IvyAskStatistics.Apps;
 [App(icon: Icons.LayoutDashboard, title: "Dashboard")]
 public class DashboardApp : ViewBase
 {
+    /// <summary>
+    /// Survives tab switches: <see cref="UseQuery"/> state is recreated when the view remounts,
+    /// but we still need the last successful payload so a failed refetch does not wipe the UI.
+    /// </summary>
+    private static DashboardPageModel? s_lastSuccessfulDashboard;
+
     public override object? Build()
     {
         var factory = UseService<AppDbContextFactory>();
         var client = UseService<IClientProvider>();
-        var queryService = UseService<IQueryService>();
         var navigation = Context.UseNavigation();
 
         var dashQuery = UseQuery<DashboardPageModel?, int>(
@@ -16,38 +21,38 @@ public class DashboardApp : ViewBase
             {
                 try
                 {
-                    return await LoadDashboardPageAsync(factory, ct);
+                    var r = await LoadDashboardPageAsync(factory, ct);
+                    s_lastSuccessfulDashboard = r;
+                    return r;
                 }
-                catch (Exception ex)
+                catch (OperationCanceledException)
+                {
+                    return s_lastSuccessfulDashboard;
+                }
+                catch (Exception ex) when (!ct.IsCancellationRequested)
                 {
                     client.Toast($"Could not load dashboard: {ex.Message}");
-                    return null;
+                    return s_lastSuccessfulDashboard;
                 }
             },
-            options: new QueryOptions { KeepPrevious = true, RevalidateOnMount = false },
+            options: new QueryOptions { KeepPrevious = true },
             tags: ["dashboard-stats"]);
 
-        if (dashQuery.Loading && dashQuery.Value == null)
+        // Prefer live query value; fall back to last success when remounting or on transient errors.
+        var page = dashQuery.Value ?? s_lastSuccessfulDashboard;
+
+        if (dashQuery.Loading && page == null)
             return TabLoadingSkeletons.Dashboard();
 
-        if (dashQuery.Value == null)
+        if (page == null)
             return Layout.Vertical().Height(Size.Full()).AlignContent(Align.Center)
                    | new Icon(Icons.LayoutDashboard)
                    | Text.H3("No statistics yet")
-                   | Text.Block(
-                       "The database has no completed test run with saved results. "
-                       + "Use Run Tests: set an Ivy version, run all questions, wait until the run finishes.")
+                   | Text.Block("No completed test runs found. Run a test to see dashboard statistics.")
                        .Muted()
-                       .Width(Size.Fraction(0.5f))
-                   | Layout.Horizontal()
-                       | new Button("Open Run Tests", onClick: _ => navigation.Navigate(typeof(RunApp)))
-                           .Primary()
-                           .Icon(Icons.Play)
-                       | new Button("Refresh", onClick: _ => queryService.RevalidateByTag("dashboard-stats"))
-                           .Variant(ButtonVariant.Outline)
-                           .Icon(Icons.RefreshCw);
-
-        var page = dashQuery.Value;
+                   | new Button("Run Tests", onClick: _ => navigation.Navigate(typeof(RunApp)))
+                       .Primary()
+                       .Icon(Icons.Play);
         var data = page.Detail;
         var versionTrend = page.VersionTrend;
 
