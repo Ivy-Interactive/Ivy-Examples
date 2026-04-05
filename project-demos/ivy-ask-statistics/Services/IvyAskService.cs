@@ -3,27 +3,68 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using IvyAskStatistics.Connections;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace IvyAskStatistics.Services;
 
 public static class IvyAskService
 {
     public const string DefaultMcpBaseUrl = "https://mcp.ivy.app";
+
+    /// <summary>
+    /// Sent as <c>client=</c> on every MCP HTTP request when no override is provided.
+    /// Use a stable slug: lowercase, ASCII, hyphens (e.g. <c>ivy-internal</c>, <c>acme-corp-qa</c>).
+    /// </summary>
+    public const string DefaultMcpClientId = "ivy-internal";
+
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(120) };
+
+    /// <summary>Builds <c>GET .../questions?question=...&amp;client=...</c> (client is always included).</summary>
+    public static string BuildQuestionsUrl(string baseUrl, string questionOrPrompt, string? client = null)
+    {
+        var root = baseUrl.TrimEnd('/');
+        var q = Uri.EscapeDataString(questionOrPrompt);
+        var id = NormalizeMcpClient(client);
+        return $"{root}/questions?question={q}&client={Uri.EscapeDataString(id)}";
+    }
+
+    /// <summary>Normalizes override or returns <see cref="DefaultMcpClientId"/>.</summary>
+    public static string NormalizeMcpClient(string? client)
+    {
+        var t = (client ?? "").Trim();
+        if (t.Length == 0) return DefaultMcpClientId;
+        if (t.Length > 120) return t[..120];
+        return t;
+    }
+
+    /// <summary>
+    /// MCP <c>client</c> query value from <c>Mcp:ClientId</c> (user secrets, env, appsettings).
+    /// If unset or blank, uses <see cref="DefaultMcpClientId"/>.
+    /// </summary>
+    public static string ResolveMcpClientId(IConfiguration configuration) =>
+        NormalizeMcpClient(configuration["Mcp:ClientId"]);
+
+    /// <summary>Appends <c>client=</c> to any MCP URL (e.g. <c>/docs</c>, widget doc path).</summary>
+    public static string WithMcpClientQuery(string absoluteOrRootRelativeUrl, string? client = null)
+    {
+        var id = NormalizeMcpClient(client);
+        var url = absoluteOrRootRelativeUrl.Trim();
+        var sep = url.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+        return $"{url}{sep}client={Uri.EscapeDataString(id)}";
+    }
 
     /// <summary>
     /// Sends a question to the IVY Ask API and returns the result with timing.
-    /// GET {baseUrl}/questions?question={encoded}
+    /// GET {baseUrl}/questions?question={encoded}&amp;client={client}
     ///
     /// Status codes:
     ///   200 + body  → "success"    (answer found)
     ///   404         → "no_answer"  (NO_ANSWER_FOUND)
     ///   other       → "error"
     /// </summary>
-    public static async Task<QuestionRun> AskAsync(TestQuestion question, string baseUrl)
+    public static async Task<QuestionRun> AskAsync(TestQuestion question, string baseUrl, string? client = null)
     {
-        var encoded = Uri.EscapeDataString(question.Question);
-        var url = $"{baseUrl}/questions?question={encoded}";
+        var url = BuildQuestionsUrl(baseUrl, question.Question, client);
 
         var sw = Stopwatch.StartNew();
         try
@@ -56,9 +97,10 @@ public static class IvyAskService
     /// Calls Ivy Ask with a meta-prompt (e.g. “output JSON array of test questions”).
     /// Same endpoint as normal Ask; the service returns generated text (often JSON).
     /// </summary>
-    public static async Task<string?> FetchAnswerBodyAsync(string baseUrl, string prompt, CancellationToken ct = default)
+    public static async Task<string?> FetchAnswerBodyAsync(
+        string baseUrl, string prompt, CancellationToken ct = default, string? client = null)
     {
-        var url = $"{baseUrl.TrimEnd('/')}/questions?question={Uri.EscapeDataString(prompt)}";
+        var url = BuildQuestionsUrl(baseUrl, prompt, client);
         using var response = await _http.GetAsync(url, ct);
         if (response.StatusCode != HttpStatusCode.OK) return null;
         return await response.Content.ReadAsStringAsync(ct);
@@ -121,9 +163,9 @@ public static class IvyAskService
     /// Fetches the full list of Ivy widgets from the docs API.
     /// Returns widgets only (filters out non-widget topics).
     /// </summary>
-    public static async Task<List<IvyWidget>> GetWidgetsAsync()
+    public static async Task<List<IvyWidget>> GetWidgetsAsync(string? client = null)
     {
-        var yaml = await _http.GetStringAsync($"{DefaultMcpBaseUrl}/docs");
+        var yaml = await _http.GetStringAsync(WithMcpClientQuery($"{DefaultMcpBaseUrl}/docs", client));
         var widgets = new List<IvyWidget>();
 
         var lines = yaml.Split('\n');
@@ -190,8 +232,9 @@ public static class IvyAskService
     /// <summary>
     /// Fetches the Markdown documentation for a specific widget.
     /// </summary>
-    public static async Task<string> GetWidgetDocsAsync(string docLink)
+    public static async Task<string> GetWidgetDocsAsync(string docLink, string? client = null)
     {
-        return await _http.GetStringAsync($"{DefaultMcpBaseUrl}/{docLink}");
+        var path = docLink.TrimStart('/');
+        return await _http.GetStringAsync(WithMcpClientQuery($"{DefaultMcpBaseUrl}/{path}", client));
     }
 }

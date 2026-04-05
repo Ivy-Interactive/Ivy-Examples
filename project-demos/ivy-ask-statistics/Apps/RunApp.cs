@@ -18,6 +18,7 @@ public class RunApp : ViewBase
     public override object? Build()
     {
         var factory = UseService<AppDbContextFactory>();
+        var configuration = UseService<IConfiguration>();
         var client = UseService<IClientProvider>();
         var queryService = UseService<IQueryService>();
 
@@ -102,6 +103,7 @@ public class RunApp : ViewBase
 
             var maxParallel = int.TryParse(concurrency.Value, out var c) ? c : 5;
             var baseUrl = McpBaseUrl(mcpEnvironment.Value);
+            var mcpClient = IvyAskService.ResolveMcpClientId(configuration);
 
             _ = Task.Run(async () =>
             {
@@ -130,7 +132,7 @@ public class RunApp : ViewBase
 
                     try
                     {
-                        var result = await IvyAskService.AskAsync(q, baseUrl);
+                        var result = await IvyAskService.AskAsync(q, baseUrl, mcpClient);
                         bag.Add(result);
                     }
                     finally
