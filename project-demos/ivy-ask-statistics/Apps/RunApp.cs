@@ -8,7 +8,12 @@ public class RunApp : ViewBase
 {
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
     private static readonly string[] ConcurrencyOptions = ["1", "3", "5", "10", "20"];
-    private const string BaseUrl = "https://mcp.ivy.app";
+    private static readonly string[] McpEnvironmentOptions = ["production", "staging"];
+
+    private static string McpBaseUrl(string environment) =>
+        environment.Equals("staging", StringComparison.OrdinalIgnoreCase)
+            ? "https://staging.mcp.ivy.app"
+            : "https://mcp.ivy.app";
 
     public override object? Build()
     {
@@ -17,6 +22,7 @@ public class RunApp : ViewBase
         var queryService = UseService<IQueryService>();
 
         var ivyVersion = UseState("");
+        var mcpEnvironment = UseState("production");
         var difficultyFilter = UseState("all");
         var concurrency = UseState("20");
         var isRunning = UseState(false);
@@ -95,6 +101,7 @@ public class RunApp : ViewBase
             refreshToken.Refresh();
 
             var maxParallel = int.TryParse(concurrency.Value, out var c) ? c : 5;
+            var baseUrl = McpBaseUrl(mcpEnvironment.Value);
 
             _ = Task.Run(async () =>
             {
@@ -123,7 +130,7 @@ public class RunApp : ViewBase
 
                     try
                     {
-                        var result = await IvyAskService.AskAsync(q, BaseUrl);
+                        var result = await IvyAskService.AskAsync(q, baseUrl);
                         bag.Add(result);
                     }
                     finally
@@ -159,8 +166,11 @@ public class RunApp : ViewBase
         if (firstLoad)
             return TabLoadingSkeletons.RunTab();
 
+        var mcpBaseForUi = McpBaseUrl(mcpEnvironment.Value);
+
         var controls = Layout.Horizontal().Height(Size.Fit())
             | ivyVersion.ToTextInput().Placeholder("e.g. v2.4.0").Disabled(running)
+            | mcpEnvironment.ToSelectInput(McpEnvironmentOptions).Disabled(running)
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(running)
             | new Button("Run All", onClick: async _ => await StartRunAsync())
                 .Primary()
@@ -173,7 +183,8 @@ public class RunApp : ViewBase
             var inFlight = active.Count;
             statusBar = new Callout(
                 Layout.Vertical()
-                    | Text.Block($"Running {done}/{questions.Count} completed, {inFlight} in flight (x{concurrency.Value} parallel)")
+                    | Text.Block(
+                        $"Running {done}/{questions.Count} completed, {inFlight} in flight (x{concurrency.Value} parallel) · {mcpBaseForUi}")
                     | new Progress(progressPct).Goal($"{done}/{questions.Count}"),
                 variant: CalloutVariant.Info);
         }
