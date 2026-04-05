@@ -54,6 +54,32 @@ public class GitHubApiClient
         return doc.RootElement.GetProperty("head").GetProperty("ref").GetString();
     }
 
+    /// <summary>Current PR state from GitHub. Used to avoid deploying after a fast merge/close (race with webhooks).</summary>
+    public async Task<GitHubPullRequestMergeInfo> GetPullRequestMergeInfoAsync(
+        string owner,
+        string repo,
+        int prNumber,
+        string? token,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return new GitHubPullRequestMergeInfo(Found: false, IsOpen: false, Merged: false);
+        var client = CreateClient(token);
+        using var response = await client.GetAsync(
+            $"https://api.github.com/repos/{owner}/{repo}/pulls/{prNumber}",
+            cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return new GitHubPullRequestMergeInfo(Found: false, IsOpen: false, Merged: false);
+
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var state = root.GetProperty("state").GetString() ?? "";
+        var merged = root.TryGetProperty("merged", out var mEl) && mEl.GetBoolean();
+        var isOpen = state.Equals("open", StringComparison.OrdinalIgnoreCase);
+        return new GitHubPullRequestMergeInfo(Found: true, IsOpen: isOpen, Merged: merged);
+    }
+
     /// <summary>Open PR whose head branch matches <paramref name="headBranch"/> (same repo: <c>owner:branch</c>).</summary>
     public async Task<int?> FindOpenPullRequestNumberByHeadBranchAsync(
         string owner,
@@ -222,3 +248,6 @@ public class GitHubApiClient
         return client;
     }
 }
+
+/// <param name="Found">False if the API request failed (caller may treat as unknown and proceed).</param>
+public readonly record struct GitHubPullRequestMergeInfo(bool Found, bool IsOpen, bool Merged);

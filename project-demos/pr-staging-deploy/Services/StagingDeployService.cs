@@ -8,12 +8,18 @@ public class StagingDeployService
     private readonly SliplaneStagingClient _sliplane;
     private readonly GitHubApiClient _github;
     private readonly IConfiguration _config;
+    private readonly ILogger<StagingDeployService> _logger;
 
-    public StagingDeployService(SliplaneStagingClient sliplane, GitHubApiClient github, IConfiguration config)
+    public StagingDeployService(
+        SliplaneStagingClient sliplane,
+        GitHubApiClient github,
+        IConfiguration config,
+        ILogger<StagingDeployService> logger)
     {
         _sliplane = sliplane;
         _github = github;
         _config = config;
+        _logger = logger;
     }
 
     public string SamplesRepo => _config["Staging:SamplesRepo"] ?? "https://github.com/Ivy-Interactive/Ivy-Examples";
@@ -24,17 +30,44 @@ public class StagingDeployService
     public string DocsDockerfile => _config["Staging:DocsDockerfile"] ?? "Dockerfile";
     public int ExpiryDays => int.TryParse(_config["Staging:ExpiryDays"], out var d) ? d : 7;
 
-    public async Task<StagingDeployResult> DeployBranchAsync(string apiToken, string branchName, int prNumber, string? samplesRepoOverride = null)
+    /// <summary>Pause (ms) after tearing down old services and before calling Sliplane create, only when GitHub owner/repo are provided. Lets merge/close webhooks win the race. Default 1200; set 0 to disable.</summary>
+    public int PreDeployDelayMs =>
+        int.TryParse(_config["Staging:PreDeployDelayMs"], out var ms) ? Math.Max(0, ms) : 1200;
+
+    public async Task<StagingDeployResult> DeployBranchAsync(
+        string apiToken,
+        string branchName,
+        int prNumber,
+        string? samplesRepoOverride = null,
+        string? gitHubOwner = null,
+        string? gitHubRepo = null,
+        CancellationToken cancellationToken = default)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
         var serverId = _config["Sliplane:ServerId"] ?? "";
         if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(serverId))
             return new StagingDeployResult(false, "Sliplane:ProjectId and ServerId required.");
 
+        var skip = await TryGetClosedOrMergedSkipAsync(prNumber, gitHubOwner, gitHubRepo, cancellationToken);
+        if (skip is not null)
+            return skip;
+
         // Tear down any existing services for this PR before creating new ones. Otherwise a
         // fallback deploy (e.g. synchronize when redeploy finds 0 services) can leave orphan
         // Sliplane services alongside the new pair.
         await DeleteBranchAsync(apiToken, prNumber);
+
+        var ghToken = _config["GitHub:Token"] ?? "";
+        if (PreDeployDelayMs > 0
+            && !string.IsNullOrEmpty(gitHubOwner)
+            && !string.IsNullOrEmpty(gitHubRepo)
+            && !string.IsNullOrEmpty(ghToken))
+        {
+            await Task.Delay(PreDeployDelayMs, cancellationToken);
+            skip = await TryGetClosedOrMergedSkipAsync(prNumber, gitHubOwner, gitHubRepo, cancellationToken);
+            if (skip is not null)
+                return skip;
+        }
 
         var docsName = $"ivy-staging-docs-{prNumber}";
         var samplesName = $"ivy-staging-samples-{prNumber}";
@@ -236,7 +269,44 @@ public class StagingDeployService
         }
         return new StagingDeleteResult(deleted > 0, $"Deleted {deleted} expired deployment(s) (closed PRs only).");
     }
+
+    /// <returns>Skip result if PR is definitely closed/merged; null to continue (including when GitHub cannot be verified).</returns>
+    private async Task<StagingDeployResult?> TryGetClosedOrMergedSkipAsync(
+        int prNumber,
+        string? gitHubOwner,
+        string? gitHubRepo,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(gitHubOwner) || string.IsNullOrEmpty(gitHubRepo))
+            return null;
+
+        var ghToken = _config["GitHub:Token"] ?? "";
+        if (string.IsNullOrEmpty(ghToken))
+            return null;
+
+        var info = await _github.GetPullRequestMergeInfoAsync(gitHubOwner, gitHubRepo, prNumber, ghToken, cancellationToken);
+        if (!info.Found)
+        {
+            _logger.LogWarning("Could not verify PR #{Pr} open state on GitHub; continuing deploy.", prNumber);
+            return null;
+        }
+
+        if (info.IsOpen)
+            return null;
+
+        return new StagingDeployResult(
+            false,
+            "PR is already closed or merged; staging deploy skipped.",
+            SkippedBecausePrNotOpen: true);
+    }
 }
 
-public record StagingDeployResult(bool Success, string Message, string? DocsUrl = null, string? SamplesUrl = null, string? DocsServiceId = null, string? SamplesServiceId = null);
+public record StagingDeployResult(
+    bool Success,
+    string Message,
+    string? DocsUrl = null,
+    string? SamplesUrl = null,
+    string? DocsServiceId = null,
+    string? SamplesServiceId = null,
+    bool SkippedBecausePrNotOpen = false);
 public record StagingDeleteResult(bool Success, string Message);
