@@ -29,5 +29,5 @@ public class TestRunEntity
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
 
-    public List<TestResultEntity> Results { get; set; } = [];
+    public List<TestRunResultEntity> Results { get; set; } = [];
 }

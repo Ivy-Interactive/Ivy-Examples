@@ -698,13 +698,13 @@ public class RunApp : ViewBase
             };
             ctx.TestRuns.Add(run);
 
-            var rows = new List<TestResultEntity>(ordered.Count);
+            var rows = new List<TestRunResultEntity>(ordered.Count);
             foreach (var result in ordered)
             {
                 if (!Guid.TryParse(result.Question.Id, out var questionId))
                     throw new InvalidOperationException($"Invalid question id: {result.Question.Id}");
 
-                rows.Add(new TestResultEntity
+                rows.Add(new TestRunResultEntity
                 {
                     TestRunId = run.Id,
                     QuestionId = questionId,

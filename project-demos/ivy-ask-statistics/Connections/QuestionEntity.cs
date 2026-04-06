@@ -26,5 +26,5 @@ public class QuestionEntity
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public List<TestResultEntity> TestResults { get; set; } = [];
+    public List<TestRunResultEntity> TestResults { get; set; } = [];
 }

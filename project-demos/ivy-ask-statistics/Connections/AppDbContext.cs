@@ -6,11 +6,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<QuestionEntity> Questions { get; set; }
     public DbSet<TestRunEntity> TestRuns { get; set; }
-    public DbSet<TestResultEntity> TestResults { get; set; }
+    public DbSet<TestRunResultEntity> TestResults { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<TestResultEntity>(e =>
+        modelBuilder.Entity<TestRunResultEntity>(e =>
         {
             e.HasOne(r => r.TestRun)
                 .WithMany(tr => tr.Results)
