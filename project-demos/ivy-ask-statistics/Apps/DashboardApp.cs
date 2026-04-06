@@ -17,8 +17,9 @@ public class DashboardApp : ViewBase
         var navigation     = Context.UseNavigation();
         var selectedRunId  = UseState<Guid?>(null);
         var runDialogOpen  = UseState(false);
-        var editSheetOpen  = UseState(false);
-        var editQuestionId = UseState(Guid.Empty);
+        var editSheetOpen     = UseState(false);
+        var editQuestionId    = UseState(Guid.Empty);
+        var editPreviewResultId = UseState<Guid?>(null);
         var envOverride    = UseState("production");
         var dashboardFocusVersion = UseState<string?>(null);
         var versionSheetOpen      = UseState(false);
@@ -289,10 +290,15 @@ public class DashboardApp : ViewBase
                     (page.IvyVersion ?? "").Trim())
                 : new Empty(),
             runDialogOpen.Value && selectedRunId.Value.HasValue
-                ? new TestRunResultsDialog(runDialogOpen, selectedRunId.Value.Value, editSheetOpen, editQuestionId)
+                ? new TestRunResultsDialog(
+                    runDialogOpen,
+                    selectedRunId.Value.Value,
+                    editSheetOpen,
+                    editQuestionId,
+                    editPreviewResultId)
                 : new Empty(),
             editSheetOpen.Value
-                ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value)
+                ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value, editPreviewResultId)
                 : new Empty());
     }
 

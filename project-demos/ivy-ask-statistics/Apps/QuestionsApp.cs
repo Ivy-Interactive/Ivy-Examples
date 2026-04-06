@@ -32,8 +32,9 @@ public class QuestionsApp : ViewBase
         var deleteRequest     = UseState<string?>(null);
         var viewDialogOpen    = UseState(false);
         var viewDialogWidget  = UseState("");
-        var editSheetOpen     = UseState(false);
-        var editQuestionId    = UseState(Guid.Empty);
+        var editSheetOpen       = UseState(false);
+        var editQuestionId      = UseState(Guid.Empty);
+        var editPreviewResultId = UseState<Guid?>(null);
         var refreshToken      = UseRefreshToken();
         var genProgress       = UseState<GenProgress?>(null);
         var (alertView, showAlert) = UseAlert();
@@ -492,11 +493,16 @@ public class QuestionsApp : ViewBase
             });
 
         object? questionsDialog = viewDialogOpen.Value && !string.IsNullOrEmpty(viewDialogWidget.Value)
-            ? new WidgetQuestionsDialog(viewDialogOpen, viewDialogWidget.Value, editSheetOpen, editQuestionId)
+            ? new WidgetQuestionsDialog(
+                viewDialogOpen,
+                viewDialogWidget.Value,
+                editSheetOpen,
+                editQuestionId,
+                editPreviewResultId)
             : null;
 
         object? editSheet = editSheetOpen.Value && editQuestionId.Value != Guid.Empty
-            ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value)
+            ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value, editPreviewResultId)
             : null;
 
         return Layout.Vertical().Height(Size.Full())

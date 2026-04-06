@@ -5,7 +5,8 @@ internal sealed class TestRunResultsDialog(
     IState<bool> isOpen,
     Guid runId,
     IState<bool> editSheetOpen,
-    IState<Guid> editQuestionId) : ViewBase
+    IState<Guid> editQuestionId,
+    IState<Guid?> editPreviewResultId) : ViewBase
 {
     public override object? Build()
     {
@@ -91,8 +92,10 @@ internal sealed class TestRunResultsDialog(
                 .Width(r => r.Difficulty,     Size.Px(80))
                 .Width(r => r.Status,         Size.Px(90))
                 .Width(r => r.ResponseTimeMs, Size.Px(80))
+                .Width(r => r.Response,       Size.Px(300))
                 .Hidden(r => r.ResultId)
                 .Hidden(r => r.QuestionId)
+                .AlignContent(r => r.ResponseTimeMs, Align.Left)
                 .RowActions(
                     MenuItem.Default(Icons.Pencil, "edit").Label("Edit question").Tag("edit"),
                     MenuItem.Default(Icons.Trash2, "delete").Label("Delete result").Tag("delete"))
@@ -109,6 +112,7 @@ internal sealed class TestRunResultsDialog(
                     if (tag == "edit")
                     {
                         editQuestionId.Set(row.QuestionId);
+                        editPreviewResultId.Set(row.ResultId);
                         editSheetOpen.Set(true);
                     }
                     else if (tag == "delete")

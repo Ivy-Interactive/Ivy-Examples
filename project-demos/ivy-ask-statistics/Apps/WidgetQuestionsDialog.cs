@@ -5,7 +5,8 @@ internal sealed class WidgetQuestionsDialog(
     IState<bool> isOpen,
     string widgetName,
     IState<bool> editSheetOpen,
-    IState<Guid> editQuestionId) : ViewBase
+    IState<Guid> editQuestionId,
+    IState<Guid?> editPreviewResultId) : ViewBase
 {
     public override object? Build()
     {
@@ -92,6 +93,7 @@ internal sealed class WidgetQuestionsDialog(
 
                     if (tag == "edit")
                     {
+                        editPreviewResultId.Set(null);
                         editQuestionId.Set(id);
                         editSheetOpen.Set(true);
                     }

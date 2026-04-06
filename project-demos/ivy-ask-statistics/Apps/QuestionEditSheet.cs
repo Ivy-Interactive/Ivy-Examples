@@ -1,6 +1,9 @@
 namespace IvyAskStatistics.Apps;
 
-internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : ViewBase
+internal sealed class QuestionEditSheet(
+    IState<bool> isOpen,
+    Guid questionId,
+    IState<Guid?> previewResultId) : ViewBase
 {
     private record EditRequest
     {
@@ -15,23 +18,90 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
         public bool IsActive { get; init; } = true;
     }
 
+    /// <summary>
+    /// Question row plus optional response preview: either the specific <see cref="TestResultEntity"/> row
+    /// (when opened from a run results table) or the latest answer across all runs (elsewhere).
+    /// </summary>
+    private sealed record QuestionEditPayload(
+        QuestionEntity Question,
+        string? AnswerText,
+        AnswerPreviewSource PreviewSource);
+
+    private enum AnswerPreviewSource
+    {
+        /// <summary>This run's result row (may be empty).</summary>
+        ThisResultRow,
+
+        /// <summary>Latest successful, else latest with text — any run.</summary>
+        GlobalHistory,
+    }
+
     public override object? Build()
     {
         var factory      = UseService<AppDbContextFactory>();
         var queryService = UseService<IQueryService>();
+        var isSaving     = UseState(false);
 
-        var questionQuery = UseQuery<QuestionEntity?, Guid>(
-            key: questionId,
-            fetcher: async (id, ct) =>
+        var questionQuery = UseQuery<QuestionEditPayload?, (Guid QuestionId, Guid? PreviewResultId)>(
+            key: (questionId, previewResultId.Value),
+            fetcher: async (key, ct) =>
             {
+                var (id, focusResult) = key;
                 await using var ctx = factory.CreateDbContext();
-                return await ctx.Questions.AsNoTracking().FirstOrDefaultAsync(q => q.Id == id, ct);
+                var q = await ctx.Questions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+                if (q == null)
+                    return null;
+
+                if (focusResult is Guid fr && fr != Guid.Empty)
+                {
+                    var text = await ctx.TestResults.AsNoTracking()
+                        .Where(r => r.Id == fr && r.QuestionId == id)
+                        .Select(r => r.ResponseText)
+                        .FirstOrDefaultAsync(ct);
+                    var trimmed = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+                    return new QuestionEditPayload(q, trimmed, AnswerPreviewSource.ThisResultRow);
+                }
+
+                var lastSuccess = await ctx.TestResults.AsNoTracking()
+                    .Where(r => r.QuestionId == id && r.IsSuccess)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Select(r => r.ResponseText)
+                    .FirstOrDefaultAsync(ct);
+
+                string? answer = null;
+                if (!string.IsNullOrWhiteSpace(lastSuccess))
+                    answer = lastSuccess.Trim();
+                else
+                {
+                    var lastAny = await ctx.TestResults.AsNoTracking()
+                        .Where(r => r.QuestionId == id)
+                        .OrderByDescending(r => r.CreatedAt)
+                        .Select(r => r.ResponseText)
+                        .FirstOrDefaultAsync(ct);
+                    if (!string.IsNullOrWhiteSpace(lastAny))
+                        answer = lastAny.Trim();
+                }
+
+                return new QuestionEditPayload(q, answer, AnswerPreviewSource.GlobalHistory);
             });
 
         if (questionQuery.Loading || questionQuery.Value == null)
-            return Skeleton.Form().ToSheet(isOpen, "Edit Question");
+            return new Sheet(
+                    _ =>
+                    {
+                        isOpen.Set(false);
+                        previewResultId.Set(null);
+                    },
+                    Skeleton.Form(),
+                    title: "Edit Question",
+                    description: "Loading question…")
+                .Width(Size.Fraction(1f / 3f))
+                .Height(Size.Full());
 
-        var q = questionQuery.Value;
+        var payload = questionQuery.Value;
+        var q       = payload.Question;
+        var answer  = payload.AnswerText;
+        var preview = payload.PreviewSource;
 
         var form = new EditRequest
         {
@@ -43,12 +113,77 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
 
         var difficulties = new[] { "easy", "medium", "hard" }.ToOptions();
 
-        return form
+        var formBuilder = form
             .ToForm()
             .Builder(f => f.QuestionText, f => f.ToTextareaInput())
             .Builder(f => f.Difficulty,   f => f.ToSelectInput(difficulties))
-            .OnSubmit(OnSubmit)
-            .ToSheet(isOpen, "Edit Question");
+            .Builder(f => f.Category,     f => f.ToTextInput())
+            .Builder(f => f.IsActive,     f => f.ToSwitchInput())
+            .OnSubmit(OnSubmit);
+
+        var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(Context);
+
+        object answerPreview = preview switch
+        {
+            AnswerPreviewSource.ThisResultRow when string.IsNullOrWhiteSpace(answer)
+                => new Callout(
+                    "No response text for this row in this test run (e.g. 404 / no answer).",
+                    variant: CalloutVariant.Info),
+            AnswerPreviewSource.ThisResultRow
+                => new Card(
+                        Layout.Vertical().Gap(2)
+                            | Text.Block("Response for the result row you opened (read-only).").Muted()
+                            | Text.Markdown(answer!))
+                    .Title("This run")
+                    .Icon(Icons.FileText),
+            AnswerPreviewSource.GlobalHistory when string.IsNullOrWhiteSpace(answer)
+                => new Empty(),
+            AnswerPreviewSource.GlobalHistory
+                => new Card(
+                        Layout.Vertical().Gap(2)
+                            | Text.Block("Latest recorded response across all test runs (read-only).").Muted()
+                            | Text.Markdown(answer!))
+                    .Title("Answer")
+                    .Icon(Icons.FileText),
+            _ => new Empty()
+        };
+
+        var scrollBody = Layout.Vertical().Gap(4)
+            | formView
+            | answerPreview;
+
+        var footer = Layout.Horizontal().Gap(2)
+            | new Button("Save")
+                .Variant(ButtonVariant.Primary)
+                .Loading(loading || isSaving.Value)
+                .Disabled(loading || isSaving.Value)
+                .OnClick(async _ =>
+                {
+                    isSaving.Set(true);
+                    try
+                    {
+                        if (await onSubmit())
+                            isOpen.Set(false);
+                    }
+                    finally
+                    {
+                        isSaving.Set(false);
+                    }
+                })
+            | validationView;
+
+        var sheetBody = new FooterLayout(footer, scrollBody);
+
+        return new Sheet(
+                _ =>
+                {
+                    isOpen.Set(false);
+                    previewResultId.Set(null);
+                },
+                sheetBody,
+                title: "Edit Question")
+            .Width(Size.Fraction(1f / 3f))
+            .Height(Size.Full());
 
         async Task OnSubmit(EditRequest? request)
         {
@@ -64,7 +199,6 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
             queryService.RevalidateByTag(("widget-questions", entity.Widget));
             queryService.RevalidateByTag("widget-summary");
             queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
-            isOpen.Set(false);
         }
     }
 }
