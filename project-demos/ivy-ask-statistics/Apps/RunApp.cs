@@ -523,11 +523,7 @@ public class RunApp : ViewBase
         {
             return Layout.Vertical().Gap(2)
                    | Text.Block("Loading last saved results…").Muted()
-                   | Layout.Grid().Columns(4).Height(Size.Fit())
-                       | new Skeleton().Height(Size.Units(14))
-                       | new Skeleton().Height(Size.Units(14))
-                       | new Skeleton().Height(Size.Units(14))
-                       | new Skeleton().Height(Size.Units(14));
+                   | TabLoadingSkeletons.RunMetricsRow();
         }
 
         var s = effective;
