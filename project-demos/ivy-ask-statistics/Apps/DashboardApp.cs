@@ -8,7 +8,7 @@ public class DashboardApp : ViewBase
     /// but we still need the last successful payload so a failed refetch does not wipe the UI.
     /// Use a unique string query key (not shared <c>0</c> with other apps) so the server cache is not clobbered.
     /// </summary>
-    private static DashboardPageModel? s_lastSuccessfulDashboard;
+    private static readonly Dictionary<string, DashboardPageModel?> s_lastDashboardByKey = new(StringComparer.Ordinal);
 
     public override object? Build()
     {
@@ -19,32 +19,38 @@ public class DashboardApp : ViewBase
         var runDialogOpen  = UseState(false);
         var editSheetOpen  = UseState(false);
         var editQuestionId = UseState(Guid.Empty);
+        var envOverride    = UseState("production");
+        var dashboardFocusVersion = UseState<string?>(null);
+        var versionSheetOpen      = UseState(false);
 
         var dashQuery = UseQuery<DashboardPageModel?, string>(
-            key: "dashboard-stats-page",
-            fetcher: async (_, ct) =>
+            key: DashboardQueryKey(dashboardFocusVersion.Value),
+            fetcher: async (key, ct) =>
             {
+                var focusVersion = ParseDashboardFocusFromQueryKey(key);
                 try
                 {
-                    var r = await LoadDashboardPageAsync(factory, ct);
-                    s_lastSuccessfulDashboard = r;
+                    var r = await LoadDashboardPageAsync(factory, focusVersion, ct);
+                    s_lastDashboardByKey[key] = r;
                     return r;
                 }
                 catch (OperationCanceledException)
                 {
-                    return s_lastSuccessfulDashboard;
+                    return s_lastDashboardByKey.TryGetValue(key, out var prev) ? prev : null;
                 }
                 catch (Exception ex) when (!ct.IsCancellationRequested)
                 {
                     client.Toast($"Could not load dashboard: {ex.Message}");
-                    return s_lastSuccessfulDashboard;
+                    return s_lastDashboardByKey.TryGetValue(key, out var prev) ? prev : null;
                 }
             },
-            options: new QueryOptions { KeepPrevious = true },
+            options: new QueryOptions { KeepPrevious = false },
             tags: ["dashboard-stats"]);
 
-        // Prefer live query value; fall back to last success when remounting or on transient errors.
-        var page = dashQuery.Value ?? s_lastSuccessfulDashboard;
+        var dashQueryKey = DashboardQueryKey(dashboardFocusVersion.Value);
+
+        // Prefer live query value; fall back to last success for this query key when remounting or on transient errors.
+        var page = dashQuery.Value ?? (s_lastDashboardByKey.TryGetValue(dashQueryKey, out var cached) ? cached : null);
 
         if (dashQuery.Loading && page == null)
             return TabLoadingSkeletons.Dashboard();
@@ -58,11 +64,41 @@ public class DashboardApp : ViewBase
                    | new Button("Run Tests", onClick: _ => navigation.Navigate(typeof(RunApp)))
                        .Primary()
                        .Icon(Icons.Play);
-        var data = page.Detail;
-        var peer = page.PeerDetail;
         var versionCompare = page.VersionCompare;
-        var envPrimary = CapitalizeEnv(page.PrimaryEnvironment);
-        var hasPeerCompare = peer != null && page.PeerEnvironment != null;
+
+        // Resolve data for each env from what the loader returned.
+        var prodData = string.Equals(page.PrimaryEnvironment, "production", StringComparison.OrdinalIgnoreCase)
+            ? page.Detail : page.PeerDetail;
+        var stgData = string.Equals(page.PrimaryEnvironment, "staging", StringComparison.OrdinalIgnoreCase)
+            ? page.Detail : page.PeerDetail;
+        var hasStagingData    = stgData  != null;
+        var hasProductionData = prodData != null;
+
+        // Respect the user's toggle; fall back gracefully when an env has no data.
+        var showEnv = envOverride.Value;
+        if (showEnv == "staging"    && !hasStagingData)    showEnv = "production";
+        if (showEnv == "production" && !hasProductionData) showEnv = "staging";
+
+        DashboardData data;
+        DashboardData? peer;
+        string envPrimary;
+        if (showEnv == "staging" && stgData != null)
+        {
+            data      = stgData;
+            peer      = prodData;
+            envPrimary = "Staging";
+        }
+        else
+        {
+            data      = prodData ?? page.Detail;
+            peer      = stgData;
+            envPrimary = "Production";
+        }
+        var hasPeerCompare = peer != null;
+
+        // Remount KPIs + charts when the selected Ivy version or env slice changes. Keep this stable (no live metrics)
+        // so we do not get a new key every build — that would remount widgets and retrigger CSS animations constantly.
+        var dashboardVisualKey = $"{dashQueryKey}|{envPrimary}";
 
         // ── Level 1: KPIs (IvyInsights-style headline + delta vs other env or vs previous version) ──
         var rateStr = $"{data.AnswerRate:F1}%";
@@ -88,7 +124,7 @@ public class DashboardApp : ViewBase
 
         var runVersion = string.IsNullOrWhiteSpace(page.IvyVersion) ? "—" : page.IvyVersion.Trim();
 
-        var kpiRow = Layout.Grid().Columns(5).Height(Size.Fit())
+        var kpiRow = Layout.Grid().Columns(5).Height(Size.Fit()).Key(dashboardVisualKey + "|kpi")
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | (Layout.Horizontal().AlignContent(Align.Center).Gap(1)
@@ -114,7 +150,10 @@ public class DashboardApp : ViewBase
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(runVersion).Bold()
-            ).Title($"Ivy version ({envPrimary})").Icon(Icons.Tag);
+            ).Title("Ivy version").Icon(Icons.Tag)
+             .OnClick(versionCompare.Count > 0
+                 ? _ => versionSheetOpen.Set(true)
+                 : _ => { });
 
         // ── Production vs staging by Ivy version ──
         object versionChartsRow;
@@ -139,7 +178,7 @@ public class DashboardApp : ViewBase
                 .Measure("Prod error", x => x.Sum(f => f.ProductionErrors))
                 .Measure("Stg error", x => x.Sum(f => f.StagingErrors));
 
-            versionChartsRow = Layout.Grid().Columns(3).Height(Size.Fit())
+            versionChartsRow = Layout.Grid().Columns(3).Height(Size.Fit()).Key(dashboardVisualKey + "|vercmp")
                 | new Card(rateByVersion).Title("Success rate · production vs staging").Height(Size.Units(70))
                 | new Card(latencyByVersion).Title("Avg response · production vs staging").Height(Size.Units(70))
                 | new Card(outcomesByVersion).Title("Outcomes · production vs staging").Height(Size.Units(70));
@@ -152,6 +191,11 @@ public class DashboardApp : ViewBase
         var worstChart = data.WorstWidgets.ToBarChart()
             .Dimension("Widget", x => x.Widget)
             .Measure("Answer rate %", x => x.Sum(f => f.AnswerRate));
+
+        var latencyByWidgetChart = data.WorstWidgets.ToBarChart()
+            .Dimension("Widget", x => x.Widget)
+            .Measure("Avg ms", x => x.Sum(f => (double)f.AvgMs))
+            .Measure("Max ms", x => x.Sum(f => (double)f.MaxMs));
 
         var resultDistribution = new[]
         {
@@ -172,8 +216,11 @@ public class DashboardApp : ViewBase
             .Measure("No answer", x => x.Sum(f => f.NoAnswer))
             .Measure("Error", x => x.Sum(f => f.Errors));
 
-        var chartsRow = Layout.Grid().Columns(3).Height(Size.Fit())
-            | new Card(worstChart).Title($"Worst widgets ({envPrimary})").Height(Size.Units(70))
+        // Row 1: 3 charts (prod vs staging by version — always both envs)
+        // Row 2: 4 charts (per-selected-env diagnostics)
+        var chartsRow = Layout.Grid().Columns(4).Height(Size.Fit()).Key(dashboardVisualKey + "|detail-charts")
+            | new Card(worstChart).Title($"Worst widgets — rate % ({envPrimary})").Height(Size.Units(70))
+            | new Card(latencyByWidgetChart).Title($"Latency by widget — avg / max ({envPrimary})").Height(Size.Units(70))
             | new Card(difficultyChart).Title($"Results by difficulty ({envPrimary})").Height(Size.Units(70))
             | new Card(pieChart).Title($"Result mix ({envPrimary})").Height(Size.Units(70));
 
@@ -181,7 +228,7 @@ public class DashboardApp : ViewBase
         var runsTable = page.AllRuns.AsQueryable()
             .ToDataTable(r => r.Id)
             .Height(Size.Units(120))
-            .Key("all-test-runs")
+            .Key($"all-test-runs|{dashQueryKey}")
             .Header(r => r.IvyVersion,      "Ivy version")
             .Header(r => r.Environment,     "Environment")
             .Header(r => r.DifficultyFilter, "Difficulty")
@@ -234,12 +281,33 @@ public class DashboardApp : ViewBase
 
         return new Fragment(
             mainLayout,
+            versionSheetOpen.Value && versionCompare.Count > 0
+                ? new DashboardVersionPickerSheet(
+                    versionSheetOpen,
+                    dashboardFocusVersion,
+                    versionCompare,
+                    (page.IvyVersion ?? "").Trim())
+                : new Empty(),
             runDialogOpen.Value && selectedRunId.Value.HasValue
                 ? new TestRunResultsDialog(runDialogOpen, selectedRunId.Value.Value, editSheetOpen, editQuestionId)
                 : new Empty(),
             editSheetOpen.Value
                 ? new QuestionEditSheet(editSheetOpen, editQuestionId.Value)
                 : new Empty());
+    }
+
+    private const char DashboardQueryKeySep = '\u001f';
+
+    private static string DashboardQueryKey(string? ivyVersionFocus) =>
+        "dashboard-stats-page" + DashboardQueryKeySep + (ivyVersionFocus ?? "");
+
+    private static string? ParseDashboardFocusFromQueryKey(string key)
+    {
+        var i = key.IndexOf(DashboardQueryKeySep);
+        if (i < 0 || i >= key.Length - 1)
+            return null;
+        var tail = key[(i + 1)..].Trim();
+        return string.IsNullOrEmpty(tail) ? null : tail;
     }
 
     private static string CapitalizeEnv(string env) =>
@@ -279,7 +347,7 @@ public class DashboardApp : ViewBase
     }
 
     private static async Task<DashboardPageModel?> LoadDashboardPageAsync(
-        AppDbContextFactory factory, CancellationToken ct)
+        AppDbContextFactory factory, string? ivyVersionFocus, CancellationToken ct)
     {
         await using var ctx = factory.CreateDbContext();
 
@@ -297,11 +365,6 @@ public class DashboardApp : ViewBase
 
         if (runs.Count == 0) return null;
 
-        var latestProd = runs.FirstOrDefault(r => NormalizeEnvironment(r.Environment) == "production");
-        var latestStag = runs.FirstOrDefault(r => NormalizeEnvironment(r.Environment) == "staging");
-        var primaryRun = latestProd ?? latestStag ?? runs[0];
-        var primaryEnv = NormalizeEnvironment(primaryRun.Environment);
-
         var latestProdByVersion = new Dictionary<string, TestRunEntity>(StringComparer.OrdinalIgnoreCase);
         var latestStagByVersion = new Dictionary<string, TestRunEntity>(StringComparer.OrdinalIgnoreCase);
         foreach (var r in runs)
@@ -311,6 +374,38 @@ public class DashboardApp : ViewBase
             var dict = NormalizeEnvironment(r.Environment) == "staging" ? latestStagByVersion : latestProdByVersion;
             if (!dict.ContainsKey(v))
                 dict[v] = r;
+        }
+
+        var latestProd = runs.FirstOrDefault(r => NormalizeEnvironment(r.Environment) == "production");
+        var latestStag = runs.FirstOrDefault(r => NormalizeEnvironment(r.Environment) == "staging");
+
+        TestRunEntity primaryRun;
+        string primaryEnv;
+        var focus = (ivyVersionFocus ?? "").Trim();
+        if (string.IsNullOrEmpty(focus))
+        {
+            primaryRun = latestProd ?? latestStag ?? runs[0];
+            primaryEnv = NormalizeEnvironment(primaryRun.Environment);
+        }
+        else
+        {
+            latestProdByVersion.TryGetValue(focus, out var prFocus);
+            latestStagByVersion.TryGetValue(focus, out var srFocus);
+            if (prFocus != null)
+            {
+                primaryRun = prFocus;
+                primaryEnv = "production";
+            }
+            else if (srFocus != null)
+            {
+                primaryRun = srFocus;
+                primaryEnv = "staging";
+            }
+            else
+            {
+                primaryRun = latestProd ?? latestStag ?? runs[0];
+                primaryEnv = NormalizeEnvironment(primaryRun.Environment);
+            }
         }
 
         var allVersions = latestProdByVersion.Keys
@@ -417,12 +512,16 @@ public class DashboardApp : ViewBase
             }
             else
             {
-                var prevRun = await ctx.TestRuns.AsNoTracking()
+                // Cannot call NormalizeEnvironment inside IQueryable — EF cannot translate it to SQL.
+                var prevRunBase = ctx.TestRuns.AsNoTracking()
                     .Where(r =>
                         r.StartedAt < primaryRun.StartedAt
                         && r.CompletedAt != null
-                        && runIdsWithData.Contains(r.Id)
-                        && NormalizeEnvironment(r.Environment) == primaryEnv)
+                        && runIdsWithData.Contains(r.Id));
+                var prevRunQuery = string.Equals(primaryEnv, "staging", StringComparison.Ordinal)
+                    ? prevRunBase.Where(r => (r.Environment ?? "").Trim().ToLower() == "staging")
+                    : prevRunBase.Where(r => (r.Environment ?? "").Trim().ToLower() != "staging");
+                var prevRun = await prevRunQuery
                     .OrderByDescending(r => r.StartedAt)
                     .FirstOrDefaultAsync(ct);
                 if (prevRun != null)
@@ -562,7 +661,7 @@ public class DashboardApp : ViewBase
     }
 
     /// <summary>Semantic-ish ordering so 1.2.26 &lt; 1.2.27 &lt; 1.10.0.</summary>
-    private static int CompareVersionStrings(string? a, string? b)
+    internal static int CompareVersionStrings(string? a, string? b)
     {
         if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return 0;
         if (string.IsNullOrEmpty(a)) return -1;
@@ -588,6 +687,78 @@ public class DashboardApp : ViewBase
         }
 
         return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+internal sealed class DashboardVersionPickerSheet(
+    IState<bool> isOpen,
+    IState<string?> dashboardFocusVersion,
+    IReadOnlyList<VersionCompareRow> rows,
+    string currentDisplayedVersion) : ViewBase
+{
+    private static readonly Comparer<string> VersionComparerDescending =
+        Comparer<string>.Create((a, b) => DashboardApp.CompareVersionStrings(a, b));
+
+    /// <summary>One headline success rate: average when both envs have data, otherwise the single non-zero side.</summary>
+    private static string FormatCombinedAnswerRate(VersionCompareRow row)
+    {
+        var p = row.ProductionAnswerRate;
+        var s = row.StagingAnswerRate;
+        if (p <= 0 && s <= 0) return "—";
+        if (s <= 0) return $"{p:F1}%";
+        if (p <= 0) return $"{s:F1}%";
+        return $"{(p + s) / 2.0:F1}%";
+    }
+
+    public override object? Build()
+    {
+        var versionSearch = UseState("");
+
+        if (!isOpen.Value)
+            return null;
+
+        var q = versionSearch.Value.Trim();
+        var filteredRows = (string.IsNullOrEmpty(q)
+                ? rows
+                : rows.Where(r => r.Version.Contains(q, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(r => r.Version, VersionComparerDescending)
+            .ToList();
+
+        var listItems = new List<ListItem>();
+        foreach (var row in filteredRows)
+        {
+            var v = row.Version;
+            var isCurrent = string.Equals(v, currentDisplayedVersion, StringComparison.OrdinalIgnoreCase);
+            var title = isCurrent ? $"{v} (current)" : v;
+            listItems.Add(new ListItem(
+                title: title,
+                subtitle: FormatCombinedAnswerRate(row),
+                onClick: () =>
+                {
+                    dashboardFocusVersion.Set(v);
+                    isOpen.Set(false);
+                }));
+        }
+
+        var sheetDescription = string.IsNullOrEmpty(q)
+            ? $"{rows.Count} version(s) with test data"
+            : $"{filteredRows.Count} matching · {rows.Count} total";
+
+        // Sheet body is a fixed column: intro + search stay put; only the list scrolls (flex child with Grow).
+        var body = Layout.Vertical().Height(Size.Full())
+            | versionSearch.ToSearchInput().Placeholder("Search versions…").Width(Size.Full())
+            | (!string.IsNullOrEmpty(q) && filteredRows.Count == 0
+                ? (object)Text.Block("No versions match your search — try another query or clear the filter.").Muted()
+                : new Empty())
+            | new List(listItems.ToArray()).Height(Size.Full());
+
+        return new Sheet(
+                _ => isOpen.Set(false),
+                body,
+                title: "Ivy version",
+                description: sheetDescription)
+            .Width(Size.Fraction(0.28f))
+            .Height(Size.Full());
     }
 }
 
