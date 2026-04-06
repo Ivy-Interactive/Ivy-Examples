@@ -595,7 +595,7 @@ public class DashboardApp : ViewBase
     }
 
     private static DashboardData BuildDashboardData(
-        List<TestResultEntity> results,
+        List<TestRunResultEntity> results,
         double? prevAnswerRate,
         int? prevAvgMs,
         TestRunEntity? run = null)

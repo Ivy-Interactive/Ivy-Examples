@@ -19,7 +19,7 @@ internal sealed class QuestionEditSheet(
     }
 
     /// <summary>
-    /// Question row plus optional response preview: either the specific <see cref="TestResultEntity"/> row
+    /// Question row plus optional response preview: either the specific <see cref="TestRunResultEntity"/> row
     /// (when opened from a run results table) or the latest answer across all runs (elsewhere).
     /// </summary>
     private sealed record QuestionEditPayload(
