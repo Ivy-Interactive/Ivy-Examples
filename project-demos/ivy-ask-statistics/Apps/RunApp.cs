@@ -19,8 +19,10 @@ public class RunApp : ViewBase
 
     private static LastSavedRunSummary? s_lastSuccessfulLastSavedRun;
 
+    /// <summary>Fixed parallel Ask requests for every run (not user-configurable).</summary>
+    private const int RunParallelism = 20;
+
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
-    private static readonly string[] ConcurrencyOptions = ["1", "3", "5", "10", "20"];
     private static readonly string[] McpEnvironmentOptions = ["production", "staging"];
 
     private static string McpBaseUrl(string environment) =>
@@ -35,10 +37,9 @@ public class RunApp : ViewBase
         var client = UseService<IClientProvider>();
         var queryService = UseService<IQueryService>();
 
-        var ivyVersion = UseState("");
-        var mcpEnvironment = UseState("production");
-        var difficultyFilter = UseState("all");
-        var concurrency = UseState("20");
+        var ivyVersion = UseState(RunTestFormPreferences.IvyVersion);
+        var mcpEnvironment = UseState(RunTestFormPreferences.McpEnvironment);
+        var difficultyFilter = UseState(RunTestFormPreferences.DifficultyFilter);
         var isRunning = UseState(false);
         var completed = UseState<ImmutableList<QuestionRun>>(ImmutableList<QuestionRun>.Empty);
         var activeIds = UseState(ImmutableHashSet<string>.Empty);
@@ -46,6 +47,7 @@ public class RunApp : ViewBase
         var persistToDb = UseState(false);
         var refreshToken = UseRefreshToken();
         var runFinished = UseState(false);
+        var runVersionExistsDialogOpen = UseState(false);
 
         UseEffect(() =>
         {
@@ -54,6 +56,18 @@ public class RunApp : ViewBase
             allQuestions.Set([]);
             runFinished.Set(false);
         }, [difficultyFilter.ToTrigger()]);
+
+        UseEffect(() =>
+        {
+            ivyVersion.Set(RunTestFormPreferences.IvyVersion);
+            mcpEnvironment.Set(RunTestFormPreferences.McpEnvironment);
+            difficultyFilter.Set(RunTestFormPreferences.DifficultyFilter);
+        }, EffectTrigger.OnMount());
+
+        UseEffect(() =>
+        {
+            RunTestFormPreferences.Set(ivyVersion.Value, mcpEnvironment.Value, difficultyFilter.Value);
+        }, [ivyVersion.ToTrigger(), mcpEnvironment.ToTrigger(), difficultyFilter.ToTrigger()]);
 
         var questionsQuery = UseQuery<List<TestQuestion>, string>(
             key: $"questions-{difficultyFilter.Value}",
@@ -85,6 +99,16 @@ public class RunApp : ViewBase
             tags: [LastSavedRunQueryTag],
             options: new QueryOptions { KeepPrevious = true, RevalidateOnMount = true });
 
+        // Latest ivy_ask_test_runs.IvyVersion when the input is still empty (prefs / first visit).
+        UseEffect(() =>
+        {
+            if (lastSavedRunQuery.Loading) return;
+            var summary = lastSavedRunQuery.Value ?? s_lastSuccessfulLastSavedRun;
+            if (summary == null || string.IsNullOrWhiteSpace(summary.IvyVersion)) return;
+            if (!string.IsNullOrWhiteSpace(ivyVersion.Value.Trim())) return;
+            ivyVersion.Set(summary.IvyVersion.Trim());
+        }, EffectTrigger.OnBuild());
+
         // Do not call Mutator.Revalidate() from EffectTrigger.OnMount here: both queries already use
         // RevalidateOnMount, and an extra OnMount revalidate starts a second fetch that cancels the first,
         // producing OperationCanceledException + Ivy.QueryService "Fetch failed" warnings.
@@ -102,22 +126,34 @@ public class RunApp : ViewBase
         var avgMs = done > 0 ? (int)completedList.Average(r => r.ResponseTimeMs) : 0;
         var progressPct = questions.Count > 0 ? done * 100 / questions.Count : 0;
 
-        var completedById = completedList.ToDictionary(r => r.Question.Id);
-        var rows = questions.Select(q =>
+        var lastSavedEffective = lastSavedRunQuery.Value ?? s_lastSuccessfulLastSavedRun;
+
+        List<QuestionRow> rows;
+        if (running || done > 0)
         {
-            if (completedById.TryGetValue(q.Id, out var r))
+            var completedById = completedList.ToDictionary(r => r.Question.Id);
+            rows = questions.Select(q =>
             {
-                var icon = r.Status == "success" ? Icons.CircleCheck : Icons.CircleX;
-                return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, ToStatusLabel(r.Status), $"{r.ResponseTimeMs}ms");
-            }
+                if (completedById.TryGetValue(q.Id, out var r))
+                {
+                    var icon = r.Status == "success" ? Icons.CircleCheck : Icons.CircleX;
+                    return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, icon, ToStatusLabel(r.Status), $"{r.ResponseTimeMs}ms");
+                }
 
-            if (active.Contains(q.Id))
-                return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Loader, "running", "");
+                if (active.Contains(q.Id))
+                    return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Loader, "running", "");
 
-            return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Clock, "pending", "");
-        }).ToList();
+                return new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Clock, "pending", "");
+            }).ToList();
+        }
+        else if (lastSavedEffective?.Rows.Count > 0)
+            rows = BuildQuestionRowsFromLastSaved(lastSavedEffective);
+        else
+            rows = questions.Select(q =>
+                    new QuestionRow(q.Id, q.Widget, q.Difficulty, q.Question, Icons.Clock, "pending", ""))
+                .ToList();
 
-        async Task StartRunAsync()
+        async Task OnRunAllClickedAsync()
         {
             var snapshot = questionsQuery.Value ?? [];
             if (snapshot.Count == 0) return;
@@ -129,8 +165,28 @@ public class RunApp : ViewBase
                 return;
             }
 
-            var shouldPersist = !await RunExistsAsync(factory, version);
-            persistToDb.Set(shouldPersist);
+            if (await RunExistsAsync(factory, version))
+            {
+                runVersionExistsDialogOpen.Set(true);
+                return;
+            }
+
+            await BeginRunAsync(persistToDatabase: true, replaceExistingRunForVersion: false);
+        }
+
+        async Task BeginRunAsync(bool persistToDatabase, bool replaceExistingRunForVersion)
+        {
+            var snapshot = questionsQuery.Value ?? [];
+            if (snapshot.Count == 0) return;
+
+            var version = ivyVersion.Value.Trim();
+            if (string.IsNullOrEmpty(version))
+            {
+                client.Toast("Please enter an Ivy version before running.");
+                return;
+            }
+
+            persistToDb.Set(persistToDatabase);
 
             completed.Set(ImmutableList<QuestionRun>.Empty);
             activeIds.Set(ImmutableHashSet<string>.Empty);
@@ -139,7 +195,7 @@ public class RunApp : ViewBase
             isRunning.Set(true);
             refreshToken.Refresh();
 
-            var maxParallel = int.TryParse(concurrency.Value, out var c) ? c : 5;
+            var maxParallel = RunParallelism;
             var baseUrl = McpBaseUrl(mcpEnvironment.Value);
             var mcpClient = IvyAskService.ResolveMcpClientId(configuration);
 
@@ -188,7 +244,7 @@ public class RunApp : ViewBase
                 activeIds.Set(ImmutableHashSet<string>.Empty);
 
                 var finalResults = OrderResultsLikeSnapshot(snapshot, bag.ToList());
-                if (shouldPersist)
+                if (persistToDatabase)
                 {
                     var saved = await PersistNewRunAsync(
                         factory,
@@ -198,7 +254,8 @@ public class RunApp : ViewBase
                         runStartedUtc,
                         mcpEnvironment.Value,
                         difficultyFilter.Value,
-                        concurrency.Value);
+                        RunParallelism.ToString(),
+                        replaceExistingRunForVersion);
                     if (saved)
                     {
                         queryService.RevalidateByTag("dashboard-stats");
@@ -214,24 +271,24 @@ public class RunApp : ViewBase
             });
         }
 
-        var lastSavedEffective = lastSavedRunQuery.Value ?? s_lastSuccessfulLastSavedRun;
         object lastSavedRunPanel = BuildLastSavedRunPanel(lastSavedRunQuery, lastSavedEffective);
-
-        if (firstLoad)
-            return Layout.Vertical().Height(Size.Full())
-                   | lastSavedRunPanel
-                   | TabLoadingSkeletons.RunTab();
 
         var mcpBaseForUi = McpBaseUrl(mcpEnvironment.Value);
 
-        var controls = Layout.Horizontal().Height(Size.Fit())
-            | ivyVersion.ToTextInput().Placeholder("e.g. v2.4.0").Disabled(running)
+        var controls = Layout.Horizontal().Gap(2).Height(Size.Fit())
+            | ivyVersion.ToTextInput().Placeholder("Ivy version (e.g. v2.4.0)").Disabled(running)
             | mcpEnvironment.ToSelectInput(McpEnvironmentOptions).Disabled(running)
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(running)
-            | new Button("Run All", onClick: async _ => await StartRunAsync())
+            | new Button("Run All", onClick: async _ => await OnRunAllClickedAsync())
                 .Primary()
                 .Icon(Icons.Play)
                 .Disabled(running || questionsQuery.Loading || questions.Count == 0);
+
+        if (firstLoad)
+            return Layout.Vertical().Height(Size.Full())
+                   | controls
+                   | lastSavedRunPanel
+                   | TabLoadingSkeletons.RunTab();
 
         object statusBar;
         if (running)
@@ -240,7 +297,7 @@ public class RunApp : ViewBase
             statusBar = new Callout(
                 Layout.Vertical()
                     | Text.Block(
-                        $"Running {done}/{questions.Count} completed, {inFlight} in flight (x{concurrency.Value} parallel) · {mcpBaseForUi}")
+                        $"Running {done}/{questions.Count} completed, {inFlight} in flight (x{RunParallelism} parallel) · {mcpBaseForUi}")
                     | new Progress(progressPct).Goal($"{done}/{questions.Count}"),
                 variant: CalloutVariant.Info);
         }
@@ -259,41 +316,51 @@ public class RunApp : ViewBase
             statusBar = Text.Muted("");
         }
 
-        object kpiCards;
-        if (done > 0)
-        {
-            var rate = Math.Round(success * 100.0 / done, 1);
-            kpiCards = Layout.Grid().Columns(4).Height(Size.Fit())
-                | new Card(
-                    Layout.Vertical()
-                        | Text.H3($"{rate}%")
-                        | Text.Block($"{success} of {done} answered").Muted()
-                ).Title("Answer Rate").Icon(Icons.CircleCheck)
-                | new Card(
-                    Layout.Vertical()
-                        | Text.H3($"{noAnswer}")
-                        | Text.Block("no answer").Muted()
-                ).Title("No Answer").Icon(Icons.Ban)
-                | new Card(
-                    Layout.Vertical()
-                        | Text.H3($"{errors}")
-                        | Text.Block("failed").Muted()
-                ).Title("Errors").Icon(Icons.CircleX)
-                | new Card(
-                    Layout.Vertical()
-                        | Text.H3($"{avgMs} ms")
-                        | Text.Block($"fastest {completedList.Min(r => r.ResponseTimeMs)} ms · slowest {completedList.Max(r => r.ResponseTimeMs)} ms").Muted()
-                ).Title("Avg Response").Icon(Icons.Timer);
-        }
-        else
-        {
-            kpiCards = Text.Muted("");
-        }
+        object kpiCards = done > 0
+            ? BuildOutcomeMetricCards(
+                done,
+                success,
+                noAnswer,
+                errors,
+                avgMs,
+                completedList.Min(r => r.ResponseTimeMs),
+                completedList.Max(r => r.ResponseTimeMs))
+            : Text.Muted("");
+
+        object liveRunKpiWhileRunning = done > 0
+            ? BuildOutcomeMetricCards(
+                done,
+                success,
+                noAnswer,
+                errors,
+                avgMs,
+                completedList.Min(r => r.ResponseTimeMs),
+                completedList.Max(r => r.ResponseTimeMs))
+            : BuildLiveRunMetricPlaceholders(questions.Count);
+
+        // After a finished session, show only this run’s metrics + callout — not the older DB snapshot row.
+        object historyOrActiveRunPanel = running
+            ? Layout.Vertical().Gap(2)
+              | statusBar
+              | liveRunKpiWhileRunning
+            : runFinished.Value && done > 0
+                ? new Empty()
+                : lastSavedRunPanel;
+
+        // Completed run: green status + current KPI cards (no "This run" heading; KPIs are not duplicated above).
+        object afterHistoryPanel = !running && runFinished.Value && done > 0
+            ? Layout.Vertical().Gap(2)
+              | statusBar
+              | kpiCards
+            : new Empty();
+
+        var showingLastSavedSnapshot = !running && done == 0 && lastSavedEffective?.Rows.Count > 0;
+        var mainTableKey = showingLastSavedSnapshot ? "run-tests-last-saved" : "run-tests-live";
 
         var table = rows.AsQueryable()
             .ToDataTable()
             .RefreshToken(refreshToken)
-            .Key("run-tests-table")
+            .Key(mainTableKey)
             .Height(Size.Full())
             .Hidden(r => r.Id)
             .Header(r => r.Widget, "Widget")
@@ -317,12 +384,115 @@ public class RunApp : ViewBase
                 config.ShowIndexColumn = true;
             });
 
-        return Layout.Vertical().Height(Size.Full())
-               | lastSavedRunPanel
-               | controls
-               | statusBar
-               | kpiCards
-               | table;
+
+        // Default Vertical gap is 4 (1rem) between every child; avoid empty Text.Muted placeholders that
+        // still consume gaps. Tight coupling between the metric/header block and the DataTable: gap 0 here.
+        var runPageTop = Layout.Vertical().Gap(2)
+            | controls
+            | historyOrActiveRunPanel;
+
+        var runPageLayout = Layout.Vertical().Height(Size.Full()).Gap(2)
+            | runPageTop
+            | afterHistoryPanel
+            | table;
+
+        object? versionExistsDialog = runVersionExistsDialogOpen.Value
+            ? new Dialog(
+                onClose: _ => runVersionExistsDialogOpen.Set(false),
+                header: new DialogHeader("This Ivy version is already in the database"),
+                body: new DialogBody(
+                    Text.Block(
+                        $"A completed run for \"{ivyVersion.Value.Trim()}\" is already stored. "
+                        + "You can run tests locally without saving, replace the stored run with new results, or cancel.")),
+                footer: new DialogFooter(
+                    new Button("Cancel")
+                        .Variant(ButtonVariant.Outline)
+                        .OnClick(_ => runVersionExistsDialogOpen.Set(false)),
+                    new Button("Run without saving")
+                        .OnClick(async _ =>
+                        {
+                            runVersionExistsDialogOpen.Set(false);
+                            await BeginRunAsync(persistToDatabase: false, replaceExistingRunForVersion: false);
+                        }),
+                    new Button("Run and replace in database")
+                        .Primary()
+                        .Icon(Icons.Database)
+                        .OnClick(async _ =>
+                        {
+                            runVersionExistsDialogOpen.Set(false);
+                            await BeginRunAsync(persistToDatabase: true, replaceExistingRunForVersion: true);
+                        })))
+            : null;
+
+        return versionExistsDialog != null
+            ? new Fragment(runPageLayout, versionExistsDialog)
+            : runPageLayout;
+    }
+
+    /// <summary>Four metric cards before the first response returns (zeros / placeholders).</summary>
+    private static object BuildLiveRunMetricPlaceholders(int queuedCount)
+    {
+        var hint = queuedCount > 0 ? $"{queuedCount} in queue" : "Starting…";
+        return Layout.Grid().Columns(4).Height(Size.Fit())
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3("0%")
+                       | Text.Block(hint).Muted()
+               ).Title("Answer rate").Icon(Icons.CircleCheck)
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3("0")
+                       | Text.Block("no answer").Muted()
+               ).Title("No answer").Icon(Icons.Ban)
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3("0")
+                       | Text.Block("failed / error").Muted()
+               ).Title("Errors").Icon(Icons.CircleX)
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3("—")
+                       | Text.Block("waiting for timings…").Muted()
+               ).Title("Avg response").Icon(Icons.Timer);
+    }
+
+    /// <summary>Same four metric cards as after a live “Run All” completes.</summary>
+    private static object BuildOutcomeMetricCards(
+        int total,
+        int success,
+        int noAnswer,
+        int errors,
+        int avgMs,
+        int minMs,
+        int maxMs)
+    {
+        if (total <= 0)
+            return Text.Muted("");
+
+        var rate = Math.Round(success * 100.0 / total, 1);
+        var timingFooter = $"fastest {minMs} ms · slowest {maxMs} ms";
+
+        return Layout.Grid().Columns(4).Height(Size.Fit())
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3($"{rate}%")
+                       | Text.Block($"{success} of {total} answered").Muted()
+               ).Title("Answer rate").Icon(Icons.CircleCheck)
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3($"{noAnswer}")
+                       | Text.Block("no answer").Muted()
+               ).Title("No answer").Icon(Icons.Ban)
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3($"{errors}")
+                       | Text.Block("failed / error").Muted()
+               ).Title("Errors").Icon(Icons.CircleX)
+               | new Card(
+                   Layout.Vertical()
+                       | Text.H3($"{avgMs} ms")
+                       | Text.Block(timingFooter).Muted()
+               ).Title("Avg response").Icon(Icons.Timer);
     }
 
     private static object BuildLastSavedRunPanel(
@@ -331,44 +501,56 @@ public class RunApp : ViewBase
     {
         if (query.Loading && effective == null)
         {
-            return new Callout(
-                Text.Block("Loading last saved run from the database…"),
-                variant: CalloutVariant.Info);
+            return Layout.Vertical().Gap(2)
+                   | Text.Block("Loading last saved results…").Muted()
+                   | Layout.Grid().Columns(4).Height(Size.Fit())
+                       | new Skeleton().Height(Size.Units(14))
+                       | new Skeleton().Height(Size.Units(14))
+                       | new Skeleton().Height(Size.Units(14))
+                       | new Skeleton().Height(Size.Units(14));
         }
 
         var s = effective;
         if (s == null)
         {
-            return new Callout(
-                Layout.Vertical()
-                    | Text.Block("No saved test run in the database yet.")
-                    | Text.Muted(
-                        "Results are written only the first time you finish a run for a given Ivy version. Repeat runs for the same version stay in memory until you refresh."),
-                variant: CalloutVariant.Warning);
+            return Layout.Vertical().Gap(2)
+                   | Text.Block("No saved test run yet.").Muted()
+                   | Text.Muted(
+                       "The first completed run for each Ivy version is stored in the database. Re-runs for the same version stay in this session only until you refresh.");
         }
 
-        var completedLocal = s.CompletedAtUtc?.ToLocalTime().ToString("dd MMM yyyy, HH:mm") ?? "—";
-        var wall = s.CompletedAtUtc.HasValue
-            ? (s.CompletedAtUtc.Value - s.StartedAtUtc).TotalSeconds
-            : (double?)null;
-        var wallText = wall is > 0 ? $"~{wall:F0} s wall time" : "—";
-        var concurrencyText = string.IsNullOrEmpty(s.Concurrency) ? "—" : $"{s.Concurrency} parallel";
+        var times = s.Rows.Select(r => r.ResponseTimeMs).ToList();
+        var avgSaved = times.Count > 0 ? (int)times.Average() : 0;
+        var minSaved = times.Count > 0 ? times.Min() : 0;
+        var maxSaved = times.Count > 0 ? times.Max() : 0;
+        var totalForMetrics = s.TotalQuestions > 0
+            ? s.TotalQuestions
+            : Math.Max(s.SuccessCount + s.NoAnswerCount + s.ErrorCount, 1);
 
-        var summaryCallout = new Callout(
-            Layout.Vertical()
-                | Text.H3("Last saved run")
-                | Text.Block(
-                    $"Ivy {s.IvyVersion} · {s.Environment} MCP · difficulty: {s.DifficultyFilter} · concurrency: {concurrencyText}")
-                | Text.Block(
-                    $"Finished {completedLocal} · {wallText} · {s.TotalQuestions} questions · {s.SuccessCount} answered · {s.NoAnswerCount} no answer · {s.ErrorCount} error(s)"),
-            variant: CalloutVariant.Info);
+        var metricCards = BuildOutcomeMetricCards(
+            totalForMetrics,
+            s.SuccessCount,
+            s.NoAnswerCount,
+            s.ErrorCount,
+            avgSaved,
+            minSaved,
+            maxSaved);
 
         if (s.Rows.Count == 0)
-            return Layout.Vertical().Gap(2) | summaryCallout | Text.Muted("No per-question rows for this run.");
+        {
+            return Layout.Vertical().Gap(3)
+                   | metricCards
+                   | Text.Muted("No per-question rows linked to this run.");
+        }
 
-        var tableRows = s.Rows.Select(
+        return Layout.Vertical()
+               | metricCards;
+    }
+
+    private static List<QuestionRow> BuildQuestionRowsFromLastSaved(LastSavedRunSummary s) =>
+        s.Rows.Select(
                 (r, i) => new QuestionRow(
-                    $"last-run-{i}",
+                    $"last-saved-{i}",
                     r.Widget,
                     r.Difficulty,
                     r.QuestionPreview,
@@ -380,38 +562,6 @@ public class RunApp : ViewBase
                     r.Outcome,
                     $"{r.ResponseTimeMs} ms"))
             .ToList();
-
-        var detailTable = tableRows.AsQueryable()
-            .ToDataTable()
-            .Key("last-saved-run-table")
-            .Height(Size.Units(240))
-            .Hidden(r => r.Id)
-            .Header(r => r.Widget, "Widget")
-            .Header(r => r.Difficulty, "Difficulty")
-            .Header(r => r.Question, "Question")
-            .Header(r => r.ResultIcon, "Icon")
-            .Header(r => r.Status, "Outcome")
-            .Header(r => r.Time, "Time")
-            .Width(r => r.ResultIcon, Size.Px(50))
-            .AlignContent(r => r.ResultIcon, Align.Center)
-            .Width(r => r.Widget, Size.Px(140))
-            .Width(r => r.Question, Size.Px(400))
-            .Width(r => r.Difficulty, Size.Px(80))
-            .Width(r => r.Status, Size.Px(90))
-            .Width(r => r.Time, Size.Px(80))
-            .Config(c =>
-            {
-                c.AllowSorting    = true;
-                c.AllowFiltering  = true;
-                c.ShowSearch      = true;
-                c.ShowIndexColumn = true;
-            });
-
-        return Layout.Vertical().Gap(2)
-               | summaryCallout
-               | Text.Block("Saved per-question outcomes").Muted()
-               | detailTable;
-    }
 
     private static async Task<List<TestQuestion>> LoadQuestionsAsync(
         AppDbContextFactory factory,
@@ -466,7 +616,8 @@ public class RunApp : ViewBase
         DateTime startedAtUtc,
         string mcpEnvironment,
         string difficultyFilter,
-        string concurrency)
+        string concurrency,
+        bool replaceExistingRunForVersion)
     {
         if (ordered.Count != snapshot.Count)
             return false;
@@ -475,6 +626,16 @@ public class RunApp : ViewBase
         await using var tx = await ctx.Database.BeginTransactionAsync();
         try
         {
+            if (replaceExistingRunForVersion)
+            {
+                var oldRuns = await ctx.TestRuns.Where(r => r.IvyVersion == ivyVersion).ToListAsync();
+                if (oldRuns.Count > 0)
+                {
+                    ctx.TestRuns.RemoveRange(oldRuns);
+                    await ctx.SaveChangesAsync();
+                }
+            }
+
             var run = new TestRunEntity
             {
                 IvyVersion       = ivyVersion,
@@ -577,5 +738,24 @@ public class RunApp : ViewBase
             run.StartedAt,
             run.CompletedAt,
             rows);
+    }
+}
+
+/// <summary>
+/// Remembers Run form fields for the current server process so tab switches do not reset MCP / difficulty / version.
+/// </summary>
+file static class RunTestFormPreferences
+{
+    public static string IvyVersion { get; private set; } = "";
+
+    public static string McpEnvironment { get; private set; } = "production";
+
+    public static string DifficultyFilter { get; private set; } = "all";
+
+    public static void Set(string ivy, string mcp, string diff)
+    {
+        IvyVersion = ivy ?? "";
+        McpEnvironment = string.IsNullOrEmpty(mcp) ? "production" : mcp;
+        DifficultyFilter = string.IsNullOrEmpty(diff) ? "all" : diff;
     }
 }
