@@ -1,15 +1,25 @@
 using System.Collections.Immutable;
+using System.Threading;
 
 namespace IvyAskStatistics.Apps;
 
 internal sealed record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, int QueryKey);
 
-internal sealed record GenProgress(string CurrentWidget, int Done, int Total, List<string> Failed, bool Active);
+internal sealed record GenProgress(
+    string CurrentWidget,
+    int Done,
+    int Total,
+    List<string> Failed,
+    bool Active,
+    int MaxParallel = 1);
 
 [App(icon: Icons.Database, title: "Questions")]
 public class QuestionsApp : ViewBase
 {
     private const int TableQueryKey = 0;
+
+    /// <summary>Batch “Generate all” runs this many widgets concurrently (no config).</summary>
+    private const int WidgetGenerationParallelism = 4;
 
     public override object? Build()
     {
@@ -38,12 +48,22 @@ public class QuestionsApp : ViewBase
             options: new QueryOptions { KeepPrevious = true, RefreshInterval = TimeSpan.FromSeconds(10), RevalidateOnMount = true },
             tags: ["widget-summary"]);
 
+        // Register flush on every build (fresh showAlert closure). Call Flush after bind so a pending
+        // request that arrived before this view existed still opens the dialog. Request() also invokes
+        // the handler so repeat footer clicks work when Navigate does not rebuild (same tab).
         UseEffect(() =>
         {
-            if (tableQuery.Value == null) return;
-            if (!GenerateAllBridge.Consume()) return;
-            OnGenerateAll();
+            void FlushFooterGenerateAll()
+            {
+                if (!GenerateAllBridge.Consume()) return;
+                ShowFooterGenerateAllDialog();
+            }
+
+            GenerateAllBridge.SetFlushHandler(FlushFooterGenerateAll);
+            FlushFooterGenerateAll();
         }, EffectTrigger.OnBuild());
+
+        UseEffect(() => new GenerateAllFlushRegistration(), EffectTrigger.OnMount());
 
         UseEffect(async () =>
         {
@@ -74,8 +94,8 @@ public class QuestionsApp : ViewBase
 
         async Task GenerateOneAsync(IvyWidget widget)
         {
-            var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set.");
-            var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set.");
+            var apiKey  = configuration[QuestionGeneratorService.ApiKeyConfigKey]!.Trim();
+            var baseUrl = configuration[QuestionGeneratorService.BaseUrlConfigKey]!.Trim();
             await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl, configuration);
         }
 
@@ -83,16 +103,17 @@ public class QuestionsApp : ViewBase
         {
             try
             {
-                genProgress.Set(new GenProgress(widget.Name, 0, 1, [], true));
+                genProgress.Set(new GenProgress(widget.Name, 0, 1, [], true, 1));
                 await GenerateOneAsync(widget);
 
                 var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(fresh, revalidate: false);
-                genProgress.Set(new GenProgress(widget.Name, 1, 1, [], false));
+                genProgress.Set(new GenProgress(widget.Name, 1, 1, [], false, 1));
             }
-            catch
+            catch (Exception ex)
             {
-                genProgress.Set(new GenProgress(widget.Name, 0, 1, [widget.Name], false));
+                client.Toast(ex.Message);
+                genProgress.Set(new GenProgress(widget.Name, 0, 1, [widget.Name], false, 1));
             }
             finally
             {
@@ -104,44 +125,141 @@ public class QuestionsApp : ViewBase
         async Task GenerateBatchAsync(List<IvyWidget> widgets)
         {
             const int maxRetries = 2;
+            var maxParallel = WidgetGenerationParallelism;
+            var completed = 0;
+            var failedLock = new object();
             var failed = new List<string>();
-            var done = 0;
 
-            foreach (var widget in widgets)
+            using var sem = new SemaphoreSlim(maxParallel);
+            using var uiGate = new SemaphoreSlim(1, 1);
+            using var tickerCts = new CancellationTokenSource();
+            using var ticker = new PeriodicTimer(TimeSpan.FromMilliseconds(800));
+
+            async Task PushUiFromStateAsync()
             {
-                genProgress.Set(new GenProgress(widget.Name, done, widgets.Count, failed, true));
-                refreshToken.Refresh();
-
-                var success = false;
-                for (var attempt = 1; attempt <= maxRetries && !success; attempt++)
+                await uiGate.WaitAsync();
+                try
                 {
-                    try
-                    {
-                        await GenerateOneAsync(widget);
-                        success = true;
-                    }
-                    catch
-                    {
-                        if (attempt < maxRetries)
-                            await Task.Delay(2000);
-                    }
+                    var d = Volatile.Read(ref completed);
+                    List<string> failedCopy;
+                    lock (failedLock)
+                        failedCopy = [..failed];
+                    genProgress.Set(new GenProgress("", d, widgets.Count, failedCopy, true, maxParallel));
+                    var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                    tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                    refreshToken.Refresh();
                 }
-
-                if (success)
-                    done++;
-                else
-                    failed.Add(widget.Name);
-
-                generatingWidgets.Set(s => s.Remove(widget.Name));
-
-                var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
-                tableQuery.Mutator.Mutate(fresh, revalidate: false);
-                refreshToken.Refresh();
+                finally
+                {
+                    uiGate.Release();
+                }
             }
 
-            generatingWidgets.Set(_ => ImmutableHashSet<string>.Empty);
-            genProgress.Set(new GenProgress("", done, widgets.Count, failed, false));
-            refreshToken.Refresh();
+            var uiTickerTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (await ticker.WaitForNextTickAsync(tickerCts.Token))
+                        await PushUiFromStateAsync();
+                }
+                catch (OperationCanceledException)
+                {
+                    // expected when batch finishes
+                }
+            });
+
+            try
+            {
+                await PushUiFromStateAsync();
+
+                var workerTasks = widgets.Select(async widget =>
+                {
+                    await sem.WaitAsync();
+                    try
+                    {
+                        var success = false;
+                        Exception? lastEx = null;
+                        for (var attempt = 1; attempt <= maxRetries && !success; attempt++)
+                        {
+                            try
+                            {
+                                await GenerateOneAsync(widget);
+                                success = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                lastEx = ex;
+                                if (attempt < maxRetries)
+                                    await Task.Delay(2000);
+                            }
+                        }
+
+                        if (success)
+                            Interlocked.Increment(ref completed);
+                        else
+                        {
+                            lock (failedLock)
+                                failed.Add(widget.Name);
+                            if (lastEx != null)
+                                client.Toast($"\"{widget.Name}\": {lastEx.Message}");
+                        }
+
+                        await uiGate.WaitAsync();
+                        try
+                        {
+                            generatingWidgets.Set(s => s.Remove(widget.Name));
+                            refreshToken.Refresh();
+                        }
+                        finally
+                        {
+                            uiGate.Release();
+                        }
+                    }
+                    finally
+                    {
+                        sem.Release();
+                    }
+                }).ToArray();
+
+                await Task.WhenAll(workerTasks);
+            }
+            finally
+            {
+                tickerCts.Cancel();
+                try
+                {
+                    await uiTickerTask;
+                }
+                catch
+                {
+                    // ignore cancellation teardown
+                }
+
+                ticker.Dispose();
+            }
+
+            await uiGate.WaitAsync();
+            try
+            {
+                generatingWidgets.Set(_ => ImmutableHashSet<string>.Empty);
+                List<string> failedCopy;
+                lock (failedLock)
+                    failedCopy = [..failed];
+                genProgress.Set(new GenProgress(
+                    "",
+                    Volatile.Read(ref completed),
+                    widgets.Count,
+                    failedCopy,
+                    false,
+                    maxParallel));
+                var finalFresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                tableQuery.Mutator.Mutate(finalFresh, revalidate: false);
+                refreshToken.Refresh();
+            }
+            finally
+            {
+                uiGate.Release();
+            }
         }
 
         void MarkGenerating(IEnumerable<string> widgetNames)
@@ -152,29 +270,59 @@ public class QuestionsApp : ViewBase
             refreshToken.Refresh();
         }
 
-        void OnGenerateAll()
+        void ShowFooterGenerateAllDialog()
         {
-            var allWidgets = tableQuery.Value?.Catalog ?? [];
-            if (allWidgets.Count == 0) return;
-
-            var allRows = tableQuery.Value?.Rows ?? [];
-            var notGenerated = allWidgets
-                .Where(w => !allRows.Any(r => r.Widget == w.Name && r.Easy + r.Medium + r.Hard > 0))
-                .ToList();
-
-            if (notGenerated.Count == 0) return;
-
             showAlert(
-                $"Generate questions for {notGenerated.Count} widget(s) that don't have questions yet?\n\nOpenAI will be called 3 times per widget (easy / medium / hard).",
+                "Generate questions for all widgets that don't have questions yet?\n\nOpenAI will be called 3 times per widget (easy / medium / hard). The widget list loads after you tap OK; only widgets with no questions are generated.",
                 result =>
                 {
                     if (!result.IsOk()) return;
-                    MarkGenerating(notGenerated.Select(w => w.Name));
-                    genProgress.Set(new GenProgress(notGenerated[0].Name, 0, notGenerated.Count, [], true));
-                    Task.Run(() => GenerateBatchAsync(notGenerated));
+                    var cfgErr = QuestionGeneratorService.GetOpenAiConfigurationError(configuration);
+                    if (cfgErr != null)
+                    {
+                        client.Toast(cfgErr);
+                        return;
+                    }
+
+                    _ = RunGenerateAllAfterConfirmAsync();
                 },
                 "Generate All Questions",
                 AlertButtonSet.OkCancel);
+        }
+
+        async Task RunGenerateAllAfterConfirmAsync()
+        {
+            try
+            {
+                var data = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
+                tableQuery.Mutator.Mutate(data, revalidate: false);
+                refreshToken.Refresh();
+
+                var allWidgets = data.Catalog;
+                if (allWidgets.Count == 0)
+                {
+                    client.Toast("No widgets found. Check MCP docs or your database.");
+                    return;
+                }
+
+                var notGenerated = allWidgets
+                    .Where(w => !data.Rows.Any(r => r.Widget == w.Name && r.Easy + r.Medium + r.Hard > 0))
+                    .ToList();
+
+                if (notGenerated.Count == 0)
+                {
+                    client.Toast("Every widget already has at least one question.");
+                    return;
+                }
+
+                MarkGenerating(notGenerated.Select(w => w.Name));
+                genProgress.Set(new GenProgress("", 0, notGenerated.Count, [], true, WidgetGenerationParallelism));
+                _ = GenerateBatchAsync(notGenerated);
+            }
+            catch (Exception ex)
+            {
+                client.Toast(ex.Message);
+            }
         }
 
         var generating = generatingWidgets.Value;
@@ -198,7 +346,9 @@ public class QuestionsApp : ViewBase
         ).ToList();
 
         if (firstLoad)
-            return TabLoadingSkeletons.QuestionsTab();
+            return Layout.Vertical().Height(Size.Full())
+                   | alertView
+                   | TabLoadingSkeletons.QuestionsTab();
 
         var notGeneratedCount = baseRows.Count(r => r.Easy + r.Medium + r.Hard == 0);
 
@@ -206,9 +356,14 @@ public class QuestionsApp : ViewBase
         if (progress is { Active: true })
         {
             var pct = progress.Total > 0 ? progress.Done * 100 / progress.Total : 0;
+            var statusLine = progress.MaxParallel > 1
+                ? $"Completed {progress.Done}/{progress.Total} · up to {progress.MaxParallel} widgets in parallel"
+                : progress.Total == 1
+                    ? $"Generating questions for {progress.CurrentWidget}…"
+                    : $"Generating {Math.Min(progress.Done + 1, progress.Total)}/{progress.Total}: {progress.CurrentWidget}…";
             progressBar = new Callout(
                 Layout.Vertical()
-                    | Text.Block($"Generating {progress.Done + 1}/{progress.Total}: {progress.CurrentWidget}…")
+                    | Text.Block(statusLine)
                     | new Progress(pct).Goal($"{progress.Done}/{progress.Total}"),
                 variant: CalloutVariant.Info);
         }
@@ -281,6 +436,13 @@ public class QuestionsApp : ViewBase
                         result =>
                         {
                             if (!result.IsOk()) return;
+                            var cfgErr = QuestionGeneratorService.GetOpenAiConfigurationError(configuration);
+                            if (cfgErr != null)
+                            {
+                                client.Toast(cfgErr);
+                                return;
+                            }
+
                             MarkGenerating([widget.Name]);
                             _ = GenerateWidgetAsync(widget);
                         },
@@ -394,5 +556,11 @@ public class QuestionsApp : ViewBase
             .ToList();
 
         return new WidgetTableData(rows, catalog, queryKey);
+    }
+
+    /// <summary>Clears <see cref="GenerateAllBridge.SetFlushHandler"/> when the Questions view unmounts.</summary>
+    sealed class GenerateAllFlushRegistration : IDisposable
+    {
+        public void Dispose() => GenerateAllBridge.SetFlushHandler(null);
     }
 }

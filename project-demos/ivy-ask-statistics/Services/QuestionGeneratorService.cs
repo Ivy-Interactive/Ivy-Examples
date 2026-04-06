@@ -14,7 +14,21 @@ namespace IvyAskStatistics.Services;
 /// </summary>
 public static class QuestionGeneratorService
 {
+    public const string ApiKeyConfigKey = "OpenAI:ApiKey";
+    public const string BaseUrlConfigKey = "OpenAI:BaseUrl";
     public const string ChatModelConfigKey = "OpenAI:ChatModel";
+
+    /// <summary>Returns <c>null</c> if OpenAI settings are present; otherwise a user-facing message.</summary>
+    public static string? GetOpenAiConfigurationError(IConfiguration configuration)
+    {
+        if (string.IsNullOrWhiteSpace(configuration[ApiKeyConfigKey]))
+            return $"{ApiKeyConfigKey} is not set. Run: dotnet user-secrets set \"{ApiKeyConfigKey}\" \"<key>\"";
+        if (string.IsNullOrWhiteSpace(configuration[BaseUrlConfigKey]))
+            return $"{BaseUrlConfigKey} is not set. Run: dotnet user-secrets set \"{BaseUrlConfigKey}\" \"<url>\"";
+        if (string.IsNullOrWhiteSpace(configuration[ChatModelConfigKey]?.Trim()))
+            return $"{ChatModelConfigKey} is not set. Run: dotnet user-secrets set \"{ChatModelConfigKey}\" \"<model id>\"";
+        return null;
+    }
 
     /// <summary>
     /// Generates 10 questions per difficulty (easy / medium / hard) for a widget
@@ -29,17 +43,15 @@ public static class QuestionGeneratorService
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
+        var cfgErr = GetOpenAiConfigurationError(configuration);
+        if (cfgErr != null)
+            throw new InvalidOperationException(cfgErr);
+
         progress?.Report($"Fetching docs for {widget.Name}…");
 
         var markdown = await FetchDocsMarkdownAsync(widget, ct);
 
-        var model = configuration[ChatModelConfigKey]?.Trim();
-        if (string.IsNullOrEmpty(model))
-        {
-            throw new InvalidOperationException(
-                $"{ChatModelConfigKey} is not set. Run: dotnet user-secrets set \"{ChatModelConfigKey}\" \"<model id>\"");
-        }
-
+        var model = configuration[ChatModelConfigKey]!.Trim();
         var chatClient = BuildChatClient(openAiApiKey, openAiBaseUrl, model);
 
         foreach (var difficulty in new[] { "easy", "medium", "hard" })
