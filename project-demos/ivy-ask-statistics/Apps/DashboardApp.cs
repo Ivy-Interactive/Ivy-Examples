@@ -110,7 +110,7 @@ public class DashboardApp : ViewBase
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(runVersion).Bold()
-            ).Title("Ivy version").Icon(Icons.Tag);
+            ).Title($"Ivy version ({envPrimary})").Icon(Icons.Tag);
 
         // ── Production vs staging by Ivy version ──
         object versionChartsRow;

@@ -69,6 +69,16 @@ public class RunApp : ViewBase
             RunTestFormPreferences.Set(ivyVersion.Value, mcpEnvironment.Value, difficultyFilter.Value);
         }, [ivyVersion.ToTrigger(), mcpEnvironment.ToTrigger(), difficultyFilter.ToTrigger()]);
 
+        UseEffect(() =>
+        {
+            SyncIvyVersionForMcpEnvironment(ivyVersion, mcpEnvironment.Value);
+        }, EffectTrigger.OnMount());
+
+        UseEffect(() =>
+        {
+            SyncIvyVersionForMcpEnvironment(ivyVersion, mcpEnvironment.Value);
+        }, [mcpEnvironment.ToTrigger()]);
+
         var questionsQuery = UseQuery<List<TestQuestion>, string>(
             key: $"questions-{difficultyFilter.Value}",
             fetcher: async (_, ct) =>
@@ -106,7 +116,7 @@ public class RunApp : ViewBase
             var summary = lastSavedRunQuery.Value ?? s_lastSuccessfulLastSavedRun;
             if (summary == null || string.IsNullOrWhiteSpace(summary.IvyVersion)) return;
             if (!string.IsNullOrWhiteSpace(ivyVersion.Value.Trim())) return;
-            ivyVersion.Set(summary.IvyVersion.Trim());
+            ivyVersion.Set(EffectiveIvyVersionForMcp(summary.IvyVersion.Trim(), mcpEnvironment.Value));
         }, EffectTrigger.OnBuild());
 
         // Do not call Mutator.Revalidate() from EffectTrigger.OnMount here: both queries already use
@@ -158,12 +168,16 @@ public class RunApp : ViewBase
             var snapshot = questionsQuery.Value ?? [];
             if (snapshot.Count == 0) return;
 
-            var version = ivyVersion.Value.Trim();
-            if (string.IsNullOrEmpty(version))
+            var raw = ivyVersion.Value.Trim();
+            if (string.IsNullOrEmpty(raw))
             {
                 client.Toast("Please enter an Ivy version before running.");
                 return;
             }
+
+            var version = EffectiveIvyVersionForMcp(raw, mcpEnvironment.Value);
+            if (!string.Equals(ivyVersion.Value.Trim(), version, StringComparison.Ordinal))
+                ivyVersion.Set(version);
 
             if (await RunExistsAsync(factory, version))
             {
@@ -179,12 +193,16 @@ public class RunApp : ViewBase
             var snapshot = questionsQuery.Value ?? [];
             if (snapshot.Count == 0) return;
 
-            var version = ivyVersion.Value.Trim();
-            if (string.IsNullOrEmpty(version))
+            var raw = ivyVersion.Value.Trim();
+            if (string.IsNullOrEmpty(raw))
             {
                 client.Toast("Please enter an Ivy version before running.");
                 return;
             }
+
+            var version = EffectiveIvyVersionForMcp(raw, mcpEnvironment.Value);
+            if (!string.Equals(ivyVersion.Value.Trim(), version, StringComparison.Ordinal))
+                ivyVersion.Set(version);
 
             persistToDb.Set(persistToDatabase);
 
@@ -276,7 +294,9 @@ public class RunApp : ViewBase
         var mcpBaseForUi = McpBaseUrl(mcpEnvironment.Value);
 
         var controls = Layout.Horizontal().Gap(2).Height(Size.Fit())
-            | ivyVersion.ToTextInput().Placeholder("Ivy version (e.g. v2.4.0)").Disabled(running)
+            | ivyVersion.ToTextInput()
+                .Placeholder("Ivy version (e.g. 1.2.27; staging adds -staging)")
+                .Disabled(running)
             | mcpEnvironment.ToSelectInput(McpEnvironmentOptions).Disabled(running)
             | difficultyFilter.ToSelectInput(DifficultyOptions).Disabled(running)
             | new Button("Run All", onClick: async _ => await OnRunAllClickedAsync())
@@ -402,7 +422,7 @@ public class RunApp : ViewBase
                 header: new DialogHeader("This Ivy version is already in the database"),
                 body: new DialogBody(
                     Text.Block(
-                        $"A completed run for \"{ivyVersion.Value.Trim()}\" is already stored. "
+                        $"A completed run for \"{EffectiveIvyVersionForMcp(ivyVersion.Value.Trim(), mcpEnvironment.Value)}\" is already stored. "
                         + "You can run tests locally without saving, replace the stored run with new results, or cancel.")),
                 footer: new DialogFooter(
                     new Button("Cancel")
@@ -580,6 +600,37 @@ public class RunApp : ViewBase
         return entities
             .Select(e => new TestQuestion(e.Id.ToString(), e.Widget, e.Difficulty, e.QuestionText))
             .ToList();
+    }
+
+    private const string IvyStagingVersionSuffix = "-staging";
+
+    /// <summary>
+    /// Staging runs store a distinct <c>IvyVersion</c> (e.g. <c>1.2.27-staging</c>) so runs do not collide with production in the DB.
+    /// Production strips a trailing <c>-staging</c> suffix when switching MCP back.
+    /// </summary>
+    private static string EffectiveIvyVersionForMcp(string trimmed, string mcpEnvironment)
+    {
+        if (string.IsNullOrEmpty(trimmed)) return trimmed;
+        var useStaging = mcpEnvironment.Equals("staging", StringComparison.OrdinalIgnoreCase);
+        if (useStaging)
+        {
+            if (trimmed.EndsWith(IvyStagingVersionSuffix, StringComparison.OrdinalIgnoreCase))
+                return trimmed;
+            return trimmed + IvyStagingVersionSuffix;
+        }
+
+        if (trimmed.EndsWith(IvyStagingVersionSuffix, StringComparison.OrdinalIgnoreCase))
+            return trimmed[..^IvyStagingVersionSuffix.Length].TrimEnd('-').Trim();
+        return trimmed;
+    }
+
+    private static void SyncIvyVersionForMcpEnvironment(IState<string> ivyVersion, string mcpEnvironment)
+    {
+        var raw = ivyVersion.Value.Trim();
+        if (string.IsNullOrEmpty(raw)) return;
+        var next = EffectiveIvyVersionForMcp(raw, mcpEnvironment);
+        if (!string.Equals(ivyVersion.Value.Trim(), next, StringComparison.Ordinal))
+            ivyVersion.Set(next);
     }
 
     private static async Task<bool> RunExistsAsync(AppDbContextFactory factory, string ivyVersion)
