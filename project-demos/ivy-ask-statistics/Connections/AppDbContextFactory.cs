@@ -61,6 +61,8 @@ public sealed class AppDbContextFactory : IDbContextFactory<AppDbContext>
                     "CompletedAt"    TIMESTAMPTZ
                 );
                 CREATE INDEX IF NOT EXISTS ix_test_runs_ivy_version ON ivy_ask_test_runs ("IvyVersion");
+                ALTER TABLE ivy_ask_test_runs ADD COLUMN IF NOT EXISTS "DifficultyFilter" VARCHAR(20) NOT NULL DEFAULT 'all';
+                ALTER TABLE ivy_ask_test_runs ADD COLUMN IF NOT EXISTS "Concurrency" VARCHAR(10) NOT NULL DEFAULT '';
 
                 CREATE TABLE IF NOT EXISTS ivy_ask_test_results (
                     "Id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),

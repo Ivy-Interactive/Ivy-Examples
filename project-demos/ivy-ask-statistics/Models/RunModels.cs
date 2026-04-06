@@ -19,3 +19,25 @@ public record QuestionRow(
     string Status,
     string Time
 );
+
+/// <summary>Latest row in <c>ivy_ask_test_runs</c> (for Run Tests summary UI).</summary>
+public sealed record LastSavedRunSummary(
+    Guid Id,
+    string IvyVersion,
+    string Environment,
+    string DifficultyFilter,
+    string Concurrency,
+    int TotalQuestions,
+    int SuccessCount,
+    int NoAnswerCount,
+    int ErrorCount,
+    DateTime StartedAtUtc,
+    DateTime? CompletedAtUtc,
+    IReadOnlyList<LastSavedRunResultRow> Rows);
+
+public sealed record LastSavedRunResultRow(
+    string Widget,
+    string Difficulty,
+    string QuestionPreview,
+    string Outcome,
+    int ResponseTimeMs);

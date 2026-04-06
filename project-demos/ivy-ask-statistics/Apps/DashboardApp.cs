@@ -6,6 +6,7 @@ public class DashboardApp : ViewBase
     /// <summary>
     /// Survives tab switches: <see cref="UseQuery"/> state is recreated when the view remounts,
     /// but we still need the last successful payload so a failed refetch does not wipe the UI.
+    /// Use a unique string query key (not shared <c>0</c> with other apps) so the server cache is not clobbered.
     /// </summary>
     private static DashboardPageModel? s_lastSuccessfulDashboard;
 
@@ -15,8 +16,8 @@ public class DashboardApp : ViewBase
         var client = UseService<IClientProvider>();
         var navigation = Context.UseNavigation();
 
-        var dashQuery = UseQuery<DashboardPageModel?, int>(
-            key: 0,
+        var dashQuery = UseQuery<DashboardPageModel?, string>(
+            key: "dashboard-stats-page",
             fetcher: async (_, ct) =>
             {
                 try

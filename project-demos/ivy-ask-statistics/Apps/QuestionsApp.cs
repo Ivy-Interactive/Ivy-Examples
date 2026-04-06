@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace IvyAskStatistics.Apps;
 
-internal sealed record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, int QueryKey);
+internal sealed record WidgetTableData(List<WidgetRow> Rows, List<IvyWidget> Catalog, string QueryKey);
 
 internal sealed record GenProgress(
     string CurrentWidget,
@@ -16,7 +16,7 @@ internal sealed record GenProgress(
 [App(icon: Icons.Database, title: "Questions")]
 public class QuestionsApp : ViewBase
 {
-    private const int TableQueryKey = 0;
+    private const string TableQueryKey = "questions-widget-table";
 
     /// <summary>Batch “Generate all” runs this many widgets concurrently (no config).</summary>
     private const int WidgetGenerationParallelism = 4;
@@ -38,7 +38,7 @@ public class QuestionsApp : ViewBase
         var genProgress       = UseState<GenProgress?>(null);
         var (alertView, showAlert) = UseAlert();
 
-        var tableQuery = UseQuery<WidgetTableData, int>(
+        var tableQuery = UseQuery<WidgetTableData, string>(
             key: TableQueryKey,
             fetcher: async (qk, ct) =>
             {
@@ -509,7 +509,7 @@ public class QuestionsApp : ViewBase
 
     private static async Task<WidgetTableData> LoadWidgetTableDataAsync(
         AppDbContextFactory factory,
-        int queryKey,
+        string queryKey,
         CancellationToken ct)
     {
         await using var ctx = factory.CreateDbContext();

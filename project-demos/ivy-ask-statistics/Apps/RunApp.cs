@@ -9,6 +9,16 @@ public class RunApp : ViewBase
     /// <summary>Invalidate with <see cref="IQueryService.RevalidateByTag"/> when rows in <c>Questions</c> change.</summary>
     internal const string TestQuestionsQueryTag = "test-questions-db";
 
+    internal const string LastSavedRunQueryTag = "last-saved-run";
+
+    /// <summary>
+    /// Must differ from other apps' <see cref="UseQuery{TValue,TKey}"/> keys (e.g. Dashboard uses its own string).
+    /// Reusing <c>0</c> across tabs overwrote the server query cache and cleared this panel after navigation.
+    /// </summary>
+    private const string LastSavedRunQueryKey = "run-tests-last-saved-db";
+
+    private static LastSavedRunSummary? s_lastSuccessfulLastSavedRun;
+
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
     private static readonly string[] ConcurrencyOptions = ["1", "3", "5", "10", "20"];
     private static readonly string[] McpEnvironmentOptions = ["production", "staging"];
@@ -56,11 +66,28 @@ public class RunApp : ViewBase
             tags: [TestQuestionsQueryTag],
             options: new QueryOptions { RevalidateOnMount = true, KeepPrevious = true });
 
-        // Tab may stay mounted in the background; OnMount runs when Run is first shown again after unmount.
-        UseEffect(() =>
-        {
-            questionsQuery.Mutator.Revalidate();
-        }, EffectTrigger.OnMount());
+        var lastSavedRunQuery = UseQuery<LastSavedRunSummary?, string>(
+            key: LastSavedRunQueryKey,
+            fetcher: async (_, ct) =>
+            {
+                try
+                {
+                    var r = await LoadLastSavedRunAsync(factory, ct);
+                    s_lastSuccessfulLastSavedRun = r;
+                    refreshToken.Refresh();
+                    return r;
+                }
+                catch (OperationCanceledException)
+                {
+                    return s_lastSuccessfulLastSavedRun;
+                }
+            },
+            tags: [LastSavedRunQueryTag],
+            options: new QueryOptions { KeepPrevious = true, RevalidateOnMount = true });
+
+        // Do not call Mutator.Revalidate() from EffectTrigger.OnMount here: both queries already use
+        // RevalidateOnMount, and an extra OnMount revalidate starts a second fetch that cancels the first,
+        // producing OperationCanceledException + Ivy.QueryService "Fetch failed" warnings.
 
         var running = isRunning.Value;
         var firstLoad = questionsQuery.Loading && questionsQuery.Value == null && !running;
@@ -163,9 +190,20 @@ public class RunApp : ViewBase
                 var finalResults = OrderResultsLikeSnapshot(snapshot, bag.ToList());
                 if (shouldPersist)
                 {
-                    var saved = await PersistNewRunAsync(factory, version, snapshot, finalResults, runStartedUtc);
+                    var saved = await PersistNewRunAsync(
+                        factory,
+                        version,
+                        snapshot,
+                        finalResults,
+                        runStartedUtc,
+                        mcpEnvironment.Value,
+                        difficultyFilter.Value,
+                        concurrency.Value);
                     if (saved)
+                    {
                         queryService.RevalidateByTag("dashboard-stats");
+                        queryService.RevalidateByTag(LastSavedRunQueryTag);
+                    }
                     else
                         client.Toast("Could not save results to the database.");
                 }
@@ -176,8 +214,13 @@ public class RunApp : ViewBase
             });
         }
 
+        var lastSavedEffective = lastSavedRunQuery.Value ?? s_lastSuccessfulLastSavedRun;
+        object lastSavedRunPanel = BuildLastSavedRunPanel(lastSavedRunQuery, lastSavedEffective);
+
         if (firstLoad)
-            return TabLoadingSkeletons.RunTab();
+            return Layout.Vertical().Height(Size.Full())
+                   | lastSavedRunPanel
+                   | TabLoadingSkeletons.RunTab();
 
         var mcpBaseForUi = McpBaseUrl(mcpEnvironment.Value);
 
@@ -275,10 +318,99 @@ public class RunApp : ViewBase
             });
 
         return Layout.Vertical().Height(Size.Full())
+               | lastSavedRunPanel
                | controls
                | statusBar
                | kpiCards
                | table;
+    }
+
+    private static object BuildLastSavedRunPanel(
+        QueryResult<LastSavedRunSummary?> query,
+        LastSavedRunSummary? effective)
+    {
+        if (query.Loading && effective == null)
+        {
+            return new Callout(
+                Text.Block("Loading last saved run from the database…"),
+                variant: CalloutVariant.Info);
+        }
+
+        var s = effective;
+        if (s == null)
+        {
+            return new Callout(
+                Layout.Vertical()
+                    | Text.Block("No saved test run in the database yet.")
+                    | Text.Muted(
+                        "Results are written only the first time you finish a run for a given Ivy version. Repeat runs for the same version stay in memory until you refresh."),
+                variant: CalloutVariant.Warning);
+        }
+
+        var completedLocal = s.CompletedAtUtc?.ToLocalTime().ToString("dd MMM yyyy, HH:mm") ?? "—";
+        var wall = s.CompletedAtUtc.HasValue
+            ? (s.CompletedAtUtc.Value - s.StartedAtUtc).TotalSeconds
+            : (double?)null;
+        var wallText = wall is > 0 ? $"~{wall:F0} s wall time" : "—";
+        var concurrencyText = string.IsNullOrEmpty(s.Concurrency) ? "—" : $"{s.Concurrency} parallel";
+
+        var summaryCallout = new Callout(
+            Layout.Vertical()
+                | Text.H3("Last saved run")
+                | Text.Block(
+                    $"Ivy {s.IvyVersion} · {s.Environment} MCP · difficulty: {s.DifficultyFilter} · concurrency: {concurrencyText}")
+                | Text.Block(
+                    $"Finished {completedLocal} · {wallText} · {s.TotalQuestions} questions · {s.SuccessCount} answered · {s.NoAnswerCount} no answer · {s.ErrorCount} error(s)"),
+            variant: CalloutVariant.Info);
+
+        if (s.Rows.Count == 0)
+            return Layout.Vertical().Gap(2) | summaryCallout | Text.Muted("No per-question rows for this run.");
+
+        var tableRows = s.Rows.Select(
+                (r, i) => new QuestionRow(
+                    $"last-run-{i}",
+                    r.Widget,
+                    r.Difficulty,
+                    r.QuestionPreview,
+                    r.Outcome == "answered"
+                        ? Icons.CircleCheck
+                        : r.Outcome == "no answer"
+                            ? Icons.Ban
+                            : Icons.CircleX,
+                    r.Outcome,
+                    $"{r.ResponseTimeMs} ms"))
+            .ToList();
+
+        var detailTable = tableRows.AsQueryable()
+            .ToDataTable()
+            .Key("last-saved-run-table")
+            .Height(Size.Units(240))
+            .Hidden(r => r.Id)
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.Difficulty, "Difficulty")
+            .Header(r => r.Question, "Question")
+            .Header(r => r.ResultIcon, "Icon")
+            .Header(r => r.Status, "Outcome")
+            .Header(r => r.Time, "Time")
+            .Width(r => r.ResultIcon, Size.Px(50))
+            .AlignContent(r => r.ResultIcon, Align.Center)
+            .Width(r => r.Widget, Size.Px(140))
+            .Width(r => r.Question, Size.Px(400))
+            .Width(r => r.Difficulty, Size.Px(80))
+            .Width(r => r.Status, Size.Px(90))
+            .Width(r => r.Time, Size.Px(80))
+            .Config(c =>
+            {
+                c.AllowSorting    = true;
+                c.AllowFiltering  = true;
+                c.ShowSearch      = true;
+                c.ShowIndexColumn = true;
+            });
+
+        return Layout.Vertical().Gap(2)
+               | summaryCallout
+               | Text.Block("Saved per-question outcomes").Muted()
+               | detailTable;
     }
 
     private static async Task<List<TestQuestion>> LoadQuestionsAsync(
@@ -331,7 +463,10 @@ public class RunApp : ViewBase
         string ivyVersion,
         IReadOnlyList<TestQuestion> snapshot,
         List<QuestionRun> ordered,
-        DateTime startedAtUtc)
+        DateTime startedAtUtc,
+        string mcpEnvironment,
+        string difficultyFilter,
+        string concurrency)
     {
         if (ordered.Count != snapshot.Count)
             return false;
@@ -342,13 +477,16 @@ public class RunApp : ViewBase
         {
             var run = new TestRunEntity
             {
-                IvyVersion = ivyVersion,
+                IvyVersion       = ivyVersion,
+                Environment    = mcpEnvironment.Trim().ToLowerInvariant() is "staging" ? "staging" : "production",
+                DifficultyFilter = string.IsNullOrEmpty(difficultyFilter) ? "all" : difficultyFilter,
+                Concurrency    = concurrency ?? "",
                 TotalQuestions = snapshot.Count,
-                StartedAt = startedAtUtc,
-                SuccessCount = ordered.Count(r => r.Status == "success"),
-                NoAnswerCount = ordered.Count(r => r.Status == "no_answer"),
-                ErrorCount = ordered.Count(r => r.Status == "error"),
-                CompletedAt = DateTime.UtcNow
+                StartedAt      = startedAtUtc,
+                SuccessCount   = ordered.Count(r => r.Status == "success"),
+                NoAnswerCount  = ordered.Count(r => r.Status == "no_answer"),
+                ErrorCount     = ordered.Count(r => r.Status == "error"),
+                CompletedAt    = DateTime.UtcNow
             };
             ctx.TestRuns.Add(run);
 
@@ -389,4 +527,55 @@ public class RunApp : ViewBase
         "error" => "error",
         _ => status.Replace('_', ' ')
     };
+
+    private static string PreviewQuestionText(string text, int maxChars)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxChars)
+            return text;
+        return text[..maxChars] + "…";
+    }
+
+    private static async Task<LastSavedRunSummary?> LoadLastSavedRunAsync(
+        AppDbContextFactory factory,
+        CancellationToken ct)
+    {
+        await using var ctx = factory.CreateDbContext();
+        var run = await ctx.TestRuns.AsNoTracking()
+            .OrderByDescending(r => r.CompletedAt ?? r.StartedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (run == null)
+            return null;
+
+        var rows = await (
+                from tr in ctx.TestResults.AsNoTracking()
+                join q in ctx.Questions.AsNoTracking() on tr.QuestionId equals q.Id
+                where tr.TestRunId == run.Id
+                orderby q.Widget, q.Difficulty, q.Id
+                select new LastSavedRunResultRow(
+                    q.Widget,
+                    q.Difficulty,
+                    PreviewQuestionText(q.QuestionText ?? "", 120),
+                    tr.IsSuccess
+                        ? "answered"
+                        : tr.HttpStatus == 404
+                            ? "no answer"
+                            : "error",
+                    tr.ResponseTimeMs))
+            .ToListAsync(ct);
+
+        return new LastSavedRunSummary(
+            run.Id,
+            run.IvyVersion,
+            run.Environment,
+            string.IsNullOrEmpty(run.DifficultyFilter) ? "all" : run.DifficultyFilter,
+            run.Concurrency ?? "",
+            run.TotalQuestions,
+            run.SuccessCount,
+            run.NoAnswerCount,
+            run.ErrorCount,
+            run.StartedAt,
+            run.CompletedAt,
+            rows);
+    }
 }
