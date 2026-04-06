@@ -1,5 +1,6 @@
 using IvyAskStatistics.Connections;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
@@ -9,10 +10,12 @@ namespace IvyAskStatistics.Services;
 /// <summary>
 /// Generates test questions by fetching the full widget Markdown documentation
 /// from mcp.ivy.app and passing it to OpenAI as context.
-/// Uses <c>OpenAI:ApiKey</c> and <c>OpenAI:BaseUrl</c> from configuration / user secrets.
+/// Uses <c>OpenAI:ApiKey</c>, <c>OpenAI:BaseUrl</c>, and <c>OpenAI:ChatModel</c> from configuration / user secrets.
 /// </summary>
 public static class QuestionGeneratorService
 {
+    public const string ChatModelConfigKey = "OpenAI:ChatModel";
+
     /// <summary>
     /// Generates 10 questions per difficulty (easy / medium / hard) for a widget
     /// and saves them to the database, replacing any previously generated ones.
@@ -22,6 +25,7 @@ public static class QuestionGeneratorService
         AppDbContextFactory factory,
         string openAiApiKey,
         string openAiBaseUrl,
+        IConfiguration configuration,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
@@ -29,7 +33,14 @@ public static class QuestionGeneratorService
 
         var markdown = await FetchDocsMarkdownAsync(widget, ct);
 
-        var chatClient = BuildChatClient(openAiApiKey, openAiBaseUrl);
+        var model = configuration[ChatModelConfigKey]?.Trim();
+        if (string.IsNullOrEmpty(model))
+        {
+            throw new InvalidOperationException(
+                $"{ChatModelConfigKey} is not set. Run: dotnet user-secrets set \"{ChatModelConfigKey}\" \"<model id>\"");
+        }
+
+        var chatClient = BuildChatClient(openAiApiKey, openAiBaseUrl, model);
 
         foreach (var difficulty in new[] { "easy", "medium", "hard" })
         {
@@ -81,14 +92,14 @@ public static class QuestionGeneratorService
         }
     }
 
-    private static ChatClient BuildChatClient(string apiKey, string baseUrl)
+    private static ChatClient BuildChatClient(string apiKey, string baseUrl, string model)
     {
         var options = new OpenAIClientOptions
         {
             Endpoint = new Uri(baseUrl.TrimEnd('/'))
         };
         var client = new OpenAIClient(new ApiKeyCredential(apiKey), options);
-        return client.GetChatClient("gemini-3.1-flash-lite");
+        return client.GetChatClient(model);
     }
 
     private static List<OpenAI.Chat.ChatMessage> BuildMessages(IvyWidget widget, string difficulty, string markdown)

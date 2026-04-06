@@ -76,7 +76,7 @@ public class QuestionsApp : ViewBase
         {
             var apiKey  = configuration["OpenAI:ApiKey"]  ?? throw new InvalidOperationException("OpenAI:ApiKey secret is not set.");
             var baseUrl = configuration["OpenAI:BaseUrl"] ?? throw new InvalidOperationException("OpenAI:BaseUrl secret is not set.");
-            await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl);
+            await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl, configuration);
         }
 
         async Task GenerateWidgetAsync(IvyWidget widget)
