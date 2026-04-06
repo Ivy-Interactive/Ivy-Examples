@@ -55,70 +55,90 @@ public class DashboardApp : ViewBase
                        .Primary()
                        .Icon(Icons.Play);
         var data = page.Detail;
-        var versionTrend = page.VersionTrend;
+        var peer = page.PeerDetail;
+        var versionCompare = page.VersionCompare;
+        var envPrimary = CapitalizeEnv(page.PrimaryEnvironment);
+        var hasPeerCompare = peer != null && page.PeerEnvironment != null;
 
-        // ── Level 1: Summary KPIs with deltas (vs previous Ivy version when possible) ──
+        // ── Level 1: KPIs (IvyInsights-style headline + delta vs other env or vs previous version) ──
         var rateStr = $"{data.AnswerRate:F1}%";
-        var rateDelta = data.PrevAnswerRate.HasValue
-            ? FormatDelta(data.AnswerRate - data.PrevAnswerRate.Value, "%", higherIsBetter: true)
-            : Text.Muted("no baseline");
+        object rateDelta = hasPeerCompare
+            ? FormatDeltaWithTrend(data.AnswerRate - peer!.AnswerRate, "%", higherIsBetter: true)
+            : data.PrevAnswerRate.HasValue
+                ? FormatDeltaWithTrend(data.AnswerRate - data.PrevAnswerRate.Value, "%", higherIsBetter: true)
+                : Text.Muted("no baseline");
 
-        var avgMsStr = $"{data.AvgMs} ms";
-        var avgMsDelta = data.PrevAvgMs.HasValue
-            ? FormatDelta(data.AvgMs - data.PrevAvgMs.Value, "ms", higherIsBetter: false)
-            : Text.Muted("no baseline");
+        // NBSP keeps "181" and "ms" on one line; narrow / Fit columns otherwise wrap between tokens.
+        var avgMsStr = $"{data.AvgMs}\u00A0ms";
+        object avgMsDelta = hasPeerCompare
+            ? FormatDeltaWithTrend(data.AvgMs - peer!.AvgMs, "ms", higherIsBetter: false)
+            : data.PrevAvgMs.HasValue
+                ? FormatDeltaWithTrend(data.AvgMs - data.PrevAvgMs.Value, "ms", higherIsBetter: false)
+                : Text.Muted("no baseline");
 
         var failedCount = data.NoAnswer + data.Errors;
+        var peerFailed = hasPeerCompare ? peer!.NoAnswer + peer.Errors : (int?)null;
+        object failedDelta = hasPeerCompare && peerFailed.HasValue
+            ? FormatDeltaWithTrend(failedCount - peerFailed.Value, "", higherIsBetter: false, countMode: true)
+            : new Empty();
 
         var runVersion = string.IsNullOrWhiteSpace(page.IvyVersion) ? "—" : page.IvyVersion.Trim();
+
         var kpiRow = Layout.Grid().Columns(5).Height(Size.Fit())
             | new Card(
-                Layout.Vertical()
-                    | (Layout.Horizontal().AlignContent(Align.Left)
-                        | Text.H3(rateStr)
+                Layout.Vertical().AlignContent(Align.Center)
+                    | (Layout.Horizontal().AlignContent(Align.Center).Gap(1)
+                        | Text.H2(rateStr).Bold()
                         | rateDelta)
             ).Title("Answer success").Icon(Icons.CircleCheck)
             | new Card(
-                Layout.Vertical()
-                    | (Layout.Horizontal().AlignContent(Align.Left)
-                        | Text.H3(avgMsStr)
+                Layout.Vertical().AlignContent(Align.Center)
+                    | (Layout.Horizontal().AlignContent(Align.Center).Gap(1)
+                        | Text.H2(avgMsStr).Bold()
                         | avgMsDelta)
             ).Title("Avg latency").Icon(Icons.Timer)
             | new Card(
-                Layout.Vertical()
-                    | Text.H3(failedCount.ToString("N0"))
-            ).Title("Failures").Icon(Icons.CircleX)
+                Layout.Vertical().AlignContent(Align.Center)
+                    | (Layout.Horizontal().AlignContent(Align.Center).Gap(1)
+                        | Text.H2(failedCount.ToString("N0")).Bold()
+                        | failedDelta)
+            ).Title("No answer + errors").Icon(Icons.CircleX)
             | new Card(
-                Layout.Vertical()
-                    | Text.H3(data.WorstWidgets.Count > 0 ? data.WorstWidgets[0].Widget : "—")
+                Layout.Vertical().AlignContent(Align.Center)
+                    | Text.H2(data.WorstWidgets.Count > 0 ? data.WorstWidgets[0].Widget : "—").Bold()
             ).Title("Weakest widget").Icon(Icons.Ban)
             | new Card(
-                Layout.Vertical()
-                    | Text.H3(runVersion)
+                Layout.Vertical().AlignContent(Align.Center)
+                    | Text.H2(runVersion).Bold()
             ).Title("Ivy version").Icon(Icons.Tag);
 
-        // ── Version history (one point = latest completed run per Ivy version) ──
+        // ── Production vs staging by Ivy version ──
         object versionChartsRow;
-        if (versionTrend.Count >= 1)
+        if (versionCompare.Count >= 1)
         {
-            var rateByVersion = versionTrend.ToBarChart()
+            var rateByVersion = versionCompare.ToBarChart()
                 .Dimension("Version", x => x.Version)
-                .Measure("Success %", x => x.Sum(f => f.AnswerRate));
+                .Measure("Production %", x => x.Sum(f => f.ProductionAnswerRate))
+                .Measure("Staging %", x => x.Sum(f => f.StagingAnswerRate));
 
-            var latencyByVersion = versionTrend.ToBarChart()
+            var latencyByVersion = versionCompare.ToBarChart()
                 .Dimension("Version", x => x.Version)
-                .Measure("Avg ms", x => x.Sum(f => f.AvgMs));
+                .Measure("Production ms", x => x.Sum(f => f.ProductionAvgMs))
+                .Measure("Staging ms", x => x.Sum(f => f.StagingAvgMs));
 
-            var outcomesByVersion = versionTrend.ToBarChart()
+            var outcomesByVersion = versionCompare.ToBarChart()
                 .Dimension("Version", x => x.Version)
-                .Measure("Answered", x => x.Sum(f => f.Answered))
-                .Measure("No answer", x => x.Sum(f => f.NoAnswer))
-                .Measure("Error", x => x.Sum(f => f.Errors));
+                .Measure("Prod answered", x => x.Sum(f => f.ProductionAnswered))
+                .Measure("Stg answered", x => x.Sum(f => f.StagingAnswered))
+                .Measure("Prod no answer", x => x.Sum(f => f.ProductionNoAnswer))
+                .Measure("Stg no answer", x => x.Sum(f => f.StagingNoAnswer))
+                .Measure("Prod error", x => x.Sum(f => f.ProductionErrors))
+                .Measure("Stg error", x => x.Sum(f => f.StagingErrors));
 
             versionChartsRow = Layout.Grid().Columns(3).Height(Size.Fit())
-                | new Card(rateByVersion).Title("Success rate by Ivy version").Height(Size.Units(70))
-                | new Card(latencyByVersion).Title("Avg response by Ivy version").Height(Size.Units(70))
-                | new Card(outcomesByVersion).Title("Outcomes by Ivy version").Height(Size.Units(70));
+                | new Card(rateByVersion).Title("Success rate · production vs staging").Height(Size.Units(70))
+                | new Card(latencyByVersion).Title("Avg response · production vs staging").Height(Size.Units(70))
+                | new Card(outcomesByVersion).Title("Outcomes · production vs staging").Height(Size.Units(70));
         }
         else
         {
@@ -174,13 +194,13 @@ public class DashboardApp : ViewBase
             .Measure("Error", x => x.Sum(f => f.Errors));
 
         var chartsRow = Layout.Grid().Columns(3).Height(Size.Fit())
-            | new Card(worstChart).Title("Worst Widgets").Height(Size.Units(70))
-            | new Card(difficultyChart).Title("Results by Difficulty").Height(Size.Units(70))
-            | new Card(pieChart).Title("Result Distribution").Height(Size.Units(70));
+            | new Card(worstChart).Title($"Worst widgets ({envPrimary})").Height(Size.Units(70))
+            | new Card(difficultyChart).Title($"Results by difficulty ({envPrimary})").Height(Size.Units(70))
+            | new Card(pieChart).Title($"Result mix ({envPrimary})").Height(Size.Units(70));
 
         var problemRow = Layout.Grid().Columns(2).Height(Size.Fit())
-            | new Card(worstTable).Title("Worst Widgets (top 10)")
-            | new Card(slowestTable).Title("Slowest Widgets (top 10)");
+            | new Card(worstTable).Title($"Worst widgets — top 10 ({envPrimary})")
+            | new Card(slowestTable).Title($"Slowest widgets — top 10 ({envPrimary})");
 
         // ── Level 3: Failed questions debug table ──
         var failedTable = data.FailedQuestions.AsQueryable()
@@ -209,16 +229,43 @@ public class DashboardApp : ViewBase
                | versionChartsRow
                | chartsRow
                | problemRow
-               | new Card(failedTable).Title($"Failed Questions ({failedCount})");
+               | new Card(failedTable).Title($"Failed questions ({failedCount}) · {envPrimary}");
     }
 
-    private static object FormatDelta(double delta, string unit, bool higherIsBetter)
+    private static string CapitalizeEnv(string env) =>
+        env.Equals("staging", StringComparison.OrdinalIgnoreCase) ? "Staging" : "Production";
+
+    private static string NormalizeEnvironment(string? environment)
     {
-        if (Math.Abs(delta) < 0.05) return Text.Muted("no change");
+        var e = (environment ?? "").Trim().ToLowerInvariant();
+        return e == "staging" ? "staging" : "production";
+    }
+
+    /// <summary>Trend icon + colored delta (same idea as IvyInsights KPI cards).</summary>
+    private static object FormatDeltaWithTrend(double delta, string unit, bool higherIsBetter, bool countMode = false)
+    {
+        if (countMode)
+        {
+            if (delta == 0) return Text.Muted("—");
+        }
+        else if (unit == "%")
+        {
+            if (Math.Abs(delta) < 0.05) return Text.Muted("—");
+        }
+        else if (Math.Abs(delta) < 1) return Text.Muted("—");
+
         var sign = delta > 0 ? "+" : "";
-        var label = unit == "%" ? $"{sign}{delta:F1}{unit}" : $"{sign}{(int)delta} {unit}";
+        var label = countMode
+            ? $"{sign}{(int)delta}"
+            : unit == "%"
+                ? $"{sign}{delta:F1}{unit}"
+                : $"{sign}{(int)delta} {unit}";
         var isGood = higherIsBetter ? delta > 0 : delta < 0;
-        return isGood ? Text.Block(label).Color(Colors.Emerald) : Text.Block(label).Color(Colors.Red);
+        var icon = isGood ? Icons.TrendingUp : Icons.TrendingDown;
+        var color = isGood ? Colors.Success : Colors.Destructive;
+        return Layout.Horizontal().Gap(1).AlignContent(Align.Center)
+            | new Icon(icon).Color(color)
+            | Text.H3(label).Color(color);
     }
 
     private static async Task<DashboardPageModel?> LoadDashboardPageAsync(
@@ -240,101 +287,186 @@ public class DashboardApp : ViewBase
 
         if (runs.Count == 0) return null;
 
-        var latestRun = runs[0];
+        var latestProd = runs.FirstOrDefault(r => NormalizeEnvironment(r.Environment) == "production");
+        var latestStag = runs.FirstOrDefault(r => NormalizeEnvironment(r.Environment) == "staging");
+        var primaryRun = latestProd ?? latestStag ?? runs[0];
+        var primaryEnv = NormalizeEnvironment(primaryRun.Environment);
 
-        var seenVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var latestRunPerVersion = new List<TestRunEntity>();
+        var latestProdByVersion = new Dictionary<string, TestRunEntity>(StringComparer.OrdinalIgnoreCase);
+        var latestStagByVersion = new Dictionary<string, TestRunEntity>(StringComparer.OrdinalIgnoreCase);
         foreach (var r in runs)
         {
             var v = (r.IvyVersion ?? "").Trim();
             if (string.IsNullOrEmpty(v)) continue;
-            if (!seenVersions.Add(v)) continue;
-            latestRunPerVersion.Add(r);
+            var dict = NormalizeEnvironment(r.Environment) == "staging" ? latestStagByVersion : latestProdByVersion;
+            if (!dict.ContainsKey(v))
+                dict[v] = r;
         }
 
-        var trendRunIds = latestRunPerVersion.Select(r => r.Id).ToList();
-        var trendResults = await ctx.TestResults.AsNoTracking()
-            .AsSplitQuery()
-            .Include(r => r.Question)
-            .Where(r => trendRunIds.Contains(r.TestRunId))
-            .ToListAsync(ct);
+        var allVersions = latestProdByVersion.Keys
+            .Union(latestStagByVersion.Keys, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        allVersions.Sort(CompareVersionStrings);
 
-        // Use TestRun row counters for outcomes/rate so charts match ivy_ask_test_runs (FinalizeRun totals).
-        // Row-level ivy_ask_test_results can be short if historical runs failed mid-persist; averages still use rows when present.
-        var versionTrend = new List<VersionTrendRow>();
-        foreach (var r in latestRunPerVersion)
+        var compareRunIds = allVersions
+            .SelectMany(v => new[]
+            {
+                latestProdByVersion.TryGetValue(v, out var p) ? p.Id : (Guid?)null,
+                latestStagByVersion.TryGetValue(v, out var s) ? s.Id : (Guid?)null
+            })
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var avgMsByRunId = compareRunIds.Count == 0
+            ? new Dictionary<Guid, double>()
+            : await ctx.TestResults.AsNoTracking()
+                .Where(r => compareRunIds.Contains(r.TestRunId))
+                .GroupBy(r => r.TestRunId)
+                .Select(g => new { g.Key, Avg = g.Average(x => (double)x.ResponseTimeMs) })
+                .ToDictionaryAsync(x => x.Key, x => Math.Round(x.Avg, 0), ct);
+
+        static void FillMetrics(
+            TestRunEntity? run,
+            IReadOnlyDictionary<Guid, double> avgByRun,
+            out double rate,
+            out double avgMs,
+            out int answered,
+            out int noAnswer,
+            out int errors)
         {
-            var res = trendResults.Where(x => x.TestRunId == r.Id).ToList();
-            var answered = r.SuccessCount;
-            var noAnswer = r.NoAnswerCount;
-            var errors = r.ErrorCount;
-            var t = r.TotalQuestions;
-            var rate = t > 0 ? Math.Round(answered * 100.0 / t, 1) : 0;
-            var avgMs = res.Count > 0 ? Math.Round(res.Average(x => (double)x.ResponseTimeMs), 0) : 0;
-            versionTrend.Add(new VersionTrendRow(
-                (r.IvyVersion ?? "").Trim(),
-                rate,
-                avgMs,
-                answered,
-                noAnswer,
-                errors,
-                t,
-                r.StartedAt));
+            if (run == null)
+            {
+                rate = 0;
+                avgMs = 0;
+                answered = 0;
+                noAnswer = 0;
+                errors = 0;
+                return;
+            }
+
+            var t = run.TotalQuestions;
+            answered = run.SuccessCount;
+            noAnswer = run.NoAnswerCount;
+            errors = run.ErrorCount;
+            rate = t > 0 ? Math.Round(answered * 100.0 / t, 1) : 0;
+            avgMs = avgByRun.TryGetValue(run.Id, out var a) ? a : 0;
         }
 
-        versionTrend.Sort((a, b) => CompareVersionStrings(a.Version, b.Version));
+        var versionCompare = new List<VersionCompareRow>();
+        foreach (var v in allVersions)
+        {
+            latestProdByVersion.TryGetValue(v, out var pr);
+            latestStagByVersion.TryGetValue(v, out var sr);
+            FillMetrics(pr, avgMsByRunId, out var pRate, out var pAvg, out var pAns, out var pNa, out var pErr);
+            FillMetrics(sr, avgMsByRunId, out var sRate, out var sAvg, out var sAns, out var sNa, out var sErr);
+            versionCompare.Add(new VersionCompareRow(
+                v, pRate, sRate, pAvg, sAvg, pAns, sAns, pNa, sNa, pErr, sErr));
+        }
+
+        var currentV = (primaryRun.IvyVersion ?? "").Trim();
+        latestStagByVersion.TryGetValue(currentV, out var stagingForVersion);
+        latestProdByVersion.TryGetValue(currentV, out var productionForVersion);
+
+        TestRunEntity? peerRun = null;
+        string? peerEnv = null;
+        if (primaryEnv == "production" && stagingForVersion != null)
+        {
+            peerRun = stagingForVersion;
+            peerEnv = "staging";
+        }
+        else if (primaryEnv == "staging" && productionForVersion != null)
+        {
+            peerRun = productionForVersion;
+            peerEnv = "production";
+        }
+
+        var trendDict = primaryEnv == "staging" ? latestStagByVersion : latestProdByVersion;
+        var versionTrendPrimary = trendDict.Values
+            .Select(r =>
+            {
+                var t = r.TotalQuestions;
+                var ans = r.SuccessCount;
+                var rate = t > 0 ? Math.Round(ans * 100.0 / t, 1) : 0.0;
+                var avg = avgMsByRunId.TryGetValue(r.Id, out var a) ? (int)Math.Round(a) : 0;
+                return (Version: (r.IvyVersion ?? "").Trim(), rate, avgMs: avg);
+            })
+            .OrderBy(x => x.Version, Comparer<string>.Create((a, b) => CompareVersionStrings(a, b)))
+            .ToList();
 
         var latestResults = await ctx.TestResults.AsNoTracking()
             .AsSplitQuery()
             .Include(r => r.Question)
-            .Where(r => r.TestRunId == latestRun.Id)
+            .Where(r => r.TestRunId == primaryRun.Id)
             .ToListAsync(ct);
 
-        if (latestResults.Count == 0 && (latestRun.CompletedAt == null || latestRun.TotalQuestions == 0))
+        if (latestResults.Count == 0 && (primaryRun.CompletedAt == null || primaryRun.TotalQuestions == 0))
             return null;
 
         double? prevAnswerRate = null;
         int? prevAvgMs = null;
-        var currentV = (latestRun.IvyVersion ?? "").Trim();
-        var idx = versionTrend.FindIndex(r => string.Equals(r.Version, currentV, StringComparison.OrdinalIgnoreCase));
-        if (idx > 0)
+        if (peerRun == null)
         {
-            var prev = versionTrend[idx - 1];
-            prevAnswerRate = prev.AnswerRate;
-            prevAvgMs = (int)prev.AvgMs;
-        }
-        else
-        {
-            var prevRun = await ctx.TestRuns.AsNoTracking()
-                .Where(r => r.StartedAt < latestRun.StartedAt && r.CompletedAt != null && runIdsWithData.Contains(r.Id))
-                .OrderByDescending(r => r.StartedAt)
-                .FirstOrDefaultAsync(ct);
-            if (prevRun != null)
+            var idx = versionTrendPrimary.FindIndex(r =>
+                string.Equals(r.Version, currentV, StringComparison.OrdinalIgnoreCase));
+            if (idx > 0)
             {
-                var prevResults = await ctx.TestResults.AsNoTracking()
-                    .Where(r => r.TestRunId == prevRun.Id)
-                    .ToListAsync(ct);
-                if (prevRun.TotalQuestions > 0 && prevResults.Count == prevRun.TotalQuestions)
+                var prev = versionTrendPrimary[idx - 1];
+                prevAnswerRate = prev.rate;
+                prevAvgMs = prev.avgMs;
+            }
+            else
+            {
+                var prevRun = await ctx.TestRuns.AsNoTracking()
+                    .Where(r =>
+                        r.StartedAt < primaryRun.StartedAt
+                        && r.CompletedAt != null
+                        && runIdsWithData.Contains(r.Id)
+                        && NormalizeEnvironment(r.Environment) == primaryEnv)
+                    .OrderByDescending(r => r.StartedAt)
+                    .FirstOrDefaultAsync(ct);
+                if (prevRun != null)
                 {
-                    var prevAns = prevResults.Count(r => r.IsSuccess);
-                    prevAnswerRate = Math.Round(prevAns * 100.0 / prevResults.Count, 1);
-                    prevAvgMs = (int)prevResults.Average(r => r.ResponseTimeMs);
-                }
-                else if (prevRun.TotalQuestions > 0)
-                {
-                    prevAnswerRate = Math.Round(prevRun.SuccessCount * 100.0 / prevRun.TotalQuestions, 1);
-                    prevAvgMs = prevResults.Count > 0 ? (int)prevResults.Average(r => r.ResponseTimeMs) : 0;
+                    var prevResults = await ctx.TestResults.AsNoTracking()
+                        .Where(r => r.TestRunId == prevRun.Id)
+                        .ToListAsync(ct);
+                    if (prevRun.TotalQuestions > 0 && prevResults.Count == prevRun.TotalQuestions)
+                    {
+                        var prevAns = prevResults.Count(r => r.IsSuccess);
+                        prevAnswerRate = Math.Round(prevAns * 100.0 / prevResults.Count, 1);
+                        prevAvgMs = (int)prevResults.Average(r => r.ResponseTimeMs);
+                    }
+                    else if (prevRun.TotalQuestions > 0)
+                    {
+                        prevAnswerRate = Math.Round(prevRun.SuccessCount * 100.0 / prevRun.TotalQuestions, 1);
+                        prevAvgMs = prevResults.Count > 0 ? (int)prevResults.Average(r => r.ResponseTimeMs) : 0;
+                    }
                 }
             }
         }
 
-        var detail = BuildDashboardData(latestResults, prevAnswerRate, prevAvgMs, latestRun);
+        var detail = BuildDashboardData(latestResults, prevAnswerRate, prevAvgMs, primaryRun);
+
+        DashboardData? peerDetail = null;
+        if (peerRun != null)
+        {
+            var peerResults = await ctx.TestResults.AsNoTracking()
+                .AsSplitQuery()
+                .Include(r => r.Question)
+                .Where(r => r.TestRunId == peerRun.Id)
+                .ToListAsync(ct);
+            peerDetail = BuildDashboardData(peerResults, null, null, peerRun);
+        }
 
         return new DashboardPageModel(
             currentV,
-            latestRun.StartedAt,
+            primaryRun.StartedAt,
+            primaryEnv,
             detail,
-            versionTrend);
+            peerDetail,
+            peerEnv,
+            versionCompare);
     }
 
     private static DashboardData BuildDashboardData(
@@ -455,18 +587,25 @@ public class DashboardApp : ViewBase
 internal record DashboardPageModel(
     string IvyVersion,
     DateTime RunStartedAt,
+    string PrimaryEnvironment,
     DashboardData Detail,
-    List<VersionTrendRow> VersionTrend);
+    DashboardData? PeerDetail,
+    string? PeerEnvironment,
+    List<VersionCompareRow> VersionCompare);
 
-internal record VersionTrendRow(
+/// <summary>Per Ivy version: latest production vs latest staging completed runs (0 when an env has no run).</summary>
+internal record VersionCompareRow(
     string Version,
-    double AnswerRate,
-    double AvgMs,
-    int Answered,
-    int NoAnswer,
-    int Errors,
-    int Total,
-    DateTime RunAt);
+    double ProductionAnswerRate,
+    double StagingAnswerRate,
+    double ProductionAvgMs,
+    double StagingAvgMs,
+    int ProductionAnswered,
+    int StagingAnswered,
+    int ProductionNoAnswer,
+    int StagingNoAnswer,
+    int ProductionErrors,
+    int StagingErrors);
 
 internal record DashboardData(
     int Total, int Answered, int NoAnswer, int Errors,
