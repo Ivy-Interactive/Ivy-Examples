@@ -6,6 +6,9 @@ namespace IvyAskStatistics.Apps;
 [App(icon: Icons.ChartBar, title: "Run Tests")]
 public class RunApp : ViewBase
 {
+    /// <summary>Invalidate with <see cref="IQueryService.RevalidateByTag"/> when rows in <c>Questions</c> change.</summary>
+    internal const string TestQuestionsQueryTag = "test-questions-db";
+
     private static readonly string[] DifficultyOptions = ["all", "easy", "medium", "hard"];
     private static readonly string[] ConcurrencyOptions = ["1", "3", "5", "10", "20"];
     private static readonly string[] McpEnvironmentOptions = ["production", "staging"];
@@ -49,7 +52,15 @@ public class RunApp : ViewBase
                 var result = await LoadQuestionsAsync(factory, difficultyFilter.Value);
                 refreshToken.Refresh();
                 return result;
-            });
+            },
+            tags: [TestQuestionsQueryTag],
+            options: new QueryOptions { RevalidateOnMount = true, KeepPrevious = true });
+
+        // Tab may stay mounted in the background; OnMount runs when Run is first shown again after unmount.
+        UseEffect(() =>
+        {
+            questionsQuery.Mutator.Revalidate();
+        }, EffectTrigger.OnMount());
 
         var running = isRunning.Value;
         var firstLoad = questionsQuery.Loading && questionsQuery.Value == null && !running;

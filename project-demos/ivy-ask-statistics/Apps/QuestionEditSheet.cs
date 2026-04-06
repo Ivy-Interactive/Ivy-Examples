@@ -63,6 +63,7 @@ internal sealed class QuestionEditSheet(IState<bool> isOpen, Guid questionId) : 
             await ctx.SaveChangesAsync();
             queryService.RevalidateByTag(("widget-questions", entity.Widget));
             queryService.RevalidateByTag("widget-summary");
+            queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
             isOpen.Set(false);
         }
     }

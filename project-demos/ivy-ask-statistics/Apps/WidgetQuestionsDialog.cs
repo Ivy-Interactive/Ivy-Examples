@@ -47,6 +47,7 @@ internal sealed class WidgetQuestionsDialog(
                 tableQuery.Mutator.Mutate(updated, revalidate: false);
                 refreshToken.Refresh();
                 queryService.RevalidateByTag("widget-summary");
+                queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
             }
             catch (Exception ex)
             {

@@ -26,6 +26,7 @@ public class QuestionsApp : ViewBase
         var factory       = UseService<AppDbContextFactory>();
         var configuration = UseService<IConfiguration>();
         var client        = UseService<IClientProvider>();
+        var queryService  = UseService<IQueryService>();
 
         var generatingWidgets = UseState(ImmutableHashSet<string>.Empty);
         var deleteRequest     = UseState<string?>(null);
@@ -81,6 +82,7 @@ public class QuestionsApp : ViewBase
                 var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(fresh, revalidate: false);
                 refreshToken.Refresh();
+                queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
             }
             catch
             {
@@ -108,6 +110,7 @@ public class QuestionsApp : ViewBase
 
                 var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(fresh, revalidate: false);
+                queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
                 genProgress.Set(new GenProgress(widget.Name, 1, 1, [], false, 1));
             }
             catch (Exception ex)
@@ -195,7 +198,10 @@ public class QuestionsApp : ViewBase
                         }
 
                         if (success)
+                        {
                             Interlocked.Increment(ref completed);
+                            queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
+                        }
                         else
                         {
                             lock (failedLock)
@@ -255,6 +261,7 @@ public class QuestionsApp : ViewBase
                 var finalFresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                 tableQuery.Mutator.Mutate(finalFresh, revalidate: false);
                 refreshToken.Refresh();
+                queryService.RevalidateByTag(RunApp.TestQuestionsQueryTag);
             }
             finally
             {
