@@ -5,7 +5,7 @@ public class LeadDetailsBlade(int leadId) : ViewBase
     public override object? Build()
     {
         var factory = this.UseService<AutodealerCrmContextFactory>();
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var lead = this.UseState<Lead?>();
         var callRecordCount = this.UseState<int>();

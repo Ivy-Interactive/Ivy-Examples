@@ -5,7 +5,7 @@ public class VehicleDetailsBlade(int vehicleId) : ViewBase
     public override object? Build()
     {
         var factory = this.UseService<AutodealerCrmContextFactory>();
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var vehicle = this.UseState<Vehicle?>();
         var mediaCount = this.UseState<int>();
