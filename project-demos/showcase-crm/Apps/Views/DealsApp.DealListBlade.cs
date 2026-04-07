@@ -6,7 +6,7 @@ public class DealListBlade : ViewBase
 
     public override object? Build()
     {
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = UseRefreshToken();
 
         var filter = UseState("");
