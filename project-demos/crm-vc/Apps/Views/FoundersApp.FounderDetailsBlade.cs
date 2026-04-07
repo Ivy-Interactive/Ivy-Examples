@@ -5,7 +5,7 @@ public class FounderDetailsBlade(int founderId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var founder = UseState<Founder?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();

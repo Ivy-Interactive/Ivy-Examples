@@ -5,7 +5,7 @@ public class IndustryDetailsBlade(int industryId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var industry = UseState<Industry?>(() => null!);
         var startups = UseState<List<Startup>>(() => new());
