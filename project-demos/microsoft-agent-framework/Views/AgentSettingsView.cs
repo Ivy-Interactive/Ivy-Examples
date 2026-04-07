@@ -24,7 +24,7 @@ public class AgentSettingsView : ViewBase
 
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var client = UseService<IClientProvider>();
 
         var form = UseState(AgentFormModel.FromConfiguration(_agent));
