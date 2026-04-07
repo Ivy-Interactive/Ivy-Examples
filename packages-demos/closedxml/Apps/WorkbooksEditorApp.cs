@@ -21,7 +21,7 @@ public class WorkbooksListBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
@@ -89,7 +89,7 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var workbookRepository = this.UseService<WorkbookRepository>();
         var refreshToken = this.UseRefreshToken();
 
@@ -108,7 +108,7 @@ public class WorkbookEditorBlade(string fileName) : ViewBase
 /// <summary>
 /// Worksheet Editor - Allows adding columns, rows, and saving changes
 /// </summary>
-public class WorksheetEditor(DataTable table, string fileName, IBladeService blades) : ViewBase
+public class WorksheetEditor(DataTable table, string fileName, IBladeContext blades) : ViewBase
 {
     public override object? Build()
     {
