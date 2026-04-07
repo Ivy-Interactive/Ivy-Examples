@@ -16,7 +16,7 @@ public class StudentsListBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var searchTerm = this.UseState("");
         var students = this.UseState(() => StudentService.GetStudents());
@@ -79,7 +79,7 @@ public class StudentDetailBlade(Guid studentId, Action? onRefresh = null) : View
     public override object? Build()
     {
         // 1. Hooks first
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
         var student = this.UseState(() => StudentService.GetStudents().FirstOrDefault(s => s.ID == studentId)!);
