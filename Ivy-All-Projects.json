@@ -154,6 +154,19 @@
       ]
     },
     {
+      "name": "IVY Ask Statistics",
+      "description": "",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/ivy-ask-statistics",
+      "deploymentLink": "ivy-projectdemos-ivy-ask-statistics.sliplane.app",
+      "tags": [
+        "Ivy.Analyser",
+        "Microsoft.EntityFrameworkCore.Design",
+        "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "OpenAI",
+        "demo"
+      ]
+    },
+    {
       "name": "LlmTornado",
       "description": "LlmTornado Examples is a web application demonstrating the \\1 library capabilities for interacting with LLM models. It features multiple chat interfaces including simple streaming chat and AI agents with function calling/tools support. https://github.com/user-attachments/assets/4466bb03-4a59-4469-b857-5bcd2e254963",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/llm-tornado-ollama",
