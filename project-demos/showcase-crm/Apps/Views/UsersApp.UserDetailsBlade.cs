@@ -6,7 +6,7 @@ public class UserDetailsBlade(int userId) : ViewBase
     {
         var isDeleting = UseState(false);
         var factory = UseService<ShowcaseCrmContextFactory>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var queryService = UseService<IQueryService>();
         var refreshToken = UseRefreshToken();
 

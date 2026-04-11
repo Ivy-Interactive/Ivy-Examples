@@ -5,7 +5,7 @@ public class DealDetailsBlade(int dealId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<VcContextFactory>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var deal = UseState<Deal?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();

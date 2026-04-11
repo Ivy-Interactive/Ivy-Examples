@@ -15,7 +15,7 @@ public class MainMenuBlade : ViewBase
     public override object? Build()
     {
         // 1. Hooks MUST be at the top
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var client = UseService<IClientProvider>();
         var ollamaUrl = UseState("http://localhost:11434");
         var selectedModel = UseState<string?>(() => null);

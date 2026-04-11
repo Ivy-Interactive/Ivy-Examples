@@ -5,7 +5,7 @@ public class StartupDetailsBlade(int startupId) : ViewBase
     public override object? Build()
     {
         var factory = this.UseService<VcContextFactory>();
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var startup = this.UseState<Startup?>();
         var dealCount = this.UseState<int>();

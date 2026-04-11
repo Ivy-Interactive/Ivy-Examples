@@ -9,7 +9,7 @@ public class ModelListBlade : ViewBase
 
     public override object? Build()
     {
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var client = UseService<IClientProvider>();
         var models = UseState(ImmutableArray.Create<ModelListRecord>());
         var modelsLoaded = UseState(false);

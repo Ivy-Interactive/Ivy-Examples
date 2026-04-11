@@ -14,7 +14,7 @@ public class MainMenuBlade : ViewBase
 {
     public override object? Build()
     {
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var client = UseService<IClientProvider>();
         var configuration = UseService<IConfiguration>();
 

@@ -5,7 +5,7 @@ public class CallRecordDetailsBlade(int callRecordId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<AutodealerCrmContextFactory>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var callRecord = UseState<CallRecord?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();

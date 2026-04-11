@@ -5,7 +5,7 @@ public class MessageDetailsBlade(int messageId) : ViewBase
     public override object? Build()
     {
         var factory = UseService<AutodealerCrmContextFactory>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
         var message = UseState<Message?>(() => null!);
         var (alertView, showAlert) = this.UseAlert();

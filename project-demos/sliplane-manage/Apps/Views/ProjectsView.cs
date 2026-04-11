@@ -26,7 +26,7 @@ public class ProjectListBlade : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var refreshToken = this.UseRefreshToken();
 
         var filter = this.UseState(string.Empty);
@@ -185,7 +185,7 @@ public class ProjectDetailsBlade : ViewBase
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
-        var blades = this.UseContext<IBladeService>();
+        var blades = this.UseContext<IBladeContext>();
         var (alertView, showAlert) = this.UseAlert();
         var refreshToken = this.UseRefreshToken();
 

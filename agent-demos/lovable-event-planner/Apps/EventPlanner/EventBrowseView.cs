@@ -8,7 +8,7 @@ public class EventBrowseView : ViewBase
     {
         var service = UseService<EventService>();
         var client = UseService<IClientProvider>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
 
         var search = UseState("");
         var categoryFilter = UseState("All");

@@ -6,7 +6,7 @@ public class LeadListBlade : ViewBase
 
     public override object? Build()
     {
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var factory = UseService<AutodealerCrmContextFactory>();
         var refreshToken = this.UseRefreshToken();
 
