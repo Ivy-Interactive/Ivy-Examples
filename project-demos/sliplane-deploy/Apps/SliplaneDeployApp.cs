@@ -10,6 +10,7 @@ using SliplaneDeploy.Services;
 /// ?repo= is captured by RepoCaptureFilter, parsed into a DeployDraft, and pre-fills the form.
 /// </summary>
 [App(
+    id: "sliplane-deploy-app",
     icon: Icons.Rocket,
     title: "Deploy on Sliplane",
     isVisible: true)]
