@@ -32,4 +32,11 @@ server.AddConnectionsFromAssembly();
 
 server.UseAuth<SliplaneAuthProvider>();
 
+// DefaultApp is required so that after OAuth redirect (which lands on /) Ivy knows
+// which app to open — without this the shell can't resolve the route and shows "app not found".
+var appShellSettings = new AppShellSettings()
+    .DefaultApp<SliplaneDeployApp>()
+    .UseTabs(preventDuplicates: true);
+server.UseAppShell(appShellSettings);
+
 await server.RunAsync();
