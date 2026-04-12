@@ -13,13 +13,13 @@ public class TestDetailView : ViewBase
     {
         var sections = Layout.Vertical().Gap(3);
 
-        
+
         sections = sections | (Layout.Horizontal().Gap(3).AlignContent(Align.Center)
             | Text.H4(_test.Name)
             | StatusBadge(_test.Status)
             | (_test.Flaky == true ? new Badge("Flaky", icon: Icons.Shuffle).Warning() : (object)Layout.Vertical()));
 
-        
+
         if (!string.IsNullOrEmpty(_test.Message))
         {
             sections = sections | Callout.Error(_test.Message, "Error");
@@ -31,7 +31,7 @@ public class TestDetailView : ViewBase
                 Text.Monospaced(_test.Trace));
         }
 
-        
+
         if (_test.Stdout?.Count > 0)
         {
             sections = sections | new Expandable("Stdout",
@@ -44,7 +44,7 @@ public class TestDetailView : ViewBase
                 Text.Monospaced(string.Join("\n", _test.Stderr)));
         }
 
-        
+
         if (_test.RetryAttempts?.Count > 0)
         {
             var retryLayout = Layout.Vertical().Gap(2);
@@ -64,7 +64,7 @@ public class TestDetailView : ViewBase
             sections = sections | new Expandable("Retry Attempts", retryLayout).Open();
         }
 
-        
+
         if (_test.Attachments?.Count > 0)
         {
             var attachLayout = Layout.Vertical().Gap(1);
@@ -77,7 +77,7 @@ public class TestDetailView : ViewBase
             sections = sections | new Expandable("Attachments", attachLayout);
         }
 
-        
+
         if (_test.Steps?.Count > 0)
         {
             var stepsLayout = Layout.Vertical().Gap(1);
@@ -90,7 +90,7 @@ public class TestDetailView : ViewBase
             sections = sections | new Expandable("Steps", stepsLayout).Open();
         }
 
-        
+
         if (!string.IsNullOrEmpty(_test.FilePath))
         {
             var fileInfo = _test.FilePath;

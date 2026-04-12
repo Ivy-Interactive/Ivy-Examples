@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using Ivy;
 
 namespace Certificate.Decoder.Apps;
@@ -187,7 +186,7 @@ public class CertificateDecoderApp : ViewBase
 
     static X509Certificate2 ParseCertificate(string input)
     {
-        
+
         var pem = input
             .Replace("-----BEGIN CERTIFICATE-----", "")
             .Replace("-----END CERTIFICATE-----", "")

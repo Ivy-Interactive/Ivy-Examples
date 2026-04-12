@@ -94,7 +94,7 @@ public static class FormulaParser
         var pos = 0;
         while (pos < expr.Length)
         {
-            
+
             var funcStart = FindNextFunction(expr, pos);
             if (funcStart < 0) break;
 
@@ -124,7 +124,7 @@ public static class FormulaParser
 
             functionsUsed.Add(funcName);
 
-            
+
             ParseExpression(innerArgs, steps, functionsUsed);
 
             var explanation = ExplainFunctionCall(funcName, innerArgs);
@@ -147,7 +147,7 @@ public static class FormulaParser
                 if (end < expr.Length && expr[end] == '(')
                 {
                     var name = expr[i..end];
-                    
+
                     if (!name.Contains('!'))
                         return i;
                 }

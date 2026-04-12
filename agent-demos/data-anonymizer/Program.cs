@@ -1,6 +1,5 @@
 using Ivy;
 using Data.Anonymizer.Apps;
-using Microsoft.Extensions.DependencyInjection;
 
 var server = new Server();
 server.SetMetaTitle("Data Anonymizer");

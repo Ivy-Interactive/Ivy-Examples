@@ -1,5 +1,4 @@
 using Ivy;
-using Microsoft.Extensions.DependencyInjection;
 
 var server = new Server();
 server.SetMetaTitle("HTML Agility Pack Scraper");

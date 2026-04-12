@@ -48,7 +48,7 @@ public class DailyFactView : ViewBase
                                 var added = service.ToggleFavorite(fact);
                                 client.Toast(added ? "Added to favorites! ❤️" : "Removed from favorites");
                             }).Icon(isFav ? Icons.Heart : Icons.HeartOff)
-                              .Variant(isFav ? ButtonVariant.Primary: ButtonVariant.Outline))))
+                              .Variant(isFav ? ButtonVariant.Primary : ButtonVariant.Outline))))
                 | (Layout.Horizontal().Gap(6)
                     | (new Card()
                         | (Layout.Horizontal().Gap(2).Center()

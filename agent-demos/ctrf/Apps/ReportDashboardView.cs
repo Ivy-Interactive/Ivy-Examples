@@ -152,7 +152,7 @@ public class ReportDashboardView : ViewBase
 
     private static string FormatInsightKey(string key)
     {
-        
+
         var result = System.Text.RegularExpressions.Regex.Replace(key, "([a-z])([A-Z])", "$1 $2");
         return char.ToUpper(result[0]) + result[1..];
     }
