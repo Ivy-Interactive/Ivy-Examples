@@ -11,7 +11,7 @@ using SliplaneDeploy.Services;
 /// </summary>
 [App(
     id: "sliplane-deploy-app",
-    icon: Icons.Rocket,
+    icon: Icons.Server,
     title: "Deploy on Sliplane",
     isVisible: true)]
 public class SliplaneDeployApp : ViewBase
@@ -82,7 +82,6 @@ public class SliplaneDeployApp : ViewBase
         {
             return Layout.Center()
                 | (Layout.Vertical().AlignContent(Align.Center).Gap(6)
-                    | Icons.Rocket.ToIcon()
                     | Text.H2("Deploy to Sliplane")
                     | (draft is not null
                         ? Text.Muted($"Repository: {draft.RepoUrl}")

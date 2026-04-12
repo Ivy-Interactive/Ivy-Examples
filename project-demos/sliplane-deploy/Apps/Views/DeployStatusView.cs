@@ -3,9 +3,6 @@ namespace SliplaneDeploy.Apps.Views;
 using SliplaneDeploy.Models;
 using SliplaneDeploy.Services;
 
-/// <summary>
-/// Shows deployment status by polling service events after create.
-/// </summary>
 public class DeployStatusView : ViewBase
 {
     private readonly string _apiToken;
@@ -25,79 +22,67 @@ public class DeployStatusView : ViewBase
         var eventsQuery = this.UseQuery<List<SliplaneServiceEvent>, (string, string, string)>(
             key: ("deploy-status-events", _projectId, _service.Id),
             fetcher: async ct => await client.GetServiceEventsAsync(_apiToken, _projectId, _service.Id),
-            options: new QueryOptions
-            {
-                RefreshInterval = TimeSpan.FromSeconds(2),
-                KeepPrevious = true,
-            });
+            options: new QueryOptions { RefreshInterval = TimeSpan.FromSeconds(2), KeepPrevious = true });
         var serviceQuery = this.UseQuery<SliplaneService?, (string, string, string)>(
             key: ("deploy-service-details", _projectId, _service.Id),
             fetcher: async ct => await client.GetServiceAsync(_apiToken, _projectId, _service.Id),
-            options: new QueryOptions { KeepPrevious = true });
+            options: new QueryOptions { RefreshInterval = TimeSpan.FromSeconds(3), KeepPrevious = true });
 
         var events = eventsQuery.Value ?? [];
         var status = DeriveStatus(events);
-        var failureMessage = GetFailureMessage(events);
-        var statusText = status switch
-        {
-            DeployStatus.Success => "Deploy succeeded",
-            DeployStatus.Failed => "Deploy failed",
-            DeployStatus.Deploying => "Deploying…",
-            _ => "Initializing…",
-        };
 
-        var calloutVariant = status switch
-        {
-            DeployStatus.Success => CalloutVariant.Success,
-            DeployStatus.Failed => CalloutVariant.Error,
-            _ => CalloutVariant.Info,
-        };
+        var latestService = serviceQuery.Value ?? _service;
+        var siteHost = ResolveSiteHost(latestService) ?? ResolveSiteHost(_service) ?? string.Empty;
+        var siteUrlAbsolute = string.IsNullOrWhiteSpace(siteHost) ? string.Empty
+            : siteHost.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? siteHost
+            : "https://" + siteHost;
 
-        var serviceForUrl = status == DeployStatus.Success ? serviceQuery.Value : _service;
-        var siteUrl = serviceForUrl?.Network?.CustomDomains?.FirstOrDefault()?.Domain
-                   ?? serviceForUrl?.Network?.ManagedDomain
-                   ?? string.Empty;
-        var siteUrlAbsolute = string.IsNullOrWhiteSpace(siteUrl)
-            ? string.Empty
-            : (siteUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-               || siteUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                ? siteUrl
-                : "https://" + siteUrl);
+        var manageUrl = "https://ivy-sliplane-management.sliplane.app/$auth";
 
-        var header = status == DeployStatus.Success
-            ? (Layout.Vertical().Gap(1) | Text.H3(statusText))
-            : (Layout.Vertical().Gap(1) | Text.H3(statusText));
+        var content = Layout.Vertical().Gap(2).AlignContent(Align.Left);
 
-        object? progressBar = null;
-        if (status is DeployStatus.Deploying or DeployStatus.Unknown)
-        {
-            progressBar = new Progress().Indeterminate().Goal("Building and deploying…");
-        }
+        if (!string.IsNullOrEmpty(siteUrlAbsolute))
+            content = content | LabelPlusUrlRow("Your app will be available at:", siteUrlAbsolute);
 
-        object? errorSection = null;
+        content = content | LabelPlusUrlRow("You can manage it at:", manageUrl);
+
         if (status == DeployStatus.Failed)
         {
-            errorSection = Text.Block(!string.IsNullOrEmpty(failureMessage)
+            var failureMessage = GetFailureMessage(events);
+            var errBody = !string.IsNullOrEmpty(failureMessage)
                 ? failureMessage
-                : "Deployment failed. Check the service logs in Sliplane dashboard.");
+                : "Deployment failed. Check the service logs in Sliplane dashboard.";
+            content = content | new Callout(Text.Markdown($"**Deployment failed.**\n\n{MarkdownEscapePlain(errBody)}"),
+                variant: CalloutVariant.Error);
         }
 
-        object? linkSection = null;
-        if (status == DeployStatus.Success && !string.IsNullOrEmpty(siteUrlAbsolute))
-        {
-            linkSection = (Layout.Horizontal().AlignContent(Align.Left)| Text.Block("URL:").Bold() | new Button(siteUrl).Link().Url(siteUrlAbsolute).Width(Size.Fit()));
-        }
+        return content;
+    }
 
-        var content = Layout.Vertical().Gap(1).AlignContent(Align.Left)
-            | header;
-        if (progressBar != null)
-            content = content | progressBar;
-        if (errorSection != null)
-            content = content | errorSection;
-        if (linkSection != null)
-            content = content | linkSection;
+    /// <summary>
+    /// Single horizontal row: bold label + link button. Avoids <see cref="Text.Markdown"/> here because
+    /// it renders as block content (line breaks, extra icons) and breaks inline layout with the URL.
+    /// </summary>
+    private static object LabelPlusUrlRow(string label, string absoluteUrl) =>
+        Layout.Horizontal().AlignContent(Align.Left).Gap(2)
+            | Text.Block(label).Bold()
+            | new Button(absoluteUrl).Link().Url(absoluteUrl).Width(Size.Fit());
 
-        return new Callout(content, "Deployment status", calloutVariant).Icon(Icons.Rocket);
+    private static string MarkdownEscapePlain(string s) =>
+        s.Replace("\\", "\\\\", StringComparison.Ordinal)
+         .Replace("*", "\\*", StringComparison.Ordinal)
+         .Replace("_", "\\_", StringComparison.Ordinal)
+         .Replace("#", "\\#", StringComparison.Ordinal)
+         .Replace("`", "\\`", StringComparison.Ordinal);
+
+    private static string? ResolveSiteHost(SliplaneService? s)
+    {
+        if (s == null) return null;
+        var custom = s.Network?.CustomDomains?.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.Domain))?.Domain;
+        if (!string.IsNullOrWhiteSpace(custom)) return custom.Trim();
+        var managed = s.Network?.ManagedDomain;
+        if (!string.IsNullOrWhiteSpace(managed)) return managed.Trim();
+        return s.Domains?.Select(d => d.Domain).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))?.Trim();
     }
 
     private enum DeployStatus { Unknown, Deploying, Success, Failed }
@@ -106,23 +91,17 @@ public class DeployStatusView : ViewBase
     {
         if (events.Any(e => e.Type == "service_deploy_success")) return DeployStatus.Success;
         if (events.Any(e => e.Type == "service_deploy_failed" || e.Type == "service_build_failed")) return DeployStatus.Failed;
-
         var last = events.LastOrDefault();
         if (last == null) return DeployStatus.Unknown;
-
         return last.Type switch
         {
-            "service_deploy_success" => DeployStatus.Success,
+            "service_deploy_success"                           => DeployStatus.Success,
             "service_deploy_failed" or "service_build_failed" => DeployStatus.Failed,
-            "service_deploy" => DeployStatus.Deploying,
-            _ => DeployStatus.Deploying,
+            _                                                  => DeployStatus.Deploying,
         };
     }
 
-    private static string? GetFailureMessage(List<SliplaneServiceEvent> events)
-    {
-        var failed = events.LastOrDefault(e =>
-            e.Type == "service_deploy_failed" || e.Type == "service_build_failed");
-        return string.IsNullOrWhiteSpace(failed?.Message) ? null : failed.Message;
-    }
+    private static string? GetFailureMessage(List<SliplaneServiceEvent> events) =>
+        events.LastOrDefault(e => e.Type is "service_deploy_failed" or "service_build_failed")
+              ?.Message is { Length: > 0 } msg ? msg : null;
 }
