@@ -33,7 +33,7 @@ public class MagickNetApp : ViewBase
         var quality = UseState(90);
 
         var client = this.UseService<IClientProvider>();
-        
+
         // When a file is uploaded, process it
         UseEffect(() =>
         {
@@ -296,7 +296,7 @@ public class MagickNetApp : ViewBase
                              | Text.Block("Quality:")
                              | quality.ToNumberInput().Min(1).Max(100).Step(1)
                            : Text.Block(""))
-                           
+
                        | (Layout.Horizontal().Gap(4)
                        | (uploadedImageBytes.Value != null
                            ? new Button("Magic Image", onClick: ProcessImage)
@@ -319,7 +319,7 @@ public class MagickNetApp : ViewBase
                        | new Spacer().Height(Size.Units(10))
                        | (Layout.Center()
                        | new Image(processedImageDataUri.Value))
-                       
+
                      );
 
         return Layout.Vertical().Padding(3)

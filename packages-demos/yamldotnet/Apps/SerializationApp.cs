@@ -64,7 +64,7 @@ Addresses = new Dictionary<string, Address> {
         try
         {
             errorMessage.Value = string.Empty;
-            
+
             // Validate address keys - only "home" and "work" are allowed
             var addressKeyValidation = ValidateAddressKeys(personCode);
             if (!string.IsNullOrEmpty(addressKeyValidation))
@@ -74,21 +74,21 @@ Addresses = new Dictionary<string, Address> {
                 yamlOutput.Value = string.Empty;
                 return;
             }
-            
+
             var person = ParsePersonCode(personCode);
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .Build();
 
             var data = new Dictionary<string, object?>();
-            
+
             if (System.Text.RegularExpressions.Regex.IsMatch(personCode, @"Name\s*=") && !string.IsNullOrWhiteSpace(person.Name))
                 data["name"] = person.Name;
             if (System.Text.RegularExpressions.Regex.IsMatch(personCode, @"Age\s*="))
                 data["age"] = person.Age;
             if (System.Text.RegularExpressions.Regex.IsMatch(personCode, @"HeightInInches\s*="))
                 data["heightInInches"] = person.HeightInInches;
-            
+
             if (person.Addresses?.Count > 0)
             {
                 var addresses = new Dictionary<string, object>();
@@ -103,7 +103,7 @@ Addresses = new Dictionary<string, Address> {
                 }
                 if (addresses.Count > 0) data["addresses"] = addresses;
             }
-            
+
             var yaml = serializer.Serialize(data);
             yamlOutput.Value = yaml;
             resultOutput.Value = yaml;
@@ -119,10 +119,10 @@ Addresses = new Dictionary<string, Address> {
     private string ValidateAddressKeys(string code)
     {
         if (!code.Contains("Addresses =")) return string.Empty;
-        
+
         // Find all address keys in the dictionary
         var matches = System.Text.RegularExpressions.Regex.Matches(code, @"""(?<key>[^""]+)"",\s*new\s+Address");
-        
+
         foreach (System.Text.RegularExpressions.Match match in matches)
         {
             var key = match.Groups["key"].Value;
@@ -131,14 +131,14 @@ Addresses = new Dictionary<string, Address> {
                 return $"Invalid address key: '{key}'. Only 'home' and 'work' keys are allowed for Address objects.";
             }
         }
-        
+
         return string.Empty;
     }
 
     private Person ParsePersonCode(string code)
     {
         var person = new Person();
-        
+
         var m = System.Text.RegularExpressions.Regex.Match(code, @"Name\s*=\s*""([^""]+)""");
         if (m.Success) person.Name = m.Groups[1].Value;
 
@@ -160,7 +160,7 @@ Addresses = new Dictionary<string, Address> {
             foreach (var key in new[] { "home", "work" })
             {
                 var addr = ExtractAddress(code, key);
-                if (addr != null && (!string.IsNullOrWhiteSpace(addr.Street) || !string.IsNullOrWhiteSpace(addr.City) || 
+                if (addr != null && (!string.IsNullOrWhiteSpace(addr.Street) || !string.IsNullOrWhiteSpace(addr.City) ||
                     !string.IsNullOrWhiteSpace(addr.State) || !string.IsNullOrWhiteSpace(addr.Zip)))
                     person.Addresses[key] = addr;
             }
@@ -173,13 +173,13 @@ Addresses = new Dictionary<string, Address> {
     {
         var m = System.Text.RegularExpressions.Regex.Match(code, $@"""{key}"",\s*new\s+Address\s*\{{([^}}]*)\}}");
         if (!m.Success) return null;
-        
+
         var block = m.Groups[1].Value;
         var street = ExtractProperty(block, "Street");
         var city = ExtractProperty(block, "City");
         var state = ExtractProperty(block, "State");
         var zip = ExtractProperty(block, "Zip");
-        
+
         if (street == null && city == null && state == null && zip == null) return null;
         return new Address { Street = street ?? "", City = city ?? "", State = state ?? "", Zip = zip ?? "" };
     }

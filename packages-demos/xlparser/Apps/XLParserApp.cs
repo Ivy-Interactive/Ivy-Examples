@@ -124,11 +124,11 @@ public class XLParserApp : ViewBase
             state.SelectedToken.Set(parseTree.FirstOrDefault());
         }
         catch (ArgumentException)
-        {            
+        {
             state.Result.Set(FormulaParseResult.NotParsed);
         }
         catch (Exception)
-        {         
+        {
             state.Result.Set(FormulaParseResult.UnexpectedError);
         }
     }

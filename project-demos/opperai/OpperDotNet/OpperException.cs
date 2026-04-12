@@ -12,12 +12,12 @@ public class OpperException : Exception
     {
     }
 
-    public OpperException(string message, Exception innerException) 
+    public OpperException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
 
-    public OpperException(string message, int statusCode, string? responseContent = null) 
+    public OpperException(string message, int statusCode, string? responseContent = null)
         : base(message)
     {
         StatusCode = statusCode;

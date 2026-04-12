@@ -1,9 +1,5 @@
-using System;
-using System.Linq;
-using System.Collections.Generic;
 using static FuzzySharp.Process;
 using FuzzySharp.Extractor;
-using Ivy.Core;
 
 [App(icon: Icons.Search, title: "FuzzySharp")]
 public class FuzzySharpApp : ViewBase
@@ -68,7 +64,7 @@ public class FuzzySharpApp : ViewBase
 
         var rightCard = new Card(
             Layout.Vertical().Gap(4).Padding(2)
-            | (results.Any() ? 
+            | (results.Any() ?
                 Layout.Vertical()
                     | Text.H2("Results")
                     | Text.Muted("Search results with similarity scores")

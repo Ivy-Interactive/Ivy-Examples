@@ -1,5 +1,4 @@
 using Aspose.OCR;
-using System.IO;
 
 namespace AsposeOcrExample.Apps;
 

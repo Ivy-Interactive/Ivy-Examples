@@ -35,7 +35,7 @@ public class SimMetricsNetApp : ViewBase
             nameList.Set(results);
         }, inputString, inputMetric);
 
-        
+
         List<NameSimilarity> CreateInitialNameList() =>
             Enumerable.Range(1, 10)
                 .Select(_ => new NameSimilarity(new Faker().Name.FullName(), 0.0))

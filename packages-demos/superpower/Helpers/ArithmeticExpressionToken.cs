@@ -6,7 +6,7 @@
 
         Number,
 
-        [Token(Category="operator", Example = "+")]
+        [Token(Category = "operator", Example = "+")]
         Plus,
 
         [Token(Category = "operator", Example = "-")]

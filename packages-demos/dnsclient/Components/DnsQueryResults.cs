@@ -14,7 +14,7 @@ public class DnsQueryResults : ViewBase
 
         UseEffect(() => signal.Receive(results =>
         {
-            queryResults.Set(results);           
+            queryResults.Set(results);
 
             return true;
         }));

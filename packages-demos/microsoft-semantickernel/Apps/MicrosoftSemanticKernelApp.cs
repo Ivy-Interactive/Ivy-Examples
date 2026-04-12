@@ -30,7 +30,7 @@ Next steps: Everyone should update their progress in the project management tool
         var isLoading = UseState(false);
         var triggerRefresh = UseState(0);
         var tasks = UseState<string[]>([]);
-        
+
         UseEffect(async () =>
         {
             isLoading.Set(true);
@@ -56,7 +56,7 @@ Next steps: Everyone should update their progress in the project management tool
                 isLoading.Set(false);
             }
         }, triggerRefresh);
-        
+
         return Layout.Horizontal().Gap(5).Padding(5)
             | new Card(
                 Layout.Vertical()

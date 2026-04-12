@@ -29,7 +29,7 @@
                     {
                         parsedDataState.Set("");
                         parsingState.Set(false);
-                        errorState.Set($"Error: {error}\nPosition: {errorPosition.Column}");                        
+                        errorState.Set($"Error: {error}\nPosition: {errorPosition.Column}");
                     }
                 }
                 parsingState.Set(false);
@@ -78,11 +78,11 @@
             var resultCard = new Card(
                 Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Result")
-                | (errorState.Value.Length > 0 
+                | (errorState.Value.Length > 0
                     ? Layout.Vertical().Gap(2)
                         | Text.Block("Parsing Error:")
                         | Text.Code(errorState.Value)
-                    : parsedDataState.Value.Length > 0 
+                    : parsedDataState.Value.Length > 0
                         ? Layout.Vertical().Gap(2)
                             | Text.Muted("Structured parser output:")
                             | Text.Code(parsedDataState.Value)
@@ -100,12 +100,12 @@
         static string GetIndentedText(object? value, int indent = 0)
         {
             string result = "";
-            
+
             void Indent(int amount, string text)
             {
                 result += $"{new string(' ', amount)}{text}\n";
             }
-            
+
             switch (value)
             {
                 case null:

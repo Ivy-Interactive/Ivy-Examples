@@ -41,7 +41,7 @@ public static class DocumentStorage
     {
         lock (_lock)
         {
-            return _documents.FirstOrDefault(d => 
+            return _documents.FirstOrDefault(d =>
                 string.Equals(d.FileName, fileName, StringComparison.OrdinalIgnoreCase));
         }
     }
@@ -53,7 +53,7 @@ public static class DocumentStorage
     {
         lock (_lock)
         {
-            return _documents.Where(d => 
+            return _documents.Where(d =>
                 string.Equals(d.Author, author, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
@@ -69,7 +69,7 @@ public static class DocumentStorage
             document.Id = _nextId++;
             document.CreatedAt = DateTime.UtcNow;
             document.UpdatedAt = DateTime.UtcNow;
-            
+
             _documents.Add(document);
             return document;
         }
@@ -94,7 +94,7 @@ public static class DocumentStorage
             existingDocument.SheetCount = document.SheetCount;
             existingDocument.FileSize = document.FileSize;
             existingDocument.UpdatedAt = DateTime.UtcNow;
-            
+
             return existingDocument;
         }
     }
@@ -159,7 +159,7 @@ public static class DocumentStorage
     {
         lock (_lock)
         {
-            return _documents.Where(d => 
+            return _documents.Where(d =>
                 d.CreatedAt >= startDate && d.CreatedAt <= endDate)
                 .ToList();
         }

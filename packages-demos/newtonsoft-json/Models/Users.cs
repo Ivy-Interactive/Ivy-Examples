@@ -1,4 +1,5 @@
 ﻿namespace NewtonsoftJsonExample;
+
 public class UserData
 {
     public string FullName { get; set; } = string.Empty;

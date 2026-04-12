@@ -100,7 +100,7 @@ public class SerializeLinqApp : ViewBase
             | new Spacer().Height(Size.Units(5))
             | Text.Block("This demo demonstrates the use of Serialize.Linq to serialize and deserialize LINQ expressions.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Serialize.Linq](https://github.com/esskar/Serialize.Linq)")
-             
+
         ).Title("Input Data").Width(Size.Fraction(0.4f));
 
         // Right card - Results

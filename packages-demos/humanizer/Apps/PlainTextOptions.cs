@@ -1,4 +1,5 @@
 namespace HumanizerExample;
+
 public class PlainTextOptions : ViewBase
 {
     readonly IState<string> InputText;
@@ -20,11 +21,11 @@ public class PlainTextOptions : ViewBase
 
     public override object? Build()
     {
-        
+
         var transformationOptions = new[]
         {
             "Humanize (Sentence)",
-            "Humanize (Title)", 
+            "Humanize (Title)",
             "Humanize (All Caps)",
             "Humanize (Lower Case)",
             "Truncate (Sentence)",
@@ -45,7 +46,7 @@ public class PlainTextOptions : ViewBase
 
             var currentText = InputText.Value;
             var selectedOption = SelectedTransformation.Value;
-            
+
             switch (selectedOption)
             {
                 case "Humanize (Sentence)":
@@ -87,7 +88,7 @@ public class PlainTextOptions : ViewBase
                     currentText = NormalizeSeparator(currentText, '-');
                     break;
             }
-            
+
             HumanizedTexts.Set(HumanizedTexts.Value.Add(currentText));
         }
 
@@ -107,7 +108,7 @@ public class PlainTextOptions : ViewBase
                 | new Button("Clear History", onClick: _ => { HumanizedTexts.Set([]); })
                     .Variant(ButtonVariant.Destructive)
                     .Width(Size.Full());
-                
+
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ internal class ParseTreeNodeInfo
 
     public string NodeValue => TreeNode.Print();
 
-    public List<NodeMetadata> NodeInfo =>    
+    public List<NodeMetadata> NodeInfo =>
         [
             new("Term", TreeNode.Term.ToString()) ,
             new("Is token", (TreeNode.Token is not null).ToString()) ,
@@ -30,7 +30,7 @@ internal class ParseTreeNodeInfo
             new("Is unary postfix operation", TreeNode.IsUnaryPostfixOperation().ToString()) ,
             new("Is unary prefix operation", TreeNode.IsUnaryPrefixOperation().ToString()) ,
             new("Is union", TreeNode.IsUnion().ToString()) ,
-        ];    
+        ];
 }
 
 internal class NodeMetadata

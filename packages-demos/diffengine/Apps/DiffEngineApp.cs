@@ -4,7 +4,7 @@ namespace DiffengineExample.Apps;
 public class DiffEngineApp : ViewBase
 {
     private const float MainCardWidthFraction = 0.8f;
-    
+
     private static readonly string[] Extensions =
     {
         "txt", "json"

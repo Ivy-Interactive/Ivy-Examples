@@ -23,41 +23,41 @@ public class QrCodeService : IQrCodeService
     private static string GenerateVCard(string firstName, string lastName, string email, string? phone, string? linkedin, string? github)
     {
         var vCard = new StringBuilder();
-        
+
         // vCard header
         vCard.AppendLine("BEGIN:VCARD");
         vCard.AppendLine("VERSION:3.0");
-        
+
         // Full name
         vCard.AppendLine($"FN:{firstName} {lastName}");
-        
+
         // Structured name (Last;First;;;)
         vCard.AppendLine($"N:{lastName};{firstName};;;");
-        
+
         // Email
         vCard.AppendLine($"EMAIL;TYPE=INTERNET:{email}");
-        
+
         // Phone (if provided)
         if (!string.IsNullOrWhiteSpace(phone))
         {
             vCard.AppendLine($"TEL;TYPE=CELL:{phone}");
         }
-        
+
         // LinkedIn URL as a URL field
         if (!string.IsNullOrWhiteSpace(linkedin))
         {
             vCard.AppendLine($"URL;TYPE=LinkedIn:{linkedin}");
         }
-        
+
         // GitHub URL as a URL field
         if (!string.IsNullOrWhiteSpace(github))
         {
             vCard.AppendLine($"URL;TYPE=GitHub:{github}");
         }
-        
+
         // vCard footer
         vCard.AppendLine("END:VCARD");
-        
+
         return vCard.ToString();
     }
 }

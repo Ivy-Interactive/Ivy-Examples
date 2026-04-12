@@ -4,20 +4,20 @@ namespace ZStringExample;
 public class ZStringApp : ViewBase
 {
     private static readonly Dictionary<string, (string code, Func<string> execute)> Operations = new()
-        {
-            ["Concat"] = (
+    {
+        ["Concat"] = (
                 "var output = ZString.Concat(\"Hello\", \" \", \"Ivy\", \" \", 2025);",
                 () => ZString.Concat("Hello", " ", "Ivy", " ", 2025)
             ),
-            ["Format"] = (
+        ["Format"] = (
                 "var output = ZString.Format(\"Pi is {0:0.00}\", 3.14159);",
                 () => ZString.Format("Pi is {0:0.00}", 3.14159)
             ),
-            ["Join"] = (
+        ["Join"] = (
                 "var output = ZString.Join(\", \", new[] { \"A\", \"B\", \"C\" });",
                 () => ZString.Join(", ", new[] { "A", "B", "C" })
             ),
-            ["CreateStringBuilder"] = (
+        ["CreateStringBuilder"] = (
                 "using var sb = ZString.CreateStringBuilder();\n" +
                 "sb.Append(\"foo\");\n" +
                 "sb.AppendLine(42);\n" +
@@ -31,8 +31,8 @@ public class ZStringApp : ViewBase
                     sb.AppendFormat("{0} {1:.###}", "bar", 123.456789);
                     return sb.ToString();
                 }
-            ),
-            ["Prepared Format"] = (
+        ),
+        ["Prepared Format"] = (
                 "var tpl = ZString.PrepareUtf16<int, int>(\"x:{0}, y:{1:000}\");\n" +
                 "var output = tpl.Format(10, 20);",
                 () =>
@@ -40,8 +40,8 @@ public class ZStringApp : ViewBase
                     var tpl = ZString.PrepareUtf16<int, int>("x:{0}, y:{1:000}");
                     return tpl.Format(10, 20);
                 }
-            ),
-            ["AppendJoin"] = (
+        ),
+        ["AppendJoin"] = (
                 "using var sb = ZString.CreateStringBuilder();\n" +
                 "sb.AppendJoin(\" -> \", new[] { \"Start\", \"Middle\", \"End\" });\n" +
                 "var output = sb.ToString();",
@@ -51,8 +51,8 @@ public class ZStringApp : ViewBase
                     sb.AppendJoin(" -> ", new[] { "Start", "Middle", "End" });
                     return sb.ToString();
                 }
-            ),
-            ["AppendFormat Multiple"] = (
+        ),
+        ["AppendFormat Multiple"] = (
                 "using var sb = ZString.CreateStringBuilder();\n" +
                 "sb.AppendFormat(\"Name: {0}, Age: {1}, Score: {2:F2}\", \"Alice\", 28, 95.678);\n" +
                 "var output = sb.ToString();",
@@ -62,8 +62,8 @@ public class ZStringApp : ViewBase
                     sb.AppendFormat("Name: {0}, Age: {1}, Score: {2:F2}", "Alice", 28, 95.678);
                     return sb.ToString();
                 }
-            ),
-            ["AppendLine"] = (
+        ),
+        ["AppendLine"] = (
                 "using var sb = ZString.CreateStringBuilder();\n" +
                 "sb.AppendLine(\"First line\");\n" +
                 "sb.AppendLine(\"Second line\");\n" +
@@ -79,8 +79,8 @@ public class ZStringApp : ViewBase
                     sb.AppendLine("After empty line");
                     return sb.ToString();
                 }
-            ),
-            ["Append With Format"] = (
+        ),
+        ["Append With Format"] = (
                 "using var sb = ZString.CreateStringBuilder();\n" +
                 "sb.Append(3.14159, \"F4\");\n" +
                 "sb.Append(\" | \");\n" +
@@ -98,8 +98,8 @@ public class ZStringApp : ViewBase
                     sb.Append(42, "X");
                     return sb.ToString();
                 }
-            ),
-            ["TryCopyTo"] = (
+        ),
+        ["TryCopyTo"] = (
                 "using var sb = ZString.CreateStringBuilder();\n" +
                 "sb.Append(\"Hello, World!\");\n" +
                 "var buffer = new char[sb.Length];\n" +
@@ -118,7 +118,7 @@ public class ZStringApp : ViewBase
                     }
                     return "Failed to copy";
                 }
-            )
+        )
     };
 
     public override object Build()
@@ -176,7 +176,7 @@ public class ZStringApp : ViewBase
                 | new Spacer().Height(Size.Units(5))
                 | Text.Block("This demo uses ZString library to format strings.")
                 | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [ZString](https://github.com/Cysharp/ZString)")
-            
+
             ).Width(Size.Fraction(0.4f));
     }
 }

@@ -1,5 +1,4 @@
-﻿using Ivy;
-using OpenAI.Chat;
+﻿using OpenAI.Chat;
 
 namespace OpenAIExample.Apps
 {

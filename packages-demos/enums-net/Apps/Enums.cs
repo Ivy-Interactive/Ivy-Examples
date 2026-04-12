@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel;
 using EnumsNET;
 // Target: Enums.NET v5.0.0
