@@ -4,10 +4,10 @@ public class BookListBlade : ViewBase
 {
     public override object? Build()
     {
-        var volume       = UseService<IVolume>();
-        var blades       = UseContext<IBladeService>();
+        var volume = UseService<IVolume>();
+        var blades = UseContext<IBladeService>();
         var refreshToken = UseRefreshToken();
-        var refreshKey   = UseState(0);
+        var refreshKey = UseState(0);
 
         UseEffect(() =>
         {
@@ -25,10 +25,10 @@ public class BookListBlade : ViewBase
             var subtitle = $"{book.Author}  ·  {BookStore.StatusLabel(book.Status)}";
             Icons icon = book.Status switch
             {
-                BookStatus.Reading   => Icons.BookMarked,
+                BookStatus.Reading => Icons.BookMarked,
                 BookStatus.Completed => Icons.BookCheck,
-                BookStatus.Paused    => Icons.BookDashed,
-                _                   => Icons.BookOpen
+                BookStatus.Paused => Icons.BookDashed,
+                _ => Icons.BookOpen
             };
             return new ListItem(title: book.Title, subtitle: subtitle, onClick: onItemClick, tag: book, icon: icon);
         }

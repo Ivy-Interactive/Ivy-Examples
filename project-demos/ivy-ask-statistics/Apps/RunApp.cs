@@ -685,16 +685,16 @@ public class RunApp : ViewBase
 
             var run = new TestRunEntity
             {
-                IvyVersion       = ivyVersion,
-                Environment    = mcpEnvironment.Trim().ToLowerInvariant() is "staging" ? "staging" : "production",
+                IvyVersion = ivyVersion,
+                Environment = mcpEnvironment.Trim().ToLowerInvariant() is "staging" ? "staging" : "production",
                 DifficultyFilter = string.IsNullOrEmpty(difficultyFilter) ? "all" : difficultyFilter,
-                Concurrency    = concurrency ?? "",
+                Concurrency = concurrency ?? "",
                 TotalQuestions = snapshot.Count,
-                StartedAt      = startedAtUtc,
-                SuccessCount   = ordered.Count(r => r.Status == "success"),
-                NoAnswerCount  = ordered.Count(r => r.Status == "no_answer"),
-                ErrorCount     = ordered.Count(r => r.Status == "error"),
-                CompletedAt    = DateTime.UtcNow
+                StartedAt = startedAtUtc,
+                SuccessCount = ordered.Count(r => r.Status == "success"),
+                NoAnswerCount = ordered.Count(r => r.Status == "no_answer"),
+                ErrorCount = ordered.Count(r => r.Status == "error"),
+                CompletedAt = DateTime.UtcNow
             };
             ctx.TestRuns.Add(run);
 

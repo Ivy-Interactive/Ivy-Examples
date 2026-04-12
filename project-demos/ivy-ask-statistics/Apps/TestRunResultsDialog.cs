@@ -10,8 +10,8 @@ internal sealed class TestRunResultsDialog(
 {
     public override object? Build()
     {
-        var factory      = UseService<AppDbContextFactory>();
-        var client       = UseService<IClientProvider>();
+        var factory = UseService<AppDbContextFactory>();
+        var client = UseService<IClientProvider>();
         var queryService = UseService<IQueryService>();
         var refreshToken = UseRefreshToken();
 
@@ -29,8 +29,8 @@ internal sealed class TestRunResultsDialog(
             tags: [("run-results", runId.ToString())]);
 
         var firstLoad = resultsQuery.Loading && resultsQuery.Value == null;
-        var rows      = resultsQuery.Value?.Results ?? [];
-        var runInfo   = resultsQuery.Value?.RunInfo;
+        var rows = resultsQuery.Value?.Results ?? [];
+        var runInfo = resultsQuery.Value?.RunInfo;
 
         void Close() => isOpen.Set(false);
 
@@ -52,9 +52,9 @@ internal sealed class TestRunResultsDialog(
                             .Where(r => r.TestRunId == runId)
                             .ToListAsync();
                         run.TotalQuestions = remaining.Count;
-                        run.SuccessCount   = remaining.Count(r => r.IsSuccess);
-                        run.NoAnswerCount  = remaining.Count(r => !r.IsSuccess && r.HttpStatus == 404);
-                        run.ErrorCount     = remaining.Count(r => !r.IsSuccess && r.HttpStatus != 404);
+                        run.SuccessCount = remaining.Count(r => r.IsSuccess);
+                        run.NoAnswerCount = remaining.Count(r => !r.IsSuccess && r.HttpStatus == 404);
+                        run.ErrorCount = remaining.Count(r => !r.IsSuccess && r.HttpStatus != 404);
                         await ctx.SaveChangesAsync();
                     }
                 }
@@ -82,17 +82,17 @@ internal sealed class TestRunResultsDialog(
                 .Key($"run-results-tbl-{runId}")
                 .Height(Size.Units(120))
                 .RefreshToken(refreshToken)
-                .Header(r => r.Widget,        "Widget")
-                .Header(r => r.Difficulty,    "Difficulty")
-                .Header(r => r.Question,      "Question")
-                .Header(r => r.Status,        "Status")
-                .Header(r => r.Response,      "Response")
+                .Header(r => r.Widget, "Widget")
+                .Header(r => r.Difficulty, "Difficulty")
+                .Header(r => r.Question, "Question")
+                .Header(r => r.Status, "Status")
+                .Header(r => r.Response, "Response")
                 .Header(r => r.ResponseTimeMs, "Time (ms)")
-                .Width(r => r.Widget,         Size.Px(130))
-                .Width(r => r.Difficulty,     Size.Px(80))
-                .Width(r => r.Status,         Size.Px(90))
+                .Width(r => r.Widget, Size.Px(130))
+                .Width(r => r.Difficulty, Size.Px(80))
+                .Width(r => r.Status, Size.Px(90))
                 .Width(r => r.ResponseTimeMs, Size.Px(80))
-                .Width(r => r.Response,       Size.Px(300))
+                .Width(r => r.Response, Size.Px(300))
                 .Hidden(r => r.ResultId)
                 .Hidden(r => r.QuestionId)
                 .AlignContent(r => r.ResponseTimeMs, Align.Left)
@@ -102,7 +102,7 @@ internal sealed class TestRunResultsDialog(
                 .OnRowAction(e =>
                 {
                     var args = e.Value;
-                    var tag  = args?.Tag?.ToString();
+                    var tag = args?.Tag?.ToString();
                     if (!Guid.TryParse(args?.Id?.ToString(), out var resultId))
                         return ValueTask.CompletedTask;
 
@@ -133,9 +133,9 @@ internal sealed class TestRunResultsDialog(
                 })
                 .Config(c =>
                 {
-                    c.AllowSorting    = true;
-                    c.AllowFiltering  = true;
-                    c.ShowSearch      = true;
+                    c.AllowSorting = true;
+                    c.AllowFiltering = true;
+                    c.ShowSearch = true;
                     c.ShowIndexColumn = false;
                 });
         }
@@ -161,7 +161,7 @@ internal sealed class TestRunResultsDialog(
     {
         await using var ctx = factory.CreateDbContext();
 
-        var run     = await ctx.TestRuns.AsNoTracking().FirstOrDefaultAsync(r => r.Id == runId, ct);
+        var run = await ctx.TestRuns.AsNoTracking().FirstOrDefaultAsync(r => r.Id == runId, ct);
         var runInfo = run == null ? null : new RunInfo(run.IvyVersion ?? "", run.Environment ?? "production");
 
         var results = await ctx.TestResults.AsNoTracking()

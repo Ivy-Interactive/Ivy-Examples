@@ -100,8 +100,8 @@ public class SharpYamlApp : ViewBase
             .Gap(1)
             | Text.Block("This demo uses SharpYaml library for converting JSON to YAML.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [SharpYaml](https://github.com/xoofx/SharpYaml)")
-            ;       
-        
+            ;
+
         var convertBtn = new Button("Convert")
             .Primary()
             .OnClick(_ =>

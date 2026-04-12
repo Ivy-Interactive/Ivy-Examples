@@ -16,9 +16,9 @@ public class VcConnection : IConnection
     public string GetName() => nameof(Vc);
 
     public string GetNamespace() => typeof(VcConnection).Namespace;
-    
+
     public string GetConnectionType() => "EntityFramework.Sqlite";
-    
+
     public ConnectionEntity[] GetEntities()
     {
         return typeof(VcContext)

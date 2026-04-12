@@ -1,5 +1,3 @@
-using System.ComponentModel;
-
 namespace MicrosoftAgentFramework.Services;
 
 /// <summary>
@@ -12,11 +10,11 @@ public static class AgentTools
     /// </summary>
     [Description("Get the current date and time. Useful for answering questions about what day it is, what time it is, or scheduling-related queries.")]
     public static string GetCurrentTime(
-        [Description("The timezone to get the time for (optional, defaults to local time). Examples: 'UTC', 'America/New_York', 'Europe/London'.")] 
+        [Description("The timezone to get the time for (optional, defaults to local time). Examples: 'UTC', 'America/New_York', 'Europe/London'.")]
         string? timezone = null)
     {
         var now = DateTime.Now;
-        
+
         if (!string.IsNullOrWhiteSpace(timezone))
         {
             try
@@ -29,7 +27,7 @@ public static class AgentTools
                 // If timezone is invalid, use local time
             }
         }
-        
+
         return $"Current date and time: {now:yyyy-MM-dd HH:mm:ss} ({now:dddd})";
     }
 
@@ -38,14 +36,14 @@ public static class AgentTools
     /// </summary>
     [Description("Perform mathematical calculations. Can handle basic arithmetic (+, -, *, /), powers (^), and common functions like sqrt, sin, cos, etc. Use this when the user asks to calculate something, solve a math problem, or perform computations.")]
     public static string Calculate(
-        [Description("The mathematical expression to evaluate. Examples: '2 + 2', '10 * 5', 'sqrt(16)', '2^3', '(10 + 5) / 3'.")] 
+        [Description("The mathematical expression to evaluate. Examples: '2 + 2', '10 * 5', 'sqrt(16)', '2^3', '(10 + 5) / 3'.")]
         string expression)
     {
         try
         {
             // Simple calculation using DataTable.Compute for safety
             var dataTable = new System.Data.DataTable();
-            
+
             // Replace common math functions
             expression = expression.Replace("sqrt", "Math.Sqrt", StringComparison.OrdinalIgnoreCase);
             expression = expression.Replace("sin", "Math.Sin", StringComparison.OrdinalIgnoreCase);
@@ -53,10 +51,10 @@ public static class AgentTools
             expression = expression.Replace("tan", "Math.Tan", StringComparison.OrdinalIgnoreCase);
             expression = expression.Replace("log", "Math.Log", StringComparison.OrdinalIgnoreCase);
             expression = expression.Replace("^", "Pow", StringComparison.OrdinalIgnoreCase);
-            
+
             // For simple expressions, use DataTable.Compute
             // For more complex expressions with functions, use a simple evaluator
-            if (expression.Contains("Math.", StringComparison.OrdinalIgnoreCase) || 
+            if (expression.Contains("Math.", StringComparison.OrdinalIgnoreCase) ||
                 expression.Contains("Pow", StringComparison.OrdinalIgnoreCase))
             {
                 // Use C# expression evaluator for complex math
@@ -88,24 +86,24 @@ public static class AgentTools
                     return " + expression + @"; 
                 } 
             }";
-        
+
         // For now, use a simpler approach
         // Replace Math functions with actual values
         expression = System.Text.RegularExpressions.Regex.Replace(
-            expression, 
-            @"Math\.Sqrt\(([^)]+)\)", 
+            expression,
+            @"Math\.Sqrt\(([^)]+)\)",
             m => Math.Sqrt(double.Parse(m.Groups[1].Value)).ToString());
-        
+
         expression = System.Text.RegularExpressions.Regex.Replace(
-            expression, 
-            @"Math\.Sin\(([^)]+)\)", 
+            expression,
+            @"Math\.Sin\(([^)]+)\)",
             m => Math.Sin(double.Parse(m.Groups[1].Value)).ToString());
-        
+
         expression = System.Text.RegularExpressions.Regex.Replace(
-            expression, 
-            @"Math\.Cos\(([^)]+)\)", 
+            expression,
+            @"Math\.Cos\(([^)]+)\)",
             m => Math.Cos(double.Parse(m.Groups[1].Value)).ToString());
-        
+
         var dataTable = new System.Data.DataTable();
         return Convert.ToDouble(dataTable.Compute(expression, null));
     }
@@ -126,10 +124,10 @@ public static class AgentTools
             {
                 using var httpClient = new HttpClient();
                 httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", bingApiKey);
-                
+
                 var searchUrl = $"https://api.bing.microsoft.com/v7.0/search?q={Uri.EscapeDataString(query)}&count=5";
                 var response = await httpClient.GetStringAsync(searchUrl);
-                
+
                 // Parse JSON response (simplified - in production use proper JSON parsing)
                 // For now, return a simple message
                 return $"Web search results for '{query}': Search completed. (Note: Full results parsing requires JSON deserialization. This is a simplified implementation.)";
@@ -159,7 +157,7 @@ public class SearchWebTool
     /// </summary>
     [Description("Search the web for current information, news, or facts. Use this when the user asks about recent events, current information, or anything that requires up-to-date data from the internet. Requires Bing Search API key to be configured.")]
     public async Task<string> SearchWeb(
-        [Description("The search query to look up on the web.")] 
+        [Description("The search query to look up on the web.")]
         string query)
     {
         if (string.IsNullOrWhiteSpace(_bingApiKey))
@@ -171,10 +169,10 @@ public class SearchWebTool
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", _bingApiKey);
-            
+
             var searchUrl = $"https://api.bing.microsoft.com/v7.0/search?q={Uri.EscapeDataString(query)}&count=5";
             var response = await httpClient.GetStringAsync(searchUrl);
-            
+
             // Parse JSON response (simplified - in production use proper JSON parsing)
             // For now, return a simple message
             return $"Web search results for '{query}': Search completed. (Note: Full results parsing requires JSON deserialization. This is a simplified implementation.)";

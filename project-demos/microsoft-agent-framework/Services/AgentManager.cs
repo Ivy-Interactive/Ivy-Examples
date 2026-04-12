@@ -1,7 +1,5 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using OllamaSharp;
-using MicrosoftAgentFramework.Models;
 
 namespace MicrosoftAgentFramework.Services;
 
@@ -30,12 +28,12 @@ public class AgentManager : IDisposable
     public void ConfigureAgent(AgentConfiguration config)
     {
         _currentConfig = config;
-        
+
         // Use model from agent configuration, fallback to constructor model if not set
-        var modelToUse = !string.IsNullOrWhiteSpace(config.OllamaModel) 
-            ? config.OllamaModel 
+        var modelToUse = !string.IsNullOrWhiteSpace(config.OllamaModel)
+            ? config.OllamaModel
             : _ollamaModel;
-        
+
         // Create OllamaApiClient which implements IChatClient
         var ollamaClient = new OllamaApiClient(new Uri(_ollamaUrl), modelToUse);
 
@@ -71,7 +69,7 @@ public class AgentManager : IDisposable
             // Run agent using Microsoft Agent Framework
             // Tools are not used for now
             var response = await _agent.RunAsync(userMessage);
-            
+
             return response.Text ?? response.ToString() ?? "I couldn't generate a response.";
         }
         catch (Exception ex)

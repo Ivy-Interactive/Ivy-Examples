@@ -36,20 +36,21 @@ public class FluentDateTimeApp : ViewBase
                              .OnClick(() => showResult.Set(true))
                          | new Button("Clear")
                              .Secondary()
-                             .OnClick(() => {
+                             .OnClick(() =>
+                             {
                                  showResult.Set(false);
                                  operation.Set("Add");
                                  unit.Set("Days");
                                  amount.Set(30);
                                  baseDateTime.Set(DateTime.Now);
                              }))
-                          | (showResult.Value ? 
+                          | (showResult.Value ?
                               new Card(
                                   Layout.Vertical()
                                   | Text.H3("Result").Bold()
                                   | Text.Markdown($"**Computed date**: `{resultDate:yyyy-MM-dd HH:mm}`")
                                   | Text.Markdown($"**Difference**: `{(int)(resultDate - baseDateTime.Value).TotalDays} days`")
-                              ) : 
+                              ) :
                               Text.Muted("Click 'Calculate' to see the result")
                             )
                          | new Spacer()
@@ -75,12 +76,12 @@ public class FluentDateTimeApp : ViewBase
         new Option<string?>("Years", "Years"),
     ];
 
-    
+
 
     private static DateTime ComputeDate(DateTime baseDate, string? operation, string? unit, int amount)
     {
         var isSubtract = string.Equals(operation, "Subtract", StringComparison.OrdinalIgnoreCase);
-    if (unit == "Months") return baseDate.AddMonths(isSubtract ? -amount : amount);
+        if (unit == "Months") return baseDate.AddMonths(isSubtract ? -amount : amount);
         if (unit == "Years") return baseDate.AddYears(isSubtract ? -amount : amount);
 
         var span = unit switch

@@ -36,7 +36,7 @@ public class BookEditSheet(IState<bool> isOpen, RefreshToken refreshToken, Guid 
 
     public override object? Build()
     {
-        var volume    = UseService<IVolume>();
+        var volume = UseService<IVolume>();
         var bookState = UseState<Book?>(() => null);
         var prevStatus = UseState(BookStatus.WantToRead);
 
@@ -52,14 +52,14 @@ public class BookEditSheet(IState<bool> isOpen, RefreshToken refreshToken, Guid 
 
         return bookState
             .ToForm()
-            .Builder(b => b!.Title,      e => e.ToTextInput())
-            .Builder(b => b!.Author,     e => e.ToTextInput())
-            .Builder(b => b!.Genre,      e => e.ToSelectInput(GenreOptions))
-            .Builder(b => b!.Status,     e => e.ToSelectInput(StatusOptions))
-            .Builder(b => b!.Rating,     e => e.ToSelectInput(RatingOptions))
+            .Builder(b => b!.Title, e => e.ToTextInput())
+            .Builder(b => b!.Author, e => e.ToTextInput())
+            .Builder(b => b!.Genre, e => e.ToSelectInput(GenreOptions))
+            .Builder(b => b!.Status, e => e.ToSelectInput(StatusOptions))
+            .Builder(b => b!.Rating, e => e.ToSelectInput(RatingOptions))
             .Builder(b => b!.TotalPages, e => e.ToNumberInput())
-            .Builder(b => b!.PagesRead,  e => e.ToNumberInput())
-            .Builder(b => b!.Notes,      e => e.ToTextareaInput())
+            .Builder(b => b!.PagesRead, e => e.ToNumberInput())
+            .Builder(b => b!.Notes, e => e.ToTextareaInput())
             .Remove(b => b!.Id, b => b!.AddedAt, b => b!.FinishedAt)
             .OnSubmit(OnSubmit)
             .ToSheet(isOpen, "Edit Book");

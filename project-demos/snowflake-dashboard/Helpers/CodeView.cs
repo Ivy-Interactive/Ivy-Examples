@@ -6,16 +6,16 @@ public class CodeView : ViewBase
     {
         var assembly = typeof(CodeView).Assembly;
         var resourceName = "SnowflakeDashboard.Apps.DashboardApp.cs";
-        
+
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
         {
             return new Exception("Resource not found.");
         }
-        
+
         using var reader = new StreamReader(stream);
         var code = reader.ReadToEnd();
-        
+
         return new CodeBlock(code, Languages.Csharp).Width(Size.Fit()).Height(Size.Fit());
     }
 }

@@ -1,10 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Reflection;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-
 namespace ShowcaseCrm.Connections.ShowcaseCrm;
 
 public sealed class ShowcaseCrmContextFactory : IDbContextFactory<ShowcaseCrmContext>

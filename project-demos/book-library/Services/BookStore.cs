@@ -4,16 +4,16 @@ public enum BookStatus { WantToRead, Reading, Completed, Paused }
 
 public record Book
 {
-    public Guid      Id         { get; init; }
-    public string    Title      { get; init; } = "";
-    public string    Author     { get; init; } = "";
-    public string    Genre      { get; init; } = "";
-    public BookStatus Status    { get; init; } = BookStatus.WantToRead;
-    public int?      Rating     { get; init; }
-    public int?      TotalPages { get; init; }
-    public int?      PagesRead  { get; init; }
-    public string?   Notes      { get; init; }
-    public DateTime  AddedAt    { get; init; } = DateTime.UtcNow;
+    public Guid Id { get; init; }
+    public string Title { get; init; } = "";
+    public string Author { get; init; } = "";
+    public string Genre { get; init; } = "";
+    public BookStatus Status { get; init; } = BookStatus.WantToRead;
+    public int? Rating { get; init; }
+    public int? TotalPages { get; init; }
+    public int? PagesRead { get; init; }
+    public string? Notes { get; init; }
+    public DateTime AddedAt { get; init; } = DateTime.UtcNow;
     public DateTime? FinishedAt { get; init; }
 }
 
@@ -63,7 +63,7 @@ public static class BookStore
         await using var conn = await OpenAsync(volume);
         await using var tx = conn.BeginTransaction();
         var authorId = await GetOrCreateAuthorIdAsync(conn, tx, book.Author);
-        var genreId  = await GetOrCreateGenreIdAsync(conn, tx, book.Genre);
+        var genreId = await GetOrCreateGenreIdAsync(conn, tx, book.Genre);
         const string sql = """
             INSERT INTO Books
                 (Id, Title, AuthorId, GenreId, Status, Rating, TotalPages, PagesRead, Notes, AddedAt, FinishedAt)
@@ -71,16 +71,16 @@ public static class BookStore
                 (@Id, @Title, @AuthorId, @GenreId, @Status, @Rating, @TotalPages, @PagesRead, @Notes, @AddedAt, @FinishedAt)
             """;
         await using var cmd = new SqliteCommand(sql, conn, tx);
-        cmd.Parameters.AddWithValue("@Id",         book.Id.ToString());
-        cmd.Parameters.AddWithValue("@Title",      book.Title);
-        cmd.Parameters.AddWithValue("@AuthorId",   authorId);
-        cmd.Parameters.AddWithValue("@GenreId",    genreId);
-        cmd.Parameters.AddWithValue("@Status",     book.Status.ToString());
-        cmd.Parameters.AddWithValue("@Rating",     book.Rating     is not null ? book.Rating     : DBNull.Value);
+        cmd.Parameters.AddWithValue("@Id", book.Id.ToString());
+        cmd.Parameters.AddWithValue("@Title", book.Title);
+        cmd.Parameters.AddWithValue("@AuthorId", authorId);
+        cmd.Parameters.AddWithValue("@GenreId", genreId);
+        cmd.Parameters.AddWithValue("@Status", book.Status.ToString());
+        cmd.Parameters.AddWithValue("@Rating", book.Rating is not null ? book.Rating : DBNull.Value);
         cmd.Parameters.AddWithValue("@TotalPages", book.TotalPages is not null ? book.TotalPages : DBNull.Value);
-        cmd.Parameters.AddWithValue("@PagesRead",  book.PagesRead  is not null ? book.PagesRead  : DBNull.Value);
-        cmd.Parameters.AddWithValue("@Notes",      book.Notes      is not null ? book.Notes      : DBNull.Value);
-        cmd.Parameters.AddWithValue("@AddedAt",    book.AddedAt.ToString("O"));
+        cmd.Parameters.AddWithValue("@PagesRead", book.PagesRead is not null ? book.PagesRead : DBNull.Value);
+        cmd.Parameters.AddWithValue("@Notes", book.Notes is not null ? book.Notes : DBNull.Value);
+        cmd.Parameters.AddWithValue("@AddedAt", book.AddedAt.ToString("O"));
         cmd.Parameters.AddWithValue("@FinishedAt", book.FinishedAt is not null ? book.FinishedAt.Value.ToString("O") : DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
         await tx.CommitAsync();
@@ -92,7 +92,7 @@ public static class BookStore
         await using var conn = await OpenAsync(volume);
         await using var tx = conn.BeginTransaction();
         var authorId = await GetOrCreateAuthorIdAsync(conn, tx, book.Author);
-        var genreId  = await GetOrCreateGenreIdAsync(conn, tx, book.Genre);
+        var genreId = await GetOrCreateGenreIdAsync(conn, tx, book.Genre);
         const string sql = """
             UPDATE Books SET
                 Title      = @Title,
@@ -107,15 +107,15 @@ public static class BookStore
             WHERE Id = @Id
             """;
         await using var cmd = new SqliteCommand(sql, conn, tx);
-        cmd.Parameters.AddWithValue("@Id",         book.Id.ToString());
-        cmd.Parameters.AddWithValue("@Title",      book.Title);
-        cmd.Parameters.AddWithValue("@AuthorId",   authorId);
-        cmd.Parameters.AddWithValue("@GenreId",    genreId);
-        cmd.Parameters.AddWithValue("@Status",     book.Status.ToString());
-        cmd.Parameters.AddWithValue("@Rating",     book.Rating     is not null ? book.Rating     : DBNull.Value);
+        cmd.Parameters.AddWithValue("@Id", book.Id.ToString());
+        cmd.Parameters.AddWithValue("@Title", book.Title);
+        cmd.Parameters.AddWithValue("@AuthorId", authorId);
+        cmd.Parameters.AddWithValue("@GenreId", genreId);
+        cmd.Parameters.AddWithValue("@Status", book.Status.ToString());
+        cmd.Parameters.AddWithValue("@Rating", book.Rating is not null ? book.Rating : DBNull.Value);
         cmd.Parameters.AddWithValue("@TotalPages", book.TotalPages is not null ? book.TotalPages : DBNull.Value);
-        cmd.Parameters.AddWithValue("@PagesRead",  book.PagesRead  is not null ? book.PagesRead  : DBNull.Value);
-        cmd.Parameters.AddWithValue("@Notes",      book.Notes      is not null ? book.Notes      : DBNull.Value);
+        cmd.Parameters.AddWithValue("@PagesRead", book.PagesRead is not null ? book.PagesRead : DBNull.Value);
+        cmd.Parameters.AddWithValue("@Notes", book.Notes is not null ? book.Notes : DBNull.Value);
         cmd.Parameters.AddWithValue("@FinishedAt", book.FinishedAt is not null ? book.FinishedAt.Value.ToString("O") : DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
         await tx.CommitAsync();
@@ -134,10 +134,10 @@ public static class BookStore
     public static string StatusLabel(BookStatus s) => s switch
     {
         BookStatus.WantToRead => "Want to Read",
-        BookStatus.Reading    => "Reading",
-        BookStatus.Completed  => "Completed",
-        BookStatus.Paused     => "Paused",
-        _                     => s.ToString()
+        BookStatus.Reading => "Reading",
+        BookStatus.Completed => "Completed",
+        BookStatus.Paused => "Paused",
+        _ => s.ToString()
     };
 
     public static string RatingStars(int? rating) =>
@@ -210,16 +210,16 @@ public static class BookStore
 
     private static Book Map(SqliteDataReader r) => new()
     {
-        Id         = Guid.Parse(r.GetString(r.GetOrdinal("Id"))),
-        Title      = r.GetString(r.GetOrdinal("Title")),
-        Author     = r.GetString(r.GetOrdinal("Author")),
-        Genre      = r.GetString(r.GetOrdinal("Genre")),
-        Status     = Enum.Parse<BookStatus>(r.GetString(r.GetOrdinal("Status"))),
-        Rating     = r.IsDBNull(r.GetOrdinal("Rating"))     ? null : r.GetInt32(r.GetOrdinal("Rating")),
+        Id = Guid.Parse(r.GetString(r.GetOrdinal("Id"))),
+        Title = r.GetString(r.GetOrdinal("Title")),
+        Author = r.GetString(r.GetOrdinal("Author")),
+        Genre = r.GetString(r.GetOrdinal("Genre")),
+        Status = Enum.Parse<BookStatus>(r.GetString(r.GetOrdinal("Status"))),
+        Rating = r.IsDBNull(r.GetOrdinal("Rating")) ? null : r.GetInt32(r.GetOrdinal("Rating")),
         TotalPages = r.IsDBNull(r.GetOrdinal("TotalPages")) ? null : r.GetInt32(r.GetOrdinal("TotalPages")),
-        PagesRead  = r.IsDBNull(r.GetOrdinal("PagesRead"))  ? null : r.GetInt32(r.GetOrdinal("PagesRead")),
-        Notes      = r.IsDBNull(r.GetOrdinal("Notes"))      ? null : r.GetString(r.GetOrdinal("Notes")),
-        AddedAt    = DateTime.Parse(r.GetString(r.GetOrdinal("AddedAt"))),
+        PagesRead = r.IsDBNull(r.GetOrdinal("PagesRead")) ? null : r.GetInt32(r.GetOrdinal("PagesRead")),
+        Notes = r.IsDBNull(r.GetOrdinal("Notes")) ? null : r.GetString(r.GetOrdinal("Notes")),
+        AddedAt = DateTime.Parse(r.GetString(r.GetOrdinal("AddedAt"))),
         FinishedAt = r.IsDBNull(r.GetOrdinal("FinishedAt")) ? null : DateTime.Parse(r.GetString(r.GetOrdinal("FinishedAt"))),
     };
 }

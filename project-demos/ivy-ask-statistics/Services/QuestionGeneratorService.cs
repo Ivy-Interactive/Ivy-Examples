@@ -1,6 +1,3 @@
-using IvyAskStatistics.Connections;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
@@ -76,12 +73,12 @@ public static class QuestionGeneratorService
 
             ctx.Questions.AddRange(questions.Select(q => new QuestionEntity
             {
-                Widget     = widget.Name,
-                Category   = widget.Category,
+                Widget = widget.Name,
+                Category = widget.Category,
                 Difficulty = difficulty,
                 QuestionText = q,
-                Source     = "openai_docs",
-                CreatedAt  = DateTime.UtcNow
+                Source = "openai_docs",
+                CreatedAt = DateTime.UtcNow
             }));
 
             await ctx.SaveChangesAsync(ct);
@@ -118,9 +115,9 @@ public static class QuestionGeneratorService
     {
         var difficultyHint = difficulty switch
         {
-            "easy"   => "basic usage, creating the widget, simple properties",
+            "easy" => "basic usage, creating the widget, simple properties",
             "medium" => "events, styling, configuration, common patterns",
-            _        => "advanced composition, edge cases, integration with other Ivy widgets"
+            _ => "advanced composition, edge cases, integration with other Ivy widgets"
         };
 
         var system = new SystemChatMessage("""

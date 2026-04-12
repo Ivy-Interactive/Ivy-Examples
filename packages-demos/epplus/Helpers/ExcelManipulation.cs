@@ -1,6 +1,4 @@
-﻿using Ivy.Core.Hooks;
-
-namespace EPPlusExample.Helpers;
+﻿namespace EPPlusExample.Helpers;
 
 public static class ExcelManipulation
 {

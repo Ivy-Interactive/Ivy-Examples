@@ -1,6 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-
 namespace IvyAskStatistics.Connections;
 
 public sealed class AppDbContextFactory : IDbContextFactory<AppDbContext>

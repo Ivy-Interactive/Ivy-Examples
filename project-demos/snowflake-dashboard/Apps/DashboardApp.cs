@@ -5,7 +5,7 @@ public class DashboardApp : ViewBase
 {
     private const int LIMIT = 25;
     private const float CONTENT_WIDTH = 0.7f;
-    
+
     public override object? Build()
     {
         var refreshToken = this.UseRefreshToken();
@@ -220,7 +220,7 @@ public class DashboardApp : ViewBase
                 .Title($"Top {LIMIT} Brands")
                 .Width(Size.Fraction(CONTENT_WIDTH));
     }
-    
+
     private class BrandStats
     {
         public string Brand { get; set; } = "";
@@ -229,19 +229,19 @@ public class DashboardApp : ViewBase
         public double MinPrice { get; set; }
         public double MaxPrice { get; set; }
     }
-    
+
     private class SizeStats
     {
         public long Size { get; set; }
         public long Count { get; set; }
     }
-    
+
     private class ContainerStats
     {
         public string Container { get; set; } = "";
         public long Count { get; set; }
     }
-    
+
     // Helper methods
     private async Task<List<BrandStats>> LoadBrandsAsync(SnowflakeService service, int limit)
     {
@@ -257,7 +257,7 @@ public class DashboardApp : ViewBase
             GROUP BY P_BRAND
             ORDER BY ItemCount DESC
             LIMIT {limit}";
-        
+
         var result = await service.ExecuteQueryAsync(sql);
         return result.Rows.Cast<System.Data.DataRow>()
             .Select(row => new BrandStats
@@ -270,21 +270,21 @@ public class DashboardApp : ViewBase
             })
             .ToList();
     }
-    
+
     private void CalculateBrandStatistics(List<BrandStats> brands, IState<long> totalItems, IState<double> avgPrice, IState<double> minPrice, IState<double> maxPrice)
     {
         if (brands.Count == 0) return;
-        
+
         totalItems.Value = brands.Sum(b => b.ItemCount);
         avgPrice.Value = brands.Average(b => b.AvgPrice);
         minPrice.Value = brands.Min(b => b.MinPrice);
         maxPrice.Value = brands.Max(b => b.MaxPrice);
     }
-    
+
     private async Task LoadPopularBrandDataAsync(SnowflakeService service, string brand, IState<List<SizeStats>> popularBrandSizes, IState<List<ContainerStats>> popularBrandContainers)
     {
         var escapedBrand = brand.Replace("'", "''");
-        
+
         // Load sizes
         var sizesSql = $@"
             SELECT P_SIZE as Size, COUNT(*) as Count
@@ -292,7 +292,7 @@ public class DashboardApp : ViewBase
             WHERE P_BRAND = '{escapedBrand}' AND P_SIZE IS NOT NULL
             GROUP BY P_SIZE
             ORDER BY Count DESC";
-        
+
         var sizesResult = await service.ExecuteQueryAsync(sizesSql);
         popularBrandSizes.Value = sizesResult.Rows.Cast<System.Data.DataRow>()
             .Select(row => new SizeStats
@@ -301,7 +301,7 @@ public class DashboardApp : ViewBase
                 Count = Convert.ToInt64(row["Count"] ?? 0)
             })
             .ToList();
-        
+
         // Load containers
         var containersSql = $@"
             SELECT P_CONTAINER as Container, COUNT(*) as Count
@@ -309,7 +309,7 @@ public class DashboardApp : ViewBase
             WHERE P_BRAND = '{escapedBrand}' AND P_CONTAINER IS NOT NULL
             GROUP BY P_CONTAINER
             ORDER BY Count DESC";
-        
+
         var containersResult = await service.ExecuteQueryAsync(containersSql);
         popularBrandContainers.Value = containersResult.Rows.Cast<System.Data.DataRow>()
             .Select(row => new ContainerStats
@@ -319,7 +319,7 @@ public class DashboardApp : ViewBase
             })
             .ToList();
     }
-    
+
     private async Task<List<ContainerStats>> LoadContainersAsync(SnowflakeService service, int limit)
     {
         var sql = $@"
@@ -329,7 +329,7 @@ public class DashboardApp : ViewBase
             GROUP BY P_CONTAINER
             ORDER BY Count DESC
             LIMIT {limit}";
-        
+
         var result = await service.ExecuteQueryAsync(sql);
         return result.Rows.Cast<System.Data.DataRow>()
             .Select(row => new ContainerStats

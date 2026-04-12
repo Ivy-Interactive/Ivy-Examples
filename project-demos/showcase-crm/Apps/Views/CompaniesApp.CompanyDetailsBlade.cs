@@ -102,7 +102,7 @@ public class CompanyDetailsBlade(int companyId) : ViewBase
                 .RemoveEmpty()
                 .Builder(e => e.Id, e => e.CopyToClipboard()),
             footer: Layout.Horizontal().Gap(2).AlignContent(Align.Right)
-                    | deleteBtn 
+                    | deleteBtn
                     | editBtn
         ).Title("Company Details").Width(Size.Units(100));
 

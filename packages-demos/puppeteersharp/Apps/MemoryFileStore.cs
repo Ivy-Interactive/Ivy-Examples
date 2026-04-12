@@ -14,7 +14,7 @@
         public static (byte[] Data, string ContentType, string FileName)? Get(string id)
         {
             if (_files.TryGetValue(id, out var file))
-                return new (file.Data, file.ContentType, file.FileName);
+                return new(file.Data, file.ContentType, file.FileName);
 
             _files.Remove(id);
             return null;

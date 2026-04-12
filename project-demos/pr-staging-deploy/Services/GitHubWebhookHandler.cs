@@ -2,7 +2,6 @@ namespace PrStagingDeploy.Services;
 
 using System.Security.Cryptography;
 using System.Text;
-using PrStagingDeploy.Models;
 
 /// <summary>
 /// Handles GitHub webhooks: pull_request (opened/reopened/synchronize → deploy; closed → delete staging), issue_comment (/deploy).

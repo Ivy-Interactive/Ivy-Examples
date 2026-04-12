@@ -1,5 +1,3 @@
-using Ivy;
-
 namespace CourseTemplate.Helpers;
 
 public static class Hooks

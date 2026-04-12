@@ -63,12 +63,12 @@ public class AgentListView : ViewBase
                 isSettingsOpen.Set(true);
                 return;
             }
-            
+
             // Use agent's model if set, otherwise fall back to global model
-            var modelToUse = !string.IsNullOrWhiteSpace(agent.OllamaModel) 
-                ? agent.OllamaModel 
+            var modelToUse = !string.IsNullOrWhiteSpace(agent.OllamaModel)
+                ? agent.OllamaModel
                 : (_ollamaModel.Value ?? "llama2");
-            
+
             blades.Push(this, new AgentChatView(agent, _agents, _ollamaUrl.Value!, modelToUse, _bingApiKey.Value), agent.Name, Size.Units(220));
         }
 
@@ -89,14 +89,14 @@ public class AgentListView : ViewBase
         async Task<AgentConfiguration[]> FetchAgents(string filter)
         {
             await Task.CompletedTask; // Make it async for FilteredListView
-            
+
             var allAgents = _agents.Value?.ToList() ?? new List<AgentConfiguration>();
-            
+
             if (!string.IsNullOrWhiteSpace(filter))
             {
                 filter = filter.Trim();
                 allAgents = allAgents
-                    .Where(a => a != null && 
+                    .Where(a => a != null &&
                                (a.Name?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
                                (a.Description?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false))
                     .ToList();

@@ -20,7 +20,7 @@
             var checkoutUrl = UseState(string.Empty);
             var isCreatingCheckout = UseState(false);
 
-            
+
             var apiKey = configuration["Stripe:SecretKey"]
                 ?? throw new InvalidOperationException("Stripe secret key is not configured.");
             var baseUrl = "http://localhost:5010/stripe-net-example";
@@ -54,8 +54,8 @@
                 {
                     var session = CreateCheckoutSession(productName.Value, currency.Value, amount.Value, quantity.Value, apiKey, baseUrl);
                     checkoutUrl.Value = session.Url ?? string.Empty;
-                    client.Toast(string.IsNullOrEmpty(checkoutUrl.Value) 
-                        ? "Stripe did not return a checkout URL." 
+                    client.Toast(string.IsNullOrEmpty(checkoutUrl.Value)
+                        ? "Stripe did not return a checkout URL."
                         : "Checkout session created. Complete it below.", "Stripe");
                 }
                 catch (Exception ex)
@@ -66,7 +66,7 @@
                 {
                     isCreatingCheckout.Value = false;
                 }
-            } 
+            }
 
             if (!string.IsNullOrEmpty(checkoutUrl.Value))
             {

@@ -1,6 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-
 namespace IvyAskStatistics.Connections;
 
 public class AppConnection : IConnection

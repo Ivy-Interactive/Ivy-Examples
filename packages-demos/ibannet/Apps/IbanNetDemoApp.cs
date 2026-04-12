@@ -8,7 +8,7 @@
         private readonly IbanRegistry _registry;
         private readonly SwiftRegistryProvider _swiftProvider = new();
         private readonly WikipediaRegistryProvider _wikiProvider = new();
-        
+
         /// <summary>Initialize components for IBAN parsing, validation, and registry</summary>
         public IbanNetDemoApp()
         {
@@ -58,7 +58,7 @@
                 | generateBtn
                 | new Spacer()
                 | Text.Block("This demo uses IbanNet library to validate and generate IBAN numbers.")
-			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [IbanNet](https://github.com/skwasjer/IbanNet)")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [IbanNet](https://github.com/skwasjer/IbanNet)")
                 ).Width(Size.Fraction(0.35f)).Height(Size.Fit().Min(Size.Full()));
 
             // Right Card - Results
@@ -66,7 +66,7 @@
                 Layout.Vertical()
                 | (hasValidIban
                     ? new IbanDetailsView(iban)
-                    :Layout.Vertical()
+                    : Layout.Vertical()
                     | Text.H3("IBAN Details")
                     | Layout.Vertical()
                         | Callout.Info("Enter a valid IBAN number in the left panel or generate a test IBAN to see detailed information here.", "Instructions")

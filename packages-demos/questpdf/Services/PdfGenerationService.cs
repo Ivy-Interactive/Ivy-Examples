@@ -2,11 +2,11 @@ namespace QuestPdfExample.Services;
 
 public class PdfGenerationService
 {
-    
+
     public byte[] GeneratePdf(string title, string markdown, PdfSettings settings)
     {
         using var ms = new MemoryStream();
-        
+
         Document.Create(container =>
         {
             container.Page(page =>
@@ -17,17 +17,17 @@ public class PdfGenerationService
                 AddFooter(page);
             });
         }).GeneratePdf(ms);
-        
+
         return ms.ToArray();
     }
-    
+
     private void ConfigurePage(PageDescriptor page, PdfSettings settings)
     {
         page.Size(settings.GetPageSize());
         page.Margin(settings.Margins);
         page.DefaultTextStyle(t => t.FontSize(12));
     }
-    
+
     private void AddHeader(PageDescriptor page)
     {
         page.Header()
@@ -35,16 +35,16 @@ public class PdfGenerationService
             .SemiBold()
             .FontSize(14);
     }
-    
+
     private void AddContent(PageDescriptor page, string title, string markdown)
     {
         page.Content().Column(col =>
         {
             col.Spacing(10);
-            
+
             // Title
             col.Item().Text(title).FontSize(20).SemiBold();
-            
+
             // Render Markdown content directly (temporary fix)
             col.Item().Column(md =>
             {
@@ -149,7 +149,7 @@ public class PdfGenerationService
                         var checkboxText = trimmed.Substring(5).Trim();
                         md.Item().PaddingVertical(2).PaddingLeft(basePadding).Row(row =>
                         {
-                            row.ConstantItem(14).Element(c => 
+                            row.ConstantItem(14).Element(c =>
                                 c.Border(1).Width(14).Height(14).MinWidth(14).MaxWidth(14).AlignCenter().Text(t => t.Span("✓").FontSize(10))
                             );
                             row.RelativeItem().PaddingLeft(4).Text(t => RenderInline(t, checkboxText));
@@ -160,7 +160,7 @@ public class PdfGenerationService
                         var checkboxText = trimmed.Substring(5).Trim();
                         md.Item().PaddingVertical(2).PaddingLeft(basePadding).Row(row =>
                         {
-                            row.ConstantItem(14).Element(c => 
+                            row.ConstantItem(14).Element(c =>
                                 c.Border(1).Width(14).Height(14).MinWidth(14).MaxWidth(14)
                             );
                             row.RelativeItem().PaddingLeft(4).Text(t => RenderInline(t, checkboxText));
@@ -171,7 +171,7 @@ public class PdfGenerationService
                         var checkboxText = trimmed.Substring(3).Trim();
                         md.Item().PaddingVertical(2).Row(row =>
                         {
-                            row.ConstantItem(14).Element(c => 
+                            row.ConstantItem(14).Element(c =>
                                 c.Border(1).Width(14).Height(14).MinWidth(14).MaxWidth(14).AlignCenter().Text(t => t.Span("✓").FontSize(10))
                             );
                             row.RelativeItem().PaddingLeft(4).Text(t => RenderInline(t, checkboxText));
@@ -182,7 +182,7 @@ public class PdfGenerationService
                         var checkboxText = trimmed.Substring(3).Trim();
                         md.Item().PaddingVertical(2).Row(row =>
                         {
-                            row.ConstantItem(14).Element(c => 
+                            row.ConstantItem(14).Element(c =>
                                 c.Border(1).Width(14).Height(14).MinWidth(14).MaxWidth(14)
                             );
                             row.RelativeItem().PaddingLeft(4).Text(t => RenderInline(t, checkboxText));
@@ -233,19 +233,19 @@ public class PdfGenerationService
                 {
                     var trimmed = line.TrimStart();
                     if (trimmed.Length < 3) return false;
-                    
+
                     // Must start with digit/letter followed by dot and space
                     if (char.IsDigit(trimmed[0]) && trimmed[1] == '.' && trimmed[2] == ' ')
                         return true;
-                    
+
                     // Roman numerals (I., II., III., etc.)
                     if (IsRomanNumeral(trimmed) && trimmed.Contains(". ") && trimmed.IndexOf(". ") == 1)
                         return true;
-                    
+
                     // Letter sequences (a., b., c., etc.)
                     if (char.IsLetter(trimmed[0]) && trimmed[1] == '.' && trimmed[2] == ' ')
                         return true;
-                    
+
                     return false;
                 }
 
@@ -275,27 +275,27 @@ public class PdfGenerationService
                 {
                     var dotIndex = line.IndexOf('.');
                     if (dotIndex < 0) return "1";
-                    
+
                     var numberPart = line.Substring(0, dotIndex).Trim();
-                    
+
                     // Arabic numerals (1, 2, 3, ...)
                     if (int.TryParse(numberPart, out int arabic))
                     {
                         return arabic.ToString();
                     }
-                    
+
                     // Roman numerals (I, II, III, IV, V, ...)
                     if (IsRomanNumeral(line))
                     {
                         return numberPart;
                     }
-                    
+
                     // Letter sequences (a, b, c, ... or A, B, C, ...)
                     if (IsLetterSequence(line))
                     {
                         return numberPart;
                     }
-                    
+
                     return "1";
                 }
 
@@ -359,7 +359,7 @@ public class PdfGenerationService
             });
         });
     }
-    
+
     private void AddFooter(PageDescriptor page)
     {
         page.Footer().AlignRight().Text(t =>

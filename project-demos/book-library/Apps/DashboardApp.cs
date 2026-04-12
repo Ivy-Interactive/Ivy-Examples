@@ -5,8 +5,8 @@ public class DashboardApp : ViewBase
 {
     public override object? Build()
     {
-        var volume       = UseService<IVolume>();
-        var books        = UseState<List<Book>>(() => []);
+        var volume = UseService<IVolume>();
+        var books = UseState<List<Book>>(() => []);
         var refreshToken = UseRefreshToken();
 
         UseEffect(async () =>
@@ -20,17 +20,17 @@ public class DashboardApp : ViewBase
             BookStore.DataChanged += OnChanged;
         }, [EffectTrigger.OnMount()]);
 
-        var all               = books.Value;
-        var total             = all.Count;
-        var reading           = all.Count(b => b.Status == BookStatus.Reading);
-        var completed         = all.Count(b => b.Status == BookStatus.Completed);
-        var wantToRead        = all.Count(b => b.Status == BookStatus.WantToRead);
-        var paused            = all.Count(b => b.Status == BookStatus.Paused);
+        var all = books.Value;
+        var total = all.Count;
+        var reading = all.Count(b => b.Status == BookStatus.Reading);
+        var completed = all.Count(b => b.Status == BookStatus.Completed);
+        var wantToRead = all.Count(b => b.Status == BookStatus.WantToRead);
+        var paused = all.Count(b => b.Status == BookStatus.Paused);
         var completedThisYear = all.Count(b => b.Status == BookStatus.Completed && b.FinishedAt?.Year == DateTime.UtcNow.Year);
-        var avgRating         = all.Where(b => b.Rating.HasValue).Select(b => (double)b.Rating!.Value).DefaultIfEmpty(0).Average();
+        var avgRating = all.Where(b => b.Rating.HasValue).Select(b => (double)b.Rating!.Value).DefaultIfEmpty(0).Average();
 
         // Books by genre — pie chart
-        var genreData  = all.GroupBy(b => b.Genre)
+        var genreData = all.GroupBy(b => b.Genre)
                             .Select(g => new { Genre = g.Key, Count = g.Count() })
                             .OrderByDescending(x => x.Count)
                             .ToList();
@@ -38,18 +38,18 @@ public class DashboardApp : ViewBase
         var genreChart = genreData.Count > 0
             ? (object)genreData.ToPieChart(
                 dimension: x => x.Genre,
-                measure:   x => x.Sum(f => f.Count),
+                measure: x => x.Sum(f => f.Count),
                 PieChartStyles.Dashboard,
                 new PieChartTotal(total.ToString(), "Books"))
             : Text.Muted("No data yet");
 
         // Library overview — bar chart
-        var statusData  = all.GroupBy(b => BookStore.StatusLabel(b.Status))
+        var statusData = all.GroupBy(b => BookStore.StatusLabel(b.Status))
                              .Select(g => new { Status = g.Key, Count = g.Count() })
                              .ToList();
         var statusChart = statusData.ToBarChart()
                                     .Dimension("Status", x => x.Status)
-                                    .Measure("Books",    x => x.Sum(f => f.Count));
+                                    .Measure("Books", x => x.Sum(f => f.Count));
 
         // Currently reading — progress cards
         var readingBooks = all.Where(b => b.Status == BookStatus.Reading).ToList();

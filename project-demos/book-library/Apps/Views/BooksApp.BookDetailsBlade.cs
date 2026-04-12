@@ -4,9 +4,9 @@ public class BookDetailsBlade(Guid bookId, RefreshToken token) : ViewBase
 {
     public override object? Build()
     {
-        var volume       = UseService<IVolume>();
-        var blades       = UseContext<IBladeService>();
-        var book         = UseState<Book?>(() => null);
+        var volume = UseService<IVolume>();
+        var blades = UseContext<IBladeService>();
+        var book = UseState<Book?>(() => null);
         var progressState = UseState(0);
         var (alertView, showAlert) = this.UseAlert();
 
@@ -56,14 +56,14 @@ public class BookDetailsBlade(Guid bookId, RefreshToken token) : ViewBase
             content: Layout.Vertical().Gap(4)
                 | new
                 {
-                    Author   = b.Author,
-                    Genre    = b.Genre,
-                    Status   = BookStore.StatusLabel(b.Status),
-                    Rating   = BookStore.RatingStars(b.Rating),
-                    Pages    = pagesText,
-                    Added    = b.AddedAt.ToString("MMM d, yyyy"),
+                    Author = b.Author,
+                    Genre = b.Genre,
+                    Status = BookStore.StatusLabel(b.Status),
+                    Rating = BookStore.RatingStars(b.Rating),
+                    Pages = pagesText,
+                    Added = b.AddedAt.ToString("MMM d, yyyy"),
                     Finished = b.FinishedAt.HasValue ? b.FinishedAt.Value.ToString("MMM d, yyyy") : null,
-                    Notes    = b.Notes
+                    Notes = b.Notes
                 }
                 .ToDetails()
                 .RemoveEmpty()

@@ -39,7 +39,7 @@ public class UnitsNetApp : ViewBase
             Layout.Vertical().Gap(1)
             | Text.Block("This demo uses UnitsNet library to convert between different units of measurement.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [UnitsNet](https://github.com/angularsen/UnitsNet)")
-                
+
         );
 
         // Get filtered quantity list items
@@ -49,7 +49,7 @@ public class UnitsNetApp : ViewBase
             : allQuantities
                 .Where(q => q.Name.Contains(quantitySearchTerm.Value, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-        
+
         var quantityListItems = filteredQuantities
             .Select(q => new ListItem(
                 title: q.Name,
@@ -57,7 +57,7 @@ public class UnitsNetApp : ViewBase
                 onClick: () => quantity.Set(q.Name)
             ))
             .ToArray();
-        
+
         // Quantity Selection Card
         var quantityCard = new Card(
             Layout.Vertical().Gap(2)
@@ -73,7 +73,7 @@ public class UnitsNetApp : ViewBase
         // Get unit list items
         var qInfo = Quantity.Infos.FirstOrDefault(q => q.Name.Equals(quantity.Value, StringComparison.OrdinalIgnoreCase))
                    ?? Quantity.Infos.First();
-        
+
         var fromUnitListItems = qInfo.UnitInfos
             .OrderBy(u => u.Name)
             .Select(u => new ListItem(
@@ -82,7 +82,7 @@ public class UnitsNetApp : ViewBase
                 onClick: () => fromUnit.Set(u.Name)
             ))
             .ToArray();
-        
+
         var toUnitListItems = qInfo.UnitInfos
             .OrderBy(u => u.Name)
             .Select(u => new ListItem(
@@ -104,7 +104,7 @@ public class UnitsNetApp : ViewBase
             | valueText.ToInput(placeholder: "e.g. 25")
             | (Layout.Vertical().Gap(2).Height(Size.Fit().Max(Size.Units(30)))
             | new List(fromUnitListItems))
-            
+
         );
 
         // To Unit Card
@@ -120,7 +120,7 @@ public class UnitsNetApp : ViewBase
                 : Text.Code("Select both units to see the result"))
             | (Layout.Vertical().Gap(2).Height(Size.Fit().Max(Size.Units(30)))
             | new List(toUnitListItems))
-            
+
         );
 
         // Horizontal layout for unit cards
@@ -132,13 +132,13 @@ public class UnitsNetApp : ViewBase
         // Input Card
         var inputCard = new Card(
             Layout.Vertical().Gap(3)
-            
+
         ).Title("Input");
 
         // Result Card
         var resultCard = new Card(
             Layout.Vertical().Gap(3)
-            
+
         ).Title("Result");
 
         // Conversion Cards Row

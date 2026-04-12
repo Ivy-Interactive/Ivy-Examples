@@ -1,7 +1,3 @@
-using MicrosoftAgentFramework.Models;
-using MicrosoftAgentFramework.Views;
-using OllamaSharp;
-
 namespace MicrosoftAgentFramework.Apps;
 
 [App(icon: Icons.Bot, title: "Microsoft Agent Framework")]
@@ -11,7 +7,7 @@ public class AgentWorkspaceExample : ViewBase
     {
         // State for agents list (including presets)
         var agents = UseState(GetPresetAgents());
-        
+
         // Ollama configuration state
         var ollamaUrl = UseState<string?>(Environment.GetEnvironmentVariable("OLLAMA_URL") ?? "http://localhost:11434");
         var ollamaModel = UseState<string?>(Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "llama2");
