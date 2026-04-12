@@ -41,27 +41,27 @@ public static partial class ReadabilityAnalyzer
         var avgWordsPerSentence = (double)wordCount / sentenceCount;
         var avgSyllablesPerWord = wordCount > 0 ? (double)totalSyllables / wordCount : 0;
 
-        
+
         var fleschEase = 206.835 - 1.015 * avgWordsPerSentence - 84.6 * avgSyllablesPerWord;
 
-        
+
         var fleschKincaid = 0.39 * avgWordsPerSentence + 11.8 * avgSyllablesPerWord - 15.59;
 
-        
+
         var complexRatio = wordCount > 0 ? (double)complexWordCount / wordCount : 0;
         var gunningFog = 0.4 * (avgWordsPerSentence + 100.0 * complexRatio);
 
-        
+
         var l = wordCount > 0 ? (double)characterCount / wordCount * 100 : 0;
         var s = wordCount > 0 ? (double)sentenceCount / wordCount * 100 : 0;
         var colemanLiau = 0.0588 * l - 0.296 * s - 15.8;
 
-        
+
         var smog = sentenceCount > 0
             ? 3.0 + Math.Sqrt((double)complexWordCount * 30.0 / sentenceCount)
             : 0;
 
-        
+
         var avgCharsPerWord = wordCount > 0 ? (double)characterCount / wordCount : 0;
         var ari = 4.71 * avgCharsPerWord + 0.5 * avgWordsPerSentence - 21.43;
 
@@ -113,7 +113,7 @@ public static partial class ReadabilityAnalyzer
             prevIsVowel = isVowel;
         }
 
-        
+
         if (word.EndsWith('e') && count > 1)
         {
             count--;

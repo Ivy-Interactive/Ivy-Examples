@@ -1,5 +1,4 @@
 using Ivy;
-using Microsoft.Extensions.DependencyInjection;
 using PDF.Compressor.Apps;
 
 var server = new Server();

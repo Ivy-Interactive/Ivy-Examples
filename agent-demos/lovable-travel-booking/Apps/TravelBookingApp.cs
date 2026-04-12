@@ -23,7 +23,7 @@ public class TravelBookingApp : ViewBase
                 p.Category.Contains(search.Value, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        
+
         var categoryFilter = Layout.Horizontal().Gap(2);
         foreach (var cat in categories)
         {
@@ -33,7 +33,7 @@ public class TravelBookingApp : ViewBase
                 : new Button(c, () => category.Set(c)).Outline().Small();
         }
 
-        
+
         var grid = Layout.Grid().Columns(3).Gap(6);
         foreach (var pkg in filtered)
         {
@@ -45,7 +45,7 @@ public class TravelBookingApp : ViewBase
             });
         }
 
-        
+
         var browseContent = Layout.Vertical()
             | (Layout.Vertical().Gap(2)
                 | Text.H1("✈️ Travel Booking")
@@ -56,16 +56,16 @@ public class TravelBookingApp : ViewBase
                 ? (object)grid
                 : Callout.Info("No packages found matching your search criteria."));
 
-        
+
         var historyContent = new BookingHistoryView();
 
-        
+
         var tabs = Layout.Tabs(
             new Tab("Browse Packages", browseContent).Icon(Icons.Search),
             new Tab("Booking History", historyContent).Icon(Icons.Clock)
         );
 
-        
+
         object? sheetView = null;
         if (selectedPackage.Value is { } selected)
         {

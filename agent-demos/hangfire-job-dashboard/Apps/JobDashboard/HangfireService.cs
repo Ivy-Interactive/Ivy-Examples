@@ -1,4 +1,3 @@
-using Hangfire;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
 

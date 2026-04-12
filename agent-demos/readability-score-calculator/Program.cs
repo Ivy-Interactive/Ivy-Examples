@@ -1,5 +1,4 @@
 using Ivy;
-using Microsoft.Extensions.DependencyInjection;
 using Readability.Score.Calculator.Apps;
 
 var server = new Server();

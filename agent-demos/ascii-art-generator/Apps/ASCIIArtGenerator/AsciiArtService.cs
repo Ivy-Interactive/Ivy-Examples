@@ -23,7 +23,7 @@ public class AsciiArtService
 
         using var image = SixImage.Load<Rgba32>(imageData);
 
-        
+
         var aspectRatio = (double)image.Height / image.Width;
         var height = (int)(width * aspectRatio * 0.5);
 

@@ -1,6 +1,5 @@
 using Ivy;
 using MeetingCostCalculator.Apps;
-using Microsoft.Extensions.DependencyInjection;
 
 var server = new Server();
 server.SetMetaTitle("Meeting Cost Calculator");

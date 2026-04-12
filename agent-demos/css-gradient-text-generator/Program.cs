@@ -1,6 +1,5 @@
 using Ivy;
 using CSSGradientTextGenerator.Apps;
-using Microsoft.Extensions.DependencyInjection;
 
 var server = new Server();
 server.SetMetaTitle("CSS Gradient Text Generator");

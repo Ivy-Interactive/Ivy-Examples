@@ -20,7 +20,7 @@ public class TodoApp : ViewBase
         void AddItem()
         {
             if (string.IsNullOrWhiteSpace(newItemText.Value)) return;
-            todos.Set([..todos.Value, new TodoItem(newItemText.Value)]);
+            todos.Set([.. todos.Value, new TodoItem(newItemText.Value)]);
             newItemText.Set("");
         }
 

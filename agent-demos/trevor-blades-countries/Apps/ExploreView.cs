@@ -22,17 +22,17 @@ public class ExploreView : ViewBase
 
         var data = query.Value!;
 
-        
+
         var continentOptions = new IAnyOption[] { new Option<string>("All Continents", "") }
             .Concat(data.Continents.OrderBy(c => c.Name).Select(c => new Option<string>(c.Name, c.Code)))
             .ToArray();
 
-        
+
         var languageOptions = new IAnyOption[] { new Option<string>("All Languages", "") }
             .Concat(data.Languages.OrderBy(l => l.Name).Select(l => new Option<string>(l.Name, l.Code)))
             .ToArray();
 
-        
+
         var filtered = data.Countries.AsEnumerable();
 
         if (!string.IsNullOrEmpty(selectedContinent.Value))
@@ -47,12 +47,12 @@ public class ExploreView : ViewBase
 
         var countries = filtered.ToArray();
 
-        
+
         var continentSelect = selectedContinent.ToSelectInput(continentOptions, placeholder: "All Continents");
         var languageSelect = selectedLanguage.ToSelectInput(languageOptions, placeholder: "All Languages");
         var searchInput = searchText.ToTextInput().Placeholder("Search countries...");
 
-        
+
         var tableData = countries.Select(c => new
         {
             Flag = c.Emoji,

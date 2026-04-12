@@ -15,7 +15,7 @@ public class SwapiService
         _http = http;
     }
 
-    
+
     public async Task<T?> GetAsync<T>(string url, CancellationToken ct = default) where T : class
     {
         if (_cache.TryGetValue(url, out var cached)) return (T)cached;
@@ -27,12 +27,12 @@ public class SwapiService
         return result;
     }
 
-    
+
     public async Task<List<T>> GetAllAsync<T>(string resource, CancellationToken ct = default) where T : class
     {
         var cacheKey = $"all:{resource}";
         if (_cache.TryGetValue(cacheKey, out var cached)) return (List<T>)cached;
-        
+
         var all = new List<T>();
         string? url = $"https://swapi.dev/api/{resource}/";
         while (url != null)
@@ -46,14 +46,14 @@ public class SwapiService
         return all;
     }
 
-    
+
     public static string ExtractId(string url)
     {
         var parts = url.TrimEnd('/').Split('/');
         return parts[^1];
     }
 
-    
+
     public async Task<List<(string Name, string Url)>> ResolveNamesAsync<T>(
         List<string> urls, Func<T, string> nameSelector, CancellationToken ct = default) where T : class
     {

@@ -1,6 +1,5 @@
 using Ivy;
 using Hangfire;
-using Hangfire.InMemory;
 using Microsoft.Extensions.DependencyInjection;
 using Hangfire.Job.Dashboard.Apps;
 using Hangfire.Job.Dashboard.Apps.JobDashboard;

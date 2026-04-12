@@ -33,14 +33,14 @@ public class CharactersApp : ViewBase
         var statusOptions = new[] { "", "Alive", "Dead", "unknown" }.ToOptions();
         var genderOptions = new[] { "", "Female", "Male", "Genderless", "unknown" }.ToOptions();
 
-        
+
         var filters = Layout.Horizontal().Gap(2)
             | name.ToTextInput().Placeholder("Search by name...").Width(Size.Units(60))
             | status.ToSelectInput(statusOptions).Placeholder("Status").Width(Size.Units(40))
             | species.ToTextInput().Placeholder("Species...").Width(Size.Units(40))
             | gender.ToSelectInput(genderOptions).Placeholder("Gender").Width(Size.Units(40));
 
-        
+
         object content;
         if (query.Loading)
         {
@@ -56,7 +56,7 @@ public class CharactersApp : ViewBase
             var totalPages = data?.Info.Pages ?? 1;
             var characters = data?.Results ?? [];
 
-            
+
             var grid = Layout.Grid().Columns(4);
             foreach (var c in characters)
             {
@@ -85,8 +85,8 @@ public class CharactersApp : ViewBase
                 grid |= card;
             }
 
-            
-            var pagination = Layout.Horizontal().AlignContent   (Align.Center).Gap(2)
+
+            var pagination = Layout.Horizontal().AlignContent(Align.Center).Gap(2)
                 | new Button("Previous", () => page.Set(Math.Max(1, page.Value - 1)))
                     .Outline()
                     .Disabled(page.Value <= 1)
