@@ -42,12 +42,10 @@ public class DeployView : ViewBase
         _defaultProjectId = defaultProjectId;
     }
 
-    private const string ManageServicesUrl = "https://ivy-sliplane-management.sliplane.app/";
-
     public override object? Build()
     {
         var client = this.UseService<SliplaneApiClient>();
-        var ivyClient = this.UseService<IClientProvider>();
+        var config = this.UseService<IConfiguration>();
         var model = this.UseState(() => new DeployFormModel
         {
             ServerId = _defaultServerId,
@@ -138,13 +136,12 @@ public class DeployView : ViewBase
         }
 
         var headerSection = Layout.Vertical().AlignContent(Align.Center).Gap(4)
-            | Icons.Rocket.ToIcon()
             | Text.H1("Deploy to Sliplane")
             | Text.Lead("Configure and deploy your Ivy app in seconds.");
 
         var actionsRow = Layout.Vertical()
             | (Layout.Horizontal().AlignContent(Align.Center)
-                | new Button("Deploy").Icon(Icons.Rocket).Primary().Large()
+                | new Button("Deploy").Primary().Large()
                     .Loading(loading || isDeploying.Value).Disabled(loading || isDeploying.Value)
                     .Width(Size.Fraction(0.5f))
                     .OnClick(async _ => await HandleDeploy()))
@@ -168,8 +165,7 @@ public class DeployView : ViewBase
                         | Text.Block("Creating service on Sliplane…").Bold()
                         | new Progress().Indeterminate().Goal("Please wait…"),
                     "Deploying",
-                    CalloutVariant.Info)
-                .Icon(Icons.Rocket);
+                    CalloutVariant.Info);
         }
         else if (deployedService.Value is { } deployed)
         {
@@ -185,9 +181,12 @@ public class DeployView : ViewBase
         }
 
         var card = new Card(cardContent).Width(Size.Fraction(0.35f));
-        var manageBtn = new Button("Manage services").Icon(Icons.Settings)
-            .Outline().Large().BorderRadius(BorderRadius.Full)
-            .OnClick(_ => ivyClient.OpenUrl(ManageServicesUrl));
+        var manageServicesUrl = config["Sliplane:ManageServicesUrl"]?.Trim();
+        if (string.IsNullOrEmpty(manageServicesUrl))
+            manageServicesUrl = "https://ivy-sliplane-management.sliplane.app/";
+        var manageBtn = new Button("Manage services")
+            .Link().Url(manageServicesUrl)
+            .Outline().Large().BorderRadius(BorderRadius.Full);
         var manageFloat = new FloatingPanel(manageBtn, Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
 
         return new Fragment(Layout.Center() | card, manageFloat);
