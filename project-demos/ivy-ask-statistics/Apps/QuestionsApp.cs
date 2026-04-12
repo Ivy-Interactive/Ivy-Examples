@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Threading;
 
 namespace IvyAskStatistics.Apps;
 
@@ -23,20 +22,20 @@ public class QuestionsApp : ViewBase
 
     public override object? Build()
     {
-        var factory       = UseService<AppDbContextFactory>();
+        var factory = UseService<AppDbContextFactory>();
         var configuration = UseService<IConfiguration>();
-        var client        = UseService<IClientProvider>();
-        var queryService  = UseService<IQueryService>();
+        var client = UseService<IClientProvider>();
+        var queryService = UseService<IQueryService>();
 
         var generatingWidgets = UseState(ImmutableHashSet<string>.Empty);
-        var deleteRequest     = UseState<string?>(null);
-        var viewDialogOpen    = UseState(false);
-        var viewDialogWidget  = UseState("");
-        var editSheetOpen       = UseState(false);
-        var editQuestionId      = UseState(Guid.Empty);
+        var deleteRequest = UseState<string?>(null);
+        var viewDialogOpen = UseState(false);
+        var viewDialogWidget = UseState("");
+        var editSheetOpen = UseState(false);
+        var editQuestionId = UseState(Guid.Empty);
         var editPreviewResultId = UseState<Guid?>(null);
-        var refreshToken      = UseRefreshToken();
-        var genProgress       = UseState<GenProgress?>(null);
+        var refreshToken = UseRefreshToken();
+        var genProgress = UseState<GenProgress?>(null);
         var (alertView, showAlert) = UseAlert();
 
         var tableQuery = UseQuery<WidgetTableData, string>(
@@ -97,7 +96,7 @@ public class QuestionsApp : ViewBase
 
         async Task GenerateOneAsync(IvyWidget widget)
         {
-            var apiKey  = configuration[QuestionGeneratorService.ApiKeyConfigKey]!.Trim();
+            var apiKey = configuration[QuestionGeneratorService.ApiKeyConfigKey]!.Trim();
             var baseUrl = configuration[QuestionGeneratorService.BaseUrlConfigKey]!.Trim();
             await QuestionGeneratorService.GenerateAndSaveAsync(widget, factory, apiKey, baseUrl, configuration);
         }
@@ -147,7 +146,7 @@ public class QuestionsApp : ViewBase
                     var d = Volatile.Read(ref completed);
                     List<string> failedCopy;
                     lock (failedLock)
-                        failedCopy = [..failed];
+                        failedCopy = [.. failed];
                     genProgress.Set(new GenProgress("", d, widgets.Count, failedCopy, true, maxParallel));
                     var fresh = await LoadWidgetTableDataAsync(factory, TableQueryKey, CancellationToken.None);
                     tableQuery.Mutator.Mutate(fresh, revalidate: false);
@@ -251,7 +250,7 @@ public class QuestionsApp : ViewBase
                 generatingWidgets.Set(_ => ImmutableHashSet<string>.Empty);
                 List<string> failedCopy;
                 lock (failedLock)
-                    failedCopy = [..failed];
+                    failedCopy = [.. failed];
                 genProgress.Set(new GenProgress(
                     "",
                     Volatile.Read(ref completed),
@@ -334,11 +333,11 @@ public class QuestionsApp : ViewBase
         }
 
         var generating = generatingWidgets.Value;
-        var baseRows   = tableQuery.Value?.Rows ?? [];
-        var catalog    = tableQuery.Value?.Catalog ?? [];
+        var baseRows = tableQuery.Value?.Rows ?? [];
+        var catalog = tableQuery.Value?.Catalog ?? [];
         var isDeleting = !string.IsNullOrEmpty(deleteRequest.Value);
-        var firstLoad  = tableQuery.Loading && tableQuery.Value == null;
-        var progress   = genProgress.Value;
+        var firstLoad = tableQuery.Loading && tableQuery.Value == null;
+        var progress = genProgress.Value;
         var isGenerating = generating.Count > 0;
 
         static string IdleStatus(WidgetRow r)
@@ -396,20 +395,20 @@ public class QuestionsApp : ViewBase
             .RefreshToken(refreshToken)
             .Key("questions-widgets")
             .Height(Size.Full())
-            .Header(r => r.Widget,      "Widget")
-            .Header(r => r.Category,    "Category")
-            .Header(r => r.Easy,        "Easy")
-            .Header(r => r.Medium,      "Medium")
-            .Header(r => r.Hard,        "Hard")
+            .Header(r => r.Widget, "Widget")
+            .Header(r => r.Category, "Category")
+            .Header(r => r.Easy, "Easy")
+            .Header(r => r.Medium, "Medium")
+            .Header(r => r.Hard, "Hard")
             .Header(r => r.LastUpdated, "Last Generated")
-            .Header(r => r.Status,      "Status")
-            .Width(r => r.Widget,       Size.Px(160))
-            .Width(r => r.Category,     Size.Px(120))
-            .Width(r => r.Easy,         Size.Px(60))
-            .Width(r => r.Medium,       Size.Px(70))
-            .Width(r => r.Hard,         Size.Px(60))
-            .Width(r => r.LastUpdated,  Size.Px(170))
-            .Width(r => r.Status,       Size.Px(280))
+            .Header(r => r.Status, "Status")
+            .Width(r => r.Widget, Size.Px(160))
+            .Width(r => r.Category, Size.Px(120))
+            .Width(r => r.Easy, Size.Px(60))
+            .Width(r => r.Medium, Size.Px(70))
+            .Width(r => r.Hard, Size.Px(60))
+            .Width(r => r.LastUpdated, Size.Px(170))
+            .Width(r => r.Status, Size.Px(280))
             .RowActions(
                 MenuItem.Default(Icons.List, "questions").Label("View questions").Tag("questions"),
                 MenuItem.Default(Icons.Sparkles, "generate").Label("Generate questions").Tag("generate"),
@@ -417,7 +416,7 @@ public class QuestionsApp : ViewBase
             .OnRowAction(e =>
             {
                 var args = e.Value;
-                var tag  = args?.Tag?.ToString();
+                var tag = args?.Tag?.ToString();
                 if (string.IsNullOrEmpty(tag)) return ValueTask.CompletedTask;
 
                 if (tag == "questions")
@@ -467,7 +466,7 @@ public class QuestionsApp : ViewBase
                     if (generating.Contains(delName)) return ValueTask.CompletedTask;
 
                     var row = rows.FirstOrDefault(r => r.Widget == delName);
-                    var n   = row == null ? 0 : row.Easy + row.Medium + row.Hard;
+                    var n = row == null ? 0 : row.Easy + row.Medium + row.Hard;
                     if (n == 0) return ValueTask.CompletedTask;
 
                     showAlert(
@@ -486,9 +485,9 @@ public class QuestionsApp : ViewBase
             })
             .Config(config =>
             {
-                config.AllowSorting    = true;
-                config.AllowFiltering  = true;
-                config.ShowSearch      = true;
+                config.AllowSorting = true;
+                config.AllowFiltering = true;
+                config.ShowSearch = true;
                 config.ShowIndexColumn = false;
             });
 
@@ -528,7 +527,7 @@ public class QuestionsApp : ViewBase
                 g.Key.Widget,
                 g.Key.Category,
                 g.Key.Difficulty,
-                Count   = g.Count(),
+                Count = g.Count(),
                 MaxDate = g.Max(x => x.CreatedAt)
             })
             .ToListAsync(ct);
@@ -538,10 +537,10 @@ public class QuestionsApp : ViewBase
             .ToDictionary(
                 g => g.Key,
                 g => (
-                    category:  g.Select(x => x.Category).FirstOrDefault() ?? "",
-                    easy:      g.FirstOrDefault(x => x.Difficulty == "easy")?.Count   ?? 0,
-                    medium:    g.FirstOrDefault(x => x.Difficulty == "medium")?.Count ?? 0,
-                    hard:      g.FirstOrDefault(x => x.Difficulty == "hard")?.Count   ?? 0,
+                    category: g.Select(x => x.Category).FirstOrDefault() ?? "",
+                    easy: g.FirstOrDefault(x => x.Difficulty == "easy")?.Count ?? 0,
+                    medium: g.FirstOrDefault(x => x.Difficulty == "medium")?.Count ?? 0,
+                    hard: g.FirstOrDefault(x => x.Difficulty == "hard")?.Count ?? 0,
                     updatedAt: g.Max(x => x.MaxDate)
                 ));
 
@@ -559,9 +558,9 @@ public class QuestionsApp : ViewBase
             .ThenBy(w => w.Name)
             .Select(w =>
             {
-                var c        = countsByWidget.GetValueOrDefault(w.Name);
+                var c = countsByWidget.GetValueOrDefault(w.Name);
                 var category = string.IsNullOrEmpty(w.Category) ? "Unclassified" : w.Category;
-                var updated  = c.updatedAt == default
+                var updated = c.updatedAt == default
                     ? "—"
                     : c.updatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm");
                 return new WidgetRow(w.Name, category, c.easy, c.medium, c.hard, updated, "");

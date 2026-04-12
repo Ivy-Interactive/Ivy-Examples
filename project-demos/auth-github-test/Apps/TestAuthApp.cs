@@ -1,7 +1,6 @@
 namespace Auth.GitHub.Test.Apps;
 
 using System.Text.Json;
-using Microsoft.Extensions.Http;
 
 public record GitHubRepo(
     string Name,
@@ -19,15 +18,15 @@ public class TestAuthApp : ViewBase
     {
         var auth = this.UseService<IAuthService>();
         var httpClientFactory = this.UseService<IHttpClientFactory>();
-        
+
         var userInfo = this.UseState<UserInfo?>();
         var repositories = this.UseState<List<GitHubRepo>?>();
         var loading = this.UseState<bool>(true);
-        
+
         var client = this.UseService<IClientProvider>();
         var isSheetOpen = this.UseState<bool>(false);
         var searchText = this.UseState<string>("");
-        
+
         this.UseEffect(async () =>
         {
             try
@@ -119,11 +118,11 @@ public class TestAuthApp : ViewBase
                 Updated = updatedText,
             }.ToDetails()
                 .RemoveEmpty();
-            
+
             var content = Layout.Vertical().AlignContent(Align.Center)
                 | Text.Block(repo.Name).Italic().Bold()
                 | details;
-            
+
             return new Card(content)
                 .OnClick(_ => client.OpenUrl(repo.HtmlUrl));
         });

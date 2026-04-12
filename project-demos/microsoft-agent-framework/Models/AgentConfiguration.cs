@@ -11,7 +11,7 @@ public class AgentConfiguration
     public string Instructions { get; set; } = "You are a helpful AI assistant.";
     public string OllamaModel { get; set; } = "llama2";
     public bool IsPreset { get; set; } = false;
-    
+
     public AgentConfiguration Clone()
     {
         return new AgentConfiguration
@@ -34,16 +34,16 @@ public record AgentFormModel
     [Required]
     [StringLength(50, MinimumLength = 1)]
     public string Name { get; set; } = "New Agent";
-    
+
     [StringLength(200)]
     public string Description { get; set; } = string.Empty;
-    
+
     [Required]
     public string OllamaModel { get; set; } = "llama2";
-    
+
     [Required]
     public string Instructions { get; set; } = "You are a helpful AI assistant.";
-    
+
     public static AgentFormModel FromConfiguration(AgentConfiguration config)
     {
         return new AgentFormModel
@@ -54,7 +54,7 @@ public record AgentFormModel
             Instructions = config.Instructions
         };
     }
-    
+
     public AgentConfiguration ToConfiguration(string? existingId = null)
     {
         return new AgentConfiguration
@@ -67,7 +67,7 @@ public record AgentFormModel
             IsPreset = false
         };
     }
-    
+
     public void ApplyTo(AgentConfiguration config)
     {
         config.Name = Name;
@@ -83,9 +83,9 @@ public record AgentFormModel
 public record ApiSettingsModel
 {
     public string OllamaUrl { get; set; } = "http://localhost:11434";
-    
+
     public string OllamaModel { get; set; } = "llama2";
-    
+
     public string BingApiKey { get; set; } = string.Empty;
 }
 

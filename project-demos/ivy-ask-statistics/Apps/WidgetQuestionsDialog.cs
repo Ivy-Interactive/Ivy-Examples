@@ -10,10 +10,10 @@ internal sealed class WidgetQuestionsDialog(
 {
     public override object? Build()
     {
-        var factory       = UseService<AppDbContextFactory>();
-        var client        = UseService<IClientProvider>();
-        var queryService  = UseService<IQueryService>();
-        var refreshToken  = UseRefreshToken();
+        var factory = UseService<AppDbContextFactory>();
+        var client = UseService<IClientProvider>();
+        var queryService = UseService<IQueryService>();
+        var refreshToken = UseRefreshToken();
 
         var (alertView, showAlert) = UseAlert();
 
@@ -29,7 +29,7 @@ internal sealed class WidgetQuestionsDialog(
             tags: [("widget-questions", widgetName)]);
 
         var firstLoad = tableQuery.Loading && tableQuery.Value == null;
-        var rows      = tableQuery.Value ?? [];
+        var rows = tableQuery.Value ?? [];
 
         void Close() => isOpen.Set(false);
 
@@ -72,15 +72,15 @@ internal sealed class WidgetQuestionsDialog(
                 .Key($"widget-questions-{widgetName}")
                 .Height(Size.Units(120))
                 .RefreshToken(refreshToken)
-                .Header(r => r.Difficulty,   "Difficulty")
-                .Header(r => r.Category,     "Category")
+                .Header(r => r.Difficulty, "Difficulty")
+                .Header(r => r.Category, "Category")
                 .Header(r => r.QuestionText, "Question")
-                .Header(r => r.Source,       "Source")
-                .Header(r => r.CreatedAt,    "Created")
-                .Width(r => r.Difficulty,    Size.Px(80))
-                .Width(r => r.QuestionText,  Size.Px(340))
-                .Width(r => r.Source,        Size.Px(100))
-                .Width(r => r.CreatedAt,     Size.Px(170))
+                .Header(r => r.Source, "Source")
+                .Header(r => r.CreatedAt, "Created")
+                .Width(r => r.Difficulty, Size.Px(80))
+                .Width(r => r.QuestionText, Size.Px(340))
+                .Width(r => r.Source, Size.Px(100))
+                .Width(r => r.CreatedAt, Size.Px(170))
                 .Hidden(r => r.Id)
                 .RowActions(
                     MenuItem.Default(Icons.Pencil, "edit").Label("Edit").Tag("edit"),
@@ -88,7 +88,7 @@ internal sealed class WidgetQuestionsDialog(
                 .OnRowAction(e =>
                 {
                     var args = e.Value;
-                    var tag  = args?.Tag?.ToString();
+                    var tag = args?.Tag?.ToString();
                     if (!Guid.TryParse(args?.Id?.ToString(), out var id)) return ValueTask.CompletedTask;
 
                     if (tag == "edit")
@@ -99,7 +99,7 @@ internal sealed class WidgetQuestionsDialog(
                     }
                     else if (tag == "delete")
                     {
-                        var text    = rows.FirstOrDefault(r => r.Id == id)?.QuestionText ?? "";
+                        var text = rows.FirstOrDefault(r => r.Id == id)?.QuestionText ?? "";
                         var preview = text.Length > 60 ? text[..60] + "…" : text;
                         showAlert(
                             $"Delete this question?\n\n\"{preview}\"",
@@ -116,9 +116,9 @@ internal sealed class WidgetQuestionsDialog(
                 })
                 .Config(c =>
                 {
-                    c.AllowSorting    = true;
-                    c.AllowFiltering  = true;
-                    c.ShowSearch      = true;
+                    c.AllowSorting = true;
+                    c.AllowFiltering = true;
+                    c.ShowSearch = true;
                     c.ShowIndexColumn = false;
                 });
         }

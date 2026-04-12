@@ -95,9 +95,9 @@ public class DeployStatusView : ViewBase
         if (last == null) return DeployStatus.Unknown;
         return last.Type switch
         {
-            "service_deploy_success"                           => DeployStatus.Success,
+            "service_deploy_success" => DeployStatus.Success,
             "service_deploy_failed" or "service_build_failed" => DeployStatus.Failed,
-            _                                                  => DeployStatus.Deploying,
+            _ => DeployStatus.Deploying,
         };
     }
 

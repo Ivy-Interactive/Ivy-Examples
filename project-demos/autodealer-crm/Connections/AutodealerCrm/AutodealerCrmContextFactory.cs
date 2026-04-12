@@ -1,7 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Threading;
-
 namespace AutodealerCrm.Connections.AutodealerCrm;
 
 public sealed class AutodealerCrmContextFactory : IDbContextFactory<AutodealerCrmContext>

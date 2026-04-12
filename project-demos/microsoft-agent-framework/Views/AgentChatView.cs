@@ -1,5 +1,3 @@
-using OllamaSharp;
-
 namespace MicrosoftAgentFramework.Views;
 
 /// <summary>
@@ -144,17 +142,17 @@ public class AgentChatView : ViewBase
                     if (!string.IsNullOrEmpty(textUpdate))
                     {
                         streamingText.Append(textUpdate);
-                        
+
                         // If this is the first word, replace waiting status with actual text
                         if (isWaitingForFirstWord)
                         {
                             isWaitingForFirstWord = false;
                         }
-                        
+
                         // Update the assistant message with accumulated text
                         var currentMessagesList = messages.Value.ToList();
                         currentMessagesList[assistantMessageIndex] = new Ivy.ChatMessage(
-                            ChatSender.Assistant, 
+                            ChatSender.Assistant,
                             Text.Markdown(streamingText.ToString())
                         );
                         messages.Set(currentMessagesList.ToImmutableArray());
@@ -166,7 +164,7 @@ public class AgentChatView : ViewBase
                 // Replace streaming message with error
                 var currentMessagesList = messages.Value.ToList();
                 currentMessagesList[assistantMessageIndex] = new Ivy.ChatMessage(
-                    ChatSender.Assistant, 
+                    ChatSender.Assistant,
                     $"Error: {ex.Message}"
                 );
                 messages.Set(currentMessagesList.ToImmutableArray());
@@ -181,11 +179,11 @@ public class AgentChatView : ViewBase
                 {
                     var models = availableModels.Value;
                     if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
-                    
-                    var filtered = string.IsNullOrEmpty(query) 
-                        ? models.Take(10) 
+
+                    var filtered = string.IsNullOrEmpty(query)
+                        ? models.Take(10)
                         : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
-                    
+
                     return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
                 });
         }
@@ -213,15 +211,15 @@ public class AgentChatView : ViewBase
                 isEditDialogOpen.Set(true);
             }).Ghost().Tooltip("Edit agent settings");
 
-         
-        
+
+
         var editDialog = isEditDialogOpen.Value
             ? editForm.ToForm()
                 .Builder(e => e.Name, e => e.ToTextInput(placeholder: "Agent name..."))
                 .Label(e => e.Name, "Name")
                 .Builder(e => e.Description, e => e.ToTextInput(placeholder: "Short description..."))
                 .Label(e => e.Description, "Description")
-                .Builder(e => e.OllamaModel,e => modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models..."))
+                .Builder(e => e.OllamaModel, e => modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models..."))
                 .Label(e => e.OllamaModel, "Ollama Model")
                 .Builder(e => e.Instructions, e => e.ToTextareaInput(placeholder: "Instructions for the AI agent...")
                     .Height(Size.Units(50)))

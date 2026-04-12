@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-
-namespace AutodealerCrm.Connections.AutodealerCrm;
+﻿namespace AutodealerCrm.Connections.AutodealerCrm;
 
 public partial class AutodealerCrmContext : DbContext
 {

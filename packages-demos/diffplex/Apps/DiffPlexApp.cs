@@ -25,7 +25,7 @@ public class DiffPlexApp : ViewBase
         {
             var diffBuilder = new SideBySideDiffBuilder(new Differ());
             diffResult.Value = diffBuilder.BuildDiffModel(
-                leftText.Value ?? "", 
+                leftText.Value ?? "",
                 rightText.Value ?? "",
                 ignoreWhitespace.Value,
                 ignoreCase.Value
@@ -56,7 +56,7 @@ public class DiffPlexApp : ViewBase
         if (diffResult.Value != null)
         {
             var diffLines = new List<string>();
-            
+
             // Use the NewText pane which has all lines including imaginary ones
             foreach (var line in diffResult.Value.NewText.Lines)
             {
@@ -68,14 +68,14 @@ public class DiffPlexApp : ViewBase
                     ChangeType.Imaginary => "- ",  // Deleted lines from original (shown as empty in new)
                     _ => "  "
                 };
-                
+
                 var lineText = line.Type == ChangeType.Imaginary ? "" : (line.Text ?? "");
                 diffLines.Add(prefix + lineText);
             }
-            
+
             diffDisplayText.Value = string.Join("\n", diffLines);
         }
-        
+
         // Comparison results card
         var resultsCard = diffResult.Value != null
             ? (object)(Layout.Vertical().Gap(3).Padding(2)
@@ -102,7 +102,7 @@ public class DiffPlexApp : ViewBase
             | new Spacer()
             | Text.Block("This demo uses the DiffPlex NuGet package for text comparison.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [DiffPlex](https://github.com/mmanela/diffplex)");
-                
+
 
         // Outer card for consistent width
         return new Card(mainContent).Height(Size.Fit().Min(Size.Full()));

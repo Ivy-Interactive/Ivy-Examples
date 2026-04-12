@@ -82,7 +82,7 @@ public class TimeZoneConverterApp : ViewBase
                 var windowsZone = TZConvert.IanaToWindows(zone);
                 windowsZoneState.Set(windowsZone);
                 windowsSearchTerm.Set(windowsZone);
-                
+
                 var railsZones = TZConvert.IanaToRails(zone);
                 if (railsZones.Any())
                 {
@@ -102,7 +102,7 @@ public class TimeZoneConverterApp : ViewBase
                 var ianaZone = TZConvert.WindowsToIana(zone);
                 ianaZoneState.Set(ianaZone);
                 ianaSearchTerm.Set(ianaZone);
-                
+
                 var railsZones = TZConvert.WindowsToRails(zone);
                 if (railsZones.Any())
                 {
@@ -122,7 +122,7 @@ public class TimeZoneConverterApp : ViewBase
                 var ianaZone = TZConvert.RailsToIana(zone);
                 ianaZoneState.Set(ianaZone);
                 ianaSearchTerm.Set(ianaZone);
-                
+
                 var windowsZone = TZConvert.RailsToWindows(zone);
                 windowsZoneState.Set(windowsZone);
                 windowsSearchTerm.Set(windowsZone);
@@ -142,21 +142,21 @@ public class TimeZoneConverterApp : ViewBase
                         .WithField()
                         .Label("Search IANA Time Zones")
                     | Layout.Vertical(new List(ianaListItems.ToArray())).Height(Size.Units(70)),
-                
+
                 "Windows" => Layout.Vertical().Gap(4)
                     | windowsSearchTerm.ToTextInput(windowsZoneState.Value)
                         .Variant(TextInputVariant.Search)
                         .WithField()
                         .Label("Search Windows Time Zones")
                     | Layout.Vertical(new List(windowsListItems.ToArray())).Height(Size.Units(70)),
-                
+
                 "Rails" => Layout.Vertical().Gap(4)
                     | railsSearchTerm.ToTextInput(railsZoneState.Value)
                         .Variant(TextInputVariant.Search)
                         .WithField()
                         .Label("Search Rails Time Zones")
                     | Layout.Vertical(new List(railsListItems.ToArray())).Height(Size.Units(70)),
-                
+
                 _ => Layout.Vertical().Gap(4)
                     | Text.Muted("Select a time zone type")
             };
@@ -199,7 +199,7 @@ public class TimeZoneConverterApp : ViewBase
                 | resultCard)
             | Text.Block("This demo uses TimeZoneNames library to convert between IANA, Windows, and Rails time zone formats.")
             | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [TimeZoneNames](https://github.com/mattjohnsonpint/TimeZoneNames)")
-        
+
         ;
     }
 }

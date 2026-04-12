@@ -69,7 +69,7 @@ public class EPPlusApp : ViewBase
                 .Icon(Icons.FileText)
                 .OnClick(_ => ExcelManipulation.WriteExcel(booksState));
 
-        
+
         var formBuilder = book.ToForm().Remove(x => x.ID)
             .Label(m => m.Title, "Title")
             .Builder(m => m.Title, s => s.ToTextInput().Placeholder("Insert title..."))
@@ -92,7 +92,7 @@ public class EPPlusApp : ViewBase
                 | downloadBtn
                 | deleteBtn
                 | generateBtn)
-                
+
         ).Width(Size.Fraction(0.55f)).Height(Size.Fit().Min(Size.Full()));
 
         var leftCard = new Card(

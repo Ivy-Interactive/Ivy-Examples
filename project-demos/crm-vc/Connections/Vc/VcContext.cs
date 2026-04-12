@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-
-namespace Vc.Connections.Vc;
+﻿namespace Vc.Connections.Vc;
 
 public partial class VcContext : DbContext
 {

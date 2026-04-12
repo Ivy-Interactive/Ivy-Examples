@@ -4,25 +4,25 @@ public class CsvHelperApp : ViewBase
     public class ProductModel
     {
         public Guid Id { get; set; }
-        
+
         [Required]
         public string Name { get; set; } = string.Empty;
-        
+
         public string Description { get; set; } = string.Empty;
-        
+
         [Required]
         public decimal Price { get; set; }
-        
+
         [Required]
         public string Category { get; set; } = string.Empty;
-        
+
         public DateTime CreatedAt { get; set; }
     }
 
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
-        
+
         // State for products list
         var products = UseState(() => new List<ProductModel>
         {
@@ -32,7 +32,7 @@ public class CsvHelperApp : ViewBase
             new() { Id = Guid.NewGuid(), Name = "USB-C Hub", Description = "7-in-1 hub with HDMI, USB 3.0 and card reader", Price = 34.95m, Category = "Peripherals", CreatedAt = DateTime.UtcNow },
             new() { Id = Guid.NewGuid(), Name = "Noise-Cancelling Headphones", Description = "Over-ear Bluetooth headphones with ANC", Price = 149.00m, Category = "Audio", CreatedAt = DateTime.UtcNow },
         });
-        
+
         // Export CSV download
         var downloadUrl = this.UseDownload(
             async () =>
@@ -111,7 +111,7 @@ public class CsvHelperApp : ViewBase
                 client.Toast($"Product '{product.Name}' deleted");
             }
         });
-        
+
         // Build the table with delete button
         var table = products.Value.Select(p => new
         {

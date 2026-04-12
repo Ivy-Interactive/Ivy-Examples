@@ -1,7 +1,6 @@
 using System.Globalization;
 using PrStagingDeploy.Apps;
 using PrStagingDeploy.Services;
-using Ivy;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 

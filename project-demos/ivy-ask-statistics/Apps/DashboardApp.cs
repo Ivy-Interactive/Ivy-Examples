@@ -12,17 +12,17 @@ public class DashboardApp : ViewBase
 
     public override object? Build()
     {
-        var factory        = UseService<AppDbContextFactory>();
-        var client         = UseService<IClientProvider>();
-        var navigation     = Context.UseNavigation();
-        var selectedRunId  = UseState<Guid?>(null);
-        var runDialogOpen  = UseState(false);
-        var editSheetOpen     = UseState(false);
-        var editQuestionId    = UseState(Guid.Empty);
+        var factory = UseService<AppDbContextFactory>();
+        var client = UseService<IClientProvider>();
+        var navigation = Context.UseNavigation();
+        var selectedRunId = UseState<Guid?>(null);
+        var runDialogOpen = UseState(false);
+        var editSheetOpen = UseState(false);
+        var editQuestionId = UseState(Guid.Empty);
         var editPreviewResultId = UseState<Guid?>(null);
-        var envOverride    = UseState("production");
+        var envOverride = UseState("production");
         var dashboardFocusVersion = UseState<string?>(null);
-        var versionSheetOpen      = UseState(false);
+        var versionSheetOpen = UseState(false);
 
         var dashQuery = UseQuery<DashboardPageModel?, string>(
             key: DashboardQueryKey(dashboardFocusVersion.Value),
@@ -72,12 +72,12 @@ public class DashboardApp : ViewBase
             ? page.Detail : page.PeerDetail;
         var stgData = string.Equals(page.PrimaryEnvironment, "staging", StringComparison.OrdinalIgnoreCase)
             ? page.Detail : page.PeerDetail;
-        var hasStagingData    = stgData  != null;
+        var hasStagingData = stgData != null;
         var hasProductionData = prodData != null;
 
         // Respect the user's toggle; fall back gracefully when an env has no data.
         var showEnv = envOverride.Value;
-        if (showEnv == "staging"    && !hasStagingData)    showEnv = "production";
+        if (showEnv == "staging" && !hasStagingData) showEnv = "production";
         if (showEnv == "production" && !hasProductionData) showEnv = "staging";
 
         DashboardData data;
@@ -85,14 +85,14 @@ public class DashboardApp : ViewBase
         string envPrimary;
         if (showEnv == "staging" && stgData != null)
         {
-            data      = stgData;
-            peer      = prodData;
+            data = stgData;
+            peer = prodData;
             envPrimary = "Staging";
         }
         else
         {
-            data      = prodData ?? page.Detail;
-            peer      = stgData;
+            data = prodData ?? page.Detail;
+            peer = stgData;
             envPrimary = "Production";
         }
         var hasPeerCompare = peer != null;
@@ -230,28 +230,28 @@ public class DashboardApp : ViewBase
             .ToDataTable(r => r.Id)
             .Height(Size.Units(120))
             .Key($"all-test-runs|{dashQueryKey}")
-            .Header(r => r.IvyVersion,      "Ivy version")
-            .Header(r => r.Environment,     "Environment")
+            .Header(r => r.IvyVersion, "Ivy version")
+            .Header(r => r.Environment, "Environment")
             .Header(r => r.DifficultyFilter, "Difficulty")
-            .Header(r => r.TotalQuestions,  "Total")
-            .Header(r => r.SuccessCount,    "Answered")
-            .Header(r => r.NoAnswerCount,   "No answer")
-            .Header(r => r.ErrorCount,      "Errors")
-            .Header(r => r.AnswerRate,      "Rate %")
-            .Header(r => r.AvgMs,           "Avg ms")
-            .Header(r => r.StartedAt,       "Started")
-            .Header(r => r.CompletedAt,     "Completed")
-            .Width(r => r.IvyVersion,       Size.Px(120))
-            .Width(r => r.Environment,      Size.Px(100))
+            .Header(r => r.TotalQuestions, "Total")
+            .Header(r => r.SuccessCount, "Answered")
+            .Header(r => r.NoAnswerCount, "No answer")
+            .Header(r => r.ErrorCount, "Errors")
+            .Header(r => r.AnswerRate, "Rate %")
+            .Header(r => r.AvgMs, "Avg ms")
+            .Header(r => r.StartedAt, "Started")
+            .Header(r => r.CompletedAt, "Completed")
+            .Width(r => r.IvyVersion, Size.Px(120))
+            .Width(r => r.Environment, Size.Px(100))
             .Width(r => r.DifficultyFilter, Size.Px(80))
-            .Width(r => r.TotalQuestions,   Size.Px(60))
-            .Width(r => r.SuccessCount,     Size.Px(80))
-            .Width(r => r.NoAnswerCount,    Size.Px(80))
-            .Width(r => r.ErrorCount,       Size.Px(60))
-            .Width(r => r.AnswerRate,       Size.Px(70))
-            .Width(r => r.AvgMs,            Size.Px(70))
-            .Width(r => r.StartedAt,        Size.Px(160))
-            .Width(r => r.CompletedAt,      Size.Px(160))
+            .Width(r => r.TotalQuestions, Size.Px(60))
+            .Width(r => r.SuccessCount, Size.Px(80))
+            .Width(r => r.NoAnswerCount, Size.Px(80))
+            .Width(r => r.ErrorCount, Size.Px(60))
+            .Width(r => r.AnswerRate, Size.Px(70))
+            .Width(r => r.AvgMs, Size.Px(70))
+            .Width(r => r.StartedAt, Size.Px(160))
+            .Width(r => r.CompletedAt, Size.Px(160))
             .Hidden(r => r.Id)
             .RowActions(
                 MenuItem.Default(Icons.Eye, "view").Label("View results").Tag("view"))
@@ -267,9 +267,9 @@ public class DashboardApp : ViewBase
             })
             .Config(c =>
             {
-                c.AllowSorting    = true;
-                c.AllowFiltering  = true;
-                c.ShowSearch      = true;
+                c.AllowSorting = true;
+                c.AllowFiltering = true;
+                c.ShowSearch = true;
                 c.ShowIndexColumn = false;
             });
         var tableRuns = Layout.Vertical() | new Card(runsTable).Title("Test runs");
@@ -278,7 +278,7 @@ public class DashboardApp : ViewBase
                | kpiRow
                | versionChartsRow
                | chartsRow
-               | tableRuns ;
+               | tableRuns;
 
         return new Fragment(
             mainLayout,
@@ -565,9 +565,9 @@ public class DashboardApp : ViewBase
 
         var allRuns = runs.Select(r =>
         {
-            var t    = r.TotalQuestions;
+            var t = r.TotalQuestions;
             var rate = t > 0 ? Math.Round(r.SuccessCount * 100.0 / t, 1) : 0.0;
-            var avg  = avgMsByRunId.TryGetValue(r.Id, out var a) ? (int)Math.Round(a) : 0;
+            var avg = avgMsByRunId.TryGetValue(r.Id, out var a) ? (int)Math.Round(a) : 0;
             return new TestRunRow(
                 r.Id,
                 r.IvyVersion ?? "",

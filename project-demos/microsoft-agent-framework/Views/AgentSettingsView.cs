@@ -70,11 +70,11 @@ public class AgentSettingsView : ViewBase
                 {
                     var models = availableModels.Value;
                     if (models.IsEmpty) return Task.FromResult(Array.Empty<Option<string>>());
-                    
-                    var filtered = string.IsNullOrEmpty(query) 
-                        ? models.Take(10) 
+
+                    var filtered = string.IsNullOrEmpty(query)
+                        ? models.Take(10)
                         : models.Where(m => m.Contains(query, StringComparison.OrdinalIgnoreCase));
-                    
+
                     return Task.FromResult(filtered.Select(m => new Option<string>(m)).ToArray());
                 });
         }
@@ -132,7 +132,7 @@ public class AgentSettingsView : ViewBase
 
         // Model selector using AsyncSelectInput or TextInput as fallback
         var modelInput = modelState.ToAsyncSelectInput<string>(QueryModels, LookupModel, placeholder: "Search models...").Disabled(isReadOnly);
-        
+
 
         var formContent = new Card(Layout.Vertical().Gap(3).Padding(2)
             | (Layout.Vertical().Gap(1)

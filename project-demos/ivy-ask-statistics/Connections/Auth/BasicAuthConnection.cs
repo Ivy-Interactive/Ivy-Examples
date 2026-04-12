@@ -1,6 +1,3 @@
-using Ivy;
-using Microsoft.Extensions.Configuration;
-
 namespace IvyAskStatistics.Connections.Auth;
 
 public class BasicAuthConnection : IConnection, IHaveSecrets

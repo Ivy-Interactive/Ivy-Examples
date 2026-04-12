@@ -38,9 +38,9 @@ internal sealed class QuestionEditSheet(
 
     public override object? Build()
     {
-        var factory      = UseService<AppDbContextFactory>();
+        var factory = UseService<AppDbContextFactory>();
         var queryService = UseService<IQueryService>();
-        var isSaving     = UseState(false);
+        var isSaving = UseState(false);
 
         var questionQuery = UseQuery<QuestionEditPayload?, (Guid QuestionId, Guid? PreviewResultId)>(
             key: (questionId, previewResultId.Value),
@@ -99,16 +99,16 @@ internal sealed class QuestionEditSheet(
                 .Height(Size.Full());
 
         var payload = questionQuery.Value;
-        var q       = payload.Question;
-        var answer  = payload.AnswerText;
+        var q = payload.Question;
+        var answer = payload.AnswerText;
         var preview = payload.PreviewSource;
 
         var form = new EditRequest
         {
             QuestionText = q.QuestionText ?? "",
-            Difficulty   = q.Difficulty,
-            Category     = q.Category,
-            IsActive     = q.IsActive,
+            Difficulty = q.Difficulty,
+            Category = q.Category,
+            IsActive = q.IsActive,
         };
 
         var difficulties = new[] { "easy", "medium", "hard" }.ToOptions();
@@ -116,9 +116,9 @@ internal sealed class QuestionEditSheet(
         var formBuilder = form
             .ToForm()
             .Builder(f => f.QuestionText, f => f.ToTextareaInput())
-            .Builder(f => f.Difficulty,   f => f.ToSelectInput(difficulties))
-            .Builder(f => f.Category,     f => f.ToTextInput())
-            .Builder(f => f.IsActive,     f => f.ToSwitchInput())
+            .Builder(f => f.Difficulty, f => f.ToSelectInput(difficulties))
+            .Builder(f => f.Category, f => f.ToTextInput())
+            .Builder(f => f.IsActive, f => f.ToSwitchInput())
             .OnSubmit(OnSubmit);
 
         var (onSubmit, formView, validationView, loading) = formBuilder.UseForm(Context);
@@ -192,9 +192,9 @@ internal sealed class QuestionEditSheet(
             var entity = await ctx.Questions.FirstOrDefaultAsync(e => e.Id == questionId);
             if (entity == null) return;
             entity.QuestionText = request.QuestionText.Trim();
-            entity.Difficulty   = request.Difficulty;
-            entity.Category     = request.Category.Trim();
-            entity.IsActive     = request.IsActive;
+            entity.Difficulty = request.Difficulty;
+            entity.Category = request.Category.Trim();
+            entity.IsActive = request.IsActive;
             await ctx.SaveChangesAsync();
             queryService.RevalidateByTag(("widget-questions", entity.Widget));
             queryService.RevalidateByTag("widget-summary");

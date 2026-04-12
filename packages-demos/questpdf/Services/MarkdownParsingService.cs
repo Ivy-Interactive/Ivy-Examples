@@ -6,19 +6,19 @@ public class MarkdownParsingService
     {
         var elements = new List<MarkdownElement>();
         var lines = text.Replace("\r\n", "\n").Split('\n');
-        
+
         for (int i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
-            
+
             if (MarkdownHelper.IsHeading(line))
             {
-                var level = MarkdownHelper.IsHeading3(line) ? 3 : 
+                var level = MarkdownHelper.IsHeading3(line) ? 3 :
                            MarkdownHelper.IsHeading2(line) ? 2 : 1;
                 var content = line.TrimStart('#', ' ').Trim();
-                elements.Add(new HeadingElement 
-                { 
-                    Level = level, 
+                elements.Add(new HeadingElement
+                {
+                    Level = level,
                     Content = content,
                     IndentLevel = MarkdownHelper.CountIndent(line)
                 });
@@ -71,10 +71,10 @@ public class MarkdownParsingService
                 elements.Add(new ParagraphElement { Content = line });
             }
         }
-        
+
         return elements;
     }
-    
+
     public void RenderToQuestPdf(IContainer container, MarkdownElement element)
     {
         switch (element)
@@ -105,7 +105,7 @@ public class MarkdownParsingService
                 break;
         }
     }
-    
+
     private void RenderHeading(IContainer container, HeadingElement heading)
     {
         container.Text(t =>
@@ -117,18 +117,18 @@ public class MarkdownParsingService
                 3 => 14,
                 _ => 12
             };
-            
+
             t.Span(heading.Content)
              .FontSize(fontSize)
              .SemiBold();
         });
     }
-    
+
     private void RenderParagraph(IContainer container, ParagraphElement paragraph)
     {
         container.Text(t => RenderInline(t, paragraph.Content));
     }
-    
+
     private void RenderBulletList(IContainer container, BulletListElement list)
     {
         container.Column(c =>
@@ -139,17 +139,17 @@ public class MarkdownParsingService
             }
         });
     }
-    
+
     private void RenderNumberedList(IContainer container, NumberedListElement list)
     {
         container.Column(c =>
         {
             for (int i = 0; i < list.Items.Count; i++)
             {
-                var number = list.NumberingType == "I." ? 
-                    RomanNumerals(i + 1) : 
+                var number = list.NumberingType == "I." ?
+                    RomanNumerals(i + 1) :
                     (i + 1).ToString();
-                    
+
                 c.Item().PaddingLeft(8).Text(t =>
                 {
                     t.Span($"{number}. ").SemiBold();
@@ -158,7 +158,7 @@ public class MarkdownParsingService
             }
         });
     }
-    
+
     private void RenderQuote(IContainer container, QuoteElement quote)
     {
         container.PaddingLeft(16).Text(t =>
@@ -170,7 +170,7 @@ public class MarkdownParsingService
             }
         });
     }
-    
+
     private void RenderCodeBlock(IContainer container, CodeBlockElement code)
     {
         container.PaddingLeft(8).Text(t =>
@@ -182,23 +182,23 @@ public class MarkdownParsingService
             }
         });
     }
-    
+
     private void RenderTable(IContainer container, TableElement table)
     {
         container.Table(t =>
         {
-            t.ColumnsDefinition(c => 
+            t.ColumnsDefinition(c =>
             {
                 for (int i = 0; i < table.Headers.Length; i++)
                     c.RelativeColumn();
             });
-            
+
             t.Header(h =>
             {
                 foreach (var header in table.Headers)
                     h.Cell().Text(header).SemiBold();
             });
-            
+
             for (int ri = table.DataStartRow; ri < table.Rows.Count; ri++)
             {
                 var row = table.Rows[ri];
@@ -210,7 +210,7 @@ public class MarkdownParsingService
             }
         });
     }
-    
+
     private void RenderCheckbox(IContainer container, CheckboxElement checkbox)
     {
         container.PaddingLeft(8).Text(t =>
@@ -220,13 +220,13 @@ public class MarkdownParsingService
             RenderInline(t, checkbox.Text);
         });
     }
-    
+
     private void RenderInline(TextDescriptor t, string text)
     {
         // Simple inline formatting
         var parts = text.Split(new[] { "**", "*", "[", "]" }, StringSplitOptions.None);
         bool isBold = false, isItalic = false, isLink = false;
-        
+
         foreach (var part in parts)
         {
             if (part == "**")
@@ -239,19 +239,19 @@ public class MarkdownParsingService
                 isItalic = !isItalic;
                 continue;
             }
-            
+
             var span = t.Span(part);
             if (isBold) span.SemiBold();
             if (isItalic) span.Italic();
             if (isLink) span.Underline();
         }
     }
-    
+
     private TableElement? ParseTable(string[] lines, int startIndex, out int consumed)
     {
         var rows = new List<string[]>();
         var k = startIndex;
-        
+
         while (k < lines.Length && MarkdownHelper.IsTableRow(lines[k]))
         {
             var cells = lines[k].Trim();
@@ -261,15 +261,15 @@ public class MarkdownParsingService
             rows.Add(parts);
             k++;
         }
-        
+
         consumed = k - startIndex;
         if (rows.Count == 0) return null;
-        
+
         var headers = rows[0];
         int dataStart = 1;
         if (rows.Count > 1 && rows[1].All(MarkdownHelper.IsSepCell))
             dataStart = 2;
-            
+
         return new TableElement
         {
             Headers = headers,
@@ -277,29 +277,29 @@ public class MarkdownParsingService
             DataStartRow = dataStart
         };
     }
-    
+
     private BulletListElement ParseBulletList(string[] lines, int startIndex, out int consumed)
     {
         var items = new List<string>();
         var k = startIndex;
-        
+
         while (k < lines.Length && MarkdownHelper.IsBulletList(lines[k]))
         {
             var line = lines[k].TrimStart('-', ' ').Trim();
             items.Add(line);
             k++;
         }
-        
+
         consumed = k - startIndex;
         return new BulletListElement { Items = items };
     }
-    
+
     private NumberedListElement ParseNumberedList(string[] lines, int startIndex, out int consumed)
     {
         var items = new List<string>();
         var k = startIndex;
         string numberingType = "1.";
-        
+
         while (k < lines.Length && MarkdownHelper.IsNumberedList(lines[k]))
         {
             var line = lines[k].TrimStart();
@@ -308,51 +308,59 @@ public class MarkdownParsingService
                 if (line.StartsWith("I.")) numberingType = "I.";
                 else if (line.StartsWith("a.")) numberingType = "a.";
             }
-            
+
             var content = line.Substring(line.IndexOf(' ') + 1);
             items.Add(content);
             k++;
         }
-        
+
         consumed = k - startIndex;
         return new NumberedListElement { Items = items, NumberingType = numberingType };
     }
-    
+
     private QuoteElement ParseQuote(string[] lines, int startIndex, out int consumed)
     {
         var quoteLines = new List<string>();
         var k = startIndex;
-        
+
         while (k < lines.Length && MarkdownHelper.IsQuote(lines[k]))
         {
             var line = lines[k].TrimStart('>', ' ').Trim();
             quoteLines.Add(line);
             k++;
         }
-        
+
         consumed = k - startIndex;
         return new QuoteElement { Lines = quoteLines };
     }
-    
+
     private CheckboxElement ParseCheckbox(string line)
     {
         var trimmed = line.TrimStart('-', ' ').Trim();
         var isChecked = trimmed.StartsWith("[x]") || trimmed.StartsWith("[X]");
         var text = trimmed.Substring(3).Trim();
-        
+
         return new CheckboxElement
         {
             IsChecked = isChecked,
             Text = text
         };
     }
-    
+
     private static string RomanNumerals(int number)
     {
         return number switch
         {
-            1 => "I", 2 => "II", 3 => "III", 4 => "IV", 5 => "V",
-            6 => "VI", 7 => "VII", 8 => "VIII", 9 => "IX", 10 => "X",
+            1 => "I",
+            2 => "II",
+            3 => "III",
+            4 => "IV",
+            5 => "V",
+            6 => "VI",
+            7 => "VII",
+            8 => "VIII",
+            9 => "IX",
+            10 => "X",
             _ => number.ToString()
         };
     }

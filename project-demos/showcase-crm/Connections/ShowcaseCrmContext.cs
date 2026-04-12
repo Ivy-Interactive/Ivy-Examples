@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-
-namespace ShowcaseCrm.Connections.ShowcaseCrm;
+﻿namespace ShowcaseCrm.Connections.ShowcaseCrm;
 
 public partial class ShowcaseCrmContext : DbContext
 {

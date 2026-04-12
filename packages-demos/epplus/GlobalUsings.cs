@@ -1,7 +1,6 @@
 global using EPPlusExample.Entities;
 global using EPPlusExample.Helpers;
 global using Ivy;
-global using Ivy.Views.Builders;
 global using OfficeOpenXml;
 global using OfficeOpenXml.Style;
 global using System.ComponentModel.DataAnnotations;
