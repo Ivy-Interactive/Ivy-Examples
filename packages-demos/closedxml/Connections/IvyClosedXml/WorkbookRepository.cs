@@ -48,7 +48,7 @@ public class WorkbookRepository
     {
         if (currentFile == null)
             throw new InvalidOperationException("No current file is set. Call SetCurrentFile() first.");
-        
+
         return GetCurrentTable(currentFile.FileName);
     }
 
@@ -63,18 +63,18 @@ public class WorkbookRepository
         var file = GetFileByName(fileName);
         var worksheet = file.Workbook.Worksheets.FirstOrDefault();
         var table = worksheet?.Tables.FirstOrDefault();
-        
+
         if (table == null)
             return new DataTable() { TableName = "FirstTable" };
 
         var dataTable = table.AsNativeDataTable();
-        
+
         // Remove empty rows that ClosedXML might have created
         RemoveEmptyRows(dataTable);
-        
+
         return dataTable;
     }
-    
+
     /// <summary>
     /// Removes rows that are completely empty (all cells are null or whitespace).
     /// </summary>
@@ -82,7 +82,7 @@ public class WorkbookRepository
     private void RemoveEmptyRows(DataTable dataTable)
     {
         var rowsToDelete = new List<DataRow>();
-        
+
         foreach (DataRow row in dataTable.Rows)
         {
             bool isEmptyRow = true;
@@ -94,13 +94,13 @@ public class WorkbookRepository
                     break;
                 }
             }
-            
+
             if (isEmptyRow)
             {
                 rowsToDelete.Add(row);
             }
         }
-        
+
         foreach (var row in rowsToDelete)
         {
             dataTable.Rows.Remove(row);
@@ -201,7 +201,7 @@ public class WorkbookRepository
     {
         if (currentFile == null)
             throw new InvalidOperationException("No current file is set. Call SetCurrentFile() first.");
-        
+
         Save(currentFile.FileName, table);
     }
 
@@ -216,7 +216,7 @@ public class WorkbookRepository
     {
         var file = GetFileByName(fileName);
         var worksheet = file.Workbook.Worksheets.FirstOrDefault();
-        
+
         TryRemoveExistingTable(worksheet);
 
         worksheet

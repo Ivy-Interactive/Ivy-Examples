@@ -1,6 +1,3 @@
-using Ivy;
-using System.Data;
-
 /// <summary>
 /// Implement IConnection interface so that WorkbookConnection is registered in the DI container
 /// </summary>

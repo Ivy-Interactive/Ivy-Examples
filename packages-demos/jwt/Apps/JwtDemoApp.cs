@@ -13,7 +13,7 @@ public class JwtDemoApp : ViewBase
         var tokenInput = this.UseState<string>();
         var generatedToken = this.UseState<string>();
         var validationResult = this.UseState<string>();
-        
+
         var jwtService = new JwtService();
         // Generate a sample token
         var generateToken = new Action(() =>
@@ -43,7 +43,7 @@ public class JwtDemoApp : ViewBase
             var result = jwtService.ValidateToken(token);
             if (result.IsValid)
             {
-                var claimsText = result.Claims != null 
+                var claimsText = result.Claims != null
                     ? string.Join("\n", result.Claims.Select(kvp => $"{kvp.Key}: {kvp.Value}"))
                     : "No claims found";
                 validationResult.Set($"Token is valid!\n\nClaims:\n{claimsText}");

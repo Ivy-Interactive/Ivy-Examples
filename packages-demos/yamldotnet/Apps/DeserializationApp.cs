@@ -67,7 +67,7 @@ addresses:
 
             // First parse YAML as dictionary to check which fields exist
             var yamlDict = deserializer.Deserialize<Dictionary<object, object>>(yamlInput);
-            
+
             // Then deserialize to Person object
             var person = deserializer.Deserialize<Person>(yamlInput);
 
@@ -88,19 +88,19 @@ addresses:
     {
         var lines = new List<string> { "{" };
         var personFields = new List<string>();
-        
+
         // Check if name exists in YAML
         if (yamlDict.ContainsKey("name") && yamlDict["name"] != null && !string.IsNullOrWhiteSpace(person.Name))
             personFields.Add($"    Name = \"{person.Name}\"");
-        
+
         // Check if age exists in YAML
         if (yamlDict.ContainsKey("age") && yamlDict["age"] != null)
             personFields.Add($"    Age = {person.Age}");
-        
+
         // Check if height_in_inches exists in YAML
         if (yamlDict.ContainsKey("height_in_inches") && yamlDict["height_in_inches"] != null)
             personFields.Add($"    HeightInInches = {person.HeightInInches}f");
-        
+
         // Check if addresses exist in YAML
         if (yamlDict.ContainsKey("addresses") && yamlDict["addresses"] != null)
         {
@@ -110,7 +110,7 @@ addresses:
                 var addressLines = new List<string>();
                 addressLines.Add("    Addresses = new Dictionary<string, Address>");
                 addressLines.Add("    {");
-                
+
                 foreach (var address in person.Addresses)
                 {
                     // Check if this address key exists in YAML
@@ -120,38 +120,38 @@ addresses:
                         if (addressDict != null)
                         {
                             var addrFields = new List<string>();
-                            
+
                             // Only include fields that exist in YAML address dict
-                            if (addressDict.ContainsKey("street") && addressDict["street"] != null && 
+                            if (addressDict.ContainsKey("street") && addressDict["street"] != null &&
                                 !string.IsNullOrWhiteSpace(address.Value.Street))
                                 addrFields.Add($"            Street = \"{address.Value.Street}\"");
-                            if (addressDict.ContainsKey("city") && addressDict["city"] != null && 
+                            if (addressDict.ContainsKey("city") && addressDict["city"] != null &&
                                 !string.IsNullOrWhiteSpace(address.Value.City))
                                 addrFields.Add($"            City = \"{address.Value.City}\"");
-                            if (addressDict.ContainsKey("state") && addressDict["state"] != null && 
+                            if (addressDict.ContainsKey("state") && addressDict["state"] != null &&
                                 !string.IsNullOrWhiteSpace(address.Value.State))
                                 addrFields.Add($"            State = \"{address.Value.State}\"");
-                            if (addressDict.ContainsKey("zip") && addressDict["zip"] != null && 
+                            if (addressDict.ContainsKey("zip") && addressDict["zip"] != null &&
                                 !string.IsNullOrWhiteSpace(address.Value.Zip))
                                 addrFields.Add($"            Zip = \"{address.Value.Zip}\"");
-                            
+
                             if (addrFields.Count > 0)
                             {
                                 addressLines.Add($"        {{\"{address.Key}\", new Address");
                                 addressLines.Add("        {");
-                                
+
                                 // Add fields with commas except the last one
                                 for (int i = 0; i < addrFields.Count; i++)
                                 {
                                     addressLines.Add(addrFields[i] + (i < addrFields.Count - 1 ? "," : ""));
                                 }
-                                
+
                                 addressLines.Add("        }},");
                             }
                         }
                     }
                 }
-                
+
                 if (addressLines.Count > 2) // More than just opening lines
                 {
                     addressLines.Add("    }");
@@ -159,13 +159,13 @@ addresses:
                 }
             }
         }
-        
+
         // Add person fields with commas except the last one
         for (int i = 0; i < personFields.Count; i++)
         {
             lines.Add(personFields[i] + (i < personFields.Count - 1 ? "," : ""));
         }
-        
+
         lines.Add("};");
         return string.Join("\n", lines) + "\n";
     }

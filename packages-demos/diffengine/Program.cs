@@ -8,7 +8,7 @@ server.UseHotReload();
 server.AddAppsFromAssembly();
 server.AddConnectionsFromAssembly();
 var customHeader = Layout.Vertical().Gap(2)
-    |new Embed(CodespacesUrl);
+    | new Embed(CodespacesUrl);
 var appShellSettings = new AppShellSettings()
     .DefaultApp<DiffEngineApp>()
     .UseTabs(preventDuplicates: true)

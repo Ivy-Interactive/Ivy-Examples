@@ -75,7 +75,7 @@ public class WorkbooksListBlade : ViewBase
 
             return filtered
                 .Select(f => new WorkbookListRecord(
-                    f.FileName, 
+                    f.FileName,
                     f.Workbook.Worksheets.FirstOrDefault()?.ColumnsUsed().Count() ?? 0))
                 .ToArray();
         });
@@ -118,7 +118,7 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeContext bla
         var selectedType = this.UseState("string");
         var columnName = this.UseState<string?>(() => null);
         var columnTypes = new string[] { "int", "double", "decimal", "long", "string" };
-        
+
 
         var addColumnButton = new Button("Add Column", _ =>
         {
@@ -132,10 +132,10 @@ public class WorksheetEditor(DataTable table, string fileName, IBladeContext bla
             {
                 var colName = columnName.Value;
                 table.Columns.Add(colName, GetColumnTypeFromString(selectedType.Value));
-                
+
                 // Auto-save changes - passing fileName directly to avoid shared state issues
                 workbookRepository.Save(fileName, table);
-                
+
                 columnName.Set(String.Empty);
                 refreshToken.Refresh();
                 client.Toast($"Column '{colName}' added and saved!");

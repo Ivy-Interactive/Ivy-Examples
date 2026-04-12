@@ -1,6 +1,6 @@
 ﻿namespace SuperpowerExample
 {
-    internal class DateTimeParserView: ViewBase
+    internal class DateTimeParserView : ViewBase
     {
         public override object? Build()
         {
@@ -70,11 +70,11 @@
             var resultCard = new Card(
                 Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Result")
-                | (errorState.Value.Length > 0 
+                | (errorState.Value.Length > 0
                     ? Layout.Vertical().Gap(2)
                         | Text.Block("Parsing Error:")
                         | Text.Code(errorState.Value)
-                    : resultState.Value 
+                    : resultState.Value
                         ? Layout.Vertical().Gap(2)
                             | Text.Muted("Parsed date/time details:")
                             | Text.Label("Formatted date:")

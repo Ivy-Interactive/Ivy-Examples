@@ -5,7 +5,7 @@ public class RestSharpApp : ViewBase
 {
     private const string BaseApiUrl = "https://api.restful-api.dev/objects";
 
-    private static bool RequiresResourceId(string? method) => 
+    private static bool RequiresResourceId(string? method) =>
         method?.ToUpper() is "DELETE" or "PUT" or "PATCH";
 
     private static string BuildUrlWithResourceId(string? resourceId) =>
@@ -80,7 +80,7 @@ public class RestSharpApp : ViewBase
             try
             {
                 // Build final URL with ID if needed
-                var finalUrl = RequiresResourceId(method.Value) 
+                var finalUrl = RequiresResourceId(method.Value)
                     ? BuildUrlWithResourceId(resourceId.Value)
                     : url.Value;
 

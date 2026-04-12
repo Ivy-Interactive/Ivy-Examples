@@ -35,11 +35,11 @@ public class PlainTextHumanizerApp : ViewBase
             | new Card(
                 Layout.Vertical().Gap(4)
                     | Text.H3("Transformed Results")
-                    | (humanizedTexts.Value.Any() 
+                    | (humanizedTexts.Value.Any()
                         ? Layout.Vertical().Gap(2)
                             | Text.Muted("You can use these transformed texts in your code, documentation, or anywhere you need formatted text.")
                             | new Spacer()
-                            | humanizedTexts.Value.Reverse().Select(text => 
+                            | humanizedTexts.Value.Reverse().Select(text =>
                                 Text.Code(text)
                             ).ToArray()
                         : Layout.Vertical().Gap(2)

@@ -1,4 +1,3 @@
-using Ivy;
 using OpperDotNet;
 
 namespace OpperaiExample.Apps
@@ -15,15 +14,15 @@ namespace OpperaiExample.Apps
         public override object? Build()
         {
             var client = UseService<IClientProvider>();
-            
+
             // API Key state - initialize from environment variable if available
             var apiKey = UseState<string?>(Environment.GetEnvironmentVariable("OPPER_API_KEY"));
             var opperClient = UseState<OpperClient?>(default(OpperClient?));
             var isValidating = UseState<bool>(false);
             var customInstructions = UseState<string>("You are a helpful AI assistant. When responding:\n\n1. Use Markdown formatting for better readability (headers, lists, code blocks, etc.)\n2. For mathematical expressions, use LaTeX notation with proper delimiters:\n   - Inline math: $expression$ (e.g., $\\sqrt{-1}$ or $x^2 + y^2 = r^2$)\n   - Block math: $$expression$$ for displayed equations\n   - Examples: $\\sqrt{-1} = i$, $E = mc^2$, $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$\n3. Ensure all math expressions render clearly and correctly\n4. Keep your responses concise, relevant, and well-formatted.");
             var isSettingsDialogOpen = UseState(false);
-            var settingsForm = UseState(new SettingsRequest 
-            { 
+            var settingsForm = UseState(new SettingsRequest
+            {
                 ApiKey = apiKey.Value ?? string.Empty,
                 Instructions = customInstructions.Value
             });
@@ -101,10 +100,10 @@ namespace OpperaiExample.Apps
                 {
                     opperClient.Value?.Dispose();
                     var testClient = new OpperClient(key);
-                    
+
                     // Try to make a simple API call to validate the key
                     await testClient.ListModelsAsync(limit: 1);
-                    
+
                     // If successful, set the client and show success toast
                     opperClient.Set(testClient);
                     client.Toast("API key validated successfully!", "Success");
@@ -113,7 +112,7 @@ namespace OpperaiExample.Apps
                 {
                     // If validation fails, show error toast
                     opperClient.Set(default(OpperClient?));
-                    var errorMessage = ex is OpperException opperEx 
+                    var errorMessage = ex is OpperException opperEx
                         ? $"API key validation error: {opperEx.Message}"
                         : $"API key validation error: {ex.Message}";
                     client.Toast(errorMessage, "Error");
@@ -185,12 +184,12 @@ namespace OpperaiExample.Apps
                             {
                                 return new Option<string>($"{model.HostingProvider}/{model.Name}", model.Name);
                             }
-                            
+
                             // If model not found, return default model option anyway
                             if (modelName == DefaultModelName)
                             {
                                 var parts = DefaultModel.Split('/');
-                                var defaultModelFromApi = response.Data.FirstOrDefault(m => 
+                                var defaultModelFromApi = response.Data.FirstOrDefault(m =>
                                     m.HostingProvider == parts[0] && m.Name == parts[1]);
                                 if (defaultModelFromApi != null)
                                 {
@@ -199,7 +198,7 @@ namespace OpperaiExample.Apps
                                 // Fallback: return default model even if not in API response
                                 return new Option<string>($"{DefaultModel}", DefaultModelName);
                             }
-                            
+
                             return null;
                         }
                         catch
@@ -219,7 +218,7 @@ namespace OpperaiExample.Apps
                 if (opperClient.Value == null)
                 {
                     messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
-                    messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, 
+                    messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant,
                         "Please click the 'Enter API Key' button above to enter your Opper.ai API key and start chatting. " +
                         "You can get your API key at https://platform.opper.ai/settings/api-keys")));
                     return;
@@ -229,7 +228,7 @@ namespace OpperaiExample.Apps
                 if (string.IsNullOrWhiteSpace(selectedModel.Value))
                 {
                     messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.User, @event.Value)));
-                    messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant, 
+                    messages.Set(messages.Value.Add(new Ivy.ChatMessage(ChatSender.Assistant,
                         "Please select a model from the dropdown above before sending a message. " +
                         "The model selection is located in the header area.")));
                     return;
@@ -296,7 +295,7 @@ namespace OpperaiExample.Apps
                         Layout.Vertical().Gap(3).Padding(4)
                         | Text.H4("Welcome to OpperAI Chat!")
                         | Text.Muted("To get started, you need an API key from Opper.ai:")
-                        
+
                         | (Layout.Vertical().Gap(1).Padding(2)
                             | Text.Markdown(@"1. Visit [https://platform.opper.ai](https://platform.opper.ai)
 2. Sign up or log in to your [account](https://platform.opper.ai/settings/details)
@@ -316,7 +315,7 @@ namespace OpperaiExample.Apps
                         | header.Width(Size.Fraction(0.6f)).Height(Size.Fit().Max(Size.Fraction(0.1f)))
                         | chatCard.Width(Size.Fraction(0.6f)).Height(Size.Full().Max(Size.Fraction(0.9f)))
                         )
-                    | (isSettingsDialogOpen.Value ? 
+                    | (isSettingsDialogOpen.Value ?
                         settingsForm.ToForm()
                             .Builder(e => e.ApiKey, e => e.ToPasswordInput(placeholder: "Enter your Opper.ai API key..."))
                             .Label(e => e.ApiKey, "API Key:")

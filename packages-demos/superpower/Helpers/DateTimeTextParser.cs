@@ -1,7 +1,7 @@
 namespace SuperpowerExample.Helpers
 {
     public static class DateTimeTextParser
-    {        
+    {
         static TextParser<int> IntDigits(int count) =>
             Character.Digit
                 .Repeat(count)
@@ -14,7 +14,7 @@ namespace SuperpowerExample.Helpers
         static TextParser<char> Colon { get; } = Character.EqualTo(':');
         static TextParser<char> TimeSeparator { get; } = Character.In('T', ' ');
 
-        static TextParser<DateTime> Date { get; } = 
+        static TextParser<DateTime> Date { get; } =
             from year in FourDigits
             from _ in Dash
             from month in TwoDigits

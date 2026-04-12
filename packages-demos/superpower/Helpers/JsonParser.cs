@@ -1,5 +1,5 @@
 ﻿namespace SuperpowerExample.Helpers
-{   
+{
     // This is an example JSON parser. It correctly and completely implements the
     // language spec at https://json.org (or should), but the goal isn't to use
     // this "for real" - there are no tests, after all! :-)

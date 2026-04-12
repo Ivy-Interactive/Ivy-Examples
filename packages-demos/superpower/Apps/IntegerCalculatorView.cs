@@ -1,6 +1,6 @@
 ﻿namespace SuperpowerExample
 {
-    internal class IntegerCalculatorView: ViewBase
+    internal class IntegerCalculatorView : ViewBase
     {
         public override object? Build()
         {
@@ -73,11 +73,11 @@
             var resultCard = new Card(
                 Layout.Vertical().Gap(3).Padding(3)
                 | Text.H4("Result")
-                | (errorState.Value.Length > 0 
+                | (errorState.Value.Length > 0
                     ? Layout.Vertical().Gap(2)
                         | Text.Block("Calculation Error:")
                         | Text.Code(errorState.Value)
-                    : resultState.Value 
+                    : resultState.Value
                         ? Layout.Vertical().Gap(2)
                             | Text.Muted("Evaluation output:")
                             | Text.Code(resultValueState.Value.ToString())

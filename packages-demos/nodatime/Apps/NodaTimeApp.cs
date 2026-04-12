@@ -7,10 +7,10 @@ public class NodaTimeApp : ViewBase
     {
         var tzState = this.UseState<string>();
         var timeState = this.UseState<object?>(Text.Muted("Select a timezone to see results..."));
-        
+
         // Update time whenever timezone selection changes
         UseEffect(() => { UpdateTime(tzState.Value); }, tzState);
-        
+
         // Helper function: updates the UI whenever a timezone is selected
         void UpdateTime(string tzId)
         {
@@ -86,8 +86,8 @@ public class NodaTimeApp : ViewBase
                 // Display the structured time output
                 | new Card(timeState.Value)
                 | new Spacer()
-				| Text.Block("This demo uses NodaTime to handle timezones and display UTC and local times.")
-			    | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [NodaTime](https://github.com/nodatime/nodatime)")
+                | Text.Block("This demo uses NodaTime to handle timezones and display UTC and local times.")
+                | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [NodaTime](https://github.com/nodatime/nodatime)")
             )
             .Width(Size.Fit().Min(100).Max(600)));
     }

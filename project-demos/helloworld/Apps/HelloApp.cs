@@ -1,6 +1,6 @@
 namespace Helloworld.Apps;
 
-[App(icon:Icons.PartyPopper, title:"Hello")]
+[App(icon: Icons.PartyPopper, title: "Hello")]
 public class HelloApp : ViewBase
 {
     public override object? Build()

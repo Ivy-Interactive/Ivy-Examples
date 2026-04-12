@@ -34,12 +34,12 @@ public class JwtService
         // In a real application, use the JWT package for proper token generation
         var header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
         var payload = CreatePayload(claims, expirationMinutes);
-        
+
         // Simple base64 encoding (not proper JWT encoding)
         var headerEncoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(header));
         var payloadEncoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload));
         var signature = "demo-signature"; // This would be a proper HMAC signature in real implementation
-        
+
         return $"{headerEncoded}.{payloadEncoded}.{signature}";
     }
 
@@ -68,7 +68,7 @@ public class JwtService
             var payload = parts[1];
             var payloadJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
             var payloadData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(payloadJson);
-            
+
             if (payloadData == null)
             {
                 return new JwtValidationResult

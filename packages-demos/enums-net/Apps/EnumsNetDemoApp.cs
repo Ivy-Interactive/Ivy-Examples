@@ -1,5 +1,4 @@
 using EnumsNET;
-using EnumsNetApp.Apps;
 using System.ComponentModel;
 /// <summary>
 /// Enums.NET demo view for Ivy samples.

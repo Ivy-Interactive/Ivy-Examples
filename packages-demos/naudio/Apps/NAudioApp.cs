@@ -162,9 +162,9 @@ public class NAudioApp : ViewBase
                             mixDataUrl.Set("data:audio/wav;base64," + Convert.ToBase64String(mixed));
                             client.Toast("Audio mixed successfully");
                         }
-                        catch (Exception ex) 
-                        { 
-                            mixError.Set(ex.Message); 
+                        catch (Exception ex)
+                        {
+                            mixError.Set(ex.Message);
                             mixBytes.Set((byte[]?)null);
                             mixDataUrl.Set((string?)null);
                         }

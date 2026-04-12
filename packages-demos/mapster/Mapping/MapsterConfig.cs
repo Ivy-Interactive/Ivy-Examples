@@ -21,7 +21,7 @@
                         dest.FirstName = parts[0];
                         dest.LastName = parts[1];
                     }
-                    else 
+                    else
                     {
                         dest.FirstName = src.FullName;
                         dest.LastName = "";

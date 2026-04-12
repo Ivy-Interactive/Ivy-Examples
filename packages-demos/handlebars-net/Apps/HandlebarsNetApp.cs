@@ -28,7 +28,8 @@ public class HandlebarsNetApp : ViewBase
 </div>");
 
         // State for the JSON model string
-        var modelState = this.UseState<string>(JsonSerializer.Serialize(new {
+        var modelState = this.UseState<string>(JsonSerializer.Serialize(new
+        {
             name = "John Smith",
             company = "TechCorp",
             department = "Engineering",
@@ -78,13 +79,13 @@ public class HandlebarsNetApp : ViewBase
             | new Card(
                 Layout.Vertical()
                     | Layout.Tabs(
-                        new Tab("Template", 
+                        new Tab("Template",
                             Layout.Vertical().Gap(2)
                                 | Text.H3("Handlebars Template")
                                 | Text.Muted("Write your Handlebars template here. Use {{variable}} for data binding, {{#each}} for loops, and {{#if}} for conditions.")
                                 | templateState.ToCodeInput().Language(Languages.Html).Height(Size.Auto())
                         ).Icon(Icons.Code),
-                        new Tab("Data", 
+                        new Tab("Data",
                             Layout.Vertical().Gap(2)
                                 | Text.H3("JSON Data")
                                 | Text.Muted("Provide your data as JSON. This will be used to populate the template variables.")
@@ -102,7 +103,7 @@ public class HandlebarsNetApp : ViewBase
                     | new Spacer()
                     | Text.Block("This demo uses Handlebars.Net library for server-side HTML templating with data binding.")
                     | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Handlebars.Net](https://github.com/Handlebars-Net/Handlebars.Net)")
-                    
+
             ).Width(Size.Fraction(0.4f)).Height(Size.Fit().Min(Size.Full()));
     }
 }

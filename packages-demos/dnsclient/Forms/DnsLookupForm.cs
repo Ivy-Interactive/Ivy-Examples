@@ -6,7 +6,7 @@ using DnsClientExample.Utils;
 namespace DnsClientExample.Forms;
 
 public class DnsLookupForm : ViewBase
-{ 
+{
     public override object? Build()
     {
         var signal = this.Context.UseSignal<DnsQueryResultsSignal, DnsQueryResponse?, bool>();

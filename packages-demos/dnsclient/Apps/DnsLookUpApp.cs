@@ -3,7 +3,7 @@ using DnsClientExample.Forms;
 
 namespace DnsClientExample.Apps;
 
-[App(icon: Icons.Server, title:"DNS Client")]
+[App(icon: Icons.Server, title: "DNS Client")]
 public class DnsLookUpApp : ViewBase
 {
     public override object? Build()

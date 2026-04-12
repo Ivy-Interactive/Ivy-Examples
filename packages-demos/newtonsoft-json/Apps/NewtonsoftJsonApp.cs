@@ -39,7 +39,7 @@ namespace NewtonsoftJsonExample
             // Simple email validation (Ivy-style via Invalid)
             UseEffect(() =>
             {
-                
+
                 if (!(email.Value.Contains("@") && email.Value.Contains(".")))
                 {
                     emailInvalid.Set("Please enter a valid email address");
@@ -113,23 +113,23 @@ namespace NewtonsoftJsonExample
                 Layout.Horizontal().Gap(8)
                     | new Card(
                         Layout.Vertical()
-						| Text.H4("Source JSON")
-						| Text.Muted("Edit sample JSON (add roles, tweak fields) then click Deserialize to load it here.")
+                        | Text.H4("Source JSON")
+                        | Text.Muted("Edit sample JSON (add roles, tweak fields) then click Deserialize to load it here.")
                         | rawData.ToCodeInput(variant: CodeInputVariant.Default, language: Languages.Json).Height(Size.Fit())
                             .Disabled(!isSerialized.Value)
                         | new Button("Deserialize", _ => HandleButtonClick())
                             .Disabled(!isSerialized.Value)
                             .Icon(Icons.ArrowRight, Align.Right)
                         | new Spacer()
-                        |   ("This demo uses Newtonsoft.Json library to serialize and deserialize JSON data.")
+                        | ("This demo uses Newtonsoft.Json library to serialize and deserialize JSON data.")
                         | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json)")
                         )
                         .Width(Size.Half()).Height(Size.Fit().Min(Size.Full()))
 
                     | new Card(
                         Layout.Vertical()
-						| Text.H4("User Editor")
-						| Text.Muted("Modify user fields, pick date and roles, then click Serialize to push changes back to JSON.")
+                        | Text.H4("User Editor")
+                        | Text.Muted("Modify user fields, pick date and roles, then click Serialize to push changes back to JSON.")
 
                         | Text.Label("Full name")
                         | fullName.ToTextInput(placeholder: "Full name")

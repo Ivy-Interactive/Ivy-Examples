@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Collections.Immutable;
-using Ivy.Views.Builders;
-using Bogus;
-using Bogus.DataSets;
+﻿using Bogus;
 
 namespace BogusExample.Apps
 {
@@ -90,7 +83,7 @@ namespace BogusExample.Apps
               | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Bogus](https://github.com/bchavez/Bogus)");
 
             var leftCard = new Card(leftCardBody).Width(Size.Fraction(LeftCardWidth)).Height(Size.Fit().Min(Size.Full()));
-            
+
             // Right Card: Generated Orders Table
             var rightCardBody = Layout.Vertical().Gap(4).Padding(3)
               | Text.H2("Generated Orders")

@@ -1,5 +1,4 @@
 using Aspose.Words;
-using Aspose.Words.Drawing;
 using Aspose.Words.Tables;
 
 namespace AsposeWordsExample.Apps;

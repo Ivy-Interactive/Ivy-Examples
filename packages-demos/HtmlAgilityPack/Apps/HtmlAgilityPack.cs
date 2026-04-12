@@ -16,7 +16,7 @@ public class HtmlAgilityPackApp : ViewBase
         var urlSocialState = UseState<string>("");
         var errorState = UseState<string>("");
         var parsingState = UseState(false);
-        
+
         // Data type selection
         var dataTypesSelect = UseState<string[]>(new[] { "title", "meta", "images", "structure", "social", "links" });
         var dataTypeOptions = new[] { "title", "meta", "images", "structure", "social", "links" }.ToOptions();
@@ -76,13 +76,13 @@ public class HtmlAgilityPackApp : ViewBase
             if (document == null)
                 return string.Empty;
             string links = string.Empty;
-            var socialDomains = new[] { 
-                "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com", 
+            var socialDomains = new[] {
+                "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com",
                 "youtube.com", "tiktok.com", "discord.gg", "discord.com", "github.com",
                 "reddit.com", "pinterest.com", "snapchat.com", "telegram.org", "whatsapp.com",
                 "discord.gg/", "github.com/"
             };
-            
+
             var metaTags = document.DocumentNode.SelectNodes("//a");
             if (metaTags != null)
             {
@@ -101,7 +101,7 @@ public class HtmlAgilityPackApp : ViewBase
                                 break;
                             }
                         }
-                        
+
                         if (!isSocialLink)
                         {
                             links += href + System.Environment.NewLine;
@@ -130,12 +130,12 @@ public class HtmlAgilityPackApp : ViewBase
                     var alt = img.Attributes["alt"]?.Value ?? "";
                     var width = img.Attributes["width"]?.Value ?? "";
                     var height = img.Attributes["height"]?.Value ?? "";
-                    
+
                     if (!string.IsNullOrEmpty(src))
                     {
                         images += $"{src}";
                         if (!string.IsNullOrEmpty(alt)) images += $" (Alt: {alt})";
-                        if (!string.IsNullOrEmpty(width) || !string.IsNullOrEmpty(height)) 
+                        if (!string.IsNullOrEmpty(width) || !string.IsNullOrEmpty(height))
                             images += $" [{width}x{height}]";
                         images += System.Environment.NewLine;
                     }
@@ -149,7 +149,7 @@ public class HtmlAgilityPackApp : ViewBase
             if (document == null)
                 return string.Empty;
             string structure = string.Empty;
-            
+
             // Headers
             for (int i = 1; i <= 6; i++)
             {
@@ -166,28 +166,28 @@ public class HtmlAgilityPackApp : ViewBase
                     if (headers.Count > 5) structure += $"  ... and {headers.Count - 5} more" + System.Environment.NewLine;
                 }
             }
-            
+
             // Paragraphs
             var paragraphs = document.DocumentNode.SelectNodes("//p");
             if (paragraphs != null && paragraphs.Count > 0)
             {
                 structure += $"Paragraphs ({paragraphs.Count})" + System.Environment.NewLine;
             }
-            
+
             // Lists
             var lists = document.DocumentNode.SelectNodes("//ul | //ol");
             if (lists != null && lists.Count > 0)
             {
                 structure += $"Lists ({lists.Count})" + System.Environment.NewLine;
             }
-            
+
             // Tables
             var tables = document.DocumentNode.SelectNodes("//table");
             if (tables != null && tables.Count > 0)
             {
                 structure += $"Tables ({tables.Count})" + System.Environment.NewLine;
             }
-            
+
             return structure;
         };
 
@@ -196,13 +196,13 @@ public class HtmlAgilityPackApp : ViewBase
             if (document == null)
                 return string.Empty;
             string social = string.Empty;
-            
+
             // Social media links only (no meta tags)
             var socialLinks = document.DocumentNode.SelectNodes("//a[@href]");
             if (socialLinks != null)
             {
-                var socialDomains = new[] { 
-                    "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com", 
+                var socialDomains = new[] {
+                    "facebook.com", "twitter.com", "x.com", "linkedin.com", "instagram.com",
                     "youtube.com", "tiktok.com", "discord.gg", "discord.com", "github.com",
                     "reddit.com", "pinterest.com", "snapchat.com", "telegram.org", "whatsapp.com",
                     "discord.gg/", "github.com/"
@@ -226,7 +226,7 @@ public class HtmlAgilityPackApp : ViewBase
                     }
                 }
             }
-            
+
             return social;
         };
 
@@ -280,7 +280,7 @@ public class HtmlAgilityPackApp : ViewBase
                         (selectedTypes.Contains("structure") && urlStructureState.Value.Length > 0) ||
                         (selectedTypes.Contains("social") && urlSocialState.Value.Length > 0) ||
                         (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0);
-                        
+
         var resultsContent = !hasAnyData
             ? Layout.Vertical().Gap(2)
                 | Text.H3("HTML Parser Results")
@@ -293,37 +293,37 @@ public class HtmlAgilityPackApp : ViewBase
                     "Site Title",
                     Text.Code(urlTitleState.Value)
                 ) : null)
-                
+
                 // Meta data
                 | (selectedTypes.Contains("meta") && urlMetaState.Value.Length > 0 ? new Expandable(
                     "Site Meta Data",
                     Text.Code(urlMetaState.Value)
                 ) : null)
-                
+
                 // Images
                 | (selectedTypes.Contains("images") && urlImagesState.Value.Length > 0 ? new Expandable(
                     "Images Found",
                     Text.Code(urlImagesState.Value)
                 ) : null)
-                
+
                 // Page structure
                 | (selectedTypes.Contains("structure") && urlStructureState.Value.Length > 0 ? new Expandable(
                     "Page Structure",
                     Text.Code(urlStructureState.Value)
                 ) : null)
-                
+
                 // Social media
                 | (selectedTypes.Contains("social") && urlSocialState.Value.Length > 0 ? new Expandable(
                     "Social Media Links",
                     Text.Code(urlSocialState.Value)
                 ) : null)
-                
+
                 // External links
                 | (selectedTypes.Contains("links") && urlLinksState.Value.Length > 0 ? new Expandable(
                     "External Links",
                     Text.Code(urlLinksState.Value)
                 ) : null)
-                
+
                 // Error display
                 | (errorState.Value.Length > 0 ? new Expandable(
                     "Error",

@@ -14,10 +14,10 @@ public class Document
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastAccessedAt { get; set; }
-    
+
     public string DisplayName => $"{FileName} ({SheetCount} sheets)";
-    public string FileSizeFormatted => FileSize < 1024 ? $"{FileSize} B" 
-        : FileSize < 1024 * 1024 ? $"{FileSize / 1024} KB" 
+    public string FileSizeFormatted => FileSize < 1024 ? $"{FileSize} B"
+        : FileSize < 1024 * 1024 ? $"{FileSize / 1024} KB"
         : $"{FileSize / (1024 * 1024)} MB";
 }
 

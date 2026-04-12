@@ -11,11 +11,11 @@ public class MimeMappingApp : ViewBase
         var fileInput = this.UseState<string>();
         var uploadState = this.UseState<FileUpload<byte[]>?>();
         var uploadBase = this.UseUpload(MemoryStreamUploadHandler.Create(uploadState));
-        
+
         var mimeTypeInput = this.UseState<string>();
         var searchQuery = this.UseState<string>();
         var currentPage = this.UseState(1);
-        
+
         // Reset to page 1 when search query changes
         UseEffect(() =>
         {
@@ -42,7 +42,7 @@ public class MimeMappingApp : ViewBase
         // Get paginated types
         var totalItems = allFilteredTypes.Count;
         var totalPages = (int)Math.Ceiling(totalItems / (double)itemsPerPage);
-        
+
         // Ensure current page is valid
         if (currentPage.Value < 1)
         {
@@ -52,7 +52,7 @@ public class MimeMappingApp : ViewBase
         {
             currentPage.Set(totalPages);
         }
-        
+
         var filteredTypes = allFilteredTypes.Skip((currentPage.Value - 1) * itemsPerPage).Take(itemsPerPage);
 
         return Layout.Vertical()
@@ -77,7 +77,7 @@ public class MimeMappingApp : ViewBase
         // Validation
         string? fileInputError = null;
         string? fileUploadError = null;
-        
+
         if (inputMethod.Value == InputMethod.UploadFile && uploadState.Value != null)
         {
             var detected = MimeUtility.GetMimeMapping(uploadState.Value.FileName);
@@ -94,11 +94,11 @@ public class MimeMappingApp : ViewBase
                 fileInputError = "Unknown file type - returns default application/octet-stream";
             }
         }
-        
+
         // Check if inputs have values
         bool hasUploadValue = inputMethod.Value == InputMethod.UploadFile && uploadState.Value != null;
         bool hasInputValue = inputMethod.Value == InputMethod.EnterFileName && !string.IsNullOrEmpty(fileInput.Value);
-        
+
         object inputSection = inputMethod.Value == InputMethod.UploadFile
             ? Layout.Vertical()
                 | Text.Label("Choose File")
@@ -146,7 +146,7 @@ public class MimeMappingApp : ViewBase
             | (totalPages > 1
                 ? new Pagination(currentPage.Value, totalPages, evt => currentPage.Set(evt.Value))
                 : null);
-            
+
     }
 
     private object BuildReverseLookupDemo(IState<string> mimeTypeInput, string[]? extensions)
@@ -168,7 +168,7 @@ public class MimeMappingApp : ViewBase
                 mimeTypeError = "This MIME type is not recognized or has no associated extensions";
             }
         }
-        
+
         // Determine if we should show results
         bool showResults = isValidInput && mimeTypeError == null && hasValidExtensions;
 
@@ -180,7 +180,7 @@ public class MimeMappingApp : ViewBase
                 | mimeTypeInput.ToInput(placeholder: "e.g., image/jpeg, application/pdf, text/html")
                     .Invalid(mimeTypeError)
                 )
-            
+
             | new Card(
                 Layout.Vertical().Gap(5)
                 | Text.H3("Lookup Result")

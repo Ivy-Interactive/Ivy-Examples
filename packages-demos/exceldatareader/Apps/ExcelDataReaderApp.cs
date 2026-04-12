@@ -1,7 +1,4 @@
 using System.Data;
-using System.IO;
-using System.Collections.Generic;
-using ExcelDataReader;
 
 namespace ExcelDataReaderExample;
 
@@ -237,10 +234,10 @@ public class ExcelDataReaderApp : ViewBase
             }
 
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = fileInfo.Extension.ToLowerInvariant() == ".csv" 
+            using var reader = fileInfo.Extension.ToLowerInvariant() == ".csv"
                 ? ExcelReaderFactory.CreateCsvReader(stream)
                 : ExcelReaderFactory.CreateReader(stream);
-            
+
             if (reader == null)
             {
                 throw new InvalidOperationException("Failed to create reader for the file");
@@ -297,7 +294,7 @@ public class ExcelDataReaderApp : ViewBase
                     // Log error but continue processing
                     Console.WriteLine($"Error processing merge cells: {ex.Message}");
                 }
-                
+
                 // For CSV files, set MergeCellsCount to 0 since CSV doesn't support merged cells
                 if (fileInfo.Extension.ToLowerInvariant() == ".csv")
                 {

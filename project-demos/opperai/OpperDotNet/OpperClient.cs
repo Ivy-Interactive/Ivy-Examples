@@ -11,7 +11,7 @@ public class OpperClient : IDisposable
     private const string DefaultBaseUrl = "https://api.opper.ai";
     private const string CallEndpoint = "/v2/call";
     private const string ModelsEndpoint = "/v2/models";
-    
+
     private readonly HttpClient _httpClient;
     private readonly bool _disposeHttpClient;
 
@@ -50,7 +50,7 @@ public class OpperClient : IDisposable
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The API response</returns>
     public async Task<OpperCallResponse> CallAsync(
-        OpperCallRequest request, 
+        OpperCallRequest request,
         CancellationToken cancellationToken = default)
     {
         if (request == null)
@@ -68,8 +68,8 @@ public class OpperClient : IDisposable
         try
         {
             var response = await _httpClient.PostAsJsonAsync(
-                CallEndpoint, 
-                request, 
+                CallEndpoint,
+                request,
                 cancellationToken);
 
             if (!response.IsSuccessStatusCode)
