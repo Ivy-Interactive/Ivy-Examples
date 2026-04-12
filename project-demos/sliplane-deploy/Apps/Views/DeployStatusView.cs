@@ -39,7 +39,7 @@ public class DeployStatusView : ViewBase
 
         var manageUrl = "https://ivy-sliplane-management.sliplane.app/$auth";
 
-        var content = Layout.Vertical().Gap(2).AlignContent(Align.Left);
+        var content = Layout.Vertical().Gap(2).AlignContent(Align.Left).Width(Size.Full());
 
         if (!string.IsNullOrEmpty(siteUrlAbsolute))
             content = content | LabelPlusUrlRow("Your app will be available at:", siteUrlAbsolute);
@@ -53,7 +53,7 @@ public class DeployStatusView : ViewBase
                 ? failureMessage
                 : "Deployment failed. Check the service logs in Sliplane dashboard.";
             content = content | new Callout(Text.Markdown($"**Deployment failed.**\n\n{MarkdownEscapePlain(errBody)}"),
-                variant: CalloutVariant.Error);
+                variant: CalloutVariant.Error).Width(Size.Full());
         }
 
         return content;
