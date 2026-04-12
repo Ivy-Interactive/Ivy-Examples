@@ -43,6 +43,21 @@
       ]
     },
     {
+      "name": "Book Library",
+      "description": "Book Library is a compact Ivy sample app for tracking a personal reading list: a dashboard with metrics and charts plus My Books with full CRUD (list, details, create, edit, delete). Data is stored in SQLite with a small relational model: Authors, Genres, and Books linked by foreign keys. <p align=\"center\"> <a href=\"https://ivy-sliplane-deployment.sliplane.app/sliplane-deploy-app?repo=https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/book-library\"> <img src=\"https://raw.githubusercontent.com/Ivy-Interactive/Ivy-Examples/main/project-demos/sliplane-manage/Assets/deploy-button.svg\" alt=\"Host your Ivy app on Sliplane\" /> </a> </p> The link opens the \\1 with this repo path pre-filled (`Dockerfile` under `project-demos/book-library`). Replace the URL if you deploy from a fork.",
+      "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/book-library",
+      "deploymentLink": "ivy-projectdemos-book-library.sliplane.app",
+      "tags": [
+        "Books",
+        "Reading List",
+        "Dashboard",
+        "CRUD",
+        "SQLite",
+        "Ivy",
+        "Sliplane"
+      ]
+    },
+    {
       "name": "ClickHouse Dashboard",
       "description": "ClickHouse Dashboard is a web application for visualizing and analyzing ClickHouse database statistics with interactive charts, real-time metrics, table statistics, and comprehensive data insights.",
       "githubLink": "https://github.com/Ivy-Interactive/Ivy-Examples/tree/main/project-demos/clickhouse-dashboard",
