@@ -638,11 +638,10 @@ public class DataTableApp : ViewBase
         {
             return Layout.Center()
                 | new Card(
-                    new StackLayout([
-                        new Loading(),
-                        Text.Block("Fetching leads from Exa.ai API..."),
-                        Text.Muted("This may take 5-10 minutes as the AI searches the web, verifies criteria, and enriches lead data with contact information")
-                    ], gap: 8)
+                    Layout.Vertical().Gap(8)
+                        | new Loading()
+                        | Text.Block("Fetching leads from Exa.ai API...")
+                        | Text.Muted("This may take 5-10 minutes as the AI searches the web, verifies criteria, and enriches lead data with contact information")
                 ).Width(Size.Units(100));
         }
 
@@ -651,11 +650,10 @@ public class DataTableApp : ViewBase
         {
             return Layout.Center()
                 | new Card(
-                    new StackLayout([
-                        new Error("Failed to load leads"),
-                        Text.Block(errorState.Value),
-                        new Button("Try Again", _ => fetchLeads())
-                    ], gap: 8)
+                    Layout.Vertical().Gap(8)
+                        | new Error("Failed to load leads")
+                        | Text.Block(errorState.Value)
+                        | new Button("Try Again", _ => fetchLeads())
                 ).Width(Size.Units(100));
         }
 
@@ -672,10 +670,9 @@ public class DataTableApp : ViewBase
                 .ToList();
 
             object websetSelector = websetOptions.Count > 0
-                ? new StackLayout([
-                    selectedWebsetId.ToSelectInput(websetOptions, placeholder: "Select a webset..."),
-                    Text.Muted($"{websetOptions.Count} saved webset(s) available")
-                ], gap: 8)
+                ? Layout.Vertical().Gap(8)
+                    | selectedWebsetId.ToSelectInput(websetOptions, placeholder: "Select a webset...")
+                    | Text.Muted($"{websetOptions.Count} saved webset(s) available")
                 : new Button("Load Websets List", _ => listWebsets());
 
             // Show API response data if toggled
@@ -684,32 +681,29 @@ public class DataTableApp : ViewBase
                 var responseToShow = apiResponseData.Value ?? ExampleResponseData;
                 var responseTitle = apiResponseData.Value != null ? "API Response" : "Example API Response";
 
-                return new StackLayout([
-                    new Card(
-                        new StackLayout([
-                            Text.H2(responseTitle),
-                            Text.Block("GET /websets/v0/websets/{id}/items"),
-                            new Button("Back to Data", _ => showExampleData.Set(_ => false))
+                return Layout.Vertical().Gap(12)
+                    | new Card(
+                        Layout.Vertical().Gap(8)
+                            | Text.H2(responseTitle)
+                            | Text.Block("GET /websets/v0/websets/{id}/items")
+                            | new Button("Back to Data", _ => showExampleData.Set(_ => false))
                                 .Variant(ButtonVariant.Outline)
-                        ], gap: 8)
-                    ),
-                    new CodeBlock(responseToShow, Languages.Json)
-                ], gap: 12);
+                    )
+                    | new CodeBlock(responseToShow, Languages.Json);
             }
 
             return Layout.Center()
                 | new Card(
-                    new StackLayout([
-                        Text.H2("Lead Generator"),
-                        Text.Block("Load an existing webset to view lead data"),
-                        new Separator(),
-                        loadingWebsets.Value ? new Loading() : websetSelector,
-                        apiResponseData.Value != null ? new Fragment([
+                    Layout.Vertical().Gap(12)
+                        | Text.H2("Lead Generator")
+                        | Text.Block("Load an existing webset to view lead data")
+                        | new Separator()
+                        | (loadingWebsets.Value ? new Loading() : websetSelector)
+                        | (apiResponseData.Value != null ? new Fragment([
                             new Separator(),
                             new Button("View API Response", _ => showExampleData.Set(_ => true))
                                 .Variant(ButtonVariant.Ghost)
-                        ]) : new Empty()
-                    ], gap: 12)
+                        ]) : new Empty())
                 ).Width(Size.Units(140));
         }
 
@@ -719,19 +713,17 @@ public class DataTableApp : ViewBase
             var responseToShow = apiResponseData.Value ?? ExampleResponseData;
             var responseTitle = apiResponseData.Value != null ? "API Response" : "Example API Response";
 
-            return new StackLayout([
-                new Card(
-                    new StackLayout([
-                        Text.H2(responseTitle),
-                        Text.Block("GET /websets/v0/websets/{id}/items"),
-                        Layout.Horizontal().Gap(12)
+            return Layout.Vertical().Gap(12)
+                | new Card(
+                    Layout.Vertical().Gap(8)
+                        | Text.H2(responseTitle)
+                        | Text.Block("GET /websets/v0/websets/{id}/items")
+                        | (Layout.Horizontal().Gap(12)
                             | new Button("Back to Data", _ => showExampleData.Set(_ => false))
                                 .Variant(ButtonVariant.Outline)
-                            | Text.Muted($"{leadsState.Value.Count} leads loaded")
-                    ], gap: 8)
-                ),
-                new CodeBlock(responseToShow, Languages.Json)
-            ], gap: 12);
+                            | Text.Muted($"{leadsState.Value.Count} leads loaded"))
+                )
+                | new CodeBlock(responseToShow, Languages.Json);
         }
 
         // Build DataTable
