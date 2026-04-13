@@ -162,10 +162,8 @@ public class RestSharpApp : ViewBase
                 Layout.Vertical()
             | Text.H3("Request")
             | Text.Muted("Configure and send your HTTP request.")
-            | new StackLayout(
-                requestControls.ToArray(),
-                Orientation.Horizontal
-            )
+            | Layout.Horizontal().Gap(12)
+                | requestControls.ToArray()
             | requestBody.ToCodeInput()
                 .Language(Languages.Json)
                 .Placeholder(isRequestBodyEnabled ? "Request Body" : "Request Body (not used for this method)")
