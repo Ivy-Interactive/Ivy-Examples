@@ -5,7 +5,7 @@ public class BookListBlade : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var refreshToken = UseRefreshToken();
         var refreshKey = UseState(0);
 

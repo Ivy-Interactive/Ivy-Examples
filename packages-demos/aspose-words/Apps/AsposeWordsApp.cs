@@ -67,90 +67,87 @@ public class CreateNewDocumentApp : ViewBase
             )
         };
 
-        return new StackLayout([
-            Text.H2("Aspose.Words for .NET Demo"),
-            Text.Block("Generate and download Word documents using Aspose.Words."),
-
-            Layout.Grid().Columns(2).Gap(3)
-            | templates.Select(template =>
-            {
-                var isTemplateGenerated = generatedDocuments.Value.ContainsKey(template.Name);
-                var isCurrentlyGenerating = isGenerating.Value == template.Name;
-                var downloadUrl = downloads[template.Name];
-
-                // Build card content dynamically
-                var cardContent = new List<object>
+        return Layout.Vertical().Gap(4)
+            | Text.H2("Aspose.Words for .NET Demo")
+            | Text.Block("Generate and download Word documents using Aspose.Words.")
+            | (Layout.Grid().Columns(2).Gap(3)
+                | templates.Select(template =>
                 {
-                    Text.H4(template.Name),
-                    Text.Muted(template.Description)
-                };
-                
-                // Step 1: Generate button (if not generated)
-                if (!isTemplateGenerated && !isCurrentlyGenerating)
-                {
-                    cardContent.Add(new Button("Generate", _ => {
-                        isGenerating.Set(template.Name);
-                        
-                        // Clear previous error
-                        var clearedErrors = new Dictionary<string, string>(errorMessages.Value);
-                        clearedErrors.Remove(template.Name);
-                        errorMessages.Set(clearedErrors);
+                    var isTemplateGenerated = generatedDocuments.Value.ContainsKey(template.Name);
+                    var isCurrentlyGenerating = isGenerating.Value == template.Name;
+                    var downloadUrl = downloads[template.Name];
 
-                        try
-                        {
-                            var doc = template.Generator();
-                            var updatedDocs = new Dictionary<string, Document>(generatedDocuments.Value)
+                    // Build card content dynamically
+                    var cardContent = new List<object>
+                    {
+                        Text.H4(template.Name),
+                        Text.Muted(template.Description)
+                    };
+
+                    // Step 1: Generate button (if not generated)
+                    if (!isTemplateGenerated && !isCurrentlyGenerating)
+                    {
+                        cardContent.Add(new Button("Generate", _ => {
+                            isGenerating.Set(template.Name);
+
+                            // Clear previous error
+                            var clearedErrors = new Dictionary<string, string>(errorMessages.Value);
+                            clearedErrors.Remove(template.Name);
+                            errorMessages.Set(clearedErrors);
+
+                            try
                             {
-                                [template.Name] = doc
-                            };
-                            generatedDocuments.Set(updatedDocs);
-                        }
-                        catch (Exception ex)
-                        {
-                            var updatedErrors = new Dictionary<string, string>(errorMessages.Value)
+                                var doc = template.Generator();
+                                var updatedDocs = new Dictionary<string, Document>(generatedDocuments.Value)
+                                {
+                                    [template.Name] = doc
+                                };
+                                generatedDocuments.Set(updatedDocs);
+                            }
+                            catch (Exception ex)
                             {
-                                [template.Name] = $"Failed to generate document: {ex.Message}"
-                            };
-                            errorMessages.Set(updatedErrors);
-                        }
-                        finally
-                        {
-                            isGenerating.Set("");
-                        }
-                    })
-                    .Primary()
-                    .Icon(Icons.Play));
-                }
-                
-                // Loading state
-                if (isCurrentlyGenerating)
-                {
-                    cardContent.Add(new StackLayout([
-                        Text.Muted("Generating...")
-                    ], Ivy.Orientation.Horizontal, alignContent: Align.Center, gap: 2));
-                }
-                
-                // Error message
-                if (errorMessages.Value.ContainsKey(template.Name))
-                {
-                    cardContent.Add(Text.Danger(errorMessages.Value[template.Name]));
-                }
-                
-                // Step 2: Download button (if generated)
-                if (isTemplateGenerated && !isCurrentlyGenerating)
-                {
-                    cardContent.Add(new Button("Download DOCX")
+                                var updatedErrors = new Dictionary<string, string>(errorMessages.Value)
+                                {
+                                    [template.Name] = $"Failed to generate document: {ex.Message}"
+                                };
+                                errorMessages.Set(updatedErrors);
+                            }
+                            finally
+                            {
+                                isGenerating.Set("");
+                            }
+                        })
                         .Primary()
-                        .Icon(Icons.Download)
-                        .Url(downloadUrl.Value));
-                }
+                        .Icon(Icons.Play));
+                    }
 
-                return new Card(new StackLayout(cardContent.ToArray(), gap: 2));
-            }),
-            new Spacer(),
-            Text.Block("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents."),
-            Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)")
-        ], gap: 4);
+                    // Loading state
+                    if (isCurrentlyGenerating)
+                    {
+                        cardContent.Add(Layout.Horizontal().AlignContent(Align.Center).Gap(2)
+                            | Text.Muted("Generating..."));
+                    }
+
+                    // Error message
+                    if (errorMessages.Value.ContainsKey(template.Name))
+                    {
+                        cardContent.Add(Text.Danger(errorMessages.Value[template.Name]));
+                    }
+
+                    // Step 2: Download button (if generated)
+                    if (isTemplateGenerated && !isCurrentlyGenerating)
+                    {
+                        cardContent.Add(new Button("Download DOCX")
+                            .Primary()
+                            .Icon(Icons.Download)
+                            .Url(downloadUrl.Value));
+                    }
+
+                    return new Card(Layout.Vertical().Gap(2) | cardContent.ToArray());
+                }))
+            | new Spacer()
+            | Text.Block("This demo uses Aspose.Words for .NET to create, manipulate, and export Word documents.")
+            | Text.Markdown("Built with [Ivy Framework](https://github.com/Ivy-Interactive/Ivy-Framework) and [Aspose.Words for .NET](https://products.aspose.com/words/net/)");
     }
 
     private static byte[] GetDocumentBytes(string name, Func<Document> generator, Dictionary<string, Document> generatedDocuments)
