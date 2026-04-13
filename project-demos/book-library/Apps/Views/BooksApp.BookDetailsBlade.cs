@@ -5,7 +5,7 @@ public class BookDetailsBlade(Guid bookId, RefreshToken token) : ViewBase
     public override object? Build()
     {
         var volume = UseService<IVolume>();
-        var blades = UseContext<IBladeService>();
+        var blades = UseContext<IBladeContext>();
         var book = UseState<Book?>(() => null);
         var progressState = UseState(0);
         var (alertView, showAlert) = this.UseAlert();
