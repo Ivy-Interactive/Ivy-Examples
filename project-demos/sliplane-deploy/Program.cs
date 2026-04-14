@@ -12,6 +12,13 @@ server.Services.AddHttpClient("Ivy", client =>
     client.DefaultRequestHeaders.Add("User-Agent", "Ivy-SliplaneDeploy/1.0");
 });
 
+server.Services.AddHttpClient("GitHubRaw", client =>
+{
+    client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Ivy-SliplaneDeploy/1.0");
+});
+
+server.Services.AddSingleton<GitHubDockerfilePathResolver>();
+
 server.Services.AddSingleton(server.Configuration);
 server.Services.AddHttpContextAccessor();
 server.Services.AddScoped<DeploymentDraftStore>();
