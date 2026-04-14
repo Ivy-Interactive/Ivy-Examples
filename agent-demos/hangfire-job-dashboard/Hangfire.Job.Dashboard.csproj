@@ -11,7 +11,7 @@
     <EmbeddedResource Include="Assets/**/*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.34" />
+    <PackageReference Include="Ivy" Version="1.2.37-pre-20260412104447" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Apps" />

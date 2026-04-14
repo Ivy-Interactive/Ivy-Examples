@@ -15,8 +15,8 @@
   </ItemGroup>
 <ItemGroup>
     <PackageReference Include="Aspose.Words" Version="25.12.0" />
-    <PackageReference Include="Ivy" Version="1.2.34" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.34">
+    <PackageReference Include="Ivy" Version="1.2.37-pre-20260412104447" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.37-pre-20260412104447">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
