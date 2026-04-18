@@ -33,7 +33,7 @@ public class DeployStatusView : ViewBase
                 var derivedStatus = DeriveStatus(fetched);
                 if (derivedStatus == DeployStatus.Deploying && deployingStartedAt.Value == null)
                     deployingStartedAt.Set(DateTime.UtcNow);
-                else if (derivedStatus != DeployStatus.Deploying)
+                else if (derivedStatus is DeployStatus.Success or DeployStatus.Failed)
                     deployingStartedAt.Set(null);
                 return fetched;
             },
@@ -184,14 +184,15 @@ public class DeployStatusView : ViewBase
         return s.Domains?.Select(d => d.Domain).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))?.Trim();
     }
 
-    private enum DeployStatus { Unknown, Deploying, Success, Failed }
+    private enum DeployStatus { Deploying, Success, Failed }
 
     private static DeployStatus DeriveStatus(List<SliplaneServiceEvent> events)
     {
         if (events.Any(e => e.Type == "service_deploy_success")) return DeployStatus.Success;
         if (events.Any(e => e.Type == "service_deploy_failed" || e.Type == "service_build_failed")) return DeployStatus.Failed;
         var last = events.LastOrDefault();
-        if (last == null) return DeployStatus.Unknown;
+        // No events yet (or still loading with empty list): treat as deploying so the UI does not flash.
+        if (last == null) return DeployStatus.Deploying;
         return last.Type switch
         {
             "service_deploy_success" => DeployStatus.Success,
