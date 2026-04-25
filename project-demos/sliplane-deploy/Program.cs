@@ -18,11 +18,13 @@ server.Services.AddHttpClient("GitHubRaw", client =>
 });
 
 server.Services.AddSingleton<GitHubDockerfilePathResolver>();
+server.Services.AddSingleton<IvyDeployManifestService>();
 
 server.Services.AddSingleton(server.Configuration);
 server.Services.AddHttpContextAccessor();
 server.Services.AddScoped<DeploymentDraftStore>();
 server.Services.AddScoped<SliplaneApiClient>();
+server.Services.AddScoped<IvyDeployOrchestrator>();
 
 Server.ConfigureAuthCookieOptions = options =>
 {
