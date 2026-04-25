@@ -79,19 +79,24 @@ public class IvyDeployOrchestrator
                 VolumeName: IvyDeployTemplateEngine.SubstituteEarly(v.VolumeName, parentServiceName)))
             .ToList();
 
-        object deployment = !string.IsNullOrWhiteSpace(child.ImageUrl)
+        var isImage = !string.IsNullOrWhiteSpace(child.ImageUrl);
+        object deployment = isImage
             ? new ImageDeployment(Url: child.ImageUrl!.Trim())
             : new RepositoryDeployment(
-                Url: child.GithubRepo!.Trim(),
+                Url: NormalizeGitHubRepoUrl(child.GithubRepo!.Trim()),
                 Branch: string.IsNullOrWhiteSpace(child.Branch) ? "main" : child.Branch!.Trim(),
                 AutoDeploy: true,
                 DockerfilePath: string.IsNullOrWhiteSpace(child.DockerfilePath) ? "Dockerfile" : child.DockerfilePath!.Trim(),
                 DockerContext: ".");
 
+        // Sliplane docs: databases and many registry images are not HTTP — use "tcp" (or "udp"). Using "http" here
+        // has been seen to fail create with misleading errors (e.g. "Invalid external docker image") for postgres.
+        var networkProtocol = isImage ? "tcp" : "http";
+
         var request = new CreateServiceRequest(
             Name: childName,
             ServerId: serverId,
-            Network: new ServiceNetworkRequest(Public: false, Protocol: "http"),
+            Network: new ServiceNetworkRequest(Public: false, Protocol: networkProtocol),
             Deployment: deployment,
             Env: env.Count > 0 ? env.Select(kv => new EnvironmentVariable(kv.Key, kv.Value, kv.Secret)).ToList() : null,
             Volumes: volumeMounts.Count > 0 ? volumeMounts : null);
@@ -120,11 +125,12 @@ public class IvyDeployOrchestrator
         if (string.IsNullOrWhiteSpace(manifest.GithubRepo))
             throw new InvalidOperationException("ivy-deploy.yaml: parent 'githubRepo' is required.");
 
+        var repoUrl = NormalizeGitHubRepoUrl(manifest.GithubRepo!);
         var branch = string.IsNullOrWhiteSpace(manifest.Branch) ? "main" : manifest.Branch!;
         var dockerfilePath = string.IsNullOrWhiteSpace(manifest.DockerfilePath) ? "Dockerfile" : manifest.DockerfilePath!;
 
         var resolution = await _dockerfileResolver.ResolveAsync(
-            manifest.GithubRepo, branch, dockerfilePath, ".", cancellationToken);
+            repoUrl, branch, dockerfilePath, ".", cancellationToken);
         var baseEnv = resolution.AdditionalEnv?.ToList() ?? [];
 
         var parentEnv = BuildParentEnv(manifest, parentServiceName, children);
@@ -146,7 +152,7 @@ public class IvyDeployOrchestrator
             ServerId: serverId,
             Network: new ServiceNetworkRequest(Public: true, Protocol: "http"),
             Deployment: new RepositoryDeployment(
-                Url: manifest.GithubRepo!.Trim(),
+                Url: repoUrl,
                 Branch: branch,
                 AutoDeploy: autoDeploy,
                 DockerfilePath: resolution.DockerfilePath,
@@ -216,6 +222,22 @@ public class IvyDeployOrchestrator
 
         throw new InvalidOperationException(
             $"Timed out waiting for internalDomain of service '{created.Name}' ({created.Id}).");
+    }
+
+    /// <summary>
+    /// Sliplane API expects a repository URL with scheme (see <c>format: uri</c> in OpenAPI). UI often accepts
+    /// <c>owner/repo</c>; we normalize to <c>https://github.com/owner/repo</c>.
+    /// </summary>
+    private static string NormalizeGitHubRepoUrl(string raw)
+    {
+        var t = raw.Trim();
+        if (t.Length == 0) return t;
+        if (t.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            t.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            return t;
+        if (t.StartsWith("github.com/", StringComparison.OrdinalIgnoreCase))
+            return "https://" + t;
+        return "https://github.com/" + t.TrimStart('/');
     }
 }
 
