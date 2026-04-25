@@ -17,11 +17,12 @@ internal static class ServiceRequestFactory
         string? cmd,
         string? healthcheck,
         IReadOnlyCollection<EnvironmentVariable>? env,
-        IReadOnlyCollection<(string VolumeId, string MountPath)>? volumeMounts)
+        IReadOnlyCollection<(string VolumeId, string MountPath)>? volumeMounts,
+        IReadOnlyCollection<string>? ignorePaths = null)
     {
         var envList = env is { Count: > 0 } ? env.ToList() : null;
         var volumes = volumeMounts is { Count: > 0 }
-            ? volumeMounts.Select(v => new ServiceVolumeMount(v.VolumeId, v.MountPath)).ToList()
+            ? volumeMounts.Select(v => new ServiceVolumeMount(v.MountPath, VolumeId: v.VolumeId)).ToList()
             : null;
 
         return new CreateServiceRequest(
@@ -33,7 +34,8 @@ internal static class ServiceRequestFactory
                 Branch: string.IsNullOrWhiteSpace(branch) ? "main" : branch.Trim(),
                 AutoDeploy: autoDeploy,
                 DockerfilePath: string.IsNullOrWhiteSpace(dockerfilePath) ? "Dockerfile" : dockerfilePath.Trim(),
-                DockerContext: string.IsNullOrWhiteSpace(dockerContext) ? "." : dockerContext.Trim()
+                DockerContext: string.IsNullOrWhiteSpace(dockerContext) ? "." : dockerContext.Trim(),
+                IgnorePaths: ignorePaths is { Count: > 0 } ? ignorePaths.ToList() : null
             ),
             Cmd: string.IsNullOrWhiteSpace(cmd) ? null : cmd.Trim(),
             Healthcheck: string.IsNullOrWhiteSpace(healthcheck) ? null : healthcheck.Trim(),

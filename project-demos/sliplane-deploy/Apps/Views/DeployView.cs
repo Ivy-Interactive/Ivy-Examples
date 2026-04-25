@@ -47,6 +47,8 @@ public class DeployView : ViewBase
         var client = this.UseService<SliplaneApiClient>();
         var config = this.UseService<IConfiguration>();
         var dockerfileResolver = this.UseService<GitHubDockerfilePathResolver>();
+        var manifestService = this.UseService<IvyDeployManifestService>();
+        var orchestrator = this.UseService<IvyDeployOrchestrator>();
         var model = this.UseState(() => new DeployFormModel
         {
             ServerId = _defaultServerId,
@@ -67,6 +69,7 @@ public class DeployView : ViewBase
         var deployError = this.UseState<string?>(() => null);
         var validationFailed = this.UseState(false);
         var isDeploying = this.UseState(false);
+        var stackProgress = this.UseState<IReadOnlyList<StackStepRow>>(() => Array.Empty<StackStepRow>());
 
         var (onSubmit, formView, validationView, loading) = this.UseForm(() => model.ToForm("Deploy")
             .Place(m => m.ServerId, m => m.Name)
@@ -103,6 +106,7 @@ public class DeployView : ViewBase
             (string ProjectId, SliplaneService Service)? noSvc = null;
             deployError.Set(noErr);
             deployedService.Set(noSvc);
+            stackProgress.Set(Array.Empty<StackStepRow>());
             validationFailed.Set(false);
             if (!await onSubmit())
             {
@@ -114,29 +118,80 @@ public class DeployView : ViewBase
             isDeploying.Set(true);
             try
             {
-                var resolution = await dockerfileResolver.ResolveAsync(
-                    m.GitRepo, m.Branch, m.DockerfilePath, m.DockerContext);
-                var envVars = resolution.AdditionalEnv?.ToList() ?? [];
-                var service = await client.CreateServiceAsync(_apiToken, m.ProjectId,
-                    ServiceRequestFactory.BuildCreateRequest(
-                        name: m.Name, serverId: m.ServerId, gitRepo: m.GitRepo,
-                        branch: m.Branch, dockerfilePath: resolution.DockerfilePath,
-                        dockerContext: resolution.DockerContext, autoDeploy: m.AutoDeploy,
-                        networkPublic: m.NetworkPublic, networkProtocol: m.NetworkProtocol,
-                        cmd: m.Cmd ?? string.Empty, healthcheck: m.Healthcheck,
-                        env: envVars, volumeMounts: []));
-
-                if (service != null)
-                    deployedService.Set((m.ProjectId, service));
+                var manifest = await manifestService.TryFetchAsync(m.GitRepo, m.Branch);
+                if (manifest is not null)
+                {
+                    await DeployStackAsync(m, manifest);
+                }
+                else
+                {
+                    await DeploySingleServiceAsync(m);
+                }
             }
             catch (Exception ex)
             {
                 deployError.Set(ex.Message);
+                if (stackProgress.Value is { Count: > 0 })
+                {
+                    stackProgress.Set(stackProgress.Value.Select(s =>
+                        s.State == StackStepState.Starting
+                            ? s with { State = StackStepState.Failed, Detail = ex.Message }
+                            : s).ToList());
+                }
             }
             finally
             {
                 isDeploying.Set(false);
             }
+        }
+
+        async Task DeploySingleServiceAsync(DeployFormModel m)
+        {
+            var resolution = await dockerfileResolver.ResolveAsync(
+                m.GitRepo, m.Branch, m.DockerfilePath, m.DockerContext);
+            var envVars = resolution.AdditionalEnv?.ToList() ?? [];
+            var service = await client.CreateServiceAsync(_apiToken, m.ProjectId,
+                ServiceRequestFactory.BuildCreateRequest(
+                    name: m.Name, serverId: m.ServerId, gitRepo: m.GitRepo,
+                    branch: m.Branch, dockerfilePath: resolution.DockerfilePath,
+                    dockerContext: resolution.DockerContext, autoDeploy: m.AutoDeploy,
+                    networkPublic: m.NetworkPublic, networkProtocol: m.NetworkProtocol,
+                    cmd: m.Cmd ?? string.Empty, healthcheck: m.Healthcheck,
+                    env: envVars, volumeMounts: []));
+
+            if (service != null)
+                deployedService.Set((m.ProjectId, service));
+        }
+
+        async Task DeployStackAsync(DeployFormModel m, IvyDeployManifest manifest)
+        {
+            var parentName = string.IsNullOrWhiteSpace(m.Name) ? manifest.ServiceName : m.Name;
+            var normalized = manifest with
+            {
+                GithubRepo = string.IsNullOrWhiteSpace(manifest.GithubRepo) ? m.GitRepo : manifest.GithubRepo,
+                Branch = string.IsNullOrWhiteSpace(manifest.Branch) ? m.Branch : manifest.Branch,
+                DockerfilePath = string.IsNullOrWhiteSpace(manifest.DockerfilePath) ? m.DockerfilePath : manifest.DockerfilePath,
+            };
+
+            var steps = new List<StackStepRow>();
+            foreach (var c in manifest.ChildServices)
+                steps.Add(new StackStepRow(
+                    IvyDeployTemplateEngine.SubstituteEarly(c.ServiceName, parentName),
+                    StackStepState.Starting, c.Description));
+            steps.Add(new StackStepRow(parentName, StackStepState.Starting, "Application service"));
+            stackProgress.Set(steps);
+
+            void OnProgress(string name, StackStepState state, string? detail)
+            {
+                var next = stackProgress.Value.Select(s =>
+                    s.Name == name ? s with { State = state, Detail = detail ?? s.Detail } : s).ToList();
+                stackProgress.Set(next);
+            }
+
+            var result = await orchestrator.DeployAsync(
+                _apiToken, m.ProjectId, m.ServerId, parentName, normalized, OnProgress);
+
+            deployedService.Set((m.ProjectId, result.Parent));
         }
 
         var headerSection = Layout.Vertical().AlignContent(Align.Center).Gap(4)
@@ -162,14 +217,15 @@ public class DeployView : ViewBase
 
         if (isDeploying.Value && deployedService.Value == null)
         {
+            var progressBody = stackProgress.Value is { Count: > 0 }
+                ? BuildStackProgress(stackProgress.Value)
+                : Layout.Vertical()
+                    | Text.Block("Creating service on Sliplane…").Bold()
+                    | new Progress().Indeterminate().Goal("Please wait…");
+
             cardContent = cardContent
                 | new Separator()
-                | new Callout(
-                    Layout.Vertical()
-                        | Text.Block("Creating service on Sliplane…").Bold()
-                        | new Progress().Indeterminate().Goal("Please wait…"),
-                    "Deploying",
-                    CalloutVariant.Info);
+                | new Callout(progressBody, "Deploying", CalloutVariant.Info);
         }
         else if (deployedService.Value is { } deployed)
         {
@@ -207,4 +263,30 @@ public class DeployView : ViewBase
         if (seg.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) seg = seg[..^4];
         return string.IsNullOrWhiteSpace(seg) ? string.Empty : seg.ToLowerInvariant();
     }
+
+    private static object BuildStackProgress(IReadOnlyList<StackStepRow> steps)
+    {
+        var list = Layout.Vertical().Gap(1)
+            | Text.Block("Deploying stack").Bold();
+
+        foreach (var s in steps)
+        {
+            var icon = s.State switch
+            {
+                StackStepState.Succeeded => "✓ ",
+                StackStepState.Failed => "✗ ",
+                _ => "• ",
+            };
+            var detail = string.IsNullOrWhiteSpace(s.Detail) ? string.Empty : $" — {s.Detail}";
+            var line = Text.Block($"{icon}{s.Name}{detail}");
+            list = list | (s.State == StackStepState.Failed ? line.Color(Colors.Red) : line);
+        }
+
+        if (steps.Any(s => s.State == StackStepState.Starting))
+            list = list | new Progress().Indeterminate().Goal("Please wait…");
+
+        return list;
+    }
 }
+
+public record StackStepRow(string Name, StackStepState State, string? Detail);

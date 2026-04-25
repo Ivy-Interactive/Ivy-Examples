@@ -9,12 +9,17 @@
     <UserSecretsId>3901cf22-a0ae-47ab-879c-682515e69029</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Do not compile helper tools nested under this folder (they would break the single Exe with top-level statements). -->
+    <Compile Remove="tools/**" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Ivy" Version="1.2.37-pre-20260412104447" />
     <PackageReference Include="Ivy.Analyser" Version="1.2.37-pre-20260412104447">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.37-pre-20260412104447" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>
 
