@@ -19,6 +19,7 @@ server.Services.AddHttpClient("Sliplane", client =>
 });
 
 server.Services.AddSingleton(server.Configuration);
+server.Services.AddSingleton<StagingReposProvider>();
 server.Services.AddScoped<GitHubApiClient>();
 server.Services.AddScoped<SliplaneStagingClient>();
 server.Services.AddScoped<StagingDeployService>();

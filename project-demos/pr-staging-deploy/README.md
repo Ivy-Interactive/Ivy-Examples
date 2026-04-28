@@ -20,20 +20,20 @@ This application is powered by [Ivy Framework](https://github.com/Ivy-Interactiv
 - **GitHub Webhook** — `POST /webhook`:
   - `pull_request` opened/reopened → auto-deploy
   - `pull_request` synchronize → redeploy
-  - `pull_request` closed → deployment kept (no immediate delete)
+  - `pull_request` closed → delete staging services for that PR
   - `issue_comment` with `/deploy` → deploy on command
 - **Auto-cleanup** — background job runs hourly; removes deployments only when **both** ExpiryDays passed (since deploy start) **and** PR is closed
-- **PR comments (optional)** — after a successful deploy (webhook auto-deploy, `/deploy`, or Deploy in the UI), posts or updates **one** comment on the PR with Docs and Samples links. Uses a dedicated PAT; the comment appears as that GitHub user (bot or service account).
-- **PR comment reactions (optional)** — when someone posts `/deploy` and is allowed, the bot reacts to that comment with the GitHub `rocket` reaction (so people see it was read).
+- **PR comments (optional)** — after deploy, posts or updates **one** comment with Docs/Samples links (uses `GitHub:PrCommentToken`, or `GitHub:Token` if unset)
+- **PR comment reactions (optional)** — bot can react with `rocket` to `/deploy` comments when configured
 
 ## Configuration
 
-### Option 1: User Secrets (Recommended for Local Development)
+### Option 1: User Secrets (recommended for local development)
 
 ```bash
 cd project-demos/pr-staging-deploy
 
-# GitHub (required for /deploy comments and expiry cleanup)
+# GitHub — legacy single-repo (simplest): PRs live in this repo
 dotnet user-secrets set "GitHub:Owner" "your-org"
 dotnet user-secrets set "GitHub:Repo" "your-repo"
 dotnet user-secrets set "GitHub:Token" "ghp_your_token"
@@ -43,7 +43,7 @@ dotnet user-secrets set "Sliplane:ApiToken" "api_rw_org_xxx"
 dotnet user-secrets set "Sliplane:ProjectId" "project_xxx"
 dotnet user-secrets set "Sliplane:ServerId" "server_xxx"
 
-# Staging (optional – defaults shown)
+# Staging — optional (defaults shown). Omit Docs/Samples URLs to skip that target.
 dotnet user-secrets set "Staging:SamplesRepo" "https://github.com/your-org/your-repo"
 dotnet user-secrets set "Staging:DocsRepo" "https://github.com/your-org/your-repo"
 dotnet user-secrets set "Staging:SamplesDockerContext" "."
@@ -52,31 +52,27 @@ dotnet user-secrets set "Staging:SamplesDockerfile" ".github/docker/Dockerfile.s
 dotnet user-secrets set "Staging:DocsDockerfile" ".github/docker/Dockerfile.docs"
 dotnet user-secrets set "Staging:ExpiryDays" "7"
 
-# Webhook (optional – for auto-deploy on PR open/update/close)
+# Optional: first segment of Sliplane service names — default "ivy" → names start with "ivy-staging-…".
+# Set your own prefix per deployment (e.g. "tendril" → "tendril-staging-…-docs-…").
+# dotnet user-secrets set "Staging:DeploymentKey" "tendril"
+
+# Webhook (optional — auto-deploy on PR open/update/close)
 dotnet user-secrets set "GitHub:WebhookSecret" "your_webhook_secret"
 
-# Optional: comma-separated GitHub logins (case-insensitive). If empty, no user-based restriction.
-# Auto-deploy (PR open / push): only if the PR author is in this list.
-# /deploy comment: only if the comment author is in this list (PR author may be anyone).
+# Optional: comma-separated GitHub logins. PR auto-deploy and `/deploy` can be restricted.
 dotnet user-secrets set "GitHub:DeployAllowedUsers" "alice,bob"
 
-# Optional: PAT used for PR comment and comment reactions (Issues API). Reaction/comment appear as the PAT owner.
-# Fine-grained: Issues read/write on the repo. Classic: repo scope.
+# Optional: PAT for PR comments (Issues API). If omitted, GitHub:Token is used.
 dotnet user-secrets set "GitHub:PrCommentToken" "ghp_xxx"
 ```
 
-### Who can trigger deploy (webhooks)
+If **`Repos`** is empty, the app builds one staging entry from **`GitHub:Owner`**, **`GitHub:Repo`**, and **`Staging:*`** as above.
 
-| Event | Who must be on the list (when `DeployAllowedUsers` is set) |
-|--------|-----------------------------------------------------------|
-| PR opened / reopened / synchronize | **PR author** (whose PR gets auto-deploy) |
-| Comment `/deploy` | **Comment author** (so a maintainer on the list can deploy someone else’s PR) |
+### Multi-repo (`Repos[]`)
 
-If `DeployAllowedUsers` is **empty**, GitHub user checks are skipped (same as before). Closing a PR is **not** gated by this list. The in-app **Deploy** buttons are not tied to GitHub identity — restrict the app URL separately if needed.
+For several GitHub repos in one app, use a **`Repos`** array (JSON in `appsettings` or flat keys like `Repos:0:Owner`, `Repos:0:Repo`, `Repos:0:Docs:Repo`, …). Each row can enable Docs only, Samples only, or both. See comments in code and `StagingRepoConfig` for the full shape.
 
-### Option 2: Environment Variables (for Sliplane Deployment)
-
-When deploying to Sliplane, set these environment variables:
+### Option 2: Environment variables (Sliplane)
 
 ```
 GitHub__Owner=your-org
@@ -92,76 +88,72 @@ Staging__DocsDockerContext=.
 Staging__SamplesDockerfile=.github/docker/Dockerfile.samples
 Staging__DocsDockerfile=.github/docker/Dockerfile.docs
 Staging__ExpiryDays=7
+# Optional — prefix before "-staging-" in service names (default ivy). Example: tendril → tendril-staging-…
+# Staging__DeploymentKey=tendril
+GitHub__WebhookSecret=your_webhook_secret
 GitHub__DeployAllowedUsers=alice,bob
 GitHub__PrCommentToken=ghp_xxx
 ```
 
-### GitHub Webhook (Optional)
+Legacy keys above apply when **`Repos__0__*`** is not set; otherwise prefer **`Repos__0__Owner`**, **`Repos__0__Repo`**, **`Repos__0__Docs__*`** / **`Repos__0__Samples__*`**, etc.
 
-Webhook notifies the server; deploy is triggered only by `/deploy` comment or UI (no auto-deploy on PR open):
+### Service names (full pattern)
 
-1. GitHub → Settings → Webhooks → Add webhook
-2. **Payload URL**: `https://your-domain.com/webhook`
-3. **Content type**: `application/json`
-4. **Secret**: `openssl rand -hex 32`
-5. **Events**: Pull requests, Issue comments
-6. Add to config: `GitHub:WebhookSecret`
+One slug at the start only:
 
-- **`/deploy`** in PR comment → deploy (requires `GitHub:Token`)
-- **PR closed** → deployment stays until ExpiryDays + closed PR (cleanup job removes it)
+`{slug}-staging-docs-{prNumber}` and `{slug}-staging-samples-{prNumber}`.
 
-**Auto-deploy not working?** Check:
-1. **GitHub** → Webhooks → Recent Deliveries: did `pull_request` get **200**? (401 = secret mismatch)
-2. **Sliplane logs**: look for `"PR #X opened"` and `"Deploy result"` — if missing, webhook may not reach the app
-3. **Env vars** on Sliplane: `Sliplane__ApiToken`, `Sliplane__ProjectId`, `Sliplane__ServerId` must be set
-4. **Staging repos**: `Staging__SamplesRepo` and `Staging__DocsRepo` must point to the repo where the PR branch exists (e.g. same repo as the webhook)
+- **`slug`** = **`Staging:DeploymentKey`** (sanitized) when that value is set — shared by every repo in this app.
+- If **`Staging:DeploymentKey`** is **not** set, **`slug`** = each entry’s **`Repos[].Key`** (or legacy sanitized **`GitHub:Repo`**).
 
-**Troubleshooting 401:** If GitHub shows "Invalid HTTP Response: 401", the webhook secret doesn't match. Either:
-- Remove `GitHub__WebhookSecret` from Sliplane (temporarily disables verification), or
-- Regenerate the secret and set the same value in both GitHub and Sliplane.
+Examples:
+
+- `Staging:DeploymentKey` = `ivy-tendril` → **`ivy-tendril-staging-docs-1`** (not `ivy-tendril-staging-ivy-tendril-docs-1`).
+- No deployment key, repo key `my-app` → **`my-app-staging-samples-42`**.
+
+Older deployments may still use the previous `{deploymentKey}-staging-{repoKey}-docs-{pr}` shape; the app still recognizes those until you recreate services.
+
+### Who can trigger deploy (webhooks)
+
+| Event | Who must be on the list (when `DeployAllowedUsers` is set) |
+|--------|-----------------------------------------------------------|
+| PR opened / reopened / synchronize | **PR author** |
+| Comment `/deploy` | **Comment author** |
+
+If `DeployAllowedUsers` is **empty**, user checks are skipped.
+
+### GitHub Webhook
+
+1. GitHub → Settings → Webhooks → Add webhook  
+2. **Payload URL**: `https://your-domain.com/webhook`  
+3. **Content type**: `application/json`  
+4. **Secret**: match `GitHub:WebhookSecret`  
+5. **Events**: Pull requests, Issue comments  
+
+**Troubleshooting:** 401 on delivery usually means the webhook secret does not match the app config.
 
 ## How to Run Locally
 
-1. **Prerequisites:** .NET 10.0 SDK, GitHub token, Sliplane API token
-2. **Navigate to the project:**
-   ```bash
-   cd project-demos/pr-staging-deploy
-   ```
-3. **Restore dependencies:**
-   ```bash
-   dotnet restore
-   ```
-4. **Configure credentials** (see Option 1 above):
-   ```bash
-   dotnet user-secrets set "GitHub:Owner" "your-org"
-   dotnet user-secrets set "GitHub:Repo" "your-repo"
-   dotnet user-secrets set "GitHub:Token" "ghp_xxx"
-   dotnet user-secrets set "Sliplane:ApiToken" "api_xxx"
-   dotnet user-secrets set "Sliplane:ProjectId" "project_xxx"
-   dotnet user-secrets set "Sliplane:ServerId" "server_xxx"
-   ```
-5. **Start the app:**
-   ```bash
-   dotnet watch
-   ```
-6. **Open your browser** to the URL shown in the terminal (typically `http://localhost:5010`)
+1. **Prerequisites:** .NET 10.0 SDK, GitHub token, Sliplane API token  
+2. **Navigate:** `cd project-demos/pr-staging-deploy`  
+3. **Restore:** `dotnet restore`  
+4. **Configure** — Option 1 above (`dotnet user-secrets set …`)  
+5. **Run:** `dotnet watch`  
+6. Open the URL from the terminal (often `http://localhost:5010`)
 
 ## Deploy to Ivy Hosting
 
-1. **Navigate to the project:**
-   ```bash
-   cd project-demos/pr-staging-deploy
-   ```
-2. **Deploy:**
-   ```bash
-   ivy deploy
-   ```
-3. **Configure environment variables** in your Sliplane deployment (see Option 2 above).
+```bash
+cd project-demos/pr-staging-deploy
+ivy deploy
+```
+
+Set environment variables on Sliplane (Option 2).
 
 ## Learn More
 
-- [Sliplane](https://sliplane.io) — Deploy and manage containers
-- [GitHub API](https://docs.github.com/en/rest) — Pull requests, webhooks
+- [Sliplane](https://sliplane.io)
+- [GitHub API](https://docs.github.com/en/rest)
 - [Ivy documentation](https://docs.ivy.app)
 
 ## Tags

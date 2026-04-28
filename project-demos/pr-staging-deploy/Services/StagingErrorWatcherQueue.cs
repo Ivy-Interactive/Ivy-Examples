@@ -22,6 +22,7 @@ public class StagingErrorWatcherQueue
 }
 
 public record StagingErrorWatchRequest(
+    string RepoKey,
     string Owner,
     string Repo,
     int PrNumber,
