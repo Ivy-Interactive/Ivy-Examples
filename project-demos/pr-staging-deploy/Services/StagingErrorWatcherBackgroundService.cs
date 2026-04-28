@@ -68,8 +68,8 @@ public class StagingErrorWatcherBackgroundService : BackgroundService
                 continue;
 
             _logger.LogInformation(
-                "PR #{Pr} build terminal: docs={Docs} samples={Samples}",
-                req.PrNumber, docsState, samplesState);
+                "PR #{Pr} ({RepoKey}) build terminal: docs={Docs} samples={Samples}",
+                req.PrNumber, req.RepoKey, docsState, samplesState);
 
             if (docsState == "failed" || samplesState == "failed")
             {
@@ -86,7 +86,8 @@ public class StagingErrorWatcherBackgroundService : BackgroundService
 
         if (DateTime.UtcNow >= deadline)
             _logger.LogWarning(
-                "PR #{Pr} build watcher timed out after {Min} min", req.PrNumber, MaxWatchMinutes);
+                "PR #{Pr} ({RepoKey}) build watcher timed out after {Min} min",
+                req.PrNumber, req.RepoKey, MaxWatchMinutes);
     }
 
     private static string ResolveState(string? serviceId, List<SliplaneServiceEvent> events)

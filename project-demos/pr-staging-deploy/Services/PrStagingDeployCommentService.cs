@@ -39,9 +39,11 @@ public class PrStagingDeployCommentService
         string? docsUrl,
         string? samplesUrl,
         string? error,
+        bool docsEnabled = true,
+        bool samplesEnabled = true,
         CancellationToken cancellationToken = default)
     {
-        var body = BuildBody(docsUrl, samplesUrl, error, removed: false);
+        var body = BuildBody(docsUrl, samplesUrl, error, removed: false, docsEnabled, samplesEnabled);
         return PostMarkerCommentAsync(owner, repo, prNumber, body, cancellationToken);
     }
 
@@ -50,9 +52,11 @@ public class PrStagingDeployCommentService
         string owner,
         string repo,
         int prNumber,
+        bool docsEnabled = true,
+        bool samplesEnabled = true,
         CancellationToken cancellationToken = default)
     {
-        var body = BuildBody(docsUrl: null, samplesUrl: null, error: null, removed: true);
+        var body = BuildBody(docsUrl: null, samplesUrl: null, error: null, removed: true, docsEnabled, samplesEnabled);
         return PostMarkerCommentAsync(owner, repo, prNumber, body, cancellationToken);
     }
 
@@ -62,11 +66,24 @@ public class PrStagingDeployCommentService
         long issueCommentId,
         CancellationToken cancellationToken = default)
     {
-        var pat = _config["GitHub:PrCommentToken"] ?? "";
+        var pat = ResolveCommentPat();
         if (string.IsNullOrWhiteSpace(pat))
             return;
 
         await _github.AddReactionToIssueCommentAsync(owner, repo, issueCommentId, RocketReaction, pat, cancellationToken);
+    }
+
+    /// <summary>
+    /// PAT for Issues API (comments + reactions). Prefer <c>GitHub:PrCommentToken</c> so the bot identity can differ from <c>GitHub:Token</c>.
+    /// If unset, falls back to <c>GitHub:Token</c> — otherwise PR comments are skipped entirely (easy to miss when only one repo is in <c>Repos[]</c>).
+    /// </summary>
+    private string? ResolveCommentPat()
+    {
+        var pr = _config["GitHub:PrCommentToken"];
+        if (!string.IsNullOrWhiteSpace(pr))
+            return pr;
+        var gh = _config["GitHub:Token"];
+        return string.IsNullOrWhiteSpace(gh) ? null : gh;
     }
 
     private async Task PostMarkerCommentAsync(
@@ -76,9 +93,14 @@ public class PrStagingDeployCommentService
         string body,
         CancellationToken cancellationToken)
     {
-        var pat = _config["GitHub:PrCommentToken"] ?? "";
+        var pat = ResolveCommentPat();
         if (string.IsNullOrWhiteSpace(pat))
+        {
+            _logger.LogWarning(
+                "Skipping PR #{Pr} staging comment: neither GitHub:PrCommentToken nor GitHub:Token is set.",
+                prNumber);
             return;
+        }
 
         await DeleteAllMarkerCommentsAsync(owner, repo, prNumber, pat, cancellationToken);
         var id = await _github.CreateIssueCommentAsync(owner, repo, prNumber, pat, body, cancellationToken);
@@ -88,7 +110,13 @@ public class PrStagingDeployCommentService
             _logger.LogInformation("Replaced staging comment on PR #{Pr} (deleted prior marker comments)", prNumber);
     }
 
-    private static string BuildBody(string? docsUrl, string? samplesUrl, string? error, bool removed)
+    private static string BuildBody(
+        string? docsUrl,
+        string? samplesUrl,
+        string? error,
+        bool removed,
+        bool docsEnabled,
+        bool samplesEnabled)
     {
         var sb = new StringBuilder();
         sb.AppendLine(Marker);
@@ -113,8 +141,10 @@ public class PrStagingDeployCommentService
 
         sb.AppendLine("### Staging preview");
         sb.AppendLine();
-        sb.AppendLine(FormatLinkLine("📄 Docs", docsUrl));
-        sb.AppendLine(FormatLinkLine("🧪 Samples", samplesUrl));
+        if (docsEnabled)
+            sb.AppendLine(FormatLinkLine("📄 Docs", docsUrl));
+        if (samplesEnabled)
+            sb.AppendLine(FormatLinkLine("🧪 Samples", samplesUrl));
         return sb.ToString();
     }
 

@@ -1,16 +1,21 @@
 namespace PrStagingDeploy.Apps;
 
+using System.Linq.Expressions;
 using System.Text;
 using PrStagingDeploy.Models;
 using PrStagingDeploy.Services;
 
 /// <summary>
-/// PR Staging Deploy — one table: PRs with Sliplane deploy status. Data from GitHub + Sliplane API.
+/// PR Staging Deploy — one table: PRs across all configured repos with Sliplane deploy status.
+/// Data from GitHub + Sliplane API.
 /// </summary>
 [App(id: "pr-staging-deploy-app", icon: Icons.GitBranch, title: "PR Staging Deploy", searchHints: ["pr", "staging", "deploy", "samples", "docs"])]
 public class PrStagingDeployApp : ViewBase
 {
     private record PrRow(
+        string Id,
+        string RepoKey,
+        string RepoLabel,
         string HeadRef,
         int Number,
         string Title,
@@ -21,7 +26,9 @@ public class PrStagingDeployApp : ViewBase
         string SamplesDisplay,
         string? HtmlUrl,
         string? DocsUrl,
-        string? SamplesUrl);
+        string? SamplesUrl,
+        bool HasDocs,
+        bool HasSamples);
 
     public override object? Build()
     {
@@ -31,15 +38,16 @@ public class PrStagingDeployApp : ViewBase
         var prComments = this.UseService<PrStagingDeployCommentService>();
         var errorWatcher = this.UseService<StagingErrorWatcherQueue>();
         var sliplane = this.UseService<SliplaneStagingClient>();
+        var reposProvider = this.UseService<StagingReposProvider>();
         var client = this.UseService<IClientProvider>();
         var refreshToken = this.UseRefreshToken();
         var (alertView, showAlert) = this.UseAlert();
         var message = this.UseState<(string Text, bool IsError)?>(() => null);
         var pinnedTableRows = this.UseState<List<PrRow>?>(() => null);
         var deleteAllWaitingForFreshNoStaging = this.UseState(false);
-        // Tracks branches for which a deploy was triggered but Sliplane hasn't created the service yet.
+        // Tracks (repoKey/branch) keys for which a deploy was triggered but Sliplane hasn't created the service yet.
         // Prevents the row from flickering back to "not deployed" during the query refresh window.
-        var deployingBranches = this.UseState(() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        var deployingItems = this.UseState(() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
         var overviewQuery = this.UseQuery<List<PrRow>, string>(
             key: $"pr-overview:{config["Sliplane:ApiToken"] ?? ""}",
@@ -48,70 +56,96 @@ public class PrStagingDeployApp : ViewBase
                 var token = config["Sliplane:ApiToken"] ?? "";
                 var projId = config["Sliplane:ProjectId"] ?? "";
                 refreshToken.Refresh();
-                var prs = await github.GetPullRequestsAsync(
-                    config["GitHub:Owner"] ?? "Ivy-Interactive",
-                    config["GitHub:Repo"] ?? "Ivy-Examples",
-                    config["GitHub:Token"] ?? "", "open");
+
+                var ghToken = config["GitHub:Token"] ?? "";
+                var allRepos = reposProvider.All;
+
                 var deployments = string.IsNullOrEmpty(token)
                     ? new List<StagingDeployment>()
                     : await deploySvc.ListDeploymentsAsync(token);
 
                 var rows = new List<PrRow>();
-                foreach (var pr in prs)
+
+                foreach (var rc in allRepos)
                 {
-                    var dep = deployments.FirstOrDefault(d => d.BranchSafe == pr.Number.ToString());
-
-                    string status;
-                    Icons statusIcon;
-                    string docsDisplay = "";
-                    string samplesDisplay = "";
-                    string expiresAt = "—";
-
-                    if (dep != null)
+                    var prs = await github.GetPullRequestsAsync(rc.Owner, rc.Repo, ghToken, "open");
+                    foreach (var pr in prs)
                     {
-                        expiresAt = dep.ExpiresAt.ToString("yyyy-MM-dd");
-                        var docsEvents = !string.IsNullOrEmpty(projId) && !string.IsNullOrEmpty(dep.DocsServiceId)
-                            ? await sliplane.GetServiceEventsAsync(token, projId, dep.DocsServiceId)
-                            : new List<SliplaneServiceEvent>();
-                        var samplesEvents = !string.IsNullOrEmpty(projId) && !string.IsNullOrEmpty(dep.SamplesServiceId)
-                            ? await sliplane.GetServiceEventsAsync(token, projId, dep.SamplesServiceId)
-                            : new List<SliplaneServiceEvent>();
+                        var rowId = $"{rc.Key}/{pr.HeadRef}";
+                        var dep = deployments.FirstOrDefault(d =>
+                            d.RepoKey.Equals(rc.Key, StringComparison.OrdinalIgnoreCase) &&
+                            d.BranchSafe == pr.Number.ToString());
 
-                        var (statusLabel, icon) = GetCombinedRowStatus(
-                            dep.DocsServiceId, docsEvents, dep.SamplesServiceId, samplesEvents);
-                        status = statusLabel;
-                        statusIcon = icon;
+                        string status;
+                        Icons statusIcon;
+                        string docsDisplay = rc.HasDocs ? "" : NotConfiguredHint;
+                        string samplesDisplay = rc.HasSamples ? "" : NotConfiguredHint;
+                        string expiresAt = "—";
 
-                        docsDisplay = GetServiceDisplay(dep.DocsUrl, dep.DocsStatus, docsEvents, statusLabel);
-                        samplesDisplay = GetServiceDisplay(dep.SamplesUrl, dep.SamplesStatus, samplesEvents, statusLabel);
-                    }
-                    else
-                    {
-                        // Sliplane doesn't know about this branch yet.
-                        // If we triggered a deploy and are waiting for the service to appear, keep "Deploying...".
-                        if (deployingBranches.Value.Contains(pr.HeadRef))
+                        if (dep != null)
                         {
-                            status = "pending";
-                            statusIcon = Icons.Clock;
-                            docsDisplay = "Deploying...";
-                            samplesDisplay = "Deploying...";
+                            expiresAt = dep.ExpiresAt.ToString("yyyy-MM-dd");
+                            var docsEvents = !string.IsNullOrEmpty(projId) && !string.IsNullOrEmpty(dep.DocsServiceId)
+                                ? await sliplane.GetServiceEventsAsync(token, projId, dep.DocsServiceId)
+                                : new List<SliplaneServiceEvent>();
+                            var samplesEvents = !string.IsNullOrEmpty(projId) && !string.IsNullOrEmpty(dep.SamplesServiceId)
+                                ? await sliplane.GetServiceEventsAsync(token, projId, dep.SamplesServiceId)
+                                : new List<SliplaneServiceEvent>();
+
+                            var (statusLabel, icon) = GetCombinedRowStatus(
+                                dep.DocsServiceId, docsEvents, dep.SamplesServiceId, samplesEvents);
+                            status = statusLabel;
+                            statusIcon = icon;
+
+                            if (rc.HasDocs)
+                                docsDisplay = GetServiceDisplay(dep.DocsUrl, dep.DocsStatus, docsEvents, statusLabel);
+                            if (rc.HasSamples)
+                                samplesDisplay = GetServiceDisplay(dep.SamplesUrl, dep.SamplesStatus, samplesEvents, statusLabel);
                         }
                         else
                         {
-                            status = "not deployed";
-                            statusIcon = Icons.CircleX;
-                            docsDisplay = NotDeployedDocsSamplesHint;
-                            samplesDisplay = NotDeployedDocsSamplesHint;
+                            // Sliplane doesn't know about this branch yet.
+                            // If we triggered a deploy and are waiting for the service to appear, keep "Deploying...".
+                            if (deployingItems.Value.Contains(rowId))
+                            {
+                                status = "pending";
+                                statusIcon = Icons.Clock;
+                                if (rc.HasDocs) docsDisplay = "Deploying...";
+                                if (rc.HasSamples) samplesDisplay = "Deploying...";
+                            }
+                            else
+                            {
+                                status = "not deployed";
+                                statusIcon = Icons.CircleX;
+                                if (rc.HasDocs) docsDisplay = NotDeployedDocsSamplesHint;
+                                if (rc.HasSamples) samplesDisplay = NotDeployedDocsSamplesHint;
+                            }
                         }
-                    }
 
-                    rows.Add(new PrRow(
-                        pr.HeadRef, pr.Number, pr.Title,
-                        status, statusIcon, expiresAt, docsDisplay, samplesDisplay, pr.HtmlUrl,
-                        dep?.DocsUrl, dep?.SamplesUrl));
+                        rows.Add(new PrRow(
+                            Id: rowId,
+                            RepoKey: rc.Key,
+                            RepoLabel: rc.Repo,
+                            HeadRef: pr.HeadRef,
+                            Number: pr.Number,
+                            Title: pr.Title,
+                            Status: status,
+                            StatusIcon: statusIcon,
+                            ExpiresAt: expiresAt,
+                            DocsDisplay: docsDisplay,
+                            SamplesDisplay: samplesDisplay,
+                            HtmlUrl: pr.HtmlUrl,
+                            DocsUrl: dep?.DocsUrl,
+                            SamplesUrl: dep?.SamplesUrl,
+                            HasDocs: rc.HasDocs,
+                            HasSamples: rc.HasSamples));
+                    }
                 }
 
-                return rows.OrderByDescending(r => r.Number).ToList();
+                return rows
+                    .OrderBy(r => r.RepoLabel, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(r => r.Number)
+                    .ToList();
             },
             options: new QueryOptions
             {
@@ -138,20 +172,18 @@ public class PrStagingDeployApp : ViewBase
                     if (result.IsOk())
                     {
                         var rowList = overviewQuery.Value ?? new List<PrRow>();
-                        var prsToDeploy = rowList.Where(RowLooksLikeNoStagingYet)
-                            .Select(r => (r.HeadRef, r.Number))
-                            .ToList();
+                        var prsToDeploy = rowList.Where(RowLooksLikeNoStagingYet).ToList();
                         if (prsToDeploy.Count > 0)
                         {
-                            var branchSet = prsToDeploy.Select(x => x.HeadRef).ToHashSet();
+                            var idSet = prsToDeploy.Select(r => r.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
                             var updated = rowList.Select(r =>
-                                branchSet.Contains(r.HeadRef)
+                                idSet.Contains(r.Id)
                                     ? r with
                                     {
                                         Status = "pending",
                                         StatusIcon = Icons.Clock,
-                                        DocsDisplay = "Deploying...",
-                                        SamplesDisplay = "Deploying...",
+                                        DocsDisplay = r.HasDocs ? "Deploying..." : NotConfiguredHint,
+                                        SamplesDisplay = r.HasSamples ? "Deploying..." : NotConfiguredHint,
                                         DocsUrl = null,
                                         SamplesUrl = null
                                     }
@@ -162,7 +194,7 @@ public class PrStagingDeployApp : ViewBase
 
                         ShowMessage($"Triggering deploy for {prsToDeploy.Count} PRs...", false);
                         foreach (var item in prsToDeploy)
-                            _ = DeployBranchAsync(item.HeadRef, item.Number, clearMessageFirst: false);
+                            _ = DeployRowAsync(item, clearMessageFirst: false);
                     }
                     await Task.CompletedTask;
                 }, "Deploy All", AlertButtonSet.OkCancel);
@@ -183,8 +215,8 @@ public class PrStagingDeployApp : ViewBase
                                     {
                                         Status = "pending",
                                         StatusIcon = Icons.Clock,
-                                        DocsDisplay = DeletingStagingCellHint,
-                                        SamplesDisplay = DeletingStagingCellHint,
+                                        DocsDisplay = r.HasDocs ? DeletingStagingCellHint : NotConfiguredHint,
+                                        SamplesDisplay = r.HasSamples ? DeletingStagingCellHint : NotConfiguredHint,
                                         ExpiresAt = "—",
                                         DocsUrl = null,
                                         SamplesUrl = null
@@ -212,14 +244,14 @@ public class PrStagingDeployApp : ViewBase
                             var res = await sliplane.DeleteAllServicesInProjectAsync(token, projectId);
                             ShowMessage($"Deleted {res.Deleted} services. Failed: {res.Failed}.", res.Failed > 0);
 
-                            // Now update PR comments to "Deleted" for any PRs that had staging services
-                            var owner = config["GitHub:Owner"] ?? "";
-                            var repo = config["GitHub:Repo"] ?? "";
-                            if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                            // Update PR comments to "Deleted" for any PRs that had staging services.
+                            var prsThatHadServices = rowList.Where(r => !RowLooksLikeNoStagingYet(r)).ToList();
+                            foreach (var pr in prsThatHadServices)
                             {
-                                var prsThatHadServices = rowList.Where(r => !RowLooksLikeNoStagingYet(r)).ToList();
-                                foreach (var pr in prsThatHadServices)
-                                    _ = prComments.TryPostStagingRemovedAsync(owner, repo, pr.Number);
+                                var rc = reposProvider.FindByKey(pr.RepoKey);
+                                if (rc != null)
+                                    _ = prComments.TryPostStagingRemovedAsync(rc.Owner, rc.Repo, pr.Number,
+                                        docsEnabled: rc.HasDocs, samplesEnabled: rc.HasSamples);
                             }
 
                             overviewQuery.Mutator.Revalidate();
@@ -271,31 +303,35 @@ public class PrStagingDeployApp : ViewBase
             return line.Length <= maxLen ? line : line[..maxLen] + "...";
         }
 
-        async Task DeployBranchAsync(string branchName, int prNumber, bool clearMessageFirst = true)
+        async Task DeployRowAsync(PrRow row, bool clearMessageFirst = true)
         {
             var t = config["Sliplane:ApiToken"] ?? "";
             if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             if (clearMessageFirst) ClearMessage();
 
+            var rc = reposProvider.FindByKey(row.RepoKey);
+            if (rc == null)
+            {
+                ShowMessage($"Repo {row.RepoKey} not configured.", true);
+                return;
+            }
+
             // Mark this branch as "deploying" so the query fetcher keeps the row in Deploying... state
             // even before Sliplane registers the new service.
-            deployingBranches.Set(prev =>
+            deployingItems.Set(prev =>
             {
-                var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase) { branchName };
+                var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase) { row.Id };
                 return next;
             });
 
             try
             {
-                var owner = config["GitHub:Owner"] ?? "";
-                var repo = config["GitHub:Repo"] ?? "";
+                var result = await deploySvc.DeployBranchAsync(t, rc, row.HeadRef, row.Number);
 
-                var result = await deploySvc.DeployBranchAsync(t, branchName, prNumber, null, owner, repo);
-
-                deployingBranches.Set(prev =>
+                deployingItems.Set(prev =>
                 {
                     var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase);
-                    next.Remove(branchName);
+                    next.Remove(row.Id);
                     return next;
                 });
 
@@ -311,64 +347,68 @@ public class PrStagingDeployApp : ViewBase
                 {
                     overviewQuery.Mutator.Revalidate();
 
-                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                    if (!string.IsNullOrEmpty(result.DocsServiceId) || !string.IsNullOrEmpty(result.SamplesServiceId))
                     {
-                        if (result.Success && (!string.IsNullOrEmpty(result.DocsServiceId) || !string.IsNullOrEmpty(result.SamplesServiceId)))
-                        {
-                            await prComments.TryPostStagingAsync(
-                                owner, repo, prNumber, result.DocsUrl, result.SamplesUrl, error: null);
-                            if (!string.IsNullOrEmpty(result.DocsServiceId) || !string.IsNullOrEmpty(result.SamplesServiceId))
-                                await errorWatcher.EnqueueAsync(new StagingErrorWatchRequest(
-                                    owner, repo, prNumber, result.DocsServiceId, result.SamplesServiceId));
-                        }
-                        else
-                        {
-                            await prComments.TryPostStagingAsync(
-                                owner, repo, prNumber, null, null, TruncLine(result.Message, 500));
-                        }
+                        await prComments.TryPostStagingAsync(
+                            rc.Owner, rc.Repo, row.Number, result.DocsUrl, result.SamplesUrl, error: null,
+                            docsEnabled: rc.HasDocs, samplesEnabled: rc.HasSamples);
+                        await errorWatcher.EnqueueAsync(new StagingErrorWatchRequest(
+                            rc.Key, rc.Owner, rc.Repo, row.Number, result.DocsServiceId, result.SamplesServiceId));
+                    }
+                    else
+                    {
+                        await prComments.TryPostStagingAsync(
+                            rc.Owner, rc.Repo, row.Number, null, null, TruncLine(result.Message, 500),
+                            docsEnabled: rc.HasDocs, samplesEnabled: rc.HasSamples);
                     }
                 }
-                else if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                else
                 {
                     await prComments.TryPostStagingAsync(
-                        owner, repo, prNumber, null, null, TruncLine(result.Message, 500));
+                        rc.Owner, rc.Repo, row.Number, null, null, TruncLine(result.Message, 500),
+                        docsEnabled: rc.HasDocs, samplesEnabled: rc.HasSamples);
                 }
             }
             catch (Exception ex)
             {
-                // On unexpected error, also remove from deployingBranches.
-                deployingBranches.Set(prev =>
+                deployingItems.Set(prev =>
                 {
                     var next = new HashSet<string>(prev, StringComparer.OrdinalIgnoreCase);
-                    next.Remove(branchName);
+                    next.Remove(row.Id);
                     return next;
                 });
                 ShowMessage(ex.Message, true);
             }
         }
 
-        async Task DeleteBranchAsync(string branchName, int prNumber)
+        async Task DeleteRowAsync(PrRow row)
         {
             var t = config["Sliplane:ApiToken"] ?? "";
             if (string.IsNullOrEmpty(t)) { ShowMessage("Sliplane API token required.", true); return; }
             ClearMessage();
+
+            var rc = reposProvider.FindByKey(row.RepoKey);
+            if (rc == null)
+            {
+                ShowMessage($"Repo {row.RepoKey} not configured.", true);
+                return;
+            }
+
             try
             {
-                var owner = config["GitHub:Owner"] ?? "";
-                var repo = config["GitHub:Repo"] ?? "";
-
-                var result = await deploySvc.DeleteBranchAsync(t, prNumber);
+                var result = await deploySvc.DeleteBranchAsync(t, rc, row.Number);
                 ShowMessage(result.Message, !result.Success);
                 if (result.Success)
                 {
                     overviewQuery.Mutator.Revalidate();
-                    if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
-                        await prComments.TryPostStagingRemovedAsync(owner, repo, prNumber);
+                    await prComments.TryPostStagingRemovedAsync(rc.Owner, rc.Repo, row.Number,
+                        docsEnabled: rc.HasDocs, samplesEnabled: rc.HasSamples);
                 }
-                else if (!string.IsNullOrEmpty(owner) && !string.IsNullOrEmpty(repo))
+                else
                 {
                     await prComments.TryPostStagingAsync(
-                        owner, repo, prNumber, null, null, TruncLine(result.Message, 500));
+                        rc.Owner, rc.Repo, row.Number, null, null, TruncLine(result.Message, 500),
+                        docsEnabled: rc.HasDocs, samplesEnabled: rc.HasSamples);
                 }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }
@@ -378,6 +418,11 @@ public class PrStagingDeployApp : ViewBase
             return Layout.Center()
                 | Text.H2("PR Staging Deploy")
                 | Text.Muted("Configure Sliplane:ApiToken in appsettings or environment variables.");
+
+        if (reposProvider.All.Count == 0)
+            return Layout.Center()
+                | Text.H2("PR Staging Deploy")
+                | Text.Muted("No repos configured. Set GitHub:Owner/Repo (legacy) or Repos[] (multi-repo).");
 
         var rows = pinnedTableRows.Value ?? overviewQuery.Value ?? new List<PrRow>();
 
@@ -390,11 +435,36 @@ public class PrStagingDeployApp : ViewBase
         var header = Layout.Horizontal().Height(Size.Fit())
             | Text.H2("PR Staging Deploy");
 
+        var showSamplesColumn = reposProvider.All.Any(r => r.HasSamples);
+
+        var hiddenColumns = new List<Expression<Func<PrRow, object>>>
+        {
+            r => r.Id,
+            r => r.RepoKey,
+            r => r.HeadRef,
+            r => r.HtmlUrl!,
+            r => r.DocsUrl!,
+            r => r.SamplesUrl!,
+            r => r.HasDocs,
+            r => r.HasSamples,
+        };
+        if (!showSamplesColumn)
+            hiddenColumns.Add(r => r.SamplesDisplay);
+
+        var openSubmenu = new List<MenuItem>
+        {
+            MenuItem.Default(Icons.GitBranch, "pr").Label("Open PR").Tag("pr"),
+            MenuItem.Default(Icons.FileText, "docs").Label("Open Docs").Tag("docs"),
+        };
+        if (showSamplesColumn)
+            openSubmenu.Add(MenuItem.Default(Icons.Box, "samples").Label("Open Samples").Tag("samples"));
+
         var table = rows
             .AsQueryable()
-            .ToDataTable(r => r.HeadRef)
+            .ToDataTable(r => r.Id)
             .RefreshToken(refreshToken)
             .Height(Size.Full())
+            .Header(r => r.RepoLabel, "Repo")
             .Header(r => r.Number, "# PR")
             .Header(r => r.Title, "Name PR")
             .Header(r => r.StatusIcon, "Icon")
@@ -402,6 +472,7 @@ public class PrStagingDeployApp : ViewBase
             .Header(r => r.ExpiresAt, "Expires")
             .Header(r => r.DocsDisplay, "Docs")
             .Header(r => r.SamplesDisplay, "Samples")
+            .Width(r => r.RepoLabel, Size.Px(160))
             .Width(r => r.Number, Size.Px(50))
             .Width(r => r.Title, Size.Px(300))
             .Width(r => r.StatusIcon, Size.Px(50))
@@ -409,95 +480,97 @@ public class PrStagingDeployApp : ViewBase
             .Width(r => r.ExpiresAt, Size.Px(100))
             .Width(r => r.DocsDisplay, Size.Px(450))
             .Width(r => r.SamplesDisplay, Size.Px(450))
-            .Hidden(r => r.HeadRef)
-            .Hidden(r => r.HtmlUrl)
-            .Hidden(r => r.DocsUrl)
-            .Hidden(r => r.SamplesUrl)
+            .Hidden(hiddenColumns)
             .Config(c =>
             {
                 c.AllowSorting = true;
                 c.AllowFiltering = true;
                 c.ShowSearch = true;
-
             })
             .RowActions(
                 MenuItem.Default(Icons.Rocket, "Deploy").Tag("deploy"),
                 MenuItem.Default(Icons.Trash2, "Delete").Tag("delete"),
                 MenuItem.Default(Icons.ExternalLink, "open").Label("Open").Tag("open-dd")
-                    .Children([
-                        MenuItem.Default(Icons.GitBranch, "pr").Label("Open PR").Tag("pr"),
-                        MenuItem.Default(Icons.FileText, "docs").Label("Open Docs").Tag("docs"),
-                        MenuItem.Default(Icons.Box, "samples").Label("Open Samples").Tag("samples"),
-                    ]))
+                    .Children(openSubmenu.ToArray()))
             .OnRowAction(e =>
             {
                 var args = e.Value;
                 if (args is null) return ValueTask.CompletedTask;
-                var headRef = args.Id?.ToString();
+                var rowId = args.Id?.ToString();
                 var tag = args.Tag?.ToString();
-                if (string.IsNullOrEmpty(headRef)) return ValueTask.CompletedTask;
+                if (string.IsNullOrEmpty(rowId)) return ValueTask.CompletedTask;
+                var row = rows.FirstOrDefault(r => r.Id == rowId);
+                if (row == null) return ValueTask.CompletedTask;
 
                 if (tag == "deploy")
                 {
-                    var branch = headRef;
-                    var prRow = rows.FirstOrDefault(r => r.HeadRef == branch);
-                    if (prRow != null && !RowLooksLikeNoStagingYet(prRow))
+                    if (!RowLooksLikeNoStagingYet(row))
                     {
-                        // Services already exist — just inform the user, no action taken.
                         showAlert(
-                            $"Staging services for branch \"{branch}\" already exist.",
+                            $"Staging services for {row.RepoLabel}/{row.HeadRef} already exist.",
                             _ => { }, "Services already deployed", AlertButtonSet.Ok);
                     }
                     else
                     {
-                        showAlert($"Deploy docs and samples for branch \"{branch}\"?", result =>
+                        showAlert($"Deploy staging for {row.RepoLabel}/{row.HeadRef}?", result =>
                         {
                             if (result.IsOk())
                             {
-                                var updated = rows.Select(r => r.HeadRef == branch
-                                    ? r with { Status = "pending", StatusIcon = Icons.Clock, DocsDisplay = "Deploying...", SamplesDisplay = "Deploying...", DocsUrl = null, SamplesUrl = null }
+                                var capturedRow = row;
+                                var updated = rows.Select(r => r.Id == capturedRow.Id
+                                    ? r with
+                                    {
+                                        Status = "pending",
+                                        StatusIcon = Icons.Clock,
+                                        DocsDisplay = r.HasDocs ? "Deploying..." : NotConfiguredHint,
+                                        SamplesDisplay = r.HasSamples ? "Deploying..." : NotConfiguredHint,
+                                        DocsUrl = null,
+                                        SamplesUrl = null
+                                    }
                                     : r).ToList();
                                 overviewQuery.Mutator.Mutate(updated, revalidate: false);
                                 refreshToken.Refresh();
-                                var newPrRow = rows.FirstOrDefault(r => r.HeadRef == branch);
-                                if (newPrRow != null)
-                                    _ = DeployBranchAsync(branch, newPrRow.Number);
+                                _ = DeployRowAsync(capturedRow);
                             }
                         }, "Deploy", AlertButtonSet.OkCancel);
                     }
                 }
                 else if (tag == "delete")
                 {
-                    var branch = headRef;
-                    showAlert($"Are you sure you want to delete deployment for branch \"{branch}\"?", result =>
+                    showAlert($"Are you sure you want to delete deployment for {row.RepoLabel}/{row.HeadRef}?", result =>
                     {
                         if (result.IsOk())
                         {
-                            var updated = rows.Select(r => r.HeadRef == branch
-                                ? r with { Status = "not deployed", StatusIcon = Icons.CircleX, DocsDisplay = NotDeployedDocsSamplesHint, SamplesDisplay = NotDeployedDocsSamplesHint, ExpiresAt = "—", DocsUrl = null, SamplesUrl = null }
+                            var capturedRow = row;
+                            var updated = rows.Select(r => r.Id == capturedRow.Id
+                                ? r with
+                                {
+                                    Status = "not deployed",
+                                    StatusIcon = Icons.CircleX,
+                                    DocsDisplay = r.HasDocs ? NotDeployedDocsSamplesHint : NotConfiguredHint,
+                                    SamplesDisplay = r.HasSamples ? NotDeployedDocsSamplesHint : NotConfiguredHint,
+                                    ExpiresAt = "—",
+                                    DocsUrl = null,
+                                    SamplesUrl = null
+                                }
                                 : r).ToList();
                             overviewQuery.Mutator.Mutate(updated, revalidate: false);
                             refreshToken.Refresh();
-                            var prRow = rows.FirstOrDefault(r => r.HeadRef == branch);
-                            if (prRow != null)
-                                _ = DeleteBranchAsync(branch, prRow.Number);
+                            _ = DeleteRowAsync(capturedRow);
                         }
                     }, "Delete", AlertButtonSet.OkCancel);
                 }
                 else if (tag == "pr")
                 {
-                    var pr = rows.FirstOrDefault(r => r.HeadRef == headRef);
-                    if (pr?.HtmlUrl != null) client.OpenUrl(pr.HtmlUrl);
+                    if (row.HtmlUrl != null) client.OpenUrl(row.HtmlUrl);
                 }
                 else if (tag == "docs")
                 {
-                    var pr = rows.FirstOrDefault(r => r.HeadRef == headRef);
-                    if (!string.IsNullOrEmpty(pr?.DocsUrl)) client.OpenUrl(pr.DocsUrl!);
+                    if (!string.IsNullOrEmpty(row.DocsUrl)) client.OpenUrl(row.DocsUrl!);
                 }
                 else if (tag == "samples")
                 {
-                    var pr = rows.FirstOrDefault(r => r.HeadRef == headRef);
-                    if (!string.IsNullOrEmpty(pr?.SamplesUrl)) client.OpenUrl(pr.SamplesUrl!);
+                    if (!string.IsNullOrEmpty(row.SamplesUrl)) client.OpenUrl(row.SamplesUrl!);
                 }
                 return ValueTask.CompletedTask;
             });
@@ -512,13 +585,18 @@ public class PrStagingDeployApp : ViewBase
         "No staging service yet.\n\n"
         + "Use Deploy (rocket) in the row menu — after Sliplane creates the service, deploy/build events appear here.";
 
+    private const string NotConfiguredHint = "—";
+
     private const string DeletingStagingCellHint = "Deleting staging…";
 
     /// <summary>Matches rows built in the query fetcher when there is no Sliplane deployment for the branch.</summary>
-    private static bool RowLooksLikeNoStagingYet(PrRow r) =>
-        r.Status == "not deployed"
-        && string.Equals(r.DocsDisplay, NotDeployedDocsSamplesHint, StringComparison.Ordinal)
-        && string.Equals(r.SamplesDisplay, NotDeployedDocsSamplesHint, StringComparison.Ordinal);
+    private static bool RowLooksLikeNoStagingYet(PrRow r)
+    {
+        if (r.Status != "not deployed") return false;
+        var docsOk = !r.HasDocs || string.Equals(r.DocsDisplay, NotDeployedDocsSamplesHint, StringComparison.Ordinal);
+        var samplesOk = !r.HasSamples || string.Equals(r.SamplesDisplay, NotDeployedDocsSamplesHint, StringComparison.Ordinal);
+        return docsOk && samplesOk;
+    }
 
     private const string PreparingStagingLogMessage =
         "Preparing…\nBuild and deploy events will appear here shortly.";
@@ -654,5 +732,4 @@ public class PrStagingDeployApp : ViewBase
 
         return PreparingStagingLogMessage;
     }
-
 }

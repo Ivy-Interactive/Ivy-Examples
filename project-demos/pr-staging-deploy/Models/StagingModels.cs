@@ -20,6 +20,7 @@ public record GitHubPullRequest(
 
 /// <summary>Staging deployment for a branch (docs + samples services).</summary>
 public record StagingDeployment(
+    string RepoKey,
     string BranchName,
     string BranchSafe,
     string? DocsServiceId,

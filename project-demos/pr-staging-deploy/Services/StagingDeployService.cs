@@ -2,45 +2,83 @@ namespace PrStagingDeploy.Services;
 
 using PrStagingDeploy.Models;
 
-/// <summary>Orchestrates deploy/delete of docs + samples for a branch.</summary>
+/// <summary>Orchestrates deploy/delete of docs + samples for a branch across one or more repos.</summary>
 public class StagingDeployService
 {
     private readonly SliplaneStagingClient _sliplane;
     private readonly GitHubApiClient _github;
+    private readonly StagingReposProvider _reposProvider;
     private readonly IConfiguration _config;
     private readonly ILogger<StagingDeployService> _logger;
 
     public StagingDeployService(
         SliplaneStagingClient sliplane,
         GitHubApiClient github,
+        StagingReposProvider reposProvider,
         IConfiguration config,
         ILogger<StagingDeployService> logger)
     {
         _sliplane = sliplane;
         _github = github;
+        _reposProvider = reposProvider;
         _config = config;
         _logger = logger;
     }
 
-    public string SamplesRepo => _config["Staging:SamplesRepo"] ?? "https://github.com/Ivy-Interactive/Ivy-Examples";
-    public string DocsRepo => _config["Staging:DocsRepo"] ?? "https://github.com/Ivy-Interactive/Ivy-Framework";
-    public string SamplesContext => _config["Staging:SamplesDockerContext"] ?? "project-demos/sliplane-manage";
-    public string DocsContext => _config["Staging:DocsDockerContext"] ?? "docs";
-    public string SamplesDockerfile => _config["Staging:SamplesDockerfile"] ?? "Dockerfile";
-    public string DocsDockerfile => _config["Staging:DocsDockerfile"] ?? "Dockerfile";
+    /// <summary>
+    /// Configured deployment slug when <c>Staging:DeploymentKey</c> is set; otherwise default <c>ivy</c> for legacy name parsing only.
+    /// Actual service names use <see cref="ResolveServiceSlug"/> (DeploymentKey if set, else each repo’s <c>Key</c>).
+    /// </summary>
+    public string DeploymentKey
+    {
+        get
+        {
+            var raw = _config["Staging:DeploymentKey"];
+            if (string.IsNullOrWhiteSpace(raw))
+                return "ivy";
+            return StagingReposProvider.SanitizeKey(raw);
+        }
+    }
+
+    /// <summary>
+    /// Single slug at the start of service names: <c>{slug}-staging-docs-{PR}</c>.
+    /// If <c>Staging:DeploymentKey</c> is set, all repos share that slug; otherwise each repo uses its own <paramref name="repo"/>.Key.
+    /// </summary>
+    public string ResolveServiceSlug(StagingRepoConfig repo)
+    {
+        var raw = _config["Staging:DeploymentKey"];
+        if (!string.IsNullOrWhiteSpace(raw))
+            return StagingReposProvider.SanitizeKey(raw);
+        return repo.Key;
+    }
+
     public int ExpiryDays => int.TryParse(_config["Staging:ExpiryDays"], out var d) ? d : 7;
 
-    /// <summary>Pause (ms) after tearing down old services and before calling Sliplane create, only when GitHub owner/repo are provided. Lets merge/close webhooks win the race. Default 1200; set 0 to disable.</summary>
+    /// <summary>Pause (ms) after tearing down old services and before calling Sliplane create. Lets merge/close webhooks win the race. Default 1200; set 0 to disable.</summary>
     public int PreDeployDelayMs =>
         int.TryParse(_config["Staging:PreDeployDelayMs"], out var ms) ? Math.Max(0, ms) : 1200;
 
+    public IReadOnlyList<StagingRepoConfig> AllRepos => _reposProvider.All;
+
+    public StagingRepoConfig? FindRepoByKey(string? key) => _reposProvider.FindByKey(key);
+
+    public StagingRepoConfig? FindRepoByOwner(string? owner, string? repo) =>
+        _reposProvider.FindByOwnerRepo(owner, repo);
+
+    /// <summary>Sliplane service name: <c>{slug}-staging-docs-{PR}</c>.</summary>
+    public string DocsServiceName(StagingRepoConfig repo, int prNumber)
+        => $"{ResolveServiceSlug(repo)}-staging-docs-{prNumber}";
+
+    /// <summary>Sliplane service name: <c>{slug}-staging-samples-{PR}</c>.</summary>
+    public string SamplesServiceName(StagingRepoConfig repo, int prNumber)
+        => $"{ResolveServiceSlug(repo)}-staging-samples-{prNumber}";
+
     public async Task<StagingDeployResult> DeployBranchAsync(
         string apiToken,
+        StagingRepoConfig repoConfig,
         string branchName,
         int prNumber,
-        string? samplesRepoOverride = null,
-        string? gitHubOwner = null,
-        string? gitHubRepo = null,
+        string? cloneUrlOverride = null,
         CancellationToken cancellationToken = default)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
@@ -48,66 +86,85 @@ public class StagingDeployService
         if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(serverId))
             return new StagingDeployResult(false, "Sliplane:ProjectId and ServerId required.");
 
-        var skip = await TryGetClosedOrMergedSkipAsync(prNumber, gitHubOwner, gitHubRepo, cancellationToken);
+        var skip = await TryGetClosedOrMergedSkipAsync(prNumber, repoConfig.Owner, repoConfig.Repo, cancellationToken);
         if (skip is not null)
             return skip;
 
-        // Tear down any existing services for this PR before creating new ones. Otherwise a
-        // fallback deploy (e.g. synchronize when redeploy finds 0 services) can leave orphan
-        // Sliplane services alongside the new pair.
-        await DeleteBranchAsync(apiToken, prNumber);
+        // Tear down any existing services for this PR (within this repo) before creating new ones.
+        await DeleteBranchAsync(apiToken, repoConfig, prNumber);
 
         var ghToken = _config["GitHub:Token"] ?? "";
         if (PreDeployDelayMs > 0
-            && !string.IsNullOrEmpty(gitHubOwner)
-            && !string.IsNullOrEmpty(gitHubRepo)
+            && !string.IsNullOrEmpty(repoConfig.Owner)
+            && !string.IsNullOrEmpty(repoConfig.Repo)
             && !string.IsNullOrEmpty(ghToken))
         {
             await Task.Delay(PreDeployDelayMs, cancellationToken);
-            skip = await TryGetClosedOrMergedSkipAsync(prNumber, gitHubOwner, gitHubRepo, cancellationToken);
+            skip = await TryGetClosedOrMergedSkipAsync(prNumber, repoConfig.Owner, repoConfig.Repo, cancellationToken);
             if (skip is not null)
                 return skip;
         }
-
-        var docsName = $"ivy-staging-docs-{prNumber}";
-        var samplesName = $"ivy-staging-samples-{prNumber}";
-
-        // For fork PRs use the fork's clone URL so Sliplane can find the branch.
-        var samplesRepo = !string.IsNullOrEmpty(samplesRepoOverride) ? samplesRepoOverride : SamplesRepo;
 
         string? docsUrl = null;
         string? samplesUrl = null;
         string? docsId = null;
         string? samplesId = null;
+        string? lastError = null;
+        var anyAttempted = false;
 
         try
         {
-            var docsResult = await _sliplane.CreateServiceAsync(
-                apiToken, projectId, serverId,
-                docsName, DocsRepo, branchName, DocsDockerfile, DocsContext);
-            if (docsResult.Service != null)
+            if (repoConfig.HasDocs)
             {
-                docsId = docsResult.Service.Id;
-                docsUrl = string.IsNullOrEmpty(docsResult.Service.ManagedDomain)
-                    ? null
-                    : "https://" + docsResult.Service.ManagedDomain;
+                anyAttempted = true;
+                var docsResult = await _sliplane.CreateServiceAsync(
+                    apiToken, projectId, serverId,
+                    DocsServiceName(repoConfig, prNumber),
+                    repoConfig.Docs!.Repo, branchName,
+                    repoConfig.Docs.Dockerfile, repoConfig.Docs.Context);
+                if (docsResult.Service != null)
+                {
+                    docsId = docsResult.Service.Id;
+                    docsUrl = string.IsNullOrEmpty(docsResult.Service.ManagedDomain)
+                        ? null
+                        : "https://" + docsResult.Service.ManagedDomain;
+                }
+                else if (!string.IsNullOrEmpty(docsResult.Error))
+                {
+                    lastError = docsResult.Error;
+                }
             }
 
-            var samplesResult = await _sliplane.CreateServiceAsync(
-                apiToken, projectId, serverId,
-                samplesName, samplesRepo, branchName, SamplesDockerfile, SamplesContext);
-            if (samplesResult.Service != null)
+            if (repoConfig.HasSamples)
             {
-                samplesId = samplesResult.Service.Id;
-                samplesUrl = string.IsNullOrEmpty(samplesResult.Service.ManagedDomain)
-                    ? null
-                    : "https://" + samplesResult.Service.ManagedDomain;
+                anyAttempted = true;
+                // For fork PRs use the fork's clone URL so Sliplane can find the branch.
+                var samplesRepo = !string.IsNullOrEmpty(cloneUrlOverride) ? cloneUrlOverride : repoConfig.Samples!.Repo;
+                var samplesResult = await _sliplane.CreateServiceAsync(
+                    apiToken, projectId, serverId,
+                    SamplesServiceName(repoConfig, prNumber),
+                    samplesRepo, branchName,
+                    repoConfig.Samples!.Dockerfile, repoConfig.Samples.Context);
+                if (samplesResult.Service != null)
+                {
+                    samplesId = samplesResult.Service.Id;
+                    samplesUrl = string.IsNullOrEmpty(samplesResult.Service.ManagedDomain)
+                        ? null
+                        : "https://" + samplesResult.Service.ManagedDomain;
+                }
+                else if (!string.IsNullOrEmpty(samplesResult.Error))
+                {
+                    lastError = samplesResult.Error;
+                }
             }
 
-            var ok = docsResult.Service != null || samplesResult.Service != null;
+            if (!anyAttempted)
+                return new StagingDeployResult(false, $"Repo {repoConfig.Key} has neither Docs nor Samples configured.");
+
+            var ok = docsId != null || samplesId != null;
             var msg = ok
-                ? $"Deployed: docs={docsUrl ?? "pending"}, samples={samplesUrl ?? "pending"}"
-                : (docsResult.Error ?? samplesResult.Error ?? "Failed to create services.");
+                ? FormatDeployMessage(repoConfig, docsUrl, samplesUrl)
+                : (lastError ?? "Failed to create services.");
             return new StagingDeployResult(ok, msg, docsUrl, samplesUrl, docsId, samplesId);
         }
         catch (Exception ex)
@@ -116,12 +173,22 @@ public class StagingDeployService
         }
     }
 
-    public async Task<StagingDeployResult> RedeployBranchAsync(string apiToken, string branchName, int prNumber)
+    private static string FormatDeployMessage(StagingRepoConfig repo, string? docsUrl, string? samplesUrl)
+    {
+        var parts = new List<string>();
+        if (repo.HasDocs) parts.Add($"docs={docsUrl ?? "pending"}");
+        if (repo.HasSamples) parts.Add($"samples={samplesUrl ?? "pending"}");
+        return $"Deployed: {string.Join(", ", parts)}";
+    }
+
+    public async Task<StagingDeployResult> RedeployBranchAsync(string apiToken, StagingRepoConfig repoConfig, string branchName, int prNumber)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
-        var services = await _sliplane.ListStagingServicesAsync(apiToken, projectId, "ivy-staging-");
-        var docsSvc = services.FirstOrDefault(s => s.Name == $"ivy-staging-docs-{prNumber}");
-        var samplesSvc = services.FirstOrDefault(s => s.Name == $"ivy-staging-samples-{prNumber}");
+        var services = await _sliplane.ListAllServicesAsync(apiToken, projectId);
+        var docsName = DocsServiceName(repoConfig, prNumber);
+        var samplesName = SamplesServiceName(repoConfig, prNumber);
+        var docsSvc = services.FirstOrDefault(s => string.Equals(s.Name, docsName, StringComparison.OrdinalIgnoreCase));
+        var samplesSvc = services.FirstOrDefault(s => string.Equals(s.Name, samplesName, StringComparison.OrdinalIgnoreCase));
 
         var triggered = 0;
         if (docsSvc != null && await _sliplane.RedeployServiceAsync(apiToken, projectId, docsSvc.Id))
@@ -129,16 +196,16 @@ public class StagingDeployService
         if (samplesSvc != null && await _sliplane.RedeployServiceAsync(apiToken, projectId, samplesSvc.Id))
             triggered++;
 
+        // Suppress unused parameter warning while keeping signature stable.
+        _ = branchName;
         return new StagingDeployResult(triggered > 0, $"Redeploy triggered for {triggered} service(s).");
     }
 
     /// <summary>Resolves docs/samples URLs from existing Sliplane services for a PR (e.g. after redeploy).</summary>
-    public async Task<(string? DocsUrl, string? SamplesUrl)> GetDeploymentUrlsForPrAsync(string apiToken, int prNumber)
+    public async Task<(string? DocsUrl, string? SamplesUrl)> GetDeploymentUrlsForPrAsync(string apiToken, StagingRepoConfig repoConfig, int prNumber)
     {
-        var list = await ListDeploymentsAsync(apiToken);
-        var dep = list.FirstOrDefault(d => string.Equals(d.BranchSafe, prNumber.ToString(), StringComparison.OrdinalIgnoreCase));
-        if (dep == null)
-            return (null, null);
+        var dep = await GetDeploymentByPrNumberAsync(apiToken, repoConfig, prNumber);
+        if (dep == null) return (null, null);
         return (dep.DocsUrl, dep.SamplesUrl);
     }
 
@@ -162,19 +229,29 @@ public class StagingDeployService
         return (docsEvents, samplesEvents);
     }
 
-    public async Task<StagingDeployment?> GetDeploymentByPrNumberAsync(string apiToken, int prNumber)
+    public async Task<StagingDeployment?> GetDeploymentByPrNumberAsync(string apiToken, StagingRepoConfig repoConfig, int prNumber)
     {
         var list = await ListDeploymentsAsync(apiToken);
-        return list.FirstOrDefault(d => string.Equals(d.BranchSafe, prNumber.ToString(), StringComparison.OrdinalIgnoreCase));
+        return list.FirstOrDefault(d =>
+            d.RepoKey.Equals(repoConfig.Key, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(d.BranchSafe, prNumber.ToString(), StringComparison.OrdinalIgnoreCase));
     }
 
-    public async Task<StagingDeleteResult> DeleteBranchAsync(string apiToken, int prNumber)
+    public async Task<StagingDeleteResult> DeleteBranchAsync(string apiToken, StagingRepoConfig repoConfig, int prNumber)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
 
-        var services = await _sliplane.ListStagingServicesAsync(apiToken, projectId, "ivy-staging-");
+        var services = await _sliplane.ListAllServicesAsync(apiToken, projectId);
+        // Match by parsed name so legacy formats (e.g. ivy-tendril-staging-ivy-tendril-docs-1) are deleted,
+        // not only the current canonical DocsServiceName/SamplesServiceName strings.
         var toDelete = services
-            .Where(s => s.Name == $"ivy-staging-docs-{prNumber}" || s.Name == $"ivy-staging-samples-{prNumber}")
+            .Where(s =>
+            {
+                var parsed = ParseServiceName(s.Name ?? "");
+                return parsed != null
+                       && parsed.Value.RepoKey.Equals(repoConfig.Key, StringComparison.OrdinalIgnoreCase)
+                       && parsed.Value.PrNumber == prNumber;
+            })
             .ToList();
 
         var deleteTasks = toDelete.Select(svc => DeleteWithRetryAsync(apiToken, projectId, svc.Id));
@@ -196,38 +273,42 @@ public class StagingDeployService
         return false;
     }
 
+    /// <summary>Lists deployments across all configured repos (parses repoKey out of the service name).</summary>
     public async Task<List<StagingDeployment>> ListDeploymentsAsync(string apiToken)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
-        var services = await _sliplane.ListStagingServicesAsync(apiToken, projectId, "ivy-staging-");
-        var byBranch = new Dictionary<string, (string? DocsId, string? DocsUrl, string? DocsStatus, string? SamplesId, string? SamplesUrl, string? SamplesStatus, DateTime Oldest)>();
+        var services = await _sliplane.ListAllServicesAsync(apiToken, projectId);
+
+        // Composite key: "{repoKey}|{prNumber}"
+        var byBranch = new Dictionary<string, (string RepoKey, string PrNumber, string? DocsId, string? DocsUrl, string? DocsStatus, string? SamplesId, string? SamplesUrl, string? SamplesStatus, DateTime Oldest)>();
 
         foreach (var svc in services)
         {
             var name = svc.Name ?? "";
-            if (!name.StartsWith("ivy-staging-docs-") && !name.StartsWith("ivy-staging-samples-"))
-                continue;
-            var branchSafe = name.StartsWith("ivy-staging-docs-")
-                ? name["ivy-staging-docs-".Length..]
-                : name["ivy-staging-samples-".Length..];
+            var parsed = ParseServiceName(name);
+            if (parsed == null) continue;
+
+            var (repoKey, type, prNumber) = parsed.Value;
             var url = string.IsNullOrEmpty(svc.ManagedDomain) ? null : "https://" + svc.ManagedDomain;
             var status = svc.Status ?? "live";
+            var compositeKey = $"{repoKey}|{prNumber}";
 
-            if (!byBranch.TryGetValue(branchSafe, out var cur))
-                cur = (null, null, null, null, null, null, svc.CreatedAt);
+            if (!byBranch.TryGetValue(compositeKey, out var cur))
+                cur = (repoKey, prNumber.ToString(), null, null, null, null, null, null, svc.CreatedAt);
 
             var oldest = cur.Oldest < svc.CreatedAt ? cur.Oldest : svc.CreatedAt;
-            if (name.StartsWith("ivy-staging-docs-"))
-                cur = (svc.Id, url, status, cur.SamplesId, cur.SamplesUrl, cur.SamplesStatus, oldest);
+            if (type == "docs")
+                cur = (cur.RepoKey, cur.PrNumber, svc.Id, url, status, cur.SamplesId, cur.SamplesUrl, cur.SamplesStatus, oldest);
             else
-                cur = (cur.DocsId, cur.DocsUrl, cur.DocsStatus, svc.Id, url, status, oldest);
+                cur = (cur.RepoKey, cur.PrNumber, cur.DocsId, cur.DocsUrl, cur.DocsStatus, svc.Id, url, status, oldest);
 
-            byBranch[branchSafe] = cur;
+            byBranch[compositeKey] = cur;
         }
 
         return byBranch.Select(kv => new StagingDeployment(
-            BranchName: kv.Key,
-            BranchSafe: kv.Key,
+            RepoKey: kv.Value.RepoKey,
+            BranchName: kv.Value.PrNumber,
+            BranchSafe: kv.Value.PrNumber,
             DocsServiceId: kv.Value.DocsId,
             DocsUrl: kv.Value.DocsUrl,
             DocsStatus: kv.Value.DocsStatus,
@@ -240,7 +321,83 @@ public class StagingDeployService
         )).OrderByDescending(d => d.DeployedAt).ToList();
     }
 
-    /// <summary>Deletes deployments that are past ExpiryDays AND whose PR is closed.</summary>
+    /// <summary>
+    /// Current format: <c>{slug}-staging-docs-{pr}</c> / <c>{slug}-staging-samples-{pr}</c> where <c>slug</c> is <see cref="ResolveServiceSlug"/>.
+    /// Legacy format (still recognized): <c>{deploymentKey}-staging-{repoKey}-docs-{pr}</c> from older builds.
+    /// </summary>
+    private (string RepoKey, string Type, int PrNumber)? ParseServiceName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+
+        // New format: single slug, then -staging-docs- or -staging-samples-
+        foreach (var rc in _reposProvider.All.OrderByDescending(r => ResolveServiceSlug(r).Length))
+        {
+            var slug = ResolveServiceSlug(rc);
+            foreach (var (type, marker) in new[] { ("docs", "-staging-docs-"), ("samples", "-staging-samples-") })
+            {
+                var prefix = slug + marker;
+                if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var tail = name[prefix.Length..];
+                if (int.TryParse(tail, out var pr))
+                    return (rc.Key, type, pr);
+            }
+        }
+
+        // Legacy: {DeploymentKey}-staging-{repoKey}-docs-{pr}
+        var dkStaging = $"{DeploymentKey}-staging-";
+        if (name.StartsWith(dkStaging, StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = name[dkStaging.Length..];
+            var byLength = _reposProvider.All.OrderByDescending(r => r.Key.Length).ToList();
+            foreach (var rc in byLength)
+            {
+                var keyDash = rc.Key + "-";
+                if (!rest.StartsWith(keyDash, StringComparison.OrdinalIgnoreCase)) continue;
+                var inner = rest[keyDash.Length..];
+                var parsed = ParseTypeAndPr(inner);
+                if (parsed != null)
+                    return (rc.Key, parsed.Value.Type, parsed.Value.PrNumber);
+            }
+
+            if (_reposProvider.All.Count == 1)
+            {
+                var legacy = ParseTypeAndPr(rest);
+                if (legacy != null)
+                    return (_reposProvider.All[0].Key, legacy.Value.Type, legacy.Value.PrNumber);
+            }
+        }
+
+        // Legacy B: any leading slug — <anything>-staging-{repoKey}-docs-{pr} (deployment prefix drift vs config)
+        foreach (var rc in _reposProvider.All.OrderByDescending(r => r.Key.Length))
+        {
+            foreach (var (type, middle) in new[] { ("docs", $"-staging-{rc.Key}-docs-"), ("samples", $"-staging-{rc.Key}-samples-") })
+            {
+                var idx = name.IndexOf(middle, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) continue;
+                var tail = name[(idx + middle.Length)..];
+                if (int.TryParse(tail, out var pr))
+                    return (rc.Key, type, pr);
+            }
+        }
+
+        return null;
+    }
+
+    private static (string Type, int PrNumber)? ParseTypeAndPr(string remainder)
+    {
+        const string docs = "docs-";
+        const string samples = "samples-";
+        if (remainder.StartsWith(docs, StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(remainder[docs.Length..], out var d))
+            return ("docs", d);
+        if (remainder.StartsWith(samples, StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(remainder[samples.Length..], out var s))
+            return ("samples", s);
+        return null;
+    }
+
+    /// <summary>Deletes deployments that are past ExpiryDays AND whose PR is closed (per-repo PR lookup).</summary>
     public async Task<StagingDeleteResult> DeleteExpiredAsync(string apiToken)
     {
         var deployments = await ListDeploymentsAsync(apiToken);
@@ -248,25 +405,36 @@ public class StagingDeployService
         if (expired.Count == 0)
             return new StagingDeleteResult(false, "No expired deployments.");
 
-        var owner = _config["GitHub:Owner"] ?? "";
-        var repo = _config["GitHub:Repo"] ?? "";
         var ghToken = _config["GitHub:Token"] ?? "";
-        if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
-            return new StagingDeleteResult(false, "GitHub:Owner/Repo not configured, skipping expiry cleanup.");
 
-        var openPrs = await _github.GetPullRequestsAsync(owner, repo, ghToken, "open");
-        var openPrNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var pr in openPrs)
-            openPrNumbers.Add(pr.Number.ToString());
+        // Cache open PR lists per (owner, repo) so we don't refetch.
+        var openPrCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-        var toDelete = expired.Where(d => !openPrNumbers.Contains(d.BranchSafe)).ToList();
-        var deleted = 0;
-        foreach (var d in toDelete)
+        async Task<HashSet<string>> GetOpenPrsAsync(StagingRepoConfig rc)
         {
+            var key = $"{rc.Owner}/{rc.Repo}";
+            if (openPrCache.TryGetValue(key, out var cached)) return cached;
+            var prs = await _github.GetPullRequestsAsync(rc.Owner, rc.Repo, ghToken, "open");
+            var set = new HashSet<string>(prs.Select(p => p.Number.ToString()), StringComparer.OrdinalIgnoreCase);
+            openPrCache[key] = set;
+            return set;
+        }
+
+        var deleted = 0;
+        foreach (var d in expired)
+        {
+            var rc = _reposProvider.FindByKey(d.RepoKey);
+            if (rc == null) continue;
+
             if (!int.TryParse(d.BranchSafe, out var prNum)) continue;
-            var r = await DeleteBranchAsync(apiToken, prNum);
+
+            var openPrs = await GetOpenPrsAsync(rc);
+            if (openPrs.Contains(d.BranchSafe)) continue;
+
+            var r = await DeleteBranchAsync(apiToken, rc, prNum);
             if (r.Success) deleted++;
         }
+
         return new StagingDeleteResult(deleted > 0, $"Deleted {deleted} expired deployment(s) (closed PRs only).");
     }
 
