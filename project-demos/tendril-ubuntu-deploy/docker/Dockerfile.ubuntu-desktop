@@ -53,9 +53,9 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     xfce4 xfce4-goodies xfce4-terminal \
     # RDP
     xrdp \
-    # VNC
-    tigervnc-standalone-server \
-    tigervnc-common \
+    # Virtual framebuffer + VNC server (container-friendly alternative to tigervnc)
+    xvfb \
+    x11vnc \
     # noVNC + websocket proxy
     novnc websockify \
     # Session helpers

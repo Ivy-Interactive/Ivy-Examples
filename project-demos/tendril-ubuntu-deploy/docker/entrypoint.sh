@@ -63,12 +63,25 @@ chown "${RDP_USER}:${RDP_USER}" "${HOME_DIR}/.bashrc" 2>/dev/null || true
 mkdir -p /run/dbus
 dbus-daemon --system --fork 2>/dev/null || true
 
-# ─── 5. TigerVNC — no password (VNC is localhost-only, HTTPS via Sliplane) ───
-echo "[entrypoint] Starting TigerVNC on display ${VNC_DISPLAY} (port ${VNC_PORT})..."
-su - "${RDP_USER}" -c \
-    "vncserver ${VNC_DISPLAY} -geometry ${GEOMETRY} -depth ${DEPTH} \
-     -localhost -SecurityTypes None -rfbport ${VNC_PORT}" \
-    2>&1 || echo "[entrypoint] VNC start failed (non-fatal — RDP still works)"
+# ─── 5. Virtual display + VNC (Xvfb + x11vnc, container-friendly) ───────────
+echo "[entrypoint] Starting Xvfb on display ${VNC_DISPLAY}..."
+# Clean any stale X locks from a previous run
+rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
+
+Xvfb ${VNC_DISPLAY} -screen 0 "${GEOMETRY}x${DEPTH}" &
+XVFB_PID=$!
+sleep 2
+
+echo "[entrypoint] Starting XFCE4 on display ${VNC_DISPLAY}..."
+export DISPLAY=${VNC_DISPLAY}
+su - "${RDP_USER}" -c "DISPLAY=${VNC_DISPLAY} startxfce4 &" 2>/dev/null &
+sleep 2
+
+echo "[entrypoint] Starting x11vnc on port ${VNC_PORT}..."
+x11vnc -display ${VNC_DISPLAY} -nopw -forever -shared \
+       -rfbport "${VNC_PORT}" -localhost \
+       2>/dev/null &
+X11VNC_PID=$!
 
 # ─── 6. xrdp ─────────────────────────────────────────────────────────────────
 echo "[entrypoint] Starting xrdp on port 3389..."
@@ -94,8 +107,8 @@ echo ""
 
 # ─── 8. Keep container alive ─────────────────────────────────────────────────
 trap 'echo "[entrypoint] Shutting down..."; \
-      kill ${NOVNC_PID} ${XRDP_PID} 2>/dev/null; \
-      su - "${RDP_USER}" -c "vncserver -kill ${VNC_DISPLAY}" 2>/dev/null; exit 0' \
+      kill ${NOVNC_PID} ${XRDP_PID} ${X11VNC_PID} ${XVFB_PID} 2>/dev/null; \
+      exit 0' \
      SIGTERM SIGINT
 
 wait ${NOVNC_PID}
