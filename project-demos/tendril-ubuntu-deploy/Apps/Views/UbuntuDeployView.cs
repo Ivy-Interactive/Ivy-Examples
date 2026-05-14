@@ -50,10 +50,13 @@ public class UbuntuRdpCredentialsModel
 // ─── View ─────────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Two-step deploy wizard:
-/// Step 0 — server + service name
-/// Step 1 — RDP credentials
-/// → Deploy button → status view
+/// Two-step deploy wizard.
+/// Step 0 — server + service name  (UseForm lives here)
+/// Step 1 — RDP credentials        (UseForm lives in UbuntuCredentialsStepView child component)
+///
+/// The credentials form is intentionally separated into a child ViewBase so that its
+/// UseForm hook is fully isolated from this component's UseForm, preventing Ivy from
+/// conflating fields by their hook-call index (IVYHOOK005).
 /// </summary>
 public class UbuntuDeployView : ViewBase
 {
@@ -77,19 +80,17 @@ public class UbuntuDeployView : ViewBase
             ServerId = _defaultServerId,
             ProjectId = _defaultProjectId,
         });
-        var credModel = UseState(() => new UbuntuRdpCredentialsModel());
 
         var stepIndex = UseState(0);
         var validationFailed = UseState(false);
-        var credValidationFailed = UseState(false);
-        var isDeploying = UseState(false);
-        var deployError = UseState<string?>(() => null);
-        var deployedService = UseState<(string ProjectId, SliplaneService Service, string ServerId)?>(() => null);
         var reloadCounter = UseState(0);
 
-        // ── Forms (hooks must precede other Build() statements; see IVYHOOK005) ─
+        // deploy result — set by the UbuntuCredentialsStepView child via callback
+        var deployedService = UseState<(string ProjectId, SliplaneService Service, string ServerId, string RdpUser, string RdpPassword)?>(() => null);
+
+        // ── Step 0 form (only UseForm in this component) ──────────────────────
         var (onServerSubmit, serverFormView, serverValidationView, serverLoading) = UseForm(() =>
-            model.ToForm("Deploy")
+            model.ToForm("Server")
                 .Place(m => m.ServerId, m => m.Name)
                 .Builder(m => m.ServerId,
                     s => s.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server…"))
@@ -98,12 +99,7 @@ public class UbuntuDeployView : ViewBase
                     m => m.DockerContext, m => m.NoVncPort, m => m.VolumeId)
                 .Required(m => m.ServerId, m => m.Name));
 
-        var (onCredSubmit, credFormView, credValidationView, credLoading) = UseForm(() =>
-            credModel.ToForm("Credentials")
-                .Builder(m => m.Password, s => s.ToPasswordInput(placeholder: "At least 8 characters"))
-                .Required(m => m.Username, m => m.Password));
-
-        // ── Server lookup for async select ────────────────────────────────────
+        // ── Server lookup helpers ─────────────────────────────────────────────
         QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string q) =>
             ctx.UseQuery<Option<string>[], (string, string, int)>(
                 key: ("ubuntu-servers", q, reloadCounter.Value),
@@ -127,7 +123,7 @@ public class UbuntuDeployView : ViewBase
         _ = QueryServers(Context, "");
         _ = LookupServer(Context, model.Value.ServerId);
 
-        // ── Step handlers ─────────────────────────────────────────────────────
+        // ── Step 0 advance ────────────────────────────────────────────────────
         async ValueTask AdvanceToStep1()
         {
             validationFailed.Set(false);
@@ -139,82 +135,7 @@ public class UbuntuDeployView : ViewBase
             stepIndex.Set(1);
         }
 
-        async ValueTask HandleDeploy()
-        {
-            credValidationFailed.Set(false);
-            if (!await onCredSubmit())
-            {
-                credValidationFailed.Set(true);
-                return;
-            }
-
-            deployError.Set(null);
-            isDeploying.Set(true);
-            try
-            {
-                var m = model.Value;
-                var creds = credModel.Value;
-
-                // Ensure project exists or create one
-                var projects = await client.GetProjectsAsync(_apiToken);
-                var project = projects.FirstOrDefault(p => p.Name.Equals("Ivy", StringComparison.OrdinalIgnoreCase))
-                              ?? await client.CreateProjectAsync(_apiToken, "Ivy");
-                if (project == null)
-                    throw new InvalidOperationException("Could not find or create an Ivy project on Sliplane.");
-
-                // Auto-create volume if not provided
-                var volumeId = m.VolumeId?.Trim();
-                if (string.IsNullOrWhiteSpace(volumeId))
-                {
-                    var vol = await client.CreateVolumeAsync(_apiToken, m.ServerId, ServiceRequestFactory.AutoVolumeName(m.Name));
-                    volumeId = vol.Id;
-                }
-
-                var port = string.IsNullOrWhiteSpace(m.NoVncPort) ? "8080" : m.NoVncPort.Trim();
-                var homeMount = $"/home/{creds.Username}";
-
-                var envVars = new List<EnvironmentVariable>
-                {
-                    new("PORT",         port,             Secret: false),
-                    new("RDP_USER",     creds.Username,   Secret: false),
-                    new("RDP_PASSWORD", creds.Password,   Secret: true),
-                };
-
-                List<(string, string)>? volumes = null;
-                if (!string.IsNullOrWhiteSpace(volumeId))
-                    volumes = [(volumeId, homeMount)];
-
-                var service = await client.CreateServiceAsync(_apiToken, project.Id,
-                    ServiceRequestFactory.BuildCreateRequest(
-                        name: m.Name,
-                        serverId: m.ServerId,
-                        gitRepo: m.GitRepo,
-                        branch: m.Branch,
-                        dockerfilePath: m.DockerfilePath,
-                        dockerContext: m.DockerContext,
-                        autoDeploy: true,
-                        networkPublic: true,
-                        networkProtocol: "http",
-                        healthcheck: "/",
-                        env: envVars,
-                        volumeMounts: volumes));
-
-                if (service == null)
-                    throw new InvalidOperationException("Sliplane returned an empty response after service creation.");
-
-                deployedService.Set((project.Id, service, m.ServerId));
-            }
-            catch (Exception ex)
-            {
-                deployError.Set(ex.Message);
-            }
-            finally
-            {
-                isDeploying.Set(false);
-            }
-        }
-
-        // ── Stepper items ─────────────────────────────────────────────────────
+        // ── Stepper ───────────────────────────────────────────────────────────
         var stepperItems = new[]
         {
             new StepperItem("1", stepIndex.Value > 0 ? Icons.Check : null, "Welcome",     "Server & name"),
@@ -228,7 +149,7 @@ public class UbuntuDeployView : ViewBase
             return ValueTask.CompletedTask;
         }
 
-        // ── Step content ──────────────────────────────────────────────────────
+        // ── Step 0 body ───────────────────────────────────────────────────────
         var welcomeCallout = new Callout(
             Layout.Vertical().Gap(3)
                 | Text.Block("This wizard deploys a full Ubuntu 22.04 Desktop environment to Sliplane. "
@@ -238,94 +159,76 @@ public class UbuntuDeployView : ViewBase
             "One-click Ubuntu Desktop",
             CalloutVariant.Info);
 
+        var step0Body = Layout.Vertical().Gap(4).Width(Size.Full())
+            | welcomeCallout
+            | serverFormView
+            | (validationFailed.Value
+                ? (object)new Callout(serverValidationView, "Please fix the following", CalloutVariant.Error)
+                : new Empty());
+
+        var step0Footer = Layout.Vertical().Width(Size.Full()).AlignContent(Align.Center)
+            | new Button("Next")
+                .Icon(Icons.ChevronRight, Align.Right)
+                .Primary().Large().BorderRadius(BorderRadius.Full)
+                .Width(Size.Full())
+                .Loading(serverLoading)
+                .Disabled(serverLoading)
+                .OnClick(async _ => await AdvanceToStep1());
+
+        // ── Step 1: credentials child component ───────────────────────────────
+        // Rendered as a child ViewBase → owns its own UseForm hooks independently.
+        var step1Component = new UbuntuCredentialsStepView(
+            apiToken: _apiToken,
+            serverModel: model.Value,
+            onBack: () => { stepIndex.Set(0); return ValueTask.CompletedTask; },
+            onDeployed: (projectId, serverId, rdpUser, rdpPassword, service) =>
+            {
+                deployedService.Set((projectId, service, serverId, rdpUser, rdpPassword));
+                return ValueTask.CompletedTask;
+            });
+
+        // ── Assemble page ─────────────────────────────────────────────────────
         object titleBlock = stepIndex.Value == 0
             ? (Layout.Vertical().Gap(2).AlignContent(Align.Center)
                 | Text.H1("Ubuntu Desktop on Sliplane").Align(TextAlignment.Center))
             : (Layout.Vertical().Gap(2).AlignContent(Align.Center)
                 | Text.H1("Set your RDP credentials").Align(TextAlignment.Center));
 
-        var credHintCallout = new Callout(
-            Text.Markdown(
-                "These become the **Linux user account** inside the Ubuntu container. "
-                + "Use them to log in via noVNC (browser) or any RDP client. "
-                + "**RDP_PASSWORD** is stored as a Sliplane secret."),
-            "Credentials",
-            CalloutVariant.Info);
-
-        object stepBody = stepIndex.Value == 0
-            ? (Layout.Vertical().Gap(4).Width(Size.Full())
-                | welcomeCallout
-                | serverFormView
-                | (validationFailed.Value
-                    ? (object)new Callout(serverValidationView, "Please fix the following", CalloutVariant.Error)
-                    : new Empty()))
-            : (Layout.Vertical().Gap(4).Width(Size.Full())
-                | credHintCallout
-                | credFormView
-                | (credValidationFailed.Value
-                    ? (object)new Callout(credValidationView, "Please fix the following", CalloutVariant.Error)
-                    : new Empty()));
-
-        object footerRow = stepIndex.Value == 0
-            ? (object)(Layout.Vertical().Width(Size.Full()).AlignContent(Align.Center)
-                | new Button("Next")
-                    .Icon(Icons.ChevronRight, Align.Right)
-                    .Primary().Large().BorderRadius(BorderRadius.Full)
-                    .Width(Size.Full())
-                    .Loading(serverLoading)
-                    .Disabled(serverLoading)
-                    .OnClick(async _ => await AdvanceToStep1()))
-            : (Layout.Horizontal().Width(Size.Full()).Gap(4)
-                | new Button("Back")
-                    .Icon(Icons.ChevronLeft)
-                    .Variant(ButtonVariant.Outline).Large().BorderRadius(BorderRadius.Full)
-                    .Width(Size.Fraction(0.31f))
-                    .OnClick(_ => { stepIndex.Set(0); return ValueTask.CompletedTask; })
-                | new Spacer()
-                | new Button("Deploy")
-                    .Icon(Icons.Rocket, Align.Right)
-                    .Primary().Large().BorderRadius(BorderRadius.Full)
-                    .Width(Size.Fraction(0.31f))
-                    .Loading(credLoading || isDeploying.Value)
-                    .Disabled(credLoading || isDeploying.Value)
-                    .OnClick(async _ => await HandleDeploy()));
-
-        var mainFlow = Layout.Vertical().Width(Size.Full()).Gap(4).AlignContent(Align.Stretch)
-            | new Stepper(OnStepperSelect, stepIndex.Value, stepperItems).Width(Size.Full())
-            | titleBlock
-            | stepBody
-            | footerRow;
-
-        var pageBody = mainFlow;
-
-        if (isDeploying.Value && deployedService.Value == null)
+        object pageContent;
+        if (deployedService.Value is { } deployed)
         {
-            pageBody = pageBody
-                | new Callout(
-                    Layout.Vertical().Gap(3)
-                        | Text.Block("Creating the Ubuntu Desktop service on Sliplane…").Bold()
-                        | new Progress().Indeterminate().Goal("Please wait…"),
-                    "Deploying",
-                    CalloutVariant.Info);
-        }
-        else if (deployedService.Value is { } deployed)
-        {
-            pageBody = pageBody
+            // Show status view below the (frozen) stepper
+            pageContent = Layout.Vertical().Width(Size.Full()).Gap(4)
+                | new Stepper(OnStepperSelect, 1, stepperItems).Width(Size.Full())
+                | titleBlock
                 | new UbuntuDeployStatusView(
                     _apiToken,
                     deployed.ProjectId,
                     deployed.Service,
-                    credModel.Value.Username,
-                    credModel.Value.Password,
+                    deployed.RdpUser,
+                    deployed.RdpPassword,
                     deployed.ServerId);
         }
+        else if (stepIndex.Value == 0)
+        {
+            pageContent = Layout.Vertical().Width(Size.Full()).Gap(4).AlignContent(Align.Stretch)
+                | new Stepper(OnStepperSelect, 0, stepperItems).Width(Size.Full())
+                | titleBlock
+                | step0Body
+                | step0Footer;
+        }
+        else
+        {
+            pageContent = Layout.Vertical().Width(Size.Full()).Gap(4).AlignContent(Align.Stretch)
+                | new Stepper(OnStepperSelect, 1, stepperItems).Width(Size.Full())
+                | titleBlock
+                | step1Component;
+        }
 
-        if (deployError.Value != null)
-            pageBody = pageBody | new Callout(deployError.Value, variant: CalloutVariant.Error);
-
-        var manageServicesUrl = "https://ivy-sliplane-management.sliplane.app/";
         var manageFloat = new FloatingPanel(
-            new Button("Manage services").Link().Url(manageServicesUrl).Outline().Large().BorderRadius(BorderRadius.Full),
+            new Button("Manage services")
+                .Link().Url("https://ivy-sliplane-management.sliplane.app/")
+                .Outline().Large().BorderRadius(BorderRadius.Full),
             Align.BottomRight).Offset(new Thickness(0, 0, 20, 10));
 
         return new Fragment(
@@ -336,7 +239,7 @@ public class UbuntuDeployView : ViewBase
                     .Gap(2)
                     .Padding(new Thickness(16, 16, 16, 16))
                     .AlignContent(Align.Stretch)
-                    | pageBody),
+                    | pageContent),
             manageFloat);
     }
 }
