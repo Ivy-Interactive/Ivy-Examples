@@ -137,6 +137,16 @@ public class UbuntuDeployStatusView : ViewBase
 
         content = content | new Card(connCard).Width(Size.Full());
 
+        // ── Next steps ────────────────────────────────────────────────────────
+        content = content | new Callout(
+            Layout.Vertical().Gap(2)
+                | Text.Markdown("**JetBrains Rider** is not pre-installed (keeps the image under 1 GB). " +
+                    "After connecting, open a terminal and run:")
+                | Text.Code("install-rider")
+                | Text.Muted("Or click the \"Install Rider\" shortcut on the desktop. Download is ~2.5 GB."),
+            "Install Rider after connecting",
+            CalloutVariant.Info).Width(Size.Full());
+
         // ── Manage link ───────────────────────────────────────────────────────
         content = content
             | (Layout.Horizontal().Gap(2).AlignContent(Align.Center)

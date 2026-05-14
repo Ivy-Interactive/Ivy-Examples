@@ -5,17 +5,21 @@
 #   - XFCE4 desktop environment
 #   - xrdp  (RDP access on port 3389)
 #   - noVNC (browser-based desktop on PORT, default 8080)
-#   - .NET 10 runtime (copied from official Microsoft image — no apt install needed)
-#   - Ivy Tendril (global tool, available as `tendril` in any terminal)
-#   - JetBrains Rider (pre-installed at /opt/rider)
+#   - .NET 10 runtime
+#   - Ivy Tendril  (CLI: `tendril`, desktop shortcut)
+#   - install-rider.sh  (run once to download & install JetBrains Rider ~2.5 GB)
+#
+# JetBrains Rider is NOT baked into the image to keep it under ~1 GB.
+# After connecting, open a terminal and run:  bash ~/install-rider.sh
+# (or click the "Install Rider" desktop shortcut)
 #
 # Required env vars at runtime:
-#   RDP_USER      – Linux username to create (default: developer)
+#   RDP_USER      – Linux username (default: developer)
 #   RDP_PASSWORD  – Password for that user and VNC (default: TendrilRDP!1 — CHANGE THIS)
-#   PORT          – noVNC HTTP port, Sliplane health-check target (default: 8080)
+#   PORT          – noVNC HTTP port / Sliplane health-check (default: 8080)
 #
 # Note: VNC passwords are capped at 8 characters by the VNC protocol.
-#       RDP (xrdp) uses the full Linux PAM password — no 8-char limit.
+#       RDP (xrdp) uses the full Linux PAM password with no 8-char limit.
 
 # ── Stage 1: install Tendril global tool (requires .NET 10 SDK) ───────────────
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dotnet-tools
@@ -25,11 +29,10 @@ ENV DOTNET_NOLOGO=1
 
 RUN dotnet tool install --global Ivy.Tendril
 
-# ── Stage 2: grab the .NET 10 runtime binaries to copy to Ubuntu ──────────────
+# ── Stage 2: .NET 10 runtime binaries ────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS dotnet-runtime
-# Files we need live at /usr/share/dotnet — nothing extra to do here.
 
-# ── Stage 3: full Ubuntu 22.04 Desktop ───────────────────────────────────────
+# ── Stage 3: Ubuntu 22.04 Desktop ────────────────────────────────────────────
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -47,87 +50,85 @@ ENV DOTNET_NOLOGO=1
 # ── 1. System packages ────────────────────────────────────────────────────────
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     # Desktop
-    xfce4 \
-    xfce4-goodies \
-    xfce4-terminal \
+    xfce4 xfce4-goodies xfce4-terminal \
     # RDP
     xrdp \
-    # VNC server
+    # VNC
     tigervnc-standalone-server \
-    # noVNC web client + websocket proxy
-    novnc \
-    websockify \
-    # Service management / session helpers
-    dbus-x11 \
-    x11-xserver-utils \
-    x11-utils \
-    sudo \
-    # Download tools
-    wget \
-    curl \
-    # Dev tools
-    git \
-    unzip \
-    # TLS / certificates
-    ca-certificates \
-    gnupg \
-    apt-transport-https \
-    # Rider native dependencies
-    libfontconfig1 \
-    libfreetype6 \
-    libxi6 \
-    libxrender1 \
-    libxtst6 \
-    libxext6 \
-    libxrandr2 \
-    libglib2.0-0 \
-    libasound2 \
+    # noVNC + websocket proxy
+    novnc websockify \
+    # Session helpers
+    dbus-x11 x11-xserver-utils x11-utils sudo \
+    # Tools
+    wget curl git unzip ca-certificates gnupg apt-transport-https \
+    # Rider runtime deps (needed when Rider is installed later)
+    libfontconfig1 libfreetype6 libxi6 libxrender1 libxtst6 \
+    libxext6 libxrandr2 libglib2.0-0 libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# ── 2. .NET 10 runtime (copied from official image — no apt required) ─────────
+# ── 2. .NET 10 runtime (copied from official image) ───────────────────────────
 COPY --from=dotnet-runtime /usr/share/dotnet /usr/share/dotnet
 RUN ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
 
-# ── 3. Ivy Tendril global tool (copied from SDK build stage) ─────────────────
+# ── 3. Ivy Tendril global tool ────────────────────────────────────────────────
 COPY --from=dotnet-tools /root/.dotnet/tools /root/.dotnet/tools
-# Make tools world-readable so non-root users (RDP_USER) can run them
 RUN chmod -R a+rX /root/.dotnet/tools \
     && ln -sf /root/.dotnet/tools/tendril /usr/local/bin/tendril
-# Verify it loads
+# Verify
 RUN dotnet /root/.dotnet/tools/.store/ivy.tendril/*/ivy.tendril/*/tools/net*/any/Ivy.Tendril.dll --version 2>/dev/null || true
 
-# ── 4. JetBrains Rider ───────────────────────────────────────────────────────
-# Bump ARG RIDER_VERSION to upgrade.
-ARG RIDER_VERSION=2024.3.6
-RUN wget -q \
-        "https://download.jetbrains.com/rider/JetBrains.Rider-${RIDER_VERSION}.tar.gz" \
-        -O /tmp/rider.tar.gz \
-    && tar -xzf /tmp/rider.tar.gz -C /opt \
-    && RIDER_DIR=$(find /opt -maxdepth 1 -type d -name "JetBrains Rider*" | head -1) \
-    && mv "$RIDER_DIR" /opt/rider \
-    && rm /tmp/rider.tar.gz \
-    && ln -s /opt/rider/bin/rider.sh /usr/local/bin/rider
-
-# ── 5. xrdp: use XFCE session ─────────────────────────────────────────────────
-RUN echo "startxfce4" > /etc/skel/.xsession \
-    && chmod 755 /etc/skel/.xsession \
-    # xrdp: enable user session type
-    && sed -i 's/^#\?\(xrdp_max_bpp\).*/\1=32/' /etc/xrdp/xrdp.ini 2>/dev/null || true
-
-# ── 6. noVNC: ensure index page exists ────────────────────────────────────────
+# ── 4. noVNC index page ───────────────────────────────────────────────────────
 RUN if [ -f /usr/share/novnc/vnc_lite.html ] && [ ! -f /usr/share/novnc/index.html ]; then \
         ln -s /usr/share/novnc/vnc_lite.html /usr/share/novnc/index.html; \
     fi
 
-# ── 7. Desktop shortcuts ──────────────────────────────────────────────────────
-RUN mkdir -p /usr/share/applications \
-    && printf '[Desktop Entry]\nName=JetBrains Rider\nExec=/opt/rider/bin/rider.sh %%F\nIcon=/opt/rider/bin/rider.svg\nType=Application\nCategories=Development;IDE;\nStartupNotify=true\n' \
-       > /usr/share/applications/rider.desktop \
-    && printf '[Desktop Entry]\nName=Tendril\nExec=bash -c "tendril --web"\nIcon=utilities-terminal\nType=Application\nCategories=Development;\nTerminal=true\n' \
-       > /usr/share/applications/tendril.desktop
+# ── 5. xrdp: XFCE session ────────────────────────────────────────────────────
+RUN echo "startxfce4" > /etc/skel/.xsession \
+    && chmod 755 /etc/skel/.xsession
 
-# ── 8. Global PATH for all users ──────────────────────────────────────────────
-RUN echo 'export PATH="$PATH:/root/.dotnet/tools:/opt/rider/bin:/usr/share/dotnet"' \
+# ── 6. Rider install script (runs on demand, not at build time) ───────────────
+ARG RIDER_VERSION=2024.3.6
+RUN printf '#!/bin/bash\n\
+set -e\n\
+RIDER_VERSION="%s"\n\
+if [ -d /opt/rider ]; then\n\
+    echo "Rider is already installed at /opt/rider"\n\
+    exit 0\n\
+fi\n\
+echo "Downloading JetBrains Rider ${RIDER_VERSION} (~2.5 GB)..."\n\
+wget -q --show-progress \\\n\
+    "https://download.jetbrains.com/rider/JetBrains.Rider-${RIDER_VERSION}.tar.gz" \\\n\
+    -O /tmp/rider.tar.gz\n\
+echo "Extracting..."\n\
+sudo tar -xzf /tmp/rider.tar.gz -C /opt\n\
+RIDER_DIR=$(find /opt -maxdepth 1 -type d -name "JetBrains Rider*" | head -1)\n\
+sudo mv "$RIDER_DIR" /opt/rider\n\
+sudo rm /tmp/rider.tar.gz\n\
+sudo ln -sf /opt/rider/bin/rider.sh /usr/local/bin/rider\n\
+# Desktop shortcut\n\
+sudo tee /usr/share/applications/rider.desktop > /dev/null << EOF\n\
+[Desktop Entry]\n\
+Name=JetBrains Rider\n\
+Exec=/opt/rider/bin/rider.sh %%F\n\
+Icon=/opt/rider/bin/rider.svg\n\
+Type=Application\n\
+Categories=Development;IDE;\n\
+StartupNotify=true\n\
+EOF\n\
+echo "JetBrains Rider installed. Launch it from the Applications menu or run: rider"\n\
+' "$RIDER_VERSION" > /usr/local/bin/install-rider \
+    && chmod +x /usr/local/bin/install-rider
+
+# ── 7. Desktop shortcuts ──────────────────────────────────────────────────────
+RUN mkdir -p /etc/skel/Desktop \
+    && printf '[Desktop Entry]\nName=Tendril\nExec=bash -c "tendril --web"\nIcon=utilities-terminal\nType=Application\nCategories=Development;\nTerminal=true\n' \
+       > /etc/skel/Desktop/tendril.desktop \
+    && printf '[Desktop Entry]\nName=Install JetBrains Rider\nExec=bash -c "install-rider; read -p '\''Press Enter to close...'\''" \nIcon=system-software-install\nType=Application\nCategories=Development;\nTerminal=true\n' \
+       > /etc/skel/Desktop/install-rider.desktop \
+    && chmod +x /etc/skel/Desktop/*.desktop
+
+# ── 8. System-wide PATH for all users ────────────────────────────────────────
+RUN printf 'export DOTNET_ROOT=/usr/share/dotnet\nexport PATH="$PATH:/root/.dotnet/tools:/opt/rider/bin"\nexport DOTNET_CLI_TELEMETRY_OPTOUT=1\nexport DOTNET_NOLOGO=1\n' \
     > /etc/profile.d/tendril-tools.sh \
     && chmod +x /etc/profile.d/tendril-tools.sh
 
