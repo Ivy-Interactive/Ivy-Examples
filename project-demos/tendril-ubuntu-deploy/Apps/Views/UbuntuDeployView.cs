@@ -73,12 +73,18 @@ public class UbuntuDeployView : ViewBase
 
     public override object? Build()
     {
+        var config = UseService<IConfiguration>();
         var client = UseService<SliplaneApiClient>();
 
-        var model = UseState(() => new UbuntuDeployFormModel
+        var model = UseState(() =>
         {
-            ServerId = _defaultServerId,
-            ProjectId = _defaultProjectId,
+            var m = new UbuntuDeployFormModel
+            {
+                ServerId = _defaultServerId,
+                ProjectId = _defaultProjectId,
+            };
+            UbuntuDeployGitConfiguration.ApplyGitSource(config, m);
+            return m;
         });
 
         var stepIndex = UseState(0);
