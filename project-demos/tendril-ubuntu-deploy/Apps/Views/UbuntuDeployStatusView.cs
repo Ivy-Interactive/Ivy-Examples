@@ -121,7 +121,6 @@ public class UbuntuDeployStatusView : ViewBase
         }
 
         // ── Credentials ───────────────────────────────────────────────────────
-        var vncPassword = _rdpPassword.Length > 8 ? _rdpPassword[..8] : _rdpPassword;
         connCard = connCard
             | Text.H3("Credentials")
             | (Layout.Horizontal().Gap(4).Wrap()
@@ -129,11 +128,9 @@ public class UbuntuDeployStatusView : ViewBase
                     | Text.Muted("Username")
                     | Text.Code(_rdpUser))
                 | (Layout.Vertical().Gap(1)
-                    | Text.Muted("RDP / Linux password")
-                    | Text.Code(_rdpPassword))
-                | (Layout.Vertical().Gap(1)
-                    | Text.Muted("noVNC password (max 8 chars)")
-                    | Text.Code(vncPassword)));
+                    | Text.Muted("Password (RDP / Linux)")
+                    | Text.Code(_rdpPassword)))
+            | Text.Muted("noVNC (browser): no password required — protected by Sliplane HTTPS.");
 
         content = content | new Card(connCard).Width(Size.Full());
 

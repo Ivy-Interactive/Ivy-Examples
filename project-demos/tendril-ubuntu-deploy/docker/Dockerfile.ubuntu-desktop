@@ -55,6 +55,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     xrdp \
     # VNC
     tigervnc-standalone-server \
+    tigervnc-common \
     # noVNC + websocket proxy
     novnc websockify \
     # Session helpers
