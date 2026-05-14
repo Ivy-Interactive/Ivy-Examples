@@ -90,6 +90,9 @@ RUN ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
 
 # ── 3. Ivy Tendril global tool (copied from SDK build stage) ─────────────────
 COPY --from=dotnet-tools /root/.dotnet/tools /root/.dotnet/tools
+# Make tools world-readable so non-root users (RDP_USER) can run them
+RUN chmod -R a+rX /root/.dotnet/tools \
+    && ln -sf /root/.dotnet/tools/tendril /usr/local/bin/tendril
 # Verify it loads
 RUN dotnet /root/.dotnet/tools/.store/ivy.tendril/*/ivy.tendril/*/tools/net*/any/Ivy.Tendril.dll --version 2>/dev/null || true
 
