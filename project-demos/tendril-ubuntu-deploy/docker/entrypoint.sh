@@ -74,8 +74,20 @@ sleep 2
 
 echo "[entrypoint] Starting XFCE4 on display ${VNC_DISPLAY}..."
 export DISPLAY=${VNC_DISPLAY}
-su - "${RDP_USER}" -c "DISPLAY=${VNC_DISPLAY} startxfce4 &" 2>/dev/null &
-sleep 2
+# XFCE in Docker + Xvfb needs a per-user session D-Bus; plain "su … startxfce4" often yields a black noVNC screen.
+# Match a typical ~/.vnc/xstartup pattern: unset stale session env, then start the desktop.
+sudo -u "${RDP_USER}" env \
+    DISPLAY="${VNC_DISPLAY}" \
+    HOME="${HOME_DIR}" \
+    USER="${RDP_USER}" \
+    LOGNAME="${RDP_USER}" \
+    bash -lc '
+      unset SESSION_MANAGER
+      unset DBUS_SESSION_BUS_ADDRESS
+      [ -f "$HOME/.Xresources" ] && xrdb "$HOME/.Xresources" 2>/dev/null || true
+      exec dbus-run-session startxfce4
+    ' &
+sleep 3
 
 echo "[entrypoint] Starting x11vnc on port ${VNC_PORT}..."
 x11vnc -display ${VNC_DISPLAY} -nopw -forever -shared \
