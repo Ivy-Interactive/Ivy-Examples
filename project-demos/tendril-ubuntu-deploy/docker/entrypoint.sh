@@ -33,10 +33,13 @@ chmod 440 "/etc/sudoers.d/${RDP_USER}" 2>/dev/null || true
 
 HOME_DIR="/home/${RDP_USER}"
 
+# Sliplane (and Docker) often mount a persistent volume at $HOME — it arrives empty and
+# root-owned, so XFCE cannot mkdir ~/.config / ~/.cache → black noVNC + xfconfd crashes.
+mkdir -p "${HOME_DIR}/.config" "${HOME_DIR}/.cache" "${HOME_DIR}/.local/share" "${HOME_DIR}/Desktop" 2>/dev/null || true
+
 # ─── 3. Session + shell environment ──────────────────────────────────────────
 echo "startxfce4" > "${HOME_DIR}/.xsession" 2>/dev/null || true
 chmod 755 "${HOME_DIR}/.xsession" 2>/dev/null || true
-chown "${RDP_USER}:${RDP_USER}" "${HOME_DIR}/.xsession" 2>/dev/null || true
 
 # Desktop shortcuts (copy from skel if not already there)
 mkdir -p "${HOME_DIR}/Desktop" 2>/dev/null || true
@@ -46,7 +49,6 @@ for f in /etc/skel/Desktop/*.desktop; do
     [ -f "$dest" ] || cp "$f" "$dest" 2>/dev/null || true
 done
 chmod +x "${HOME_DIR}/Desktop/"*.desktop 2>/dev/null || true
-chown -R "${RDP_USER}:${RDP_USER}" "${HOME_DIR}/Desktop" 2>/dev/null || true
 
 # PATH for dotnet tools in user's shell (idempotent)
 if ! grep -q "dotnet/tools" "${HOME_DIR}/.bashrc" 2>/dev/null; then
@@ -57,7 +59,10 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export DOTNET_NOLOGO=1
 EOF
 fi
-chown "${RDP_USER}:${RDP_USER}" "${HOME_DIR}/.bashrc" 2>/dev/null || true
+
+# Own entire home (required when $HOME is a volume mount created as root:root)
+echo "[entrypoint] chown ${HOME_DIR} → ${RDP_USER} (volume / first-run safe)"
+chown -R "${RDP_USER}:${RDP_USER}" "${HOME_DIR}" 2>/dev/null || true
 
 # ─── 4. dbus (required by XFCE) ──────────────────────────────────────────────
 mkdir -p /run/dbus
@@ -81,6 +86,7 @@ sudo -u "${RDP_USER}" env \
     HOME="${HOME_DIR}" \
     USER="${RDP_USER}" \
     LOGNAME="${RDP_USER}" \
+    NO_AT_BRIDGE=1 \
     bash -lc '
       unset SESSION_MANAGER
       unset DBUS_SESSION_BUS_ADDRESS
