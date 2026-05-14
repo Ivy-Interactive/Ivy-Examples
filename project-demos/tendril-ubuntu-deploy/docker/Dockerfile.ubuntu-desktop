@@ -1,30 +1,41 @@
 # Ubuntu Desktop image for Sliplane (or any Docker host).
 #
-# Includes:
+# What's inside:
 #   - Ubuntu 22.04 LTS
 #   - XFCE4 desktop environment
-#   - xrdp  (RDP access on port 3389 — connect with any RDP client)
-#   - noVNC (browser-based VNC on PORT, default 8080)
-#   - .NET SDK 9
-#   - Ivy Tendril (dotnet global tool, available in terminal as `tendril`)
-#   - JetBrains Rider (IDE at /opt/rider, launched via Applications menu or `rider`)
+#   - xrdp  (RDP access on port 3389)
+#   - noVNC (browser-based desktop on PORT, default 8080)
+#   - .NET 10 runtime (copied from official Microsoft image — no apt install needed)
+#   - Ivy Tendril (global tool, available as `tendril` in any terminal)
+#   - JetBrains Rider (pre-installed at /opt/rider)
 #
 # Required env vars at runtime:
 #   RDP_USER      – Linux username to create (default: developer)
-#   RDP_PASSWORD  – Password for that user + VNC (default: TendrilRDP!1 – CHANGE THIS)
-#   PORT          – noVNC HTTP port (default: 8080)
+#   RDP_PASSWORD  – Password for that user and VNC (default: TendrilRDP!1 — CHANGE THIS)
+#   PORT          – noVNC HTTP port, Sliplane health-check target (default: 8080)
 #
-# Sliplane notes:
-#   Set PORT env var and expose it as the service port (HTTP health-check target).
-#   xrdp listens on 3389 — reachable at <server-ip>:3389 if your server's firewall allows it.
+# Note: VNC passwords are capped at 8 characters by the VNC protocol.
+#       RDP (xrdp) uses the full Linux PAM password — no 8-char limit.
 
+# ── Stage 1: install Tendril global tool (requires .NET 10 SDK) ───────────────
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dotnet-tools
+
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV DOTNET_NOLOGO=1
+
+RUN dotnet tool install --global Ivy.Tendril
+
+# ── Stage 2: grab the .NET 10 runtime binaries to copy to Ubuntu ──────────────
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS dotnet-runtime
+# Files we need live at /usr/share/dotnet — nothing extra to do here.
+
+# ── Stage 3: full Ubuntu 22.04 Desktop ───────────────────────────────────────
 FROM ubuntu:22.04
 
-# ── Non-interactive apt ────────────────────────────────────────────────────────
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# ── Runtime defaults (override at deploy time) ─────────────────────────────────
+# Runtime defaults (override at deploy time)
 ENV PORT=8080
 ENV RDP_USER=developer
 ENV RDP_PASSWORD=TendrilRDP!1
@@ -33,29 +44,35 @@ ENV PATH="$PATH:/root/.dotnet/tools:/opt/rider/bin"
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ENV DOTNET_NOLOGO=1
 
-# ── 1. System packages ─────────────────────────────────────────────────────────
+# ── 1. System packages ────────────────────────────────────────────────────────
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     # Desktop
-    xfce4 xfce4-goodies xfce4-terminal \
-    # RDP + VNC
+    xfce4 \
+    xfce4-goodies \
+    xfce4-terminal \
+    # RDP
     xrdp \
+    # VNC server
     tigervnc-standalone-server \
-    # noVNC web client
-    novnc websockify \
-    # Utilities
-    supervisor \
+    # noVNC web client + websocket proxy
+    novnc \
+    websockify \
+    # Service management / session helpers
     dbus-x11 \
     x11-xserver-utils \
     x11-utils \
     sudo \
+    # Download tools
     wget \
     curl \
+    # Dev tools
     git \
     unzip \
+    # TLS / certificates
     ca-certificates \
     gnupg \
     apt-transport-https \
-    # Rider runtime dependencies
+    # Rider native dependencies
     libfontconfig1 \
     libfreetype6 \
     libxi6 \
@@ -64,51 +81,52 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrandr2 \
     libglib2.0-0 \
-    libgbm1 \
     libasound2 \
-    # Clean up
     && rm -rf /var/lib/apt/lists/*
 
-# ── 2. .NET SDK 9 ──────────────────────────────────────────────────────────────
-RUN wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb \
-        -O /tmp/packages-microsoft-prod.deb \
-    && dpkg -i /tmp/packages-microsoft-prod.deb \
-    && rm /tmp/packages-microsoft-prod.deb \
-    && apt-get update -qq \
-    && apt-get install -y --no-install-recommends dotnet-sdk-9.0 \
-    && rm -rf /var/lib/apt/lists/*
+# ── 2. .NET 10 runtime (copied from official image — no apt required) ─────────
+COPY --from=dotnet-runtime /usr/share/dotnet /usr/share/dotnet
+RUN ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
 
-# ── 3. Ivy Tendril ─────────────────────────────────────────────────────────────
-RUN dotnet tool install --global Ivy.Tendril \
-    && echo 'export PATH="$PATH:/root/.dotnet/tools"' >> /etc/profile.d/tendril-path.sh \
-    && chmod +x /etc/profile.d/tendril-path.sh
+# ── 3. Ivy Tendril global tool (copied from SDK build stage) ─────────────────
+COPY --from=dotnet-tools /root/.dotnet/tools /root/.dotnet/tools
+# Verify it loads
+RUN dotnet /root/.dotnet/tools/.store/ivy.tendril/*/ivy.tendril/*/tools/net*/any/Ivy.Tendril.dll --version 2>/dev/null || true
 
-# ── 4. JetBrains Rider ────────────────────────────────────────────────────────
-# Pin to a known good release; bump ARG to upgrade.
+# ── 4. JetBrains Rider ───────────────────────────────────────────────────────
+# Bump ARG RIDER_VERSION to upgrade.
 ARG RIDER_VERSION=2024.3.6
 RUN wget -q \
         "https://download.jetbrains.com/rider/JetBrains.Rider-${RIDER_VERSION}.tar.gz" \
         -O /tmp/rider.tar.gz \
     && tar -xzf /tmp/rider.tar.gz -C /opt \
-    && find /opt -maxdepth 1 -type d -name "JetBrains Rider*" -exec mv {} /opt/rider \; \
+    && RIDER_DIR=$(find /opt -maxdepth 1 -type d -name "JetBrains Rider*" | head -1) \
+    && mv "$RIDER_DIR" /opt/rider \
     && rm /tmp/rider.tar.gz \
     && ln -s /opt/rider/bin/rider.sh /usr/local/bin/rider
 
 # ── 5. xrdp: use XFCE session ─────────────────────────────────────────────────
 RUN echo "startxfce4" > /etc/skel/.xsession \
-    && chmod 755 /etc/skel/.xsession
+    && chmod 755 /etc/skel/.xsession \
+    # xrdp: enable user session type
+    && sed -i 's/^#\?\(xrdp_max_bpp\).*/\1=32/' /etc/xrdp/xrdp.ini 2>/dev/null || true
 
-# ── 6. noVNC: symlink index page ──────────────────────────────────────────────
-RUN ln -sf /usr/share/novnc/vnc_lite.html /usr/share/novnc/index.html 2>/dev/null || true
+# ── 6. noVNC: ensure index page exists ────────────────────────────────────────
+RUN if [ -f /usr/share/novnc/vnc_lite.html ] && [ ! -f /usr/share/novnc/index.html ]; then \
+        ln -s /usr/share/novnc/vnc_lite.html /usr/share/novnc/index.html; \
+    fi
 
-# ── 7. Rider desktop shortcut (system-wide) ───────────────────────────────────
+# ── 7. Desktop shortcuts ──────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/applications \
     && printf '[Desktop Entry]\nName=JetBrains Rider\nExec=/opt/rider/bin/rider.sh %%F\nIcon=/opt/rider/bin/rider.svg\nType=Application\nCategories=Development;IDE;\nStartupNotify=true\n' \
-       > /usr/share/applications/rider.desktop
+       > /usr/share/applications/rider.desktop \
+    && printf '[Desktop Entry]\nName=Tendril\nExec=bash -c "tendril --web"\nIcon=utilities-terminal\nType=Application\nCategories=Development;\nTerminal=true\n' \
+       > /usr/share/applications/tendril.desktop
 
-# ── 8. Tendril desktop shortcut ───────────────────────────────────────────────
-RUN printf '[Desktop Entry]\nName=Tendril\nExec=bash -c "tendril --web &amp;&amp; xdg-open http://localhost:8000"\nIcon=utilities-terminal\nType=Application\nCategories=Development;\nTerminal=false\n' \
-    > /usr/share/applications/tendril.desktop
+# ── 8. Global PATH for all users ──────────────────────────────────────────────
+RUN echo 'export PATH="$PATH:/root/.dotnet/tools:/opt/rider/bin:/usr/share/dotnet"' \
+    > /etc/profile.d/tendril-tools.sh \
+    && chmod +x /etc/profile.d/tendril-tools.sh
 
 # ── 9. Entrypoint ─────────────────────────────────────────────────────────────
 COPY entrypoint.sh /entrypoint.sh
