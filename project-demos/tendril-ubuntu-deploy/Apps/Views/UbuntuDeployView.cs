@@ -87,6 +87,22 @@ public class UbuntuDeployView : ViewBase
         var deployedService = UseState<(string ProjectId, SliplaneService Service, string ServerId)?>(() => null);
         var reloadCounter = UseState(0);
 
+        // ── Forms (hooks must precede other Build() statements; see IVYHOOK005) ─
+        var (onServerSubmit, serverFormView, serverValidationView, serverLoading) = UseForm(() =>
+            model.ToForm("Deploy")
+                .Place(m => m.ServerId, m => m.Name)
+                .Builder(m => m.ServerId,
+                    s => s.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server…"))
+                .Builder(m => m.Name, s => s.ToTextInput().Placeholder("e.g. ubuntu-dev"))
+                .Remove(m => m.ProjectId, m => m.GitRepo, m => m.Branch, m => m.DockerfilePath,
+                    m => m.DockerContext, m => m.NoVncPort, m => m.VolumeId)
+                .Required(m => m.ServerId, m => m.Name));
+
+        var (onCredSubmit, credFormView, credValidationView, credLoading) = UseForm(() =>
+            credModel.ToForm("Credentials")
+                .Builder(m => m.Password, s => s.ToPasswordInput(placeholder: "At least 8 characters"))
+                .Required(m => m.Username, m => m.Password));
+
         // ── Server lookup for async select ────────────────────────────────────
         QueryResult<Option<string>[]> QueryServers(IViewContext ctx, string q) =>
             ctx.UseQuery<Option<string>[], (string, string, int)>(
@@ -110,22 +126,6 @@ public class UbuntuDeployView : ViewBase
 
         _ = QueryServers(Context, "");
         _ = LookupServer(Context, model.Value.ServerId);
-
-        // ── Forms ─────────────────────────────────────────────────────────────
-        var (onServerSubmit, serverFormView, serverValidationView, serverLoading) = UseForm(() =>
-            model.ToForm("Deploy")
-                .Place(m => m.ServerId, m => m.Name)
-                .Builder(m => m.ServerId,
-                    s => s.ToAsyncSelectInput(QueryServers, LookupServer, placeholder: "Search server…"))
-                .Builder(m => m.Name, s => s.ToTextInput().Placeholder("e.g. ubuntu-dev"))
-                .Remove(m => m.ProjectId, m => m.GitRepo, m => m.Branch, m => m.DockerfilePath,
-                    m => m.DockerContext, m => m.NoVncPort, m => m.VolumeId)
-                .Required(m => m.ServerId, m => m.Name));
-
-        var (onCredSubmit, credFormView, credValidationView, credLoading) = UseForm(() =>
-            credModel.ToForm("Credentials")
-                .Builder(m => m.Password, s => s.ToPasswordInput(placeholder: "At least 8 characters"))
-                .Required(m => m.Username, m => m.Password));
 
         // ── Step handlers ─────────────────────────────────────────────────────
         async ValueTask AdvanceToStep1()
@@ -296,11 +296,11 @@ public class UbuntuDeployView : ViewBase
             | stepBody
             | footerRow;
 
-        object pageBody = mainFlow;
+        var pageBody = mainFlow;
 
         if (isDeploying.Value && deployedService.Value == null)
         {
-            pageBody = (object)pageBody
+            pageBody = pageBody
                 | new Callout(
                     Layout.Vertical().Gap(3)
                         | Text.Block("Creating the Ubuntu Desktop service on Sliplane…").Bold()
@@ -310,7 +310,7 @@ public class UbuntuDeployView : ViewBase
         }
         else if (deployedService.Value is { } deployed)
         {
-            pageBody = (object)pageBody
+            pageBody = pageBody
                 | new UbuntuDeployStatusView(
                     _apiToken,
                     deployed.ProjectId,
@@ -321,7 +321,7 @@ public class UbuntuDeployView : ViewBase
         }
 
         if (deployError.Value != null)
-            pageBody = (object)pageBody | new Callout(deployError.Value, variant: CalloutVariant.Error);
+            pageBody = pageBody | new Callout(deployError.Value, variant: CalloutVariant.Error);
 
         var manageServicesUrl = "https://ivy-sliplane-management.sliplane.app/";
         var manageFloat = new FloatingPanel(
