@@ -1,5 +1,5 @@
-#:package Ivy@1.2.56
-#:package Ivy.Analyser@1.2.56
+#:package Ivy@1.2.58
+#:package Ivy.Analyser@1.2.58
 #:package ClickHouse.Driver@0.9.0
 
 global using Ivy;
