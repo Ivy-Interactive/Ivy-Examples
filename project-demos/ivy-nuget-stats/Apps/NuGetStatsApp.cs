@@ -46,6 +46,8 @@ public class PackageStatsView : ViewBase
     public override object? Build()
     {
         var packageId = PackageId;
+        var githubRepo = GithubRepoCatalog.GetRepoForPackage(packageId);
+        var githubRepoLabel = GithubRepoCatalog.GetDisplayName(githubRepo);
 
         var client = UseService<IClientProvider>();
         var navigator = UseNavigation();
@@ -107,10 +109,10 @@ public class PackageStatsView : ViewBase
             tags: ["database", "downloads", packageId]);
 
         var starsStatsQuery = this.UseQuery(
-            key: "github-stars-stats",
+            key: $"github-stars-stats/{githubRepo}",
             fetcher: async (CancellationToken ct) =>
             {
-                return await dbService.GetGithubStarsStatsAsync(365, ct);
+                return await dbService.GetGithubStarsStatsAsync(365, githubRepo, ct);
             },
             options: new QueryOptions
             {
@@ -119,7 +121,7 @@ public class PackageStatsView : ViewBase
                 KeepPrevious = true,
                 RevalidateOnMount = true
             },
-            tags: ["database", "stars"]);
+            tags: ["database", "stars", githubRepo]);
 
         var totalDownloadsStatsQuery = this.UseQuery(
             key: $"total-downloads-stats-365/{packageId}",
@@ -137,10 +139,10 @@ public class PackageStatsView : ViewBase
             tags: ["database", "downloads", "total", packageId]);
 
         var stargazersQuery = this.UseQuery(
-            key: $"github-stargazers-list/{stargazerRefreshVersion.Value}",
+            key: $"github-stargazers-list/{githubRepo}/{stargazerRefreshVersion.Value}",
             fetcher: async (CancellationToken ct) =>
             {
-                return await dbService.GetGithubStargazersAsync(ct);
+                return await dbService.GetGithubStargazersAsync(githubRepo, ct);
             },
             options: new QueryOptions
             {
@@ -149,7 +151,7 @@ public class PackageStatsView : ViewBase
                 KeepPrevious = true,
                 RevalidateOnMount = false
             },
-            tags: ["database", "stargazers", "list"]);
+            tags: ["database", "stargazers", "list", githubRepo]);
 
         // Cache stargazers data so old data stays visible while a new query loads
         if (stargazersQuery.Value is { Count: > 0 } freshStargazers && !ReferenceEquals(freshStargazers, cachedStargazers.Value))
@@ -482,7 +484,7 @@ public class PackageStatsView : ViewBase
                 | (starsChart != null
                     ? starsChart
                     : (object)Text.Block("No data available").Muted())
-        ).Title("GitHub Stars (Last 365 Days)").Icon(Icons.Github);
+        ).Title($"GitHub Stars — {githubRepoLabel} (Last 365 Days)").Icon(Icons.Github);
 
         var metrics = Layout.Grid().Columns(5)
             | new Card(
@@ -527,7 +529,7 @@ public class PackageStatsView : ViewBase
                         : starsThisMonth < 0
                             ? $"{starsThisMonth:N0} this month"
                             : "0 stars added this month").Muted()
-            ).Title("GitHub Stars").Icon(Icons.Github)
+            ).Title($"GitHub Stars — {githubRepoLabel}").Icon(Icons.Github)
              .OnClick(_ =>
              {
                  showStargazersTodayDialog.Set(true);
@@ -585,7 +587,7 @@ public class PackageStatsView : ViewBase
                 | (stargazersChart != null
                     ? stargazersChart
                     : (object)Text.Block("No data available").Muted())
-        ).Title("Stargazers Daily (New vs Unstarred) - Last 30 Days").Icon(Icons.Users).Key($"stargazers-daily-card-{stargazerRefreshVersion.Value}");
+        ).Title($"Stargazers Daily — {githubRepoLabel} (New vs Unstarred) - Last 30 Days").Icon(Icons.Users).Key($"stargazers-daily-card-{githubRepo}-{stargazerRefreshVersion.Value}");
 
         var totalDownloadsStats = totalDownloadsStatsQuery.Value ?? new List<DailyDownloadStats>();
 
@@ -832,7 +834,7 @@ public class PackageStatsView : ViewBase
                     isUpdatingDatabase.Set(true);
                     try
                     {
-                        var result = await updateService.UpdateStargazersAsync();
+                        var result = await updateService.UpdateStargazersAsync(githubRepo);
                         if (result.Success)
                         {
                             starsStatsQuery.Mutator.Revalidate();

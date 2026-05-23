@@ -101,7 +101,10 @@ public class DatabaseService : IDatabaseService
         }
     }
 
-    public async Task<List<GithubStarsStats>> GetGithubStarsStatsAsync(int days = 30, CancellationToken cancellationToken = default)
+    public async Task<List<GithubStarsStats>> GetGithubStarsStatsAsync(
+        int days = 30,
+        string repoName = GithubRepoCatalog.IvyFramework,
+        CancellationToken cancellationToken = default)
     {
         var stats = new List<GithubStarsStats>();
 
@@ -115,7 +118,7 @@ public class DatabaseService : IDatabaseService
                 SELECT d::date AS date,
                        (SELECT COUNT(*)::bigint
                         FROM github_stargazers g
-                        WHERE g.repo_name = 'Ivy-Interactive/Ivy-Framework'
+                        WHERE g.repo_name = @repo
                           AND (g.starred_at AT TIME ZONE 'UTC')::date <= d::date
                           AND (g.unstarred_at IS NULL OR (g.unstarred_at AT TIME ZONE 'UTC')::date > d::date)) AS stars
                 FROM generate_series(
@@ -128,6 +131,7 @@ public class DatabaseService : IDatabaseService
 
             await using var cmd = new NpgsqlCommand(query, conn);
             cmd.Parameters.AddWithValue("days", days);
+            cmd.Parameters.AddWithValue("repo", repoName);
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
@@ -150,7 +154,10 @@ public class DatabaseService : IDatabaseService
         }
     }
 
-    public async Task<List<GithubStargazersDailyStats>> GetGithubStargazersDailyStatsAsync(int days = 30, CancellationToken cancellationToken = default)
+    public async Task<List<GithubStargazersDailyStats>> GetGithubStargazersDailyStatsAsync(
+        int days = 30,
+        string repoName = GithubRepoCatalog.IvyFramework,
+        CancellationToken cancellationToken = default)
     {
         var stats = new List<GithubStargazersDailyStats>();
 
@@ -162,13 +169,14 @@ public class DatabaseService : IDatabaseService
             var query = @"
                 SELECT date, new_count, unstar_count, reactivated_count
                 FROM github_stargazers_daily
-                WHERE repo_name = 'Ivy-Interactive/Ivy-Framework'
+                WHERE repo_name = @repo
                 ORDER BY date DESC
                 LIMIT @days;
             ";
 
             await using var cmd = new NpgsqlCommand(query, conn);
             cmd.Parameters.AddWithValue("days", days);
+            cmd.Parameters.AddWithValue("repo", repoName);
             
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
@@ -196,7 +204,9 @@ public class DatabaseService : IDatabaseService
         }
     }
 
-    public async Task<List<GithubStargazer>> GetGithubStargazersAsync(CancellationToken cancellationToken = default)
+    public async Task<List<GithubStargazer>> GetGithubStargazersAsync(
+        string repoName = GithubRepoCatalog.IvyFramework,
+        CancellationToken cancellationToken = default)
     {
         var stargazers = new List<GithubStargazer>();
 
@@ -208,11 +218,12 @@ public class DatabaseService : IDatabaseService
             var query = @"
                 SELECT user_login, starred_at, unstarred_at
                 FROM github_stargazers
-                WHERE repo_name = 'Ivy-Interactive/Ivy-Framework'
+                WHERE repo_name = @repo
                 ORDER BY starred_at DESC;
             ";
 
             await using var cmd = new NpgsqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("repo", repoName);
             
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))

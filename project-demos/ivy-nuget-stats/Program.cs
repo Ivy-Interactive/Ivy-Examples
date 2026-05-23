@@ -64,23 +64,26 @@ server.UseWebApplication(app =>
     app.MapOpenApi();
     app.MapScalarApiReference();
 
-    app.MapGet("/starred", async (IDatabaseService db, CancellationToken ct) =>
+    app.MapGet("/starred", async (IDatabaseService db, string? repo, CancellationToken ct) =>
     {
-        var all = await db.GetGithubStargazersAsync(ct);
+        var repoName = repo ?? GithubRepoCatalog.IvyFramework;
+        var all = await db.GetGithubStargazersAsync(repoName, ct);
         var starred = all.Where(s => s.IsActive).Select(s => new { s.Username, s.StarredAt });
         return Results.Ok(starred);
     });
 
-    app.MapGet("/unstarred", async (IDatabaseService db, CancellationToken ct) =>
+    app.MapGet("/unstarred", async (IDatabaseService db, string? repo, CancellationToken ct) =>
     {
-        var all = await db.GetGithubStargazersAsync(ct);
+        var repoName = repo ?? GithubRepoCatalog.IvyFramework;
+        var all = await db.GetGithubStargazersAsync(repoName, ct);
         var unstarred = all.Where(s => !s.IsActive).Select(s => new { s.Username, s.StarredAt, s.UnstarredAt });
         return Results.Ok(unstarred);
     });
 
-    app.MapGet("/stars", async (IDatabaseService db, CancellationToken ct) =>
+    app.MapGet("/stars", async (IDatabaseService db, string? repo, CancellationToken ct) =>
     {
-        var all = await db.GetGithubStargazersAsync(ct);
+        var repoName = repo ?? GithubRepoCatalog.IvyFramework;
+        var all = await db.GetGithubStargazersAsync(repoName, ct);
         var starred = all.Count(s => s.IsActive);
         var unstarred = all.Count(s => !s.IsActive);
         return Results.Ok(new { starred, unstarred, totalEver = all.Count });
@@ -104,9 +107,10 @@ server.UseWebApplication(app =>
         return Results.Ok(daily.Select(s => new { s.Date, s.TotalDownloads, s.DailyGrowth }));
     });
 
-    app.MapGet("/summary", async (IDatabaseService db, CancellationToken ct) =>
+    app.MapGet("/summary", async (IDatabaseService db, string? repo, CancellationToken ct) =>
     {
-        var stargazers = await db.GetGithubStargazersAsync(ct);
+        var repoName = repo ?? GithubRepoCatalog.IvyFramework;
+        var stargazers = await db.GetGithubStargazersAsync(repoName, ct);
         var daily = await db.GetDailyDownloadStatsAsync(days: 2, packageName: "Ivy", cancellationToken: ct);
         var latest = daily.FirstOrDefault();
         return Results.Ok(new
