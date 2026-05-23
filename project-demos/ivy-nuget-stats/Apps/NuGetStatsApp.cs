@@ -32,29 +32,6 @@ public class IvyInsightsApp : ViewBase
         return parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]);
     }
 
-    private static List<DailyDownloadStats> CreateMockDailyDownloadStats(int days)
-    {
-        var stats = new List<DailyDownloadStats>(days);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var random = new Random(42);
-        var totalDownloads = 65_000L;
-
-        for (var i = days - 1; i >= 0; i--)
-        {
-            var date = today.AddDays(-i);
-            var dailyGrowth = random.Next(5, 520);
-            totalDownloads += dailyGrowth;
-            stats.Add(new DailyDownloadStats
-            {
-                Date = date,
-                TotalDownloads = totalDownloads,
-                DailyGrowth = dailyGrowth
-            });
-        }
-
-        return stats;
-    }
-
     public override object? Build()
     {
         var client = UseService<IClientProvider>();
@@ -640,14 +617,7 @@ public class IvyInsightsApp : ViewBase
             .Icon(Icons.Download)
             .Height(Size.Full());
 
-#if DEBUG
-        var useMockActivity = !totalDownloadsStatsQuery.Loading && totalDownloadsStats.Count == 0;
-#else
-        var useMockActivity = false;
-#endif
-        var dailyActivityData = (useMockActivity
-            ? CreateMockDailyDownloadStats(365)
-            : totalDownloadsStats).Select(d => new Activity
+        var dailyActivityData = totalDownloadsStats.Select(d => new Activity
             {
                 Date = d.Date,
                 Count = Math.Max(0, (int)d.DailyGrowth)
@@ -655,18 +625,32 @@ public class IvyInsightsApp : ViewBase
             .OrderBy(d => d.Date)
             .ToArray();
 
+        var heatmapEndDate = DateOnly.FromDateTime(now);
+        var heatmapStartDate = heatmapEndDate.AddDays(-364);
+
         var dailyActivityHeatmap = new ActivityHeatmap()
             .Data(dailyActivityData)
-            .ColorScheme(Colors.Emerald);
+            .ColorScheme(Colors.Emerald)
+            .StartDate(heatmapStartDate)
+            .EndDate(heatmapEndDate);
 
-        var dailyActivityCard = new Card(
-            Layout.Horizontal().Height(Size.Full())
-            | (dailyActivityData.Length > 0
-                ? dailyActivityHeatmap
-                : Text.Block("No data available").Muted()))
-        .Title("Daily Growth (Last 365 days)" + (useMockActivity ? " (MOCK DATA)" : ""))
-        .Icon(Icons.ArrowBigUpDash)
-        .Height(Size.Full());
+        object heatmapCardBody = dailyActivityData.Length > 0
+            ? Layout.Vertical()
+                .Width(Size.Full())
+                .Height(Size.Full())
+                .AlignContent(Align.Center)
+                | new Spacer()
+                | (Layout.Horizontal()
+                    .Width(Size.Full())
+                    .AlignContent(Align.Center)
+                    | dailyActivityHeatmap)
+                | new Spacer()
+            : Text.Block("No data available").Muted();
+
+        var dailyActivityCard = new Card(heatmapCardBody)
+            .Title("Daily Growth (Last 365 days)")
+            .Icon(Icons.ArrowBigUpDash)
+            .Height(Size.Full());
 
         // Calculate historical weekly growth for the chart
         var growthWeeks = new List<string>();
