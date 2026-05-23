@@ -24,6 +24,32 @@ jobs:
           import psycopg2
           from datetime import date
 
+          def parse_db_url(raw):
+              """Accept PostgreSQL URI or .NET key=value;... connection string, return psycopg2 dsn."""
+              raw = raw.strip()
+              if raw.startswith("postgresql://") or raw.startswith("postgres://"):
+                  return raw  # already a URI, psycopg2 handles it natively
+              # .NET style: Host=...;Port=...;Database=...;Username=...;Password=...
+              key_map = {
+                  "host": "host", "server": "host",
+                  "port": "port",
+                  "database": "dbname", "initial catalog": "dbname",
+                  "username": "user", "user id": "user", "uid": "user",
+                  "password": "password", "pwd": "password",
+                  "ssl mode": "sslmode", "sslmode": "sslmode",
+              }
+              parts = {}
+              for pair in raw.split(";"):
+                  pair = pair.strip()
+                  if "=" not in pair:
+                      continue
+                  k, v = pair.split("=", 1)
+                  mapped = key_map.get(k.strip().lower())
+                  if mapped:
+                      parts[mapped] = v.strip()
+              return " ".join(f"{k}={v}" for k, v in parts.items())
+
+          db_dsn = parse_db_url(os.getenv("DB_URL", ""))
           date_to_record = date.today().isoformat()
 
           # Packages to track: (nuget_package_id, db_package_name)
@@ -47,7 +73,7 @@ jobs:
               exit(1)
 
           try:
-              conn = psycopg2.connect(os.getenv('DB_URL'))
+              conn = psycopg2.connect(db_dsn)
               cur = conn.cursor()
 
               # Ensure table exists with package_name column
@@ -99,6 +125,31 @@ jobs:
           import psycopg2
           from datetime import date
 
+          def parse_db_url(raw):
+              raw = raw.strip()
+              if raw.startswith("postgresql://") or raw.startswith("postgres://"):
+                  return raw
+              key_map = {
+                  "host": "host", "server": "host",
+                  "port": "port",
+                  "database": "dbname", "initial catalog": "dbname",
+                  "username": "user", "user id": "user", "uid": "user",
+                  "password": "password", "pwd": "password",
+                  "ssl mode": "sslmode", "sslmode": "sslmode",
+              }
+              parts = {}
+              for pair in raw.split(";"):
+                  pair = pair.strip()
+                  if "=" not in pair:
+                      continue
+                  k, v = pair.split("=", 1)
+                  mapped = key_map.get(k.strip().lower())
+                  if mapped:
+                      parts[mapped] = v.strip()
+              return " ".join(f"{k}={v}" for k, v in parts.items())
+
+          db_dsn = parse_db_url(os.getenv("DB_URL", ""))
+
           # Fetch GitHub Stars
           stars = 0
           try:
@@ -110,10 +161,10 @@ jobs:
               exit(1)
 
           date_to_record = date.today().isoformat()
-          
+
           if stars > 0:
               try:
-                  conn = psycopg2.connect(os.getenv('DB_URL'))
+                  conn = psycopg2.connect(db_dsn)
                   cur = conn.cursor()
 
                   # GitHub Stars Table
@@ -164,7 +215,32 @@ jobs:
           import requests
           import psycopg2
           from datetime import date, datetime, timezone
-          
+
+          def parse_db_url(raw):
+              raw = raw.strip()
+              if raw.startswith("postgresql://") or raw.startswith("postgres://"):
+                  return raw
+              key_map = {
+                  "host": "host", "server": "host",
+                  "port": "port",
+                  "database": "dbname", "initial catalog": "dbname",
+                  "username": "user", "user id": "user", "uid": "user",
+                  "password": "password", "pwd": "password",
+                  "ssl mode": "sslmode", "sslmode": "sslmode",
+              }
+              parts = {}
+              for pair in raw.split(";"):
+                  pair = pair.strip()
+                  if "=" not in pair:
+                      continue
+                  k, v = pair.split("=", 1)
+                  mapped = key_map.get(k.strip().lower())
+                  if mapped:
+                      parts[mapped] = v.strip()
+              return " ".join(f"{k}={v}" for k, v in parts.items())
+
+          db_dsn = parse_db_url(os.getenv("DB_URL", ""))
+
           REPO = "Ivy-Interactive/Ivy-Framework"
           
           def fetch_all_stargazers():
@@ -216,9 +292,9 @@ jobs:
           starred_at_map = {login: starred_at for login, starred_at in stargazers}
           
           try:
-              conn = psycopg2.connect(os.getenv("DB_URL"))
+              conn = psycopg2.connect(db_dsn)
               cur = conn.cursor()
-          
+
               # Setup tables (ensure starred_at column exists)
               cur.execute("""
                   CREATE TABLE IF NOT EXISTS github_stargazers (
