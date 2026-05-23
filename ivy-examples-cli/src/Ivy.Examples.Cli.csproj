@@ -10,7 +10,7 @@
     <ToolCommandName>ivy-examples</ToolCommandName>
 
     <!-- NuGet package metadata -->
-    <PackageId>Ivy.Cli</PackageId>
+    <PackageId>Ivy.Examples.Cli</PackageId>
     <Version>0.1.0</Version>
     <Authors>Ivy-Interactive</Authors>
     <Description>Unified CLI for Ivy Interactive infrastructure — Sliplane, Tendrils, and more.</Description>
