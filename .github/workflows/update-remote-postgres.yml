@@ -150,51 +150,60 @@ jobs:
 
           db_dsn = parse_db_url(os.getenv("DB_URL", ""))
 
-          # Fetch GitHub Stars
-          stars = 0
+          REPOS = [
+              "Ivy-Interactive/Ivy-Framework",
+              "Ivy-Interactive/Ivy-Tendril",
+          ]
+          headers = {'User-Agent': 'python-request-script'}
+          date_to_record = date.today().isoformat()
+          any_success = False
+
           try:
-              headers = {'User-Agent': 'python-request-script'}
-              repo_data = requests.get("https://api.github.com/repos/Ivy-Interactive/Ivy-Framework", headers=headers).json()
-              stars = repo_data.get('stargazers_count', 0)
+              conn = psycopg2.connect(db_dsn)
+              cur = conn.cursor()
+
+              cur.execute("""
+                  CREATE TABLE IF NOT EXISTS github_stars_history (
+                      id SERIAL PRIMARY KEY,
+                      repo_name TEXT,
+                      stars BIGINT,
+                      date DATE DEFAULT CURRENT_DATE,
+                      UNIQUE(repo_name, date)
+                  );
+              """)
+
+              for repo in REPOS:
+                  stars = 0
+                  try:
+                      repo_data = requests.get(f"https://api.github.com/repos/{repo}", headers=headers).json()
+                      stars = repo_data.get('stargazers_count', 0)
+                  except Exception as e:
+                      print(f"Error fetching GitHub stats for {repo}: {e}")
+                      continue
+
+                  if stars > 0:
+                      cur.execute("""
+                          INSERT INTO github_stars_history (repo_name, stars, date)
+                          VALUES (%s, %s, %s)
+                          ON CONFLICT (repo_name, date)
+                          DO UPDATE SET stars = EXCLUDED.stars;
+                      """, (repo, stars, date_to_record))
+                      print(f"Success! {repo}: {stars} stars added/updated in database.")
+                      any_success = True
+                  else:
+                      print(f"No stars found for {repo} (fetch returned 0).")
+
+              if any_success:
+                  conn.commit()
+              cur.close()
+              conn.close()
           except Exception as e:
-              print(f"Error fetching GitHub stats: {e}")
+              print(f"Database error: {e}")
               exit(1)
 
-          date_to_record = date.today().isoformat()
-
-          if stars > 0:
-              try:
-                  conn = psycopg2.connect(db_dsn)
-                  cur = conn.cursor()
-
-                  # GitHub Stars Table
-                  cur.execute("""
-                      CREATE TABLE IF NOT EXISTS github_stars_history (
-                          id SERIAL PRIMARY KEY,
-                          repo_name TEXT,
-                          stars BIGINT,
-                          date DATE DEFAULT CURRENT_DATE,
-                          UNIQUE(repo_name, date)
-                      );
-                  """)
-                  
-                  cur.execute("""
-                      INSERT INTO github_stars_history (repo_name, stars, date)
-                      VALUES (%s, %s, %s)
-                      ON CONFLICT (repo_name, date) 
-                      DO UPDATE SET stars = EXCLUDED.stars;
-                  """, ("Ivy-Interactive/Ivy-Framework", stars, date_to_record))
-
-                  conn.commit()
-                  cur.close()
-                  conn.close()
-                  print(f"Success! Ivy-Interactive/Ivy-Framework: {stars} stars added/updated in database.")
-              except Exception as e:
-                  print(f"Database error: {e}")
-                  exit(1)
-          else:
-              print("No stars found or fetch returned 0.")
-              exit(1) # Fail if we can't get stars, usually we expect at least 1 for this repo
+          if not any_success:
+              print("No GitHub star counts were updated for any repo.")
+              exit(1)
           EOF
 
   update_github_stargazers:
@@ -241,9 +250,12 @@ jobs:
 
           db_dsn = parse_db_url(os.getenv("DB_URL", ""))
 
-          REPO = "Ivy-Interactive/Ivy-Framework"
-          
-          def fetch_all_stargazers():
+          REPOS = [
+              "Ivy-Interactive/Ivy-Framework",
+              "Ivy-Interactive/Ivy-Tendril",
+          ]
+
+          def fetch_all_stargazers(repo):
               """Fetch all stargazers with their starred_at timestamps."""
               result = []
               page = 1
@@ -251,10 +263,10 @@ jobs:
                   "Accept": "application/vnd.github.star+json",
                   "User-Agent": "ivy-stars-tracker"
               }
-              
+
               while True:
                   resp = requests.get(
-                      f"https://api.github.com/repos/{REPO}/stargazers",
+                      f"https://api.github.com/repos/{repo}/stargazers",
                       headers=headers,
                       params={"per_page": 100, "page": page}
                   )
@@ -262,40 +274,22 @@ jobs:
                   data = resp.json()
                   if not data:
                       break
-                  
+
                   for item in data:
                       user = item.get("user") or {}
                       login = user.get("login")
                       starred_at = item.get("starred_at")
                       if login:
                           result.append((login, starred_at))
-                  
+
                   page += 1
-              
+
               return result
-          
-          try:
-              stargazers = fetch_all_stargazers()
-          except Exception as e:
-              print(f"Error fetching stargazers: {e}")
-              raise SystemExit(1)
-          
-          print(f"Fetched {len(stargazers)} stargazers for {REPO}.")
-          
-          if not stargazers:
-              print("No stargazers returned; nothing to update.")
-              raise SystemExit(0)
-          
-          # Current active stargazers as a set of logins
-          current = {login for login, _ in stargazers}
-          # Map login -> starred_at from GitHub API (when we first see them)
-          starred_at_map = {login: starred_at for login, starred_at in stargazers}
-          
+
           try:
               conn = psycopg2.connect(db_dsn)
               cur = conn.cursor()
 
-              # Setup tables (ensure starred_at column exists)
               cur.execute("""
                   CREATE TABLE IF NOT EXISTS github_stargazers (
                       repo_name TEXT,
@@ -308,77 +302,87 @@ jobs:
                   ALTER TABLE github_stargazers ADD COLUMN IF NOT EXISTS unstarred_at TIMESTAMPTZ;
               """)
 
-              # Get previous active state
-              cur.execute("""
-                  SELECT user_login FROM github_stargazers
-                  WHERE repo_name = %s AND unstarred_at IS NULL;
-              """, (REPO,))
-              previous = {row[0] for row in cur.fetchall()}
+              for REPO in REPOS:
+                  try:
+                      stargazers = fetch_all_stargazers(REPO)
+                  except Exception as e:
+                      print(f"Error fetching stargazers for {REPO}: {e}")
+                      raise SystemExit(1)
 
-              # Calculate diff
-              new_users = current - previous
-              lost_users = previous - current
-              
-              # Backfill starred_at for any existing active users that don't have it yet
-              for login, starred_at in stargazers:
-                  if not starred_at:
+                  print(f"Fetched {len(stargazers)} stargazers for {REPO}.")
+
+                  if not stargazers:
+                      print(f"No stargazers returned for {REPO}; skipping.")
                       continue
-                  cur.execute("""
-                      UPDATE github_stargazers
-                      SET starred_at = COALESCE(starred_at, %s)
-                      WHERE repo_name = %s AND user_login = %s;
-                  """, (starred_at, REPO, login))
-              
-              # Insert new users with their first starred_at
-              for login in new_users:
-                  starred_at = starred_at_map.get(login)
-                  cur.execute("""
-                      INSERT INTO github_stargazers (repo_name, user_login, starred_at, unstarred_at)
-                      VALUES (%s, %s, %s, NULL)
-                      ON CONFLICT (repo_name, user_login)
-                      DO NOTHING;
-                  """, (REPO, login, starred_at))
 
-              # Reactivate users (do NOT touch starred_at so it stays as "first joined")
-              reactivate_count = 0
-              for login in current:
-                  cur.execute("""
-                      UPDATE github_stargazers SET unstarred_at = NULL
-                      WHERE repo_name = %s AND user_login = %s AND unstarred_at IS NOT NULL;
-                  """, (REPO, login))
-                  if cur.rowcount > 0:
-                      reactivate_count += 1
+                  current = {login for login, _ in stargazers}
+                  starred_at_map = {login: starred_at for login, starred_at in stargazers}
 
-              # Mark unstarred
-              now = datetime.now(timezone.utc)
-              for login in lost_users:
                   cur.execute("""
-                      UPDATE github_stargazers SET unstarred_at = %s
-                      WHERE repo_name = %s AND user_login = %s AND unstarred_at IS NULL;
-                  """, (now, REPO, login))
+                      SELECT user_login FROM github_stargazers
+                      WHERE repo_name = %s AND unstarred_at IS NULL;
+                  """, (REPO,))
+                  previous = {row[0] for row in cur.fetchall()}
+
+                  new_users = current - previous
+                  lost_users = previous - current
+
+                  for login, starred_at in stargazers:
+                      if not starred_at:
+                          continue
+                      cur.execute("""
+                          UPDATE github_stargazers
+                          SET starred_at = COALESCE(starred_at, %s)
+                          WHERE repo_name = %s AND user_login = %s;
+                      """, (starred_at, REPO, login))
+
+                  for login in new_users:
+                      starred_at = starred_at_map.get(login)
+                      cur.execute("""
+                          INSERT INTO github_stargazers (repo_name, user_login, starred_at, unstarred_at)
+                          VALUES (%s, %s, %s, NULL)
+                          ON CONFLICT (repo_name, user_login)
+                          DO NOTHING;
+                      """, (REPO, login, starred_at))
+
+                  reactivate_count = 0
+                  for login in current:
+                      cur.execute("""
+                          UPDATE github_stargazers SET unstarred_at = NULL
+                          WHERE repo_name = %s AND user_login = %s AND unstarred_at IS NOT NULL;
+                      """, (REPO, login))
+                      if cur.rowcount > 0:
+                          reactivate_count += 1
+
+                  now = datetime.now(timezone.utc)
+                  for login in lost_users:
+                      cur.execute("""
+                          UPDATE github_stargazers SET unstarred_at = %s
+                          WHERE repo_name = %s AND user_login = %s AND unstarred_at IS NULL;
+                      """, (now, REPO, login))
+
+                  print(f"{REPO}: New: {len(new_users)}, Unstarred: {len(lost_users)}, Reactivated: {reactivate_count}. Total active: {len(current)}.")
+
+                  if new_users:
+                      print("New stargazers since last run:")
+                      for login in sorted(new_users):
+                          print(f"  + {login}")
+                  else:
+                      print("No new stargazers since last run.")
+
+                  if lost_users:
+                      print("Users who unstarred since last run:")
+                      for login in sorted(lost_users):
+                          print(f"  - {login}")
+                  else:
+                      print("No users unstarred since last run.")
+
+                  if reactivate_count > 0:
+                      print(f"Users who re-starred since last run: {reactivate_count}")
 
               conn.commit()
               cur.close()
               conn.close()
-          
-              print(f"Stargazers update complete. New: {len(new_users)}, Unstarred: {len(lost_users)}, Reactivated: {reactivate_count}. Total fetched: {len(current)}.")
-
-              if new_users:
-                  print("New stargazers since last run:")
-                  for login in sorted(new_users):
-                      print(f"  + {login}")
-              else:
-                  print("No new stargazers since last run.")
-
-              if lost_users:
-                  print("Users who unstarred since last run:")
-                  for login in sorted(lost_users):
-                      print(f"  - {login}")
-              else:
-                  print("No users unstarred since last run.")
-
-              if reactivate_count > 0:
-                  print(f"Users who re-starred since last run: {reactivate_count}")
           except Exception as e:
               print(f"Database error while updating stargazers: {e}")
               raise SystemExit(1)

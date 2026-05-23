@@ -9,5 +9,7 @@ public record DatabaseUpdateResult(
 
 public interface IDatabaseUpdateService
 {
-    Task<DatabaseUpdateResult> UpdateStargazersAsync(CancellationToken cancellationToken = default);
+    Task<DatabaseUpdateResult> UpdateStargazersAsync(
+        string repoName,
+        CancellationToken cancellationToken = default);
 }
