@@ -24,46 +24,60 @@ jobs:
           import psycopg2
           from datetime import date
 
-          # Fetch Nuget Downloads
-          try:
-              downloads = requests.get("https://azuresearch-usnc.nuget.org/query?q=packageid:Ivy").json()['data'][0]['totalDownloads']
-          except Exception as e:
-              print(f"Error fetching Nuget stats: {e}")
-              exit(1)
-
           date_to_record = date.today().isoformat()
 
-          if downloads > 0:
-              try:
-                  conn = psycopg2.connect(os.getenv('DB_URL'))
-                  cur = conn.cursor()
-                  
-                  # Nuget History Table
-                  cur.execute("""
-                      CREATE TABLE IF NOT EXISTS nuget_history (
-                          id SERIAL PRIMARY KEY,
-                          package_name TEXT,
-                          downloads BIGINT,
-                          date DATE DEFAULT CURRENT_DATE,
-                          UNIQUE(package_name, date)
-                      );
-                  """)
-                  cur.execute("""
-                      INSERT INTO nuget_history (package_name, downloads, date)
-                      VALUES (%s, %s, %s)
-                      ON CONFLICT (package_name, date) 
-                      DO UPDATE SET downloads = EXCLUDED.downloads;
-                  """, ("Ivy", downloads, date_to_record))
+          # Packages to track: (nuget_package_id, db_package_name)
+          packages = [
+              ("Ivy", "Ivy"),
+              ("Ivy.Tendril", "Ivy.Tendril"),
+          ]
 
-                  conn.commit()
-                  cur.close()
-                  conn.close()
-                  print(f"Success! Ivy: {downloads} downloads added/updated in database.")
+          results = {}
+          for nuget_id, db_name in packages:
+              try:
+                  resp = requests.get(f"https://azuresearch-usnc.nuget.org/query?q=packageid:{nuget_id}").json()
+                  dl = resp['data'][0]['totalDownloads']
+                  results[db_name] = dl
+                  print(f"Fetched {nuget_id}: {dl} downloads")
               except Exception as e:
-                  print(f"Database error: {e}")
-                  exit(1)
-          else:
-              print("No downloads found or fetch returned 0.")
+                  print(f"Error fetching {nuget_id}: {e}")
+
+          if not results:
+              print("No download data fetched. Exiting.")
+              exit(1)
+
+          try:
+              conn = psycopg2.connect(os.getenv('DB_URL'))
+              cur = conn.cursor()
+
+              # Ensure table exists with package_name column
+              cur.execute("""
+                  CREATE TABLE IF NOT EXISTS nuget_history (
+                      id SERIAL PRIMARY KEY,
+                      package_name TEXT,
+                      downloads BIGINT,
+                      date DATE DEFAULT CURRENT_DATE,
+                      UNIQUE(package_name, date)
+                  );
+              """)
+
+              for db_name, downloads in results.items():
+                  if downloads > 0:
+                      cur.execute("""
+                          INSERT INTO nuget_history (package_name, downloads, date)
+                          VALUES (%s, %s, %s)
+                          ON CONFLICT (package_name, date)
+                          DO UPDATE SET downloads = EXCLUDED.downloads;
+                      """, (db_name, downloads, date_to_record))
+                      print(f"Success! {db_name}: {downloads} downloads added/updated in database.")
+                  else:
+                      print(f"Skipping {db_name}: 0 downloads returned.")
+
+              conn.commit()
+              cur.close()
+              conn.close()
+          except Exception as e:
+              print(f"Database error: {e}")
               exit(1)
           EOF
 

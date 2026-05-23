@@ -88,7 +88,7 @@ server.UseWebApplication(app =>
 
     app.MapGet("/downloads", async (IDatabaseService db, CancellationToken ct) =>
     {
-        var daily = await db.GetDailyDownloadStatsAsync(days: 2, ct);
+        var daily = await db.GetDailyDownloadStatsAsync(days: 2, packageName: "Ivy", cancellationToken: ct);
         var latest = daily.FirstOrDefault();
         return Results.Ok(new
         {
@@ -100,14 +100,14 @@ server.UseWebApplication(app =>
 
     app.MapGet("/downloads/history", async (IDatabaseService db, int days = 30, CancellationToken ct = default) =>
     {
-        var daily = await db.GetDailyDownloadStatsAsync(days: Math.Clamp(days, 1, 365), ct);
+        var daily = await db.GetDailyDownloadStatsAsync(days: Math.Clamp(days, 1, 365), packageName: "Ivy", cancellationToken: ct);
         return Results.Ok(daily.Select(s => new { s.Date, s.TotalDownloads, s.DailyGrowth }));
     });
 
     app.MapGet("/summary", async (IDatabaseService db, CancellationToken ct) =>
     {
         var stargazers = await db.GetGithubStargazersAsync(ct);
-        var daily = await db.GetDailyDownloadStatsAsync(days: 2, ct);
+        var daily = await db.GetDailyDownloadStatsAsync(days: 2, packageName: "Ivy", cancellationToken: ct);
         var latest = daily.FirstOrDefault();
         return Results.Ok(new
         {

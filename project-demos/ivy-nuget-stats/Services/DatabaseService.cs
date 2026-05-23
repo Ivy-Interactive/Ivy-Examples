@@ -33,7 +33,7 @@ public class DatabaseService : IDatabaseService
         _connectionString = builder.ConnectionString;
     }
 
-    public async Task<List<DailyDownloadStats>> GetDailyDownloadStatsAsync(int days = 30, CancellationToken cancellationToken = default)
+    public async Task<List<DailyDownloadStats>> GetDailyDownloadStatsAsync(int days = 30, string packageName = "Ivy", CancellationToken cancellationToken = default)
     {
         var stats = new List<DailyDownloadStats>();
 
@@ -42,15 +42,17 @@ public class DatabaseService : IDatabaseService
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync(cancellationToken);
 
-            // Get data for the last N days, ordered by date
+            // Get data for the last N days, ordered by date, filtered by package name
             var query = @"
                 SELECT date, downloads
                 FROM nuget_history
+                WHERE package_name = @packageName
                 ORDER BY date DESC
                 LIMIT @days;
             ";
 
             await using var cmd = new NpgsqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("packageName", packageName);
             cmd.Parameters.AddWithValue("days", days);
             
             var records = new List<(DateOnly Date, long Downloads)>();

@@ -21,7 +21,18 @@ internal class StargazersDailyChartData
 [App(icon: Icons.ChartBar, title: "Ivy Statistics")]
 public class IvyInsightsApp : ViewBase
 {
-    private const string PackageId = "Ivy";
+    public override object? Build()
+    {
+        return Layout.Tabs(
+            new Tab("Ivy Framework", new PackageStatsView { PackageId = "Ivy" }),
+            new Tab("Ivy Tendril", new PackageStatsView { PackageId = "Ivy.Tendril" })
+        ).Variant(TabsVariant.Tabs);
+    }
+}
+
+public class PackageStatsView : ViewBase
+{
+    public string PackageId { get; set; } = "Ivy";
 
     private static bool IsPreRelease(string version)
     {
@@ -34,17 +45,19 @@ public class IvyInsightsApp : ViewBase
 
     public override object? Build()
     {
+        var packageId = PackageId;
+
         var client = UseService<IClientProvider>();
         var navigator = UseNavigation();
         var nugetProvider = UseService<INuGetStatisticsProvider>();
         var updateService = UseService<IDatabaseUpdateService>();
 
         var statsQuery = this.UseQuery(
-            key: $"nuget-stats/{PackageId}",
+            key: $"nuget-stats/{packageId}",
             fetcher: async (CancellationToken ct) =>
             {
-                var statistics = await nugetProvider.GetPackageStatisticsAsync(PackageId, ct);
-                client.Toast($"Successfully loaded statistics for {PackageId}!");
+                var statistics = await nugetProvider.GetPackageStatisticsAsync(packageId, ct);
+                client.Toast($"Successfully loaded statistics for {packageId}!");
                 return statistics;
             },
             options: new QueryOptions
@@ -54,7 +67,7 @@ public class IvyInsightsApp : ViewBase
                 KeepPrevious = true,
                 RevalidateOnMount = true
             },
-            tags: ["nuget", "statistics"]);
+            tags: ["nuget", "statistics", packageId]);
 
         var animatedDownloads = this.UseState(0L);
         var animatedVersions = this.UseState(0);
@@ -79,10 +92,10 @@ public class IvyInsightsApp : ViewBase
 
         var dbService = UseService<IDatabaseService>();
         var dailyStatsQuery = this.UseQuery(
-            key: "daily-download-stats-90",
+            key: $"daily-download-stats-90/{packageId}",
             fetcher: async (CancellationToken ct) =>
             {
-                return await dbService.GetDailyDownloadStatsAsync(90, ct);
+                return await dbService.GetDailyDownloadStatsAsync(90, packageId, ct);
             },
             options: new QueryOptions
             {
@@ -91,7 +104,7 @@ public class IvyInsightsApp : ViewBase
                 KeepPrevious = true,
                 RevalidateOnMount = true
             },
-            tags: ["database", "downloads"]);
+            tags: ["database", "downloads", packageId]);
 
         var starsStatsQuery = this.UseQuery(
             key: "github-stars-stats",
@@ -108,12 +121,11 @@ public class IvyInsightsApp : ViewBase
             },
             tags: ["database", "stars"]);
 
-
         var totalDownloadsStatsQuery = this.UseQuery(
-            key: "total-downloads-stats-365",
+            key: $"total-downloads-stats-365/{packageId}",
             fetcher: async (CancellationToken ct) =>
             {
-                return await dbService.GetDailyDownloadStatsAsync(365, ct);
+                return await dbService.GetDailyDownloadStatsAsync(365, packageId, ct);
             },
             options: new QueryOptions
             {
@@ -122,7 +134,7 @@ public class IvyInsightsApp : ViewBase
                 KeepPrevious = true,
                 RevalidateOnMount = true
             },
-            tags: ["database", "downloads", "total"]);
+            tags: ["database", "downloads", "total", packageId]);
 
         var stargazersQuery = this.UseQuery(
             key: $"github-stargazers-list/{stargazerRefreshVersion.Value}",
@@ -146,7 +158,7 @@ public class IvyInsightsApp : ViewBase
         }
 
         var filteredVersionChartQuery = this.UseQuery(
-            key: $"version-chart-filtered/{PackageId}/{statsQuery.Value != null}/{versionChartDateRange.Value.Item1?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartDateRange.Value.Item2?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
+            key: $"version-chart-filtered/{packageId}/{statsQuery.Value != null}/{versionChartDateRange.Value.Item1?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartDateRange.Value.Item2?.ToString("yyyy-MM-dd") ?? "null"}/{versionChartShowPreReleases.Value}/{versionChartCount.Value}",
             fetcher: (CancellationToken ct) =>
             {
                 if (statsQuery.Value == null)
@@ -245,7 +257,7 @@ public class IvyInsightsApp : ViewBase
         {
             return Layout.Vertical().AlignContent(Align.TopCenter).Gap(2)
                 | Text.H1("NuGet Statistics")
-                | Text.Muted($"Loading statistics for {PackageId}...")
+                | Text.Muted($"Loading statistics for {packageId}...")
                 | (Layout.Grid().Columns(5).Width(Size.Fraction(0.9f))
                     | new Skeleton().Height(Size.Units(50))
                     | new Skeleton().Height(Size.Units(50))
@@ -279,7 +291,6 @@ public class IvyInsightsApp : ViewBase
                 .FirstOrDefault();
         }
 
-
         var now = DateTime.UtcNow;
         var thisMonthStart = new DateTime(now.Year, now.Month, 1);
 
@@ -311,20 +322,17 @@ public class IvyInsightsApp : ViewBase
 
                 if (index >= 4)
                 {
-                    // We have at least 5 days, calculate average of last 5 days
-                    // (current day + previous 4 days = 5 days total)
                     var last5Days = dailyChartData
-                        .Skip(index - 4)  // Skip to 4 days before current
-                        .Take(5)          // Take 5 days total
+                        .Skip(index - 4)
+                        .Take(5)
                         .Select(x => x.Downloads)
                         .ToList();
                     movingAverage = Math.Round(last5Days.Average(), 1);
                 }
                 else
                 {
-                    // Less than 5 days available, calculate average of all days up to this point
                     var availableDays = dailyChartData
-                        .Take(index + 1)  // Take all days from start to current
+                        .Take(index + 1)
                         .Select(x => x.Downloads)
                         .ToList();
                     movingAverage = Math.Round(availableDays.Average(), 1);
@@ -359,7 +367,6 @@ public class IvyInsightsApp : ViewBase
         }
         else if (thisWeekDownloads > 0)
         {
-            // If previous week is 0, show the current count as percentage growth (e.g. 0 -> 404 = +404%)
             growthPercent = (double)thisWeekDownloads;
         }
 
@@ -406,16 +413,6 @@ public class IvyInsightsApp : ViewBase
                     LineChartStyles.Dashboard)
                 .Measure("Moving Average", d => d.First().movingAverage)
             : null;
-
-        var monthlyDownloadsCard = new Card(
-            Layout.Vertical()
-                | (dailyDownloadsChart != null
-                    ? dailyDownloadsChart
-                    : Text.Block("No data available for the last 90 days").Muted())
-        ).Title("Daily Downloads (Last 90 Days)")
-         .Icon(Icons.ChartNoAxesCombined)
-         .Height(Size.Full());
-
 
         var versionChartData = filteredVersionChartQuery.Value ?? new List<VersionChartDataItem>();
 
@@ -657,16 +654,13 @@ public class IvyInsightsApp : ViewBase
         var growthValues = new List<double>();
         var todayDate = DateOnly.FromDateTime(now);
 
-        // Find the Monday of the current week to align strictly to Mon-Sun
-        // If today is Sunday (0), we go back 6 days to Monday. Otherwise we go back DayOfWeek-1
         var diff = todayDate.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)todayDate.DayOfWeek - 1;
         var currentWeekMonday = todayDate.AddDays(-diff);
 
-        // Go back 12 calendar weeks
         for (int i = 0; i < 12; i++)
         {
             var weekStart = currentWeekMonday.AddDays(-i * 7);
-            var weekEnd = weekStart.AddDays(6); // Monday to Sunday
+            var weekEnd = weekStart.AddDays(6);
             var prevWeekStart = weekStart.AddDays(-7);
 
             var currentWeekSum = dailyStats
@@ -691,11 +685,9 @@ public class IvyInsightsApp : ViewBase
             growthValues.Add(growth);
         }
 
-        // Reverse to show oldest to newest
         growthWeeks.Reverse();
         growthValues.Reverse();
 
-        // Zero out the first data point with growth > 0 (outlier from 0→N downloads when history started)
         var firstPositiveIndex = growthValues.FindIndex(g => g > 0);
         if (firstPositiveIndex >= 0)
             growthValues[firstPositiveIndex] = 0;
@@ -748,7 +740,6 @@ public class IvyInsightsApp : ViewBase
 
         Dialog? stargazersTodayDialog = null;
 
-        // Stargazer activity by period dialog
         if (showStargazersTodayDialog.Value)
         {
             var (fromDate, toDate) = stargazersDateRange.Value;
@@ -844,7 +835,6 @@ public class IvyInsightsApp : ViewBase
                         var result = await updateService.UpdateStargazersAsync();
                         if (result.Success)
                         {
-                            // Revalidate related queries
                             starsStatsQuery.Mutator.Revalidate();
                             await Task.Delay(1000);
                             stargazerRefreshVersion.Set(stargazerRefreshVersion.Value + 1);
@@ -912,7 +902,6 @@ public class IvyInsightsApp : ViewBase
             | metrics.Width(Size.Fraction(0.9f))
             | (Layout.Grid().Columns(3).Width(Size.Fraction(0.9f))
                 | adoptionCard
-                // | monthlyDownloadsCard
                 | dailyActivityCard
                 | weeklyGrowthCard)
             | (Layout.Horizontal().Width(Size.Fraction(0.9f)).Height(Size.Units(140))
