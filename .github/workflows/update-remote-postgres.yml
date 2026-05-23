@@ -29,7 +29,7 @@ jobs:
               raw = raw.strip()
               if raw.startswith("postgresql://") or raw.startswith("postgres://"):
                   return raw  # already a URI, psycopg2 handles it natively
-              # .NET style: Host=...;Port=...;Database=...;Username=...;Password=...
+              # .NET style: Host=...;Port=...;Database=...;Userfname=...;Password=...
               key_map = {
                   "host": "host", "server": "host",
                   "port": "port",
