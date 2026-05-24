@@ -1,3 +1,4 @@
+using Ivy.Cli.Infrastructure;
 using Ivy.Cli.Commands.Config;
 using Ivy.Cli.Commands.NuGet;
 using Ivy.Cli.Commands.Sliplane;
@@ -152,19 +153,19 @@ app.Configure(config =>
     // ── NuGet ─────────────────────────────────────────────────────────
     config.AddBranch("nuget", nuget =>
     {
-        nuget.SetDescription("Manage NuGet package statistics");
+        nuget.SetDescription("Ivy Insights metrics (Ivy-Framework or Ivy-Tendril)");
         nuget.AddCommand<NuGetSummaryCommand>("summary")
-            .WithDescription("Overall stats summary");
+            .WithDescription("Downloads + GitHub stars summary");
         nuget.AddCommand<NuGetStarsCommand>("stars")
-            .WithDescription("Star counts per package");
+            .WithDescription("GitHub star counts");
         nuget.AddCommand<NuGetStarredCommand>("starred")
-            .WithDescription("List starred packages");
+            .WithDescription("Active GitHub stargazers");
         nuget.AddCommand<NuGetUnstarredCommand>("unstarred")
-            .WithDescription("List unstarred packages");
+            .WithDescription("GitHub users who unstarred");
         nuget.AddCommand<NuGetDownloadsCommand>("downloads")
-            .WithDescription("Download counts per package");
+            .WithDescription("Latest NuGet download totals");
         nuget.AddCommand<NuGetDownloadsHistoryCommand>("downloads-history")
-            .WithDescription("Download history over time");
+            .WithDescription("NuGet download history");
     });
 
     // ── Tendril ───────────────────────────────────────────────────────

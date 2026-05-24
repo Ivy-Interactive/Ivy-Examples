@@ -7,8 +7,7 @@ public sealed class NuGetDownloadsHistoryCommand : AsyncCommand<NuGetStatsSettin
 {
     public override async Task<int> ExecuteAsync(CommandContext context, NuGetStatsSettings settings)
     {
-        var client = settings.CreateNuGetStatsClient();
-        var doc = await client.GetAsync("downloads/history");
+        var doc = await settings.FetchDownloadsHistoryAsync();
         YamlOutput.Write(doc);
         return 0;
     }
