@@ -7,8 +7,7 @@ public sealed class NuGetStarsCommand : AsyncCommand<NuGetStatsSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, NuGetStatsSettings settings)
     {
-        var client = settings.CreateNuGetStatsClient();
-        var doc = await client.GetAsync("stars");
+        var doc = await settings.FetchAsync("stars");
         YamlOutput.Write(doc);
         return 0;
     }

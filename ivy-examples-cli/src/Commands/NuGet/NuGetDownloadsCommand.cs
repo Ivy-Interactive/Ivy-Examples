@@ -7,8 +7,7 @@ public sealed class NuGetDownloadsCommand : AsyncCommand<NuGetStatsSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, NuGetStatsSettings settings)
     {
-        var client = settings.CreateNuGetStatsClient();
-        var doc = await client.GetAsync("downloads");
+        var doc = await settings.FetchAsync("downloads");
         YamlOutput.Write(doc);
         return 0;
     }

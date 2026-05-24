@@ -45,14 +45,17 @@ Combine **Path** + **Actions** (e.g. `ivy-examples sliplane projects list`). See
 
 **Needs:** Usually nothing—defaults hit the Ivy metrics host. If you use another instance, set its URL/secret once (config or prompt).
 
+Each command prompts for **Ivy-Framework** or **Ivy-Tendril** (or pass `-p` / `--product`).
+
 | Command | Description |
 |---------|-------------|
-| `ivy-examples nuget summary` | Overall stats |
-| `ivy-examples nuget stars` | Star counts per package |
-| `ivy-examples nuget starred` | Starred packages |
-| `ivy-examples nuget unstarred` | Unstarred packages |
-| `ivy-examples nuget downloads` | Download counts |
-| `ivy-examples nuget downloads-history` | Downloads over time |
+| `ivy-examples nuget summary` | Downloads + GitHub stars (pick product) |
+| `ivy-examples nuget summary -p Ivy-Tendril` | Same, no prompt |
+| `ivy-examples nuget stars` | GitHub star counts |
+| `ivy-examples nuget starred` | Active stargazers |
+| `ivy-examples nuget unstarred` | Users who unstarred |
+| `ivy-examples nuget downloads` | Latest NuGet downloads |
+| `ivy-examples nuget downloads-history --days 90` | Download history |
 
 ### Config
 

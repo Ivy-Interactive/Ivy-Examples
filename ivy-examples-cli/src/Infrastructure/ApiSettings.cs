@@ -1,4 +1,7 @@
 using System.ComponentModel;
+using System.Globalization;
+using System.Text.Json;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Ivy.Cli.Infrastructure;
@@ -77,6 +80,43 @@ public class NuGetStatsSettings : CommandSettings
     [CommandOption("--nuget-stats-key <KEY>")]
     [Description("API key for IvyInsights (or set NUGET_STATS_API_KEY env var). Optional.")]
     public string? NuGetStatsKey { get; init; }
+
+    [CommandOption("-p|--product <PRODUCT>")]
+    [Description("Ivy-Framework or Ivy-Tendril (interactive prompt if omitted)")]
+    public string? Product { get; init; }
+
+    [CommandOption("--days <DAYS>")]
+    [Description("History length for downloads-history (1–365, default 30)")]
+    [DefaultValue(30)]
+    public int Days { get; init; }
+
+    public NuGetProduct ResolveProduct()
+    {
+        var product = NuGetProduct.Resolve(Product);
+        AnsiConsole.MarkupLine($"[dim]Product:[/] [green]{product.DisplayName}[/]");
+        return product;
+    }
+
+    public IReadOnlyDictionary<string, string?> QueryFor(NuGetProduct product) =>
+        new Dictionary<string, string?> { ["package"] = product.PackageQuery };
+
+    public async Task<JsonDocument> FetchAsync(string path)
+    {
+        var product = ResolveProduct();
+        var client = CreateNuGetStatsClient();
+        return await client.GetAsync(path, QueryFor(product));
+    }
+
+    public async Task<JsonDocument> FetchDownloadsHistoryAsync()
+    {
+        var product = ResolveProduct();
+        var q = new Dictionary<string, string?>(QueryFor(product))
+        {
+            ["days"] = Math.Clamp(Days, 1, 365).ToString(CultureInfo.InvariantCulture)
+        };
+        var client = CreateNuGetStatsClient();
+        return await client.GetAsync("downloads/history", q);
+    }
 
     public NuGetStatsClient CreateNuGetStatsClient()
     {
