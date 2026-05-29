@@ -295,7 +295,7 @@ jobs:
             "Ivy.Analyser"
             "Ivy.Auth.GitHub"
             "Ivy.Auth.Clerk"
-            "Ivy.Auth.Sliplan"
+            "Ivy.Auth.Sliplane"
           )
 
           # Shared function: check version guards and update a file
