@@ -26,7 +26,7 @@ public class IvyInsightsApp : ViewBase
         return Layout.Tabs(
             new Tab("Ivy Framework", new PackageStatsView { PackageId = "Ivy" }),
             new Tab("Ivy Tendril", new PackageStatsView { PackageId = "Ivy.Tendril" })
-        ).Variant(TabsVariant.Tabs);
+        ).RemoveParentPadding().Variant(TabsVariant.Tabs);
     }
 }
 
@@ -911,7 +911,7 @@ public class PackageStatsView : ViewBase
                 | totalDownloadsCard)
             | versionsTableCard
             | new FloatingPanel(openApiButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 5))
-            | (Layout.Horizontal().Width(Size.Fraction(0.9f)).Height(Size.Units(140))
+            | (Layout.Horizontal().Width(Size.Fraction(0.9f)).Height(Size.Units(280))
                 | githubStarsCard
                 | stargazersDailyCard)
             | stargazersTodayDialog
