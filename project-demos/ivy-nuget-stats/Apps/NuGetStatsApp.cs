@@ -57,11 +57,7 @@ public class PackageStatsView : ViewBase
         var statsQuery = this.UseQuery(
             key: $"nuget-stats/{packageId}",
             fetcher: async (CancellationToken ct) =>
-            {
-                var statistics = await nugetProvider.GetPackageStatisticsAsync(packageId, ct);
-                client.Toast($"Successfully loaded statistics for {packageId}!");
-                return statistics;
-            },
+                await nugetProvider.GetPackageStatisticsAsync(packageId, ct),
             options: new QueryOptions
             {
                 Scope = QueryScope.Server,
