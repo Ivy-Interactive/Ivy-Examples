@@ -525,7 +525,7 @@ public class PackageStatsView : ViewBase
                         : starsThisMonth < 0
                             ? $"{starsThisMonth:N0} this month"
                             : "0 stars added this month").Muted()
-            ).Title($"GitHub Stars — {githubRepoLabel}").Icon(Icons.Github)
+            ).Title($"GitHub Stars").Icon(Icons.Github)
              .OnClick(_ =>
              {
                  showStargazersTodayDialog.Set(true);
