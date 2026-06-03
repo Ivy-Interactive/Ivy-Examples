@@ -425,26 +425,26 @@ public class PackageStatsView : ViewBase
             : null;
 
         var versionChartCard = new Card(
-            Layout.Horizontal().Height(Size.Full())
-                 | (Layout.Vertical()
-                    | (Layout.Horizontal().AlignContent(Align.Center).Height(Size.Fit())
-                        | versionChartDateRange.ToDateRangeInput()
-                            .Format("MMM dd, yyyy")
-                            .Placeholder("Select date range")
-                        | new Button(versionChartShowPreReleases.Value ? "With Pre-releases" : "Releases Only")
-                            .Outline()
-                            .Icon(Icons.ChevronDown)
-                            .WithDropDown(
-                                MenuItem.Default("With Pre-releases").OnSelect(() => versionChartShowPreReleases.Set(true)),
-                                MenuItem.Default("Releases Only").OnSelect(() => versionChartShowPreReleases.Set(false))
-                            )
-                        | versionChartCount.ToNumberInput()
-                            .Min(2)
-                            .Max(20)
-                            .Width(Size.Units(60)))
-                    | (versionChart != null
-                        ? versionChart
-                        : Text.Block("No versions found").Muted())))
+            Layout.Vertical().Width(Size.Full()).Height(Size.Full())
+                | (Layout.Grid().Columns(3).Gap(2).Width(Size.Full()).Height(Size.Fit())
+                    | versionChartDateRange.ToDateRangeInput()
+                        .Format("MMM dd, yyyy")
+                        .Placeholder("Select date range")
+                        .Width(Size.Full())
+                    | versionChartShowPreReleases.ToSelectInput(new[]
+                        {
+                            new Option<bool>("With Pre-releases", true),
+                            new Option<bool>("Releases Only", false),
+                        })
+                        .Variant(SelectInputVariant.Select)
+                        .Width(Size.Full())
+                    | versionChartCount.ToNumberInput()
+                        .Min(2)
+                        .Max(20)
+                        .Width(Size.Full()))
+                | (versionChart != null
+                    ? versionChart
+                    : Text.Block("No versions found").Muted()))
             .Title("Recent Versions Distribution")
             .Icon(Icons.ChartBar)
             .Height(Size.Full());
