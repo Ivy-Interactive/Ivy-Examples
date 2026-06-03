@@ -368,7 +368,11 @@ public class PackageStatsView : ViewBase
             growthPercent = (double)thisWeekDownloads;
         }
 
-        var latestVersionInfo = s.Versions.FirstOrDefault(v => v.Version == s.LatestVersion);
+        var latestVersionInfo = s.Versions.FirstOrDefault(v =>
+            string.Equals(v.Version, s.LatestVersion, StringComparison.OrdinalIgnoreCase));
+        var latestVersionDownloadsLabel = latestVersionInfo?.Downloads is { } latestVersionDownloads
+            ? $"{latestVersionDownloads:N0} downloads"
+            : "— downloads";
 
         var trendIcon = growthPercent >= 0 ? Icons.TrendingUp : Icons.TrendingDown;
         var trendColor = growthPercent >= 0 ? Colors.Success : Colors.Destructive;
@@ -482,7 +486,7 @@ public class PackageStatsView : ViewBase
                     : (object)Text.Block("No data available").Muted())
         ).Title($"GitHub Stars — {githubRepoLabel} (Last 365 Days)").Icon(Icons.Github);
 
-        var metrics = Layout.Grid().Columns(5)
+        var metrics = (Layout.Grid().Columns(5)
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | (Layout.Horizontal().AlignContent(Align.Center)
@@ -493,21 +497,19 @@ public class PackageStatsView : ViewBase
                                 | Text.H3($"{Math.Abs(growthPercent):0.0}%").Color(trendColor))
                             : null))
                     | Text.Block($"+{thisWeekDownloads:N0} this week").Muted()
-            ).Title("Total Downloads").Icon(Icons.Download)
+            ).Title("Total Downloads").Icon(Icons.Download).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(animatedVersions.Value.ToString("N0")).Bold()
                     | Text.Block(versionsThisMonth > 0
                         ? $"+{versionsThisMonth} this month"
                         : "0 versions released this month").Muted()
-            ).Title("Total Versions").Icon(Icons.Tag)
+            ).Title("Total Versions").Icon(Icons.Tag).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(s.LatestVersion).Bold()
-                    | (latestVersionInfo != null && latestVersionInfo.Downloads.HasValue && latestVersionInfo.Downloads.Value > 0
-                        ? Text.Block($"{latestVersionInfo.Downloads.Value:N0} downloads").Muted()
-                        : null)
-            ).Title("Latest Version").Icon(Icons.ArrowUp)
+                    | Text.Block(latestVersionDownloadsLabel).Muted()
+            ).Title("Latest Version").Icon(Icons.ArrowUp).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(mostDownloadedVersion != null
@@ -516,7 +518,7 @@ public class PackageStatsView : ViewBase
                     | (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue && mostDownloadedVersion.Downloads.Value > 0
                         ? Text.Block($"{mostDownloadedVersion.Downloads.Value:N0} downloads").Muted()
                         : null)
-            ).Title("Most Popular").Icon(Icons.Star)
+            ).Title("Most Popular").Icon(Icons.Star).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(currentStars.ToString("N0")).Bold()
@@ -525,7 +527,7 @@ public class PackageStatsView : ViewBase
                         : starsThisMonth < 0
                             ? $"{starsThisMonth:N0} this month"
                             : "0 stars added this month").Muted()
-            ).Title($"GitHub Stars").Icon(Icons.Github)
+            ).Title($"GitHub Stars").Icon(Icons.Github).Height(Size.Full())
              .OnClick(_ =>
              {
                  showStargazersTodayDialog.Set(true);
@@ -533,7 +535,7 @@ public class PackageStatsView : ViewBase
                  {
                      stargazersQuery.Mutator.Revalidate();
                  }
-             });
+             }));
 
         var allStargazers = stargazersQuery.Value ?? cachedStargazers.Value;
         var last30Days = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
