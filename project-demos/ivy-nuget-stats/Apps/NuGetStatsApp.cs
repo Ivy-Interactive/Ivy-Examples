@@ -899,6 +899,7 @@ public class PackageStatsView : ViewBase
             .Url("/scalar");
 
         return Layout.Vertical().AlignContent(Align.TopCenter)
+            | new Spacer().Height(Size.Units(5))
             | metrics.Width(Size.Fraction(0.9f))
             | (Layout.Grid().Columns(3).Width(Size.Fraction(0.9f))
                 | adoptionCard
@@ -908,10 +909,11 @@ public class PackageStatsView : ViewBase
                 | versionChartCard
                 | totalDownloadsCard)
             | versionsTableCard
-            | new FloatingPanel(openApiButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 5))
-            | (Layout.Horizontal().Width(Size.Fraction(0.9f)).Height(Size.Units(280))
+            | (Layout.Horizontal().Width(Size.Fraction(0.9f))
                 | githubStarsCard
                 | stargazersDailyCard)
+            | new FloatingPanel(openApiButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 5))
+            | new Spacer().Height(Size.Units(10))
             | stargazersTodayDialog
             | stargazerDetailDialog;
     }
