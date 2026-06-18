@@ -13,12 +13,12 @@
     <Compile Remove="tools/**" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.66" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.66">
+    <PackageReference Include="Ivy" Version="1.2.67" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.67">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.66" />
+    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.67" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>

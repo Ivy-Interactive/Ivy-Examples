@@ -9,8 +9,8 @@
     <UserSecretsId>pr-staging-deploy-001</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Ivy" Version="1.2.66" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.66">
+    <PackageReference Include="Ivy" Version="1.2.67" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.67">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
