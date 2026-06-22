@@ -484,7 +484,8 @@ public class PackageStatsView : ViewBase
                 | (starsChart != null
                     ? starsChart
                     : (object)Text.Block("No data available").Muted())
-        ).Title($"GitHub Stars — {githubRepoLabel} (Last 365 Days)").Icon(Icons.Github);
+        ).Title($"GitHub Stars — {githubRepoLabel} (Last 365 Days)").Icon(Icons.Github)
+         .Height(Size.Full());
 
         var metrics = (Layout.Grid().Columns(5)
             | new Card(
@@ -585,7 +586,8 @@ public class PackageStatsView : ViewBase
                 | (stargazersChart != null
                     ? stargazersChart
                     : (object)Text.Block("No data available").Muted())
-        ).Title($"Stargazers Daily — {githubRepoLabel} (New vs Unstarred) - Last 30 Days").Icon(Icons.Users).Key($"stargazers-daily-card-{githubRepo}-{stargazerRefreshVersion.Value}");
+        ).Title($"Stargazers Daily — {githubRepoLabel} (New vs Unstarred) - Last 30 Days").Icon(Icons.Users).Key($"stargazers-daily-card-{githubRepo}-{stargazerRefreshVersion.Value}")
+         .Height(Size.Full());
 
         var totalDownloadsStats = totalDownloadsStatsQuery.Value ?? new List<DailyDownloadStats>();
 
@@ -909,7 +911,7 @@ public class PackageStatsView : ViewBase
                 | versionChartCard
                 | totalDownloadsCard)
             | versionsTableCard
-            | (Layout.Horizontal().Width(Size.Fraction(0.9f))
+            | (Layout.Horizontal().Width(Size.Fraction(0.9f)).Height(Size.Units(140))
                 | githubStarsCard
                 | stargazersDailyCard)
             | new FloatingPanel(openApiButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 5))
