@@ -12,12 +12,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
-    <PackageReference Include="Ivy" Version="1.2.70" />
-    <PackageReference Include="Ivy.Analyser" Version="1.2.70">
+    <PackageReference Include="Ivy" Version="1.2.72" />
+    <PackageReference Include="Ivy.Analyser" Version="1.2.72">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.70" />
+    <PackageReference Include="Ivy.Auth.Sliplane" Version="1.2.72" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.14.10" />
   </ItemGroup>
 </Project>
