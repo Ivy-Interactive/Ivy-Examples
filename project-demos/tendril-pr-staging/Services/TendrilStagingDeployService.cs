@@ -236,6 +236,14 @@ public class TendrilStagingDeployService
         if (!string.IsNullOrWhiteSpace(baseUrl))
             list.Add(("ANTHROPIC_BASE_URL", baseUrl, false));
 
+        var username = _config["Tendril:AuthUsername"];
+        if (!string.IsNullOrWhiteSpace(username))
+            list.Add(("TENDRIL_AUTH_USERNAME", username, false));
+
+        var password = _config["Tendril:AuthPassword"];
+        if (!string.IsNullOrWhiteSpace(password))
+            list.Add(("TENDRIL_AUTH_PASSWORD", password, true));
+
         return list;
     }
 
