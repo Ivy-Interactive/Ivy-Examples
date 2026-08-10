@@ -54,5 +54,6 @@ var appShellSettings = AppShellSettings.Default()
         return list;
     });
 server.UseAppShell(appShellSettings);
+server.UseAuth<BasicAuthProvider>();
 
 await server.RunAsync();
