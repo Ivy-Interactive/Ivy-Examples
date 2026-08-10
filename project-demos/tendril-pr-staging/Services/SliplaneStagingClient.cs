@@ -37,9 +37,15 @@ public class SliplaneStagingClient
         string gitRepo,
         string branch,
         string dockerfilePath,
-        string dockerContext)
+        string dockerContext,
+        IReadOnlyList<(string Key, string Value, bool Secret)>? env = null)
     {
         var client = CreateClient(apiToken);
+
+        var envArray = (env ?? Array.Empty<(string, string, bool)>())
+            .Select(e => new { key = e.Key, value = e.Value, secret = e.Secret })
+            .ToArray();
+
         var body = new
         {
             name,
@@ -53,7 +59,8 @@ public class SliplaneStagingClient
                 dockerfilePath,
                 dockerContext
             },
-            healthcheck = "/"
+            healthcheck = "/",
+            env = envArray
         };
 
         var content = new StringContent(

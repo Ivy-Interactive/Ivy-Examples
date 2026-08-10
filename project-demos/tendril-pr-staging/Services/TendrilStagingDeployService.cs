@@ -73,11 +73,14 @@ public class TendrilStagingDeployService
 
         try
         {
+            var env = BuildEnvVars();
+
             var result = await _sliplane.CreateServiceAsync(
                 apiToken, projectId, serverId,
                 ServiceName(repoConfig, prNumber),
                 repoConfig.GitUrl, branchName,
-                repoConfig.DockerfilePath, repoConfig.DockerContext);
+                repoConfig.DockerfilePath, repoConfig.DockerContext,
+                env);
 
             if (result.Service != null)
             {
@@ -215,6 +218,15 @@ public class TendrilStagingDeployService
         }
 
         return new TendrilStagingDeleteResult(deleted > 0, $"Deleted {deleted} expired deployment(s).");
+    }
+
+    private List<(string Key, string Value, bool Secret)> BuildEnvVars()
+    {
+        var list = new List<(string, string, bool)>();
+        var anthropicKey = _config["Tendril:AnthropicApiKey"];
+        if (!string.IsNullOrWhiteSpace(anthropicKey))
+            list.Add(("ANTHROPIC_API_KEY", anthropicKey, true));
+        return list;
     }
 
     /// <summary>Parses service name format: <c>{repoKey}-tendril-pr-{prNumber}</c>.</summary>
