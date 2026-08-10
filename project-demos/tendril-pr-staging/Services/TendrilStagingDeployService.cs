@@ -224,9 +224,17 @@ public class TendrilStagingDeployService
     {
         var list = new List<(string, string, bool)>();
 
-        var anthropicKey = _config["Tendril:AnthropicApiKey"];
-        if (!string.IsNullOrWhiteSpace(anthropicKey))
-            list.Add(("ANTHROPIC_API_KEY", anthropicKey, true));
+        var apiKey = _config["Tendril:AnthropicApiKey"];
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            list.Add(("ANTHROPIC_API_KEY", apiKey, true));
+
+        var authToken = _config["Tendril:AnthropicAuthToken"];
+        if (!string.IsNullOrWhiteSpace(authToken))
+            list.Add(("ANTHROPIC_AUTH_TOKEN", authToken, true));
+
+        var baseUrl = _config["Tendril:AnthropicBaseUrl"];
+        if (!string.IsNullOrWhiteSpace(baseUrl))
+            list.Add(("ANTHROPIC_BASE_URL", baseUrl, false));
 
         return list;
     }
