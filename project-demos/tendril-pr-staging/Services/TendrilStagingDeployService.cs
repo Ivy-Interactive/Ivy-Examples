@@ -223,9 +223,11 @@ public class TendrilStagingDeployService
     private List<(string Key, string Value, bool Secret)> BuildEnvVars()
     {
         var list = new List<(string, string, bool)>();
+
         var anthropicKey = _config["Tendril:AnthropicApiKey"];
         if (!string.IsNullOrWhiteSpace(anthropicKey))
             list.Add(("ANTHROPIC_API_KEY", anthropicKey, true));
+
         return list;
     }
 
