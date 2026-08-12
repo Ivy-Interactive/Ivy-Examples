@@ -17,15 +17,12 @@
 
   
   <ItemGroup>
-    <!-- <PackageReference Include="Ivy" Version="1.2.58" /> -->
-    <!-- <PackageReference Include="Ivy.Widgets.ActivityHeatmap" Version="1.2.58" /> -->
+    <PackageReference Include="Ivy" Version="1.3.6" />
+    <PackageReference Include="Ivy.Widgets.ActivityHeatmap" Version="1.3.6" />
     <PackageReference Include="Npgsql" Version="9.0.2" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.12.40" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="/Users/mak/git/Ivy-Interactive/Ivy-Framework/src/Ivy/Ivy.csproj" />
-    <ProjectReference Include="/Users/mak/git/Ivy-Interactive/Ivy-Framework/src/widgets/Ivy.Widgets.ActivityHeatmap/Ivy.Widgets.ActivityHeatmap.csproj" />
-  </ItemGroup>
+    
 
   <ItemGroup>
     <Folder Include="Apps" />

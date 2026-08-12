@@ -26,7 +26,7 @@ public class IvyInsightsApp : ViewBase
         return Layout.Tabs(
             new Tab("Ivy Framework", new PackageStatsView { PackageId = "Ivy" }),
             new Tab("Ivy Tendril", new PackageStatsView { PackageId = "Ivy.Tendril" })
-        ).Variant(TabsVariant.Tabs);
+        ).RemoveParentPadding().Variant(TabsVariant.Tabs);
     }
 }
 
@@ -57,11 +57,7 @@ public class PackageStatsView : ViewBase
         var statsQuery = this.UseQuery(
             key: $"nuget-stats/{packageId}",
             fetcher: async (CancellationToken ct) =>
-            {
-                var statistics = await nugetProvider.GetPackageStatisticsAsync(packageId, ct);
-                client.Toast($"Successfully loaded statistics for {packageId}!");
-                return statistics;
-            },
+                await nugetProvider.GetPackageStatisticsAsync(packageId, ct),
             options: new QueryOptions
             {
                 Scope = QueryScope.Server,
@@ -372,7 +368,11 @@ public class PackageStatsView : ViewBase
             growthPercent = (double)thisWeekDownloads;
         }
 
-        var latestVersionInfo = s.Versions.FirstOrDefault(v => v.Version == s.LatestVersion);
+        var latestVersionInfo = s.Versions.FirstOrDefault(v =>
+            string.Equals(v.Version, s.LatestVersion, StringComparison.OrdinalIgnoreCase));
+        var latestVersionDownloadsLabel = latestVersionInfo?.Downloads is { } latestVersionDownloads
+            ? $"{latestVersionDownloads:N0} downloads"
+            : "— downloads";
 
         var trendIcon = growthPercent >= 0 ? Icons.TrendingUp : Icons.TrendingDown;
         var trendColor = growthPercent >= 0 ? Colors.Success : Colors.Destructive;
@@ -425,26 +425,26 @@ public class PackageStatsView : ViewBase
             : null;
 
         var versionChartCard = new Card(
-            Layout.Horizontal().Height(Size.Full())
-                 | (Layout.Vertical()
-                    | (Layout.Horizontal().AlignContent(Align.Center).Height(Size.Fit())
-                        | versionChartDateRange.ToDateRangeInput()
-                            .Format("MMM dd, yyyy")
-                            .Placeholder("Select date range")
-                        | new Button(versionChartShowPreReleases.Value ? "With Pre-releases" : "Releases Only")
-                            .Outline()
-                            .Icon(Icons.ChevronDown)
-                            .WithDropDown(
-                                MenuItem.Default("With Pre-releases").OnSelect(() => versionChartShowPreReleases.Set(true)),
-                                MenuItem.Default("Releases Only").OnSelect(() => versionChartShowPreReleases.Set(false))
-                            )
-                        | versionChartCount.ToNumberInput()
-                            .Min(2)
-                            .Max(20)
-                            .Width(Size.Units(60)))
-                    | (versionChart != null
-                        ? versionChart
-                        : Text.Block("No versions found").Muted())))
+            Layout.Vertical().Width(Size.Full()).Height(Size.Full())
+                | (Layout.Grid().Columns(3).Gap(2).Width(Size.Full()).Height(Size.Fit())
+                    | versionChartDateRange.ToDateRangeInput()
+                        .Format("MMM dd, yyyy")
+                        .Placeholder("Select date range")
+                        .Width(Size.Full())
+                    | versionChartShowPreReleases.ToSelectInput(new[]
+                        {
+                            new Option<bool>("With Pre-releases", true),
+                            new Option<bool>("Releases Only", false),
+                        })
+                        .Variant(SelectInputVariant.Select)
+                        .Width(Size.Full())
+                    | versionChartCount.ToNumberInput()
+                        .Min(2)
+                        .Max(20)
+                        .Width(Size.Full()))
+                | (versionChart != null
+                    ? versionChart
+                    : Text.Block("No versions found").Muted()))
             .Title("Recent Versions Distribution")
             .Icon(Icons.ChartBar)
             .Height(Size.Full());
@@ -484,9 +484,10 @@ public class PackageStatsView : ViewBase
                 | (starsChart != null
                     ? starsChart
                     : (object)Text.Block("No data available").Muted())
-        ).Title($"GitHub Stars — {githubRepoLabel} (Last 365 Days)").Icon(Icons.Github);
+        ).Title($"GitHub Stars — {githubRepoLabel} (Last 365 Days)").Icon(Icons.Github)
+         .Height(Size.Full());
 
-        var metrics = Layout.Grid().Columns(5)
+        var metrics = (Layout.Grid().Columns(5)
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | (Layout.Horizontal().AlignContent(Align.Center)
@@ -497,21 +498,19 @@ public class PackageStatsView : ViewBase
                                 | Text.H3($"{Math.Abs(growthPercent):0.0}%").Color(trendColor))
                             : null))
                     | Text.Block($"+{thisWeekDownloads:N0} this week").Muted()
-            ).Title("Total Downloads").Icon(Icons.Download)
+            ).Title("Total Downloads").Icon(Icons.Download).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(animatedVersions.Value.ToString("N0")).Bold()
                     | Text.Block(versionsThisMonth > 0
                         ? $"+{versionsThisMonth} this month"
                         : "0 versions released this month").Muted()
-            ).Title("Total Versions").Icon(Icons.Tag)
+            ).Title("Total Versions").Icon(Icons.Tag).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(s.LatestVersion).Bold()
-                    | (latestVersionInfo != null && latestVersionInfo.Downloads.HasValue && latestVersionInfo.Downloads.Value > 0
-                        ? Text.Block($"{latestVersionInfo.Downloads.Value:N0} downloads").Muted()
-                        : null)
-            ).Title("Latest Version").Icon(Icons.ArrowUp)
+                    | Text.Block(latestVersionDownloadsLabel).Muted()
+            ).Title("Latest Version").Icon(Icons.ArrowUp).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(mostDownloadedVersion != null
@@ -520,7 +519,7 @@ public class PackageStatsView : ViewBase
                     | (mostDownloadedVersion != null && mostDownloadedVersion.Downloads.HasValue && mostDownloadedVersion.Downloads.Value > 0
                         ? Text.Block($"{mostDownloadedVersion.Downloads.Value:N0} downloads").Muted()
                         : null)
-            ).Title("Most Popular").Icon(Icons.Star)
+            ).Title("Most Popular").Icon(Icons.Star).Height(Size.Full())
             | new Card(
                 Layout.Vertical().AlignContent(Align.Center)
                     | Text.H2(currentStars.ToString("N0")).Bold()
@@ -529,7 +528,7 @@ public class PackageStatsView : ViewBase
                         : starsThisMonth < 0
                             ? $"{starsThisMonth:N0} this month"
                             : "0 stars added this month").Muted()
-            ).Title($"GitHub Stars — {githubRepoLabel}").Icon(Icons.Github)
+            ).Title($"GitHub Stars").Icon(Icons.Github).Height(Size.Full())
              .OnClick(_ =>
              {
                  showStargazersTodayDialog.Set(true);
@@ -537,7 +536,7 @@ public class PackageStatsView : ViewBase
                  {
                      stargazersQuery.Mutator.Revalidate();
                  }
-             });
+             }));
 
         var allStargazers = stargazersQuery.Value ?? cachedStargazers.Value;
         var last30Days = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
@@ -587,7 +586,8 @@ public class PackageStatsView : ViewBase
                 | (stargazersChart != null
                     ? stargazersChart
                     : (object)Text.Block("No data available").Muted())
-        ).Title($"Stargazers Daily — {githubRepoLabel} (New vs Unstarred) - Last 30 Days").Icon(Icons.Users).Key($"stargazers-daily-card-{githubRepo}-{stargazerRefreshVersion.Value}");
+        ).Title($"Stargazers Daily — {githubRepoLabel} (New vs Unstarred) - Last 30 Days").Icon(Icons.Users).Key($"stargazers-daily-card-{githubRepo}-{stargazerRefreshVersion.Value}")
+         .Height(Size.Full());
 
         var totalDownloadsStats = totalDownloadsStatsQuery.Value ?? new List<DailyDownloadStats>();
 
@@ -901,6 +901,7 @@ public class PackageStatsView : ViewBase
             .Url("/scalar");
 
         return Layout.Vertical().AlignContent(Align.TopCenter)
+            | new Spacer().Height(Size.Units(5))
             | metrics.Width(Size.Fraction(0.9f))
             | (Layout.Grid().Columns(3).Width(Size.Fraction(0.9f))
                 | adoptionCard
@@ -910,10 +911,11 @@ public class PackageStatsView : ViewBase
                 | versionChartCard
                 | totalDownloadsCard)
             | versionsTableCard
-            | new FloatingPanel(openApiButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 5))
             | (Layout.Horizontal().Width(Size.Fraction(0.9f)).Height(Size.Units(140))
                 | githubStarsCard
                 | stargazersDailyCard)
+            | new FloatingPanel(openApiButton, Align.BottomRight).Offset(new Thickness(0, 0, 10, 5))
+            | new Spacer().Height(Size.Units(10))
             | stargazersTodayDialog
             | stargazerDetailDialog;
     }

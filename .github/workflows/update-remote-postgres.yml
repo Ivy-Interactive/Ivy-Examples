@@ -4,44 +4,6 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
-    inputs:
-      record_date:
-        description: 'Date for DB rows (YYYY-MM-DD). Empty = today (UTC). Use to simulate past/future days.'
-        required: false
-        type: string
-        default: ''
-      fetch_from_apis:
-        description: 'Fetch live NuGet/GitHub data. Turn off to use manual_* JSON instead.'
-        required: false
-        type: boolean
-        default: true
-      manual_nuget_json:
-        description: 'Manual NuGet totals when fetch_from_apis=false. Example: {"Ivy": 150000, "Ivy.Tendril": 42000}'
-        required: false
-        type: string
-        default: ''
-      manual_github_stars_json:
-        description: 'Manual star counts when fetch_from_apis=false. Example: {"Ivy-Interactive/Ivy-Framework": 1200}'
-        required: false
-        type: string
-        default: ''
-      run_stargazers_job:
-        description: 'Sync stargazers from GitHub API (slow). Ignored if manual_stargazers_json is set.'
-        required: false
-        type: boolean
-        default: true
-      manual_stargazers_json:
-        description: 'Simulate stargazer changes for record_date. Example: [{"repo":"Ivy-Interactive/Ivy-Framework","add":["alice"],"remove":["bob"],"reactivate":["carol"]}]'
-        required: false
-        type: string
-        default: ''
-
-env:
-  RECORD_DATE: ${{ github.event.inputs.record_date || '' }}
-  FETCH_FROM_APIS: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.fetch_from_apis != 'false' }}
-  MANUAL_NUGET_JSON: ${{ github.event.inputs.manual_nuget_json || '' }}
-  MANUAL_GITHUB_STARS_JSON: ${{ github.event.inputs.manual_github_stars_json || '' }}
-  MANUAL_STARGAZERS_JSON: ${{ github.event.inputs.manual_stargazers_json || '' }}
 
 jobs:
   update_nuget_stats:
@@ -55,13 +17,9 @@ jobs:
       - name: Run Nuget Update
         env:
           DB_URL: ${{ secrets.DB_URL }}
-          RECORD_DATE: ${{ env.RECORD_DATE }}
-          FETCH_FROM_APIS: ${{ env.FETCH_FROM_APIS }}
-          MANUAL_NUGET_JSON: ${{ env.MANUAL_NUGET_JSON }}
         run: |
           python - <<EOF
           import os
-          import json
           import requests
           import psycopg2
           from datetime import date
@@ -92,10 +50,7 @@ jobs:
               return " ".join(f"{k}={v}" for k, v in parts.items())
 
           db_dsn = parse_db_url(os.getenv("DB_URL", ""))
-          record_date_raw = os.getenv("RECORD_DATE", "").strip()
-          date_to_record = record_date_raw if record_date_raw else date.today().isoformat()
-          fetch_from_apis = os.getenv("FETCH_FROM_APIS", "true").lower() == "true"
-          print(f"Recording NuGet stats for date: {date_to_record} (fetch_from_apis={fetch_from_apis})")
+          date_to_record = date.today().isoformat()
 
           # Packages to track: (nuget_package_id, db_package_name)
           packages = [
@@ -104,27 +59,14 @@ jobs:
           ]
 
           results = {}
-          if fetch_from_apis:
-              for nuget_id, db_name in packages:
-                  try:
-                      resp = requests.get(f"https://azuresearch-usnc.nuget.org/query?q=packageid:{nuget_id}").json()
-                      dl = resp['data'][0]['totalDownloads']
-                      results[db_name] = dl
-                      print(f"Fetched {nuget_id}: {dl} downloads")
-                  except Exception as e:
-                      print(f"Error fetching {nuget_id}: {e}")
-          else:
-              manual_raw = os.getenv("MANUAL_NUGET_JSON", "").strip()
-              if not manual_raw:
-                  print("fetch_from_apis=false but manual_nuget_json is empty. Provide JSON, e.g. {\"Ivy\": 150000, \"Ivy.Tendril\": 42000}")
-                  exit(1)
+          for nuget_id, db_name in packages:
               try:
-                  results = {str(k): int(v) for k, v in json.loads(manual_raw).items()}
+                  resp = requests.get(f"https://azuresearch-usnc.nuget.org/query?q=packageid:{nuget_id}").json()
+                  dl = resp['data'][0]['totalDownloads']
+                  results[db_name] = dl
+                  print(f"Fetched {nuget_id}: {dl} downloads")
               except Exception as e:
-                  print(f"Invalid manual_nuget_json: {e}")
-                  exit(1)
-              for db_name, dl in results.items():
-                  print(f"Manual {db_name}: {dl} downloads")
+                  print(f"Error fetching {nuget_id}: {e}")
 
           if not results:
               print("No download data fetched. Exiting.")
@@ -176,13 +118,9 @@ jobs:
       - name: Run GitHub Update
         env:
           DB_URL: ${{ secrets.DB_URL }}
-          RECORD_DATE: ${{ env.RECORD_DATE }}
-          FETCH_FROM_APIS: ${{ env.FETCH_FROM_APIS }}
-          MANUAL_GITHUB_STARS_JSON: ${{ env.MANUAL_GITHUB_STARS_JSON }}
         run: |
           python - <<EOF
           import os
-          import json
           import requests
           import psycopg2
           from datetime import date
@@ -217,23 +155,7 @@ jobs:
               "Ivy-Interactive/Ivy-Tendril",
           ]
           headers = {'User-Agent': 'python-request-script'}
-          record_date_raw = os.getenv("RECORD_DATE", "").strip()
-          date_to_record = record_date_raw if record_date_raw else date.today().isoformat()
-          fetch_from_apis = os.getenv("FETCH_FROM_APIS", "true").lower() == "true"
-          print(f"Recording GitHub stars for date: {date_to_record} (fetch_from_apis={fetch_from_apis})")
-
-          manual_stars = {}
-          if not fetch_from_apis:
-              manual_raw = os.getenv("MANUAL_GITHUB_STARS_JSON", "").strip()
-              if not manual_raw:
-                  print("fetch_from_apis=false but manual_github_stars_json is empty.")
-                  exit(1)
-              try:
-                  manual_stars = {str(k): int(v) for k, v in json.loads(manual_raw).items()}
-              except Exception as e:
-                  print(f"Invalid manual_github_stars_json: {e}")
-                  exit(1)
-
+          date_to_record = date.today().isoformat()
           any_success = False
 
           try:
@@ -252,20 +174,12 @@ jobs:
 
               for repo in REPOS:
                   stars = 0
-                  if fetch_from_apis:
-                      try:
-                          repo_data = requests.get(f"https://api.github.com/repos/{repo}", headers=headers).json()
-                          stars = repo_data.get('stargazers_count', 0)
-                          print(f"Fetched {repo}: {stars} stars")
-                      except Exception as e:
-                          print(f"Error fetching GitHub stats for {repo}: {e}")
-                          continue
-                  else:
-                      if repo not in manual_stars:
-                          print(f"No manual star count for {repo}; skipping.")
-                          continue
-                      stars = manual_stars[repo]
-                      print(f"Manual {repo}: {stars} stars")
+                  try:
+                      repo_data = requests.get(f"https://api.github.com/repos/{repo}", headers=headers).json()
+                      stars = repo_data.get('stargazers_count', 0)
+                  except Exception as e:
+                      print(f"Error fetching GitHub stats for {repo}: {e}")
+                      continue
 
                   if stars > 0:
                       cur.execute("""
@@ -295,10 +209,6 @@ jobs:
   update_github_stargazers:
     runs-on: ubuntu-latest
     needs: update_github_stats
-    if: >-
-      github.event_name != 'workflow_dispatch' ||
-      github.event.inputs.run_stargazers_job == 'true' ||
-      github.event.inputs.manual_stargazers_json != ''
     steps:
       - name: Install DB driver
         run: |
@@ -308,13 +218,9 @@ jobs:
       - name: Run GitHub Stargazers Update
         env:
           DB_URL: ${{ secrets.DB_URL }}
-          RECORD_DATE: ${{ env.RECORD_DATE }}
-          FETCH_FROM_APIS: ${{ env.FETCH_FROM_APIS }}
-          MANUAL_STARGAZERS_JSON: ${{ env.MANUAL_STARGAZERS_JSON }}
         run: |
           python - <<EOF
           import os
-          import json
           import requests
           import psycopg2
           from datetime import date, datetime, timezone
@@ -348,71 +254,6 @@ jobs:
               "Ivy-Interactive/Ivy-Framework",
               "Ivy-Interactive/Ivy-Tendril",
           ]
-
-          record_date_raw = os.getenv("RECORD_DATE", "").strip()
-          date_to_record = record_date_raw if record_date_raw else date.today().isoformat()
-          record_day = date.fromisoformat(date_to_record)
-          record_ts = datetime(record_day.year, record_day.month, record_day.day, 12, 0, 0, tzinfo=timezone.utc)
-          fetch_from_apis = os.getenv("FETCH_FROM_APIS", "true").lower() == "true"
-          manual_stargazers_raw = os.getenv("MANUAL_STARGAZERS_JSON", "").strip()
-          use_manual_stargazers = bool(manual_stargazers_raw)
-          print(f"Stargazers update for date: {date_to_record} (manual={use_manual_stargazers}, fetch_from_apis={fetch_from_apis})")
-
-          def upsert_daily_stats(cur, repo, new_count, unstar_count, reactivated_count):
-              cur.execute("""
-                  CREATE TABLE IF NOT EXISTS github_stargazers_daily (
-                      repo_name TEXT,
-                      date DATE,
-                      new_count INT DEFAULT 0,
-                      unstar_count INT DEFAULT 0,
-                      reactivated_count INT DEFAULT 0,
-                      PRIMARY KEY (repo_name, date)
-                  );
-              """)
-              cur.execute("""
-                  INSERT INTO github_stargazers_daily (repo_name, date, new_count, unstar_count, reactivated_count)
-                  VALUES (%s, %s, %s, %s, %s)
-                  ON CONFLICT (repo_name, date) DO UPDATE SET
-                      new_count = EXCLUDED.new_count,
-                      unstar_count = EXCLUDED.unstar_count,
-                      reactivated_count = EXCLUDED.reactivated_count;
-              """, (repo, date_to_record, new_count, unstar_count, reactivated_count))
-
-          def apply_manual_stargazers(cur, ops):
-              for op in ops:
-                  repo = op.get("repo")
-                  if not repo:
-                      print("Skipping manual op without repo")
-                      continue
-                  to_add = op.get("add") or []
-                  to_remove = op.get("remove") or []
-                  to_reactivate = op.get("reactivate") or []
-
-                  for login in to_add:
-                      cur.execute("""
-                          INSERT INTO github_stargazers (repo_name, user_login, starred_at, unstarred_at)
-                          VALUES (%s, %s, %s, NULL)
-                          ON CONFLICT (repo_name, user_login)
-                          DO UPDATE SET starred_at = COALESCE(github_stargazers.starred_at, EXCLUDED.starred_at),
-                                        unstarred_at = NULL;
-                      """, (repo, login, record_ts))
-
-                  reactivate_count = 0
-                  for login in to_reactivate:
-                      cur.execute("""
-                          UPDATE github_stargazers SET unstarred_at = NULL
-                          WHERE repo_name = %s AND user_login = %s AND unstarred_at IS NOT NULL;
-                      """, (repo, login))
-                      reactivate_count += cur.rowcount
-
-                  for login in to_remove:
-                      cur.execute("""
-                          UPDATE github_stargazers SET unstarred_at = %s
-                          WHERE repo_name = %s AND user_login = %s AND unstarred_at IS NULL;
-                      """, (record_ts, repo, login))
-
-                  upsert_daily_stats(cur, repo, len(to_add), len(to_remove), reactivate_count)
-                  print(f"Manual {repo}: add={len(to_add)}, unstar={len(to_remove)}, reactivate={reactivate_count}")
 
           def fetch_all_stargazers(repo):
               """Fetch all stargazers with their starred_at timestamps."""
@@ -460,25 +301,6 @@ jobs:
                   ALTER TABLE github_stargazers ADD COLUMN IF NOT EXISTS starred_at TIMESTAMPTZ;
                   ALTER TABLE github_stargazers ADD COLUMN IF NOT EXISTS unstarred_at TIMESTAMPTZ;
               """)
-
-              if use_manual_stargazers:
-                  try:
-                      manual_ops = json.loads(manual_stargazers_raw)
-                      if not isinstance(manual_ops, list):
-                          raise ValueError("manual_stargazers_json must be a JSON array")
-                  except Exception as e:
-                      print(f"Invalid manual_stargazers_json: {e}")
-                      raise SystemExit(1)
-                  apply_manual_stargazers(cur, manual_ops)
-                  conn.commit()
-                  cur.close()
-                  conn.close()
-                  print("Manual stargazer simulation complete.")
-                  raise SystemExit(0)
-
-              if not fetch_from_apis:
-                  print("fetch_from_apis=false and no manual_stargazers_json; nothing to do.")
-                  raise SystemExit(0)
 
               for REPO in REPOS:
                   try:
@@ -557,8 +379,6 @@ jobs:
 
                   if reactivate_count > 0:
                       print(f"Users who re-starred since last run: {reactivate_count}")
-
-                  upsert_daily_stats(cur, REPO, len(new_users), len(lost_users), reactivate_count)
 
               conn.commit()
               cur.close()
