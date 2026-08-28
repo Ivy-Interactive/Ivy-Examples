@@ -88,6 +88,12 @@ public class GitHubWebhookHandler
         var owner = repoEl.GetProperty("owner").GetProperty("login").GetString() ?? "";
         var repoName = repoEl.GetProperty("name").GetString() ?? "";
 
+        string? cloneUrl = null;
+        if (pr.TryGetProperty("head", out var headEl) && headEl.TryGetProperty("repo", out var headRepoEl) && headRepoEl.ValueKind == JsonValueKind.Object)
+        {
+            cloneUrl = headRepoEl.TryGetProperty("clone_url", out var cu) ? cu.GetString() : null;
+        }
+
         var repoConfig = _reposProvider.FindByOwnerRepo(owner, repoName);
         if (repoConfig == null)
         {
@@ -119,12 +125,12 @@ public class GitHubWebhookHandler
                 if (existing != null)
                 {
                     _logger.LogInformation("Staging service already exists for PR #{Pr}, skipping deploy.", prNumber);
-                    await _prComments.TryPostStagingAsync(owner, repoName, prNumber, existing.ServiceUrl, error: null);
+                    await _prComments.TryPostStagingAsync(owner, repoName, prNumber, existing.ServiceUrl, error: null, branch: branch);
                     break;
                 }
 
                 _logger.LogInformation("PR #{Pr} opened: {Title} branch={Branch}", prNumber, title, branch);
-                var deployResult = await _deployService.DeployBranchAsync(apiToken, repoConfig, branch, prNumber);
+                var deployResult = await _deployService.DeployBranchAsync(apiToken, repoConfig, branch, prNumber, cloneUrlOverride: cloneUrl);
                 _logger.LogInformation("Deploy result: {Success} - {Message}", deployResult.Success, deployResult.Message);
 
                 if (deployResult.SkippedBecausePrNotOpen)
@@ -132,10 +138,11 @@ public class GitHubWebhookHandler
 
                 await _prComments.TryPostStagingAsync(owner, repoName, prNumber,
                     deployResult.ServiceUrl,
-                    deployResult.Success ? null : deployResult.Message);
+                    deployResult.Success ? null : deployResult.Message,
+                    branch: branch);
 
                 if (deployResult.Success && deployResult.ServiceId != null)
-                    await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repoName, prNumber, deployResult.ServiceId));
+                    await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repoName, prNumber, deployResult.ServiceId, Branch: branch));
 
                 break;
 
@@ -153,7 +160,7 @@ public class GitHubWebhookHandler
                 if (!redeployResult.Success)
                 {
                     _logger.LogInformation("PR #{Pr} redeploy found no service, falling back to fresh deploy.", prNumber);
-                    var fallback = await _deployService.DeployBranchAsync(apiToken, repoConfig, branch, prNumber);
+                    var fallback = await _deployService.DeployBranchAsync(apiToken, repoConfig, branch, prNumber, cloneUrlOverride: cloneUrl);
                     _logger.LogInformation("Fallback deploy result: {Success} - {Message}", fallback.Success, fallback.Message);
 
                     if (fallback.SkippedBecausePrNotOpen)
@@ -161,18 +168,19 @@ public class GitHubWebhookHandler
 
                     await _prComments.TryPostStagingAsync(owner, repoName, prNumber,
                         fallback.ServiceUrl,
-                        fallback.Success ? null : fallback.Message);
+                        fallback.Success ? null : fallback.Message,
+                        branch: branch);
 
                     if (fallback.Success && fallback.ServiceId != null)
-                        await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repoName, prNumber, fallback.ServiceId));
+                        await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repoName, prNumber, fallback.ServiceId, Branch: branch));
 
                     break;
                 }
 
                 var syncDep = await _deployService.GetDeploymentByPrNumberAsync(apiToken, repoConfig, prNumber);
-                await _prComments.TryPostStagingAsync(owner, repoName, prNumber, syncDep?.ServiceUrl, error: null);
+                await _prComments.TryPostStagingAsync(owner, repoName, prNumber, syncDep?.ServiceUrl, error: null, branch: branch);
                 if (syncDep?.ServiceId != null)
-                    await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repoName, prNumber, syncDep.ServiceId));
+                    await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repoName, prNumber, syncDep.ServiceId, Branch: branch));
 
                 break;
 
@@ -181,7 +189,7 @@ public class GitHubWebhookHandler
                 var deleteResult = await _deployService.DeleteBranchAsync(apiToken, repoConfig, prNumber);
                 _logger.LogInformation("Delete result: {Success} - {Message}", deleteResult.Success, deleteResult.Message);
                 if (deleteResult.Success)
-                    await _prComments.TryPostStagingRemovedAsync(owner, repoName, prNumber);
+                    await _prComments.TryPostStagingRemovedAsync(owner, repoName, prNumber, branch: branch);
                 break;
 
             default:
@@ -218,7 +226,7 @@ public class GitHubWebhookHandler
         }
 
         var ghToken = _config["GitHub:Token"] ?? "";
-        var branch = await _github.GetPullRequestBranchAsync(owner, repo, prNumber, ghToken);
+        var (branch, cloneUrl) = await _github.GetPullRequestBranchAndCloneUrlAsync(owner, repo, prNumber, ghToken);
         if (string.IsNullOrEmpty(branch))
         {
             _logger.LogWarning("Could not get branch for PR #{Pr}", prNumber);
@@ -245,12 +253,12 @@ public class GitHubWebhookHandler
         if (existingDep != null)
         {
             _logger.LogInformation("Staging service already exists for PR #{Pr}, posting current link.", prNumber);
-            await _prComments.TryPostStagingAsync(owner, repo, prNumber, existingDep.ServiceUrl, error: null);
+            await _prComments.TryPostStagingAsync(owner, repo, prNumber, existingDep.ServiceUrl, error: null, branch: branch);
             return;
         }
 
         _logger.LogInformation("PR #{Pr} /deploy comment: branch={Branch}", prNumber, branch);
-        var result = await _deployService.DeployBranchAsync(apiToken, repoConfig, branch, prNumber);
+        var result = await _deployService.DeployBranchAsync(apiToken, repoConfig, branch, prNumber, cloneUrlOverride: cloneUrl);
         _logger.LogInformation("Deploy result: {Success} - {Message}", result.Success, result.Message);
 
         if (result.SkippedBecausePrNotOpen)
@@ -258,10 +266,11 @@ public class GitHubWebhookHandler
 
         await _prComments.TryPostStagingAsync(owner, repo, prNumber,
             result.ServiceUrl,
-            result.Success ? null : TruncLine(result.Message, 500));
+            result.Success ? null : TruncLine(result.Message, 500),
+            branch: branch);
 
         if (result.Success && result.ServiceId != null)
-            await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repo, prNumber, result.ServiceId));
+            await _errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(repoConfig.Key, owner, repo, prNumber, result.ServiceId, Branch: branch));
     }
 
     private static bool IsDeployCommand(string trimmed)

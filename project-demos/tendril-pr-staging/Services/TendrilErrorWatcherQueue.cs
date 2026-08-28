@@ -22,4 +22,5 @@ public record TendrilErrorWatchRequest(
     string Owner,
     string Repo,
     int PrNumber,
-    string ServiceId);
+    string ServiceId,
+    string? Branch = null);

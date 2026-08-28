@@ -108,6 +108,29 @@ public class SliplaneStagingClient
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<SliplaneServiceInfo?> GetServiceAsync(string apiToken, string projectId, string serviceId)
+    {
+        var client = CreateClient(apiToken);
+        var response = await client.GetAsync($"{BaseUrl}/projects/{projectId}/services/{serviceId}");
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var el = root.TryGetProperty("service", out var s) ? s : root;
+        var name = el.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+        var id = el.TryGetProperty("id", out var i) ? i.GetString() ?? serviceId : serviceId;
+        var managedDomain = el.TryGetProperty("network", out var net) && net.TryGetProperty("managedDomain", out var md)
+            ? md.GetString()
+            : null;
+        var createdAt = el.TryGetProperty("createdAt", out var ca)
+            ? DateTime.Parse(ca.GetString() ?? "1970-01-01")
+            : DateTime.MinValue;
+        var status = el.TryGetProperty("status", out var st) ? st.GetString() : null;
+        return new SliplaneServiceInfo(id, managedDomain ?? "", name, createdAt, status);
+    }
+
     public async Task<List<SliplaneServiceInfo>> ListAllServicesAsync(string apiToken, string projectId)
     {
         var client = CreateClient(apiToken);

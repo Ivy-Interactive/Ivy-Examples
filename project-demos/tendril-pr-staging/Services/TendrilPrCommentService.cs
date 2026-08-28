@@ -32,9 +32,10 @@ public class TendrilPrCommentService
         int prNumber,
         string? serviceUrl,
         string? error,
+        string? branch = null,
         CancellationToken cancellationToken = default)
     {
-        var body = BuildBody(serviceUrl, error, removed: false);
+        var body = BuildBody(serviceUrl, error, branch, prNumber, repo, removed: false);
         return PostMarkerCommentAsync(owner, repo, prNumber, body, cancellationToken);
     }
 
@@ -42,9 +43,10 @@ public class TendrilPrCommentService
         string owner,
         string repo,
         int prNumber,
+        string? branch = null,
         CancellationToken cancellationToken = default)
     {
-        var body = BuildBody(serviceUrl: null, error: null, removed: true);
+        var body = BuildBody(serviceUrl: null, error: null, branch, prNumber, repo, removed: true);
         return PostMarkerCommentAsync(owner, repo, prNumber, body, cancellationToken);
     }
 
@@ -90,7 +92,7 @@ public class TendrilPrCommentService
             _logger.LogInformation("Posted staging comment on PR #{Pr}", prNumber);
     }
 
-    private static string BuildBody(string? serviceUrl, string? error, bool removed)
+    private static string BuildBody(string? serviceUrl, string? error, string? branch, int prNumber, string? repo, bool removed)
     {
         var sb = new StringBuilder();
         sb.AppendLine(Marker);
@@ -98,27 +100,34 @@ public class TendrilPrCommentService
 
         if (removed)
         {
-            sb.AppendLine("### Tendril staging removed");
+            sb.AppendLine("### 🛑 Tendril Staging Environment Removed");
             sb.AppendLine();
-            sb.AppendLine("The Tendril staging environment for this PR has been deleted.");
+            var branchInfo = !string.IsNullOrWhiteSpace(branch) ? $" (`{branch}`)" : "";
+            sb.AppendLine($"The Tendril staging preview for **PR #{prNumber}**{branchInfo} has been deleted.");
             return sb.ToString();
         }
 
         if (!string.IsNullOrWhiteSpace(error))
         {
-            sb.AppendLine("### Tendril staging deploy failed");
+            sb.AppendLine("### ❌ Tendril Staging Deployment Failed");
+            sb.AppendLine();
+            if (!string.IsNullOrWhiteSpace(branch))
+                sb.AppendLine($"- **Branch:** `{branch}` (PR #{prNumber})");
             sb.AppendLine();
             var oneLine = error.Trim().Replace("\r", "").Replace("\n", " ");
-            sb.AppendLine($"> {oneLine}");
+            sb.AppendLine($"> **Error:** {oneLine}");
             return sb.ToString();
         }
 
-        sb.AppendLine("### Tendril staging preview");
+        sb.AppendLine("### 🚀 Tendril Staging Preview Ready");
         sb.AppendLine();
+        if (!string.IsNullOrWhiteSpace(branch))
+            sb.AppendLine($"- **Branch:** `{branch}` (PR #{prNumber})");
+
         if (!string.IsNullOrWhiteSpace(serviceUrl))
-            sb.AppendLine($"**Tendril:** [{serviceUrl}]({serviceUrl})");
+            sb.AppendLine($"- **Environment URL:** [{serviceUrl}]({serviceUrl})");
         else
-            sb.AppendLine("**Tendril:** _deploying, URL will be available shortly_");
+            sb.AppendLine("- **Environment URL:** _Provisioning service and acquiring domain..._");
 
         return sb.ToString();
     }

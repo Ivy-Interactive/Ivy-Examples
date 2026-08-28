@@ -16,7 +16,7 @@ public sealed class TendrilRepoConfig
     public string GitUrl => $"https://github.com/{Owner}/{Repo}";
 
     /// <summary>Path to the Tendril Dockerfile within the repo.</summary>
-    public string DockerfilePath { get; set; } = ".github/docker/Dockerfile.tendril-release";
+    public string DockerfilePath { get; set; } = ".github/docker/Dockerfile.tendril-source";
 
     /// <summary>Docker build context within the repo.</summary>
     public string DockerContext { get; set; } = ".";

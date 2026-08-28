@@ -49,6 +49,7 @@ public class TendrilStagingDeployService
         TendrilRepoConfig repoConfig,
         string branchName,
         int prNumber,
+        string? cloneUrlOverride = null,
         CancellationToken cancellationToken = default)
     {
         var projectId = _config["Sliplane:ProjectId"] ?? "";
@@ -74,11 +75,12 @@ public class TendrilStagingDeployService
         try
         {
             var env = BuildEnvVars();
+            var gitUrl = !string.IsNullOrWhiteSpace(cloneUrlOverride) ? cloneUrlOverride.Trim() : repoConfig.GitUrl;
 
             var result = await _sliplane.CreateServiceAsync(
                 apiToken, projectId, serverId,
                 ServiceName(repoConfig, prNumber),
-                repoConfig.GitUrl, branchName,
+                gitUrl, branchName,
                 repoConfig.DockerfilePath, repoConfig.DockerContext,
                 env);
 

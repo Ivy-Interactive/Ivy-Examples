@@ -56,7 +56,9 @@ server.Services.AddOpenApi("v1", options =>
         if (doc.Tags != null)
         {
             var keep = doc.Tags.Where(t => t.Name == "TendrilApi").ToList();
-            doc.Tags.IntersectWith(keep);
+            doc.Tags.Clear();
+            foreach (var t in keep)
+                doc.Tags.Add(t);
         }
 
         return Task.CompletedTask;

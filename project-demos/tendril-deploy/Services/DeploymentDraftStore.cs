@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http;
 /// </summary>
 public record DeployDraft(
     string RepoUrl,
-    string Branch = "main",
+    string Branch = "development",
     string DockerContext = ".",
     string DockerfilePath = TendrilDeploymentPaths.DefaultDockerfilePath);
 

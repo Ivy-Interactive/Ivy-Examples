@@ -27,6 +27,12 @@ public class GitHubApiClient
         foreach (var el in doc.RootElement.EnumerateArray())
         {
             var head = el.GetProperty("head");
+            string? cloneUrl = null;
+            if (head.TryGetProperty("repo", out var headRepo) && headRepo.ValueKind == JsonValueKind.Object)
+            {
+                cloneUrl = headRepo.TryGetProperty("clone_url", out var cu) ? cu.GetString() : null;
+            }
+
             list.Add(new GitHubPullRequest(
                 Number: el.GetProperty("number").GetInt32(),
                 Title: el.GetProperty("title").GetString() ?? "",
@@ -35,7 +41,8 @@ public class GitHubApiClient
                 HtmlUrl: el.GetProperty("html_url").GetString() ?? "",
                 State: el.GetProperty("state").GetString() ?? "open",
                 Author: el.TryGetProperty("user", out var u) ? u.GetProperty("login").GetString() : null,
-                CreatedAt: DateTime.Parse(el.GetProperty("created_at").GetString() ?? "1970-01-01")
+                CreatedAt: DateTime.Parse(el.GetProperty("created_at").GetString() ?? "1970-01-01"),
+                CloneUrl: cloneUrl
             ));
         }
         return list;
@@ -43,13 +50,26 @@ public class GitHubApiClient
 
     public async Task<string?> GetPullRequestBranchAsync(string owner, string repo, int prNumber, string? token)
     {
+        var (branch, _) = await GetPullRequestBranchAndCloneUrlAsync(owner, repo, prNumber, token);
+        return branch;
+    }
+
+    public async Task<(string? Branch, string? CloneUrl)> GetPullRequestBranchAndCloneUrlAsync(string owner, string repo, int prNumber, string? token)
+    {
         var client = CreateClient(token);
         var response = await client.GetAsync($"https://api.github.com/repos/{owner}/{repo}/pulls/{prNumber}");
         if (!response.IsSuccessStatusCode)
-            return null;
+            return (null, null);
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.GetProperty("head").GetProperty("ref").GetString();
+        var head = doc.RootElement.GetProperty("head");
+        var branch = head.GetProperty("ref").GetString();
+        string? cloneUrl = null;
+        if (head.TryGetProperty("repo", out var headRepo) && headRepo.ValueKind == JsonValueKind.Object)
+        {
+            cloneUrl = headRepo.TryGetProperty("clone_url", out var cu) ? cu.GetString() : null;
+        }
+        return (branch, cloneUrl);
     }
 
     public async Task<GitHubPullRequestMergeInfo> GetPullRequestMergeInfoAsync(

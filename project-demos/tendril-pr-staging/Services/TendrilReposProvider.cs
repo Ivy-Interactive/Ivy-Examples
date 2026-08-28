@@ -32,7 +32,7 @@ public sealed class TendrilReposProvider
                     Key = SanitizeKey(repo!),
                     Owner = owner!,
                     Repo = repo!,
-                    DockerfilePath = config["Staging:DockerfilePath"] ?? ".github/docker/Dockerfile.tendril-release",
+                    DockerfilePath = config["Staging:DockerfilePath"] ?? ".github/docker/Dockerfile.tendril-source",
                     DockerContext = config["Staging:DockerContext"] ?? ".",
                 });
             }

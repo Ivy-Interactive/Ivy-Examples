@@ -20,7 +20,8 @@ public class TendrilPrStagingApp : ViewBase
         string ExpiresAt,
         string DeployDisplay,
         string? HtmlUrl,
-        string? ServiceUrl);
+        string? ServiceUrl,
+        string? CloneUrl = null);
 
     public override object? Build()
     {
@@ -108,7 +109,8 @@ public class TendrilPrStagingApp : ViewBase
                             ExpiresAt: expiresAt,
                             DeployDisplay: deployDisplay,
                             HtmlUrl: pr.HtmlUrl,
-                            ServiceUrl: dep?.ServiceUrl));
+                            ServiceUrl: dep?.ServiceUrl,
+                            CloneUrl: pr.CloneUrl));
                     }
                 }
 
@@ -195,7 +197,7 @@ public class TendrilPrStagingApp : ViewBase
                             {
                                 var rc = reposProvider.FindByKey(pr.RepoKey);
                                 if (rc != null)
-                                    _ = prComments.TryPostStagingRemovedAsync(rc.Owner, rc.Repo, pr.Number);
+                                    _ = prComments.TryPostStagingRemovedAsync(rc.Owner, rc.Repo, pr.Number, branch: pr.HeadRef);
                             }
 
                             overviewQuery.Mutator.Revalidate();
@@ -249,7 +251,7 @@ public class TendrilPrStagingApp : ViewBase
 
             try
             {
-                var result = await deploySvc.DeployBranchAsync(t, rc, row.HeadRef, row.Number);
+                var result = await deploySvc.DeployBranchAsync(t, rc, row.HeadRef, row.Number, cloneUrlOverride: row.CloneUrl);
 
                 deployingItems.Set(prev =>
                 {
@@ -266,13 +268,13 @@ public class TendrilPrStagingApp : ViewBase
                 {
                     overviewQuery.Mutator.Revalidate();
                     await prComments.TryPostStagingAsync(rc.Owner, rc.Repo, row.Number,
-                        result.ServiceUrl, result.Success ? null : result.Message);
+                        result.ServiceUrl, result.Success ? null : result.Message, branch: row.HeadRef);
                     if (result.ServiceId != null)
-                        await errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(rc.Key, rc.Owner, rc.Repo, row.Number, result.ServiceId));
+                        await errorWatcher.EnqueueAsync(new TendrilErrorWatchRequest(rc.Key, rc.Owner, rc.Repo, row.Number, result.ServiceId, Branch: row.HeadRef));
                 }
                 else
                 {
-                    await prComments.TryPostStagingAsync(rc.Owner, rc.Repo, row.Number, null, TruncLine(result.Message, 500));
+                    await prComments.TryPostStagingAsync(rc.Owner, rc.Repo, row.Number, null, TruncLine(result.Message, 500), branch: row.HeadRef);
                 }
             }
             catch (Exception ex)
@@ -303,11 +305,11 @@ public class TendrilPrStagingApp : ViewBase
                 if (result.Success)
                 {
                     overviewQuery.Mutator.Revalidate();
-                    await prComments.TryPostStagingRemovedAsync(rc.Owner, rc.Repo, row.Number);
+                    await prComments.TryPostStagingRemovedAsync(rc.Owner, rc.Repo, row.Number, branch: row.HeadRef);
                 }
                 else
                 {
-                    await prComments.TryPostStagingAsync(rc.Owner, rc.Repo, row.Number, null, TruncLine(result.Message, 500));
+                    await prComments.TryPostStagingAsync(rc.Owner, rc.Repo, row.Number, null, TruncLine(result.Message, 500), branch: row.HeadRef);
                 }
             }
             catch (Exception ex) { ShowMessage(ex.Message, true); }

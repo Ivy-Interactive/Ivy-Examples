@@ -12,7 +12,8 @@ public record GitHubPullRequest(
     string HtmlUrl,
     string State,
     string? Author,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? CloneUrl = null
 );
 
 /// <summary>Tendril staging deployment for one PR — a single Sliplane service.</summary>

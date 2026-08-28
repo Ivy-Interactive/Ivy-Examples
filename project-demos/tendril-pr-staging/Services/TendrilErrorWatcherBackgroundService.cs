@@ -59,7 +59,14 @@ public class TendrilErrorWatcherBackgroundService : BackgroundService
 
             _logger.LogInformation("PR #{Pr} ({RepoKey}) build terminal: {State}", req.PrNumber, req.RepoKey, state);
 
-            if (state == "failed")
+            if (state == "deployed")
+            {
+                var svc = await _sliplane.GetServiceAsync(apiToken, projectId, req.ServiceId);
+                var url = !string.IsNullOrEmpty(svc?.ManagedDomain) ? "https://" + svc.ManagedDomain : null;
+                await _comments.TryPostStagingAsync(req.Owner, req.Repo, req.PrNumber,
+                    serviceUrl: url, error: null, branch: req.Branch, cancellationToken: ct);
+            }
+            else if (state == "failed")
             {
                 var last = events
                     .Where(e => IsFailEvent(e))
@@ -67,7 +74,7 @@ public class TendrilErrorWatcherBackgroundService : BackgroundService
                     .FirstOrDefault();
                 var errMsg = last != null ? Trunc(last.Message ?? last.Type, 200) : "build failed";
                 await _comments.TryPostStagingAsync(req.Owner, req.Repo, req.PrNumber,
-                    serviceUrl: null, error: errMsg, cancellationToken: ct);
+                    serviceUrl: null, error: errMsg, branch: req.Branch, cancellationToken: ct);
             }
             return;
         }
